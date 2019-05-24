@@ -46,7 +46,12 @@ def open_file(zarr_file):
 
 #map expression values to genes
 def map_cell_ids_to_expression_values():
-    expression_matrix.update(dict(zip(za['expression_matrix']['cell_id'][0:1000].tolist(), za['expression_matrix']['expression'][0:1000,0:500].tolist())))
+    expression_matrix.update(
+        dict(
+            zip(za['expression_matrix']['cell_id'][0:1000].tolist(), 
+            za['expression_matrix']['expression'][0:1000,0:500].tolist())
+        )
+    )
 
 ##Save to firestore
 ##Abstract this out
