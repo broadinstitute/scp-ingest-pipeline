@@ -30,7 +30,6 @@ db = firestore.Client()
 parser = argparse.ArgumentParser(
     prog = 'mtx_ingest.py'
 )
-
 parser.add_argument(
     '--input-dir', default='.',
     help='Input directory for matrix bundle files'
@@ -84,7 +83,7 @@ def add_data_to_firestore(exp_by_gene, cells, matrix_path):
         }
         batch.set(doc_ref, doc_data)
     batch.commit()
-    time.sleep(2)
+    time.sleep(2)  # TODO: Confirm need for this, work to eliminate
 
 bundle_paths = [os.path.join(input_dir, fn) for fn in matrix_bundle]
 

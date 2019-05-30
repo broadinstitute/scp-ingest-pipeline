@@ -10,7 +10,7 @@ and configured.
 
 EXAMPLES
 # Transform dense matrix and load to Firestore
-$ python dense_ingest.py  200k_subsample_4k_PMBC.zarr
+$ python dense_ingest.py  --matrix-path ../test/data/AB_toy_data_toy.txt
 """
 
 import argparse
@@ -30,14 +30,12 @@ db = firestore.Client()
 parser = argparse.ArgumentParser(
     prog = 'dense_ingest.py'
 )
-
 parser.add_argument(
     '--matrix-path', default=None,
     help='Path to dense matrix file'
 )
 
-import logging
-
+# TODO: Apply this to other ingest modules, after refactoring for abstraction
 def get_logger(output_dir, log_name):
     """Creates a log file and returns an object to interface with it.
     """
@@ -92,7 +90,7 @@ def add_data_to_firestore(exp_by_gene, cells, matrix_path):
     logger.info('End batch insert')
     batch_time = str(round(time.time() - batch_start_time))
     logger.info('Batch insert time: ' + batch_time + ' s')
-    time.sleep(2)
+    time.sleep(2)  # TODO: Confirm need for this, work to eliminate
 
 def chunk(data, SIZE=5):
     it = iter(data)
