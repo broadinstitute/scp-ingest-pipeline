@@ -38,12 +38,6 @@ parser.add_argument(
 
 args = parser.parse_args()
 np.set_printoptions(precision=8, threshold=sys.maxsize, edgeitems=1e9)
-<<<<<<< HEAD
-expression_dictionaries = dict()
-loom_file = sys.argv[1]
-loom_file_name = os.path.splitext(loom_file)[0]
-=======
->>>>>>> Adding style changes. Commit includes POC of ingest service for both loom and zarr. Requirements.txt has been updated with required packages
 
 ##Opens loom file
 def open_file(loom_file):
@@ -73,7 +67,7 @@ def add_data_to_firestore(data):
         doc_ref = db.collection("loom_gene").document(key)
         batch.set(doc_ref, {
         'accession': val[0],
-        'file_name' : loom_file,
+        'file_name' : loom_file_name,
         'cells':{
         'cell_id': val[1],
         'expression_values': val[2]
@@ -82,15 +76,11 @@ def add_data_to_firestore(data):
     batch.commit()
     time.sleep(2)
 
-<<<<<<< HEAD
-map_genes_to_expression_values()
-=======
 ##Open loom file
 ds, loom_file_name = open_file(args.loom_file)
 
 #Map expression data to expression values and row attrobutes
-map_genes_to_expression_vaues()
->>>>>>> Adding style changes. Commit includes POC of ingest service for both loom and zarr. Requirements.txt has been updated with required packages
+map_genes_to_expression_values()
 for genes in chunk(expression_dictionaries):
     add_data_to_firestore(genes)
 
