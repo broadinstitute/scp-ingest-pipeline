@@ -11,7 +11,8 @@ You must have google could firestore installed, authenticated
 
 EXAMPLES
 # Takes dense file and stores it into firestore
-$ python paraelle_processing_dense_matrix.py  200k_subsample_4k_PMBC.loom
+python parallelization_processing_expression_data.py <file path>
+$ python parallelization_processing_expression_data.py  200k_subsample_4k_PMBC.loom
 """
 import multiprocessing
 import argparse
@@ -42,9 +43,6 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
-read_shutdown_value = False
-write_shutdown_value = False
-
 
 def determine_size_of_chunks(file):
     line = linecache.getline(args.file_name, line_number).split()
@@ -80,7 +78,7 @@ def transform(process_name, extracted_data, transformed_data,expression_attr):
 
             if len(new_value) < 1:
                 print('[%s] transform routine quits' % process_name)
-                # Indicate finished and signal load worker function to quit
+                # Indicate transformation function is finished and signal load worker function to quit
                 transformed_data.put([])
                 break
             else:
@@ -96,7 +94,7 @@ def transform(process_name, extracted_data, transformed_data,expression_attr):
                 time.sleep(.1)
 
         except EOFError as error:
-            # Output expected EOFErrors.
+            # signal transform worker to quit if the que is empty
             print('[%s] transform routine quits' % process_name)
             break
 
@@ -124,14 +122,14 @@ def load(process_name, transformed_data):
                 time.sleep(.2)
 
         except EOFError as error:
-            # Output expected EOFErrors.
+            # signal load worker function to quit if the que is empty
             print('Process Load [%s]  routine quits' % process_name)
             break
     return
 
 
 if __name__ == "__main__":
-    # Define IPC manager
+    # Define manager
     manager = multiprocessing.Manager()
 
     # Define a list (queue) for extraced data and transformed data
@@ -139,7 +137,6 @@ if __name__ == "__main__":
     transformed_data = manager.Queue()
 
     num_processes= int((multiprocessing.cpu_count()-1)/2)
-    pool = multiprocessing.Pool(processes=num_processes)
     processes = []
     expression_attr = []
 
