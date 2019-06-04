@@ -67,14 +67,14 @@ def extract(file, number_of_lines):
             break
 
 ##worker function
-def transform(process_name, extracted_data, transformed_data,expression_attr):
+def transform(process_name, extracted_data, transformed_data):
     print('[%s] transform routine starts' % process_name)
     gene_list = []
     model = dict()
 
     while True:
         try:
-            new_value = extracted_data.get()
+            new_value, expression_attr = extracted_data.get()
 
             if len(new_value) < 1:
                 print('[%s] transform routine quits' % process_name)
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         load_process_name = 'Load P%i' % i
 
         # Create the process, and connect it to the worker function
-        transform_process = multiprocessing.Process(target=transform, args=(transform_process_name,extracted_data,transformed_data, expression_attr ))
+        transform_process = multiprocessing.Process(target=transform, args=(transform_process_name,extracted_data,transformed_data))
         load_process = multiprocessing.Process(target=load, args=(load_process_name, transformed_data ))
 
         # Start the process
@@ -156,12 +156,9 @@ if __name__ == "__main__":
 
     # Fill extract queue
     with open(args.file_name,'r') as fname:
-        expression_attr = fname.readline().rstrip().split(',')[1:]
+        expression_attr = fname.readline().rstrip().split(',')[1:2000]
         size_of_chunks = determine_size_of_chunks(fname)
         for data in extract(fname, size_of_chunks):
-            extracted_data.put(data)
+            extracted_data.put((data, expression_attr))
     # Wait while the workers process
     time.sleep(5)
-    pool.close()
-    pool.join()
-    transform_process.join()
