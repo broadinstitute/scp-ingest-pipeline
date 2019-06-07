@@ -44,7 +44,6 @@ parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
 
-#Positional argument
 parser.add_argument(
     "--file-path",
     required=True,
