@@ -57,7 +57,8 @@ def determine_size_of_chunks(file_object, file_path):
     Ensures field value, in this case a line, is less than 1,048,487 bytes and,
     eventually, API request size is less than 10 MiB. If field value is more
     than 1,048,487 bytes, logic will be needed to figure out how chunk per line
-    basis.
+    basis.  These byte-size constraints are imposed by Firestore and documented
+    at https://firebase.google.com/docs/firestore/quotas#writes_and_transactions.
 
     TODO:
     Abstract out function. Needs to handle different ways to chunk based on file type and size restrants
