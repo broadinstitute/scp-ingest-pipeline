@@ -39,7 +39,7 @@ db = firestore.Client()
 
 
 parser = argparse.ArgumentParser(
-    prog ='parallel_processing_ingest_dense_matrix_.py',
+    prog ='parallel_processing_ingest_dense_matrix.py',
     description= __doc__,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
