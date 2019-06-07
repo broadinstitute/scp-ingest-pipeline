@@ -1,4 +1,4 @@
-"""Command-line interface for ingesting dense matrixes into Firestore with parallel processing
+"""Command-line interface for ingesting dense matrixes into firestore with paraelle processing
 
 DESCRIPTION
 This CLI uses paraelle processing to map expression data from a dense matrix.
@@ -44,6 +44,7 @@ parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
 
+#Positional argument
 parser.add_argument(
     "--file-path",
     required=True,
@@ -57,8 +58,7 @@ def determine_size_of_chunks(file_object, file_path):
     Ensures field value, in this case a line, is less than 1,048,487 bytes and,
     eventually, API request size is less than 10 MiB. If field value is more
     than 1,048,487 bytes, logic will be needed to figure out how chunk per line
-    basis.  These byte-size constraints are imposed by Firestore and documented
-    at https://firebase.google.com/docs/firestore/quotas#writes_and_transactions.
+    basis.
 
     TODO:
     Abstract out function. Needs to handle different ways to chunk based on file type and size restrants
@@ -83,7 +83,7 @@ def extract(file, number_of_lines):
     while True:
         next_lines = list(islice(file, number_of_lines))
         if not next_lines:
-            # Notifies worker function that there are no more extracted data
+            # Let's worker function that there are no more extracted data
             return []
             break
         yield next_lines
@@ -112,7 +112,9 @@ def transform(process_name, extracted_data, transformed_data):
                     model[compute[0]]['gene_expression'] = {}
                     model[compute[0]]['gene_expression']['cell_names'] = expression_attr
                     #change this line to alter amount of scores. Right now first
-                    # 1k scores and genes are loaded to data model
+                    # 1k scores and genes are loaded to data model because  we
+                    # cannot yet ingest matrices with many cells,
+                    # due to one of the Firestore constraints
                     scores = [float(x) for x in compute[1:1000]]
                     model[compute[0]]['gene_expression']['expression_scores'] = scores
                     gene_list.append(model)
@@ -185,6 +187,8 @@ if __name__ == "__main__":
     # Fill extract queue
     with open(args.file_path,'r') as fname:
         #change this line to alter amount of cells. Right now first 1k are loaded
+        # because  we cannot yet ingest matrices with many cells,
+        # due to one of the Firestore constraints
         cell_names = fname.readline().rstrip().split(',')[1:1000]
         print("Size of cell names is %i " % sys.getsizeof(cell_names))
         size_of_chunks = determine_size_of_chunks(fname, args.file_path)
