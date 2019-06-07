@@ -82,7 +82,7 @@ def extract(file, number_of_lines):
     while True:
         next_lines = list(islice(file, number_of_lines))
         if not next_lines:
-            # Let's worker function that there are no more extracted data
+            # Notifies worker function that there are no more extracted data
             return []
             break
         yield next_lines
