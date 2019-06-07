@@ -1,4 +1,4 @@
-"""Command-line interface for ingesting dense matrixes into firestore with paraelle processing
+"""Command-line interface for ingesting dense matrixes into Firestore with parallel processing
 
 DESCRIPTION
 This CLI uses paraelle processing to map expression data from a dense matrix.
