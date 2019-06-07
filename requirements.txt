@@ -1,3 +1,4 @@
 google-cloud-firestore==1.2.0
 loompy==2.0.15
 zarr==2.2.0
+requests==2.22.0
