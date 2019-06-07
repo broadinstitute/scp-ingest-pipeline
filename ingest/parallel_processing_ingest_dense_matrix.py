@@ -1,7 +1,7 @@
 """Command-line interface for ingesting dense matrixes into firestore with paraelle processing
 
 DESCRIPTION
-This CLI uses paraelle processing to map expression data from a dense matrix.
+This CLI uses parallel processing to map expression data from a dense matrix.
 Genes are mapped to expression values and cell  names and inputted into firestore
 
 PREREQUISITES
