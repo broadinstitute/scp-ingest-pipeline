@@ -25,7 +25,9 @@ terms_not_found = {}
 error_filename = "metadata_errors.txt"
 
 parser = argparse.ArgumentParser(
-    prog='validate_ontology_terms.py'
+    prog='validate_ontology_terms.py',
+    description=__doc__,
+    formatter_class=argparse.RawDescriptionHelpFormatter
 )
 
 parser.add_argument(
