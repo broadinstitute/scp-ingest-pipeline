@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument(
-    '-m', '--metadata-path', default=None,
+    'metadata-path'
     help='Path to tsv/csv cell metadata file'
 )
 
