@@ -9,7 +9,7 @@ Requests 2.22.0 (see requirements.txt)
 
 EXAMPLES
 Validate columns called 'Cell Type' and 'Disease' from a cell metadata file against EBI OLS
-python3 validate_ontology_terms.py --metadata-path /path/to/metadata.txt --columns "Cell Type, Disease"
+python3 validate_ontology_terms.py ../tests/data/cell_metadata_toy.tsv --columns "Cell Type, Disease"
 """
 
 import argparse
@@ -31,41 +31,31 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument(
-    'metadata-path'
+    'metadata_path',
     help='Path to tsv/csv cell metadata file'
 )
 
 parser.add_argument(
-    '-c', '--columns', default=None,
+    '--columns', default=None,
     help='Comma-delimited list of specific columns to validate from cell metadata file'
 )
 
 parser.add_argument(
-    '-i', '--ignore-columns', default="Cell ID",
+    '--ignore-columns', default="Cell ID",
     help='Comma-delimited list of specific columns to ignore from cell metadata file'
 )
 
 parser.add_argument(
-    '-d', '--delimiter', default="\t",
+    '--delimiter', default="\t",
     help='Delimiter for cell metadata file ("\\t" as default)'
 )
 
 parser.add_argument(
-    '-a', '--ancestors', default=False, action='store_true',
+    '--ancestors', default=False, action='store_true',
     help='Retrieve ancestors for ontology terms from defining ontology (False as default)'
 )
 
 args = parser.parse_args()
-
-# ensure cell metadata file exists
-if args.metadata_path:
-    metadata_exists = os.path.isfile(args.metadata_path)
-    if not metadata_exists:
-        print("Metadata file not found at: " + args.metadata_path)
-        exit(1)
-else:
-    print("No metadata file provided; Exiting")
-    exit(1)
 
 
 # set control lists of columns to validate/ignore
