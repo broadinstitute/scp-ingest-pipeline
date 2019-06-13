@@ -1,3 +1,18 @@
+"""Command-line interface for ingesting loom files into firestore
+
+DESCRIPTION
+This CLI passes extract and transforms functions into  ingest service thereby
+allowing the loom file to be ingested into Firestore.
+
+PREREQUISITES
+You must have google could firestore installed, authenticated
+ configured.
+
+EXAMPLES
+# Takes loom file and stores it into firestore
+$ python ingest_loom.py ../tests/L5_All.agg.loom
+"""
+
 import argparse
 from typing import *
 import numpy as np
@@ -10,8 +25,7 @@ import ingest
 
 class Loom:
     def __init__(self, file_path):
-        if not os.path.exists(file_path):
-		          raise IOError(f"File '{file_path}' not found")
+
         self.loom = loompy.connect(file_path)
         self.file_name, self.filetype = os.path.splitext(file_path)
 
@@ -55,7 +69,6 @@ class Loom:
         Returns:
         ------
 		    transformed_data (List[Gene]): A list of Gene objects
-
         """
         transformed_data=[]
         for index in selection:

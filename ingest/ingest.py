@@ -1,4 +1,5 @@
 from typing import Union, Generator, Dict, List, Tuple
+import time
 
 from google.cloud import firestore
 import numpy as np
@@ -6,7 +7,7 @@ from gene_data_model import Gene
 import pprint
 
 class IngestService:
-    def __init__(self, file_path, file_type_class):
+    def __init__(self,extract_fn, transform_fn):
         """Initializes variables in ingest service.
 
         Args:
@@ -17,16 +18,20 @@ class IngestService:
         Returns:
             Nothing
         """
-        if not os.path.exists(file_path):
-		          raise IOError(f"File '{file_path}' not found")
-        file_type_class = file_type_class(file_path)
-        self.extract = file_type_class.extraxt
-        self.transform = file_type_class.transform
+        self.extract = extract_fn
+        self.transform = transform_fn
         self.db = firestore.Client()
 
 
     def load(self, list_of_transformed_data: List[Gene]) -> None:
-        """
+        """Loads data into firestore
+
+        Args:
+            list_of_transformed_data (List[Gene]): A list of object type Gene
+                that's stored into Firestore
+
+        Returns:
+            Nothing
         """
         batch = self.db.batch()
         for transformed_data in list_of_transformed_data:
@@ -45,46 +50,8 @@ class IngestService:
             transformed_data = self.transform(*data)
             self.load(transformed_data)
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog ='ingest.py',
-        description= __doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
 
-    #Positional argument
-    parser.add_argument(
-        "file-path",
-        help='Absolute or relative path to expression file'
-    )
-
-
-    subargs = args.add_subparsers()
-
-    parser_ingest_expression_file = subargs.add_parser('ingest-expression-files',
-        dest='ingest_expression_files',
-        description = "Indicates that expression files will be ingested")
-
-    parser_ingest_expression_file.add_argument(
-        '--file-type',
-        required=True,
-        choices=['loom', 'dense-matrix', 'mtx'],
-        help = 'Indicates what type of expression file willbe ingest'
-    )
-
-    dense_mtx = subargs.add_parser('dense_matrx', help='Ingest expression file that is a dense matrix')
-    dense_mtx.add_argument('--dense-matrix', help = 'Indicates that expression file is a dense matrix file')
-
-    mtx = subargs.add_parser('mtx', help='Ingest expression file that is a mtx')
-    mtx.add_argument('mtx')
-    args = parser.parse_args()
-
-    parsed_args = args.parse_args()
-
-    if hasarrt(parsed_args.file_type, 'loom') :
-        ingest_loom = Ingest_Service(extract_fn, transform_fn)
-
-def connect(extract_fn, transform_fn) -> Ingest_Service:
+def connect(extract_fn, transform_fn) -> IngestService:
     """
     Connects to Ingest service.
 
@@ -96,4 +63,4 @@ def connect(extract_fn, transform_fn) -> Ingest_Service:
     Returns:
         An Ingest_Service instance
     """
-    return Ingest_Service(extract_fn, transform_fn)
+    return IngestService(extract_fn, transform_fn)
