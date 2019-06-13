@@ -5,18 +5,19 @@ Genes are mapped to expression values and cell  names and inputted into firestor
 
 PREREQUISITES
 You must have google could firestore installed, authenticated
- configured. 
+ configured.
 
 EXAMPLES
 # Takes dense file and stores it into firestore
-python parallel_processing_ingest_dense_matrix.py <file path>
-$ python parallel_processing_ingest_dense_matrix.py --file-path ../tests/data/dense_matrix_19_genes_100k_cells.txt
+$ python dense_matrix.py <file path>
+$ python dense_matrix.py ../tests/data/dense_matrix_19_genes_100k_cells.txt
 """
 import argparse
 from typing import *
 import numpy as np
 import sys
 import os
+from itertools import islice
 
 from gene_data_model import Gene
 import ingest
@@ -29,21 +30,32 @@ class Dense():
         self.cell_names = self.file.readline()[1:1000]
         self.file_name, self.filetype = os.path.splitext(file_path)
 
-    def extract(file, size=500):
+    def extract(self, size=500):
         while True:
-            next_lines = list(islice(file, number_of_lines))
+            next_lines = list(islice(self.file, size))
             if not next_lines:
                 break
             yield next_lines
 
-    def transform(lines):
+    def transform(self, *lines):
+        """Transforms dense matrix into firestore data model
+
+        Args:
+            lines : List[str]
+                Lines from dense matrix file
+
+        Returns:
+        ------
+		    transformed_data : List[Gene]
+                A list of Gene objects
+        """
         transformed_data = []
         for line in lines:
             compute = line.rstrip('\n').split(',')
             expression_scores = [float(x) for x in compute[1:1000]]
             gene_model = Gene(compute[0], self.file_name, self.filetype,
             expression_scores = expression_scores,
-            cell_names = self.cell_name)
+            cell_names = self.cell_names)
             transformed_data.append(gene_model.gene)
         return transformed_data
 
@@ -62,15 +74,15 @@ class Dense():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog ='dense_matrix.py',
-        description= __doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        prog = 'dense_matrix.py',
+        description = __doc__,
+        formatter_class = argparse.RawDescriptionHelpFormatter
     )
 
     #Positional argument
     parser.add_argument(
-        "dense-matrix",
-        help='Absolute or relative path to expression file'
+        "dense_matrix",
+        help ='Absolute or relative path to expression file'
     )
     args = parser.parse_args()
 

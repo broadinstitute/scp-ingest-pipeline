@@ -10,7 +10,8 @@ You must have google could firestore installed, authenticated
 
 EXAMPLES
 # Takes loom file and stores it into firestore
-$ python ingest_loom.py ../tests/L5_All.agg.loom
+$ python ingest_loom.py <path to loom file>
+$ python ingest_loom.py ../tests/data/L5_All.agg.loom
 """
 
 import argparse
@@ -68,7 +69,8 @@ class Loom:
 
         Returns:
         ------
-		    transformed_data (List[Gene]): A list of Gene objects
+		    transformed_data : List[Gene]
+                A list of Gene objects
         """
         transformed_data=[]
         for index in selection:
@@ -76,7 +78,7 @@ class Loom:
             expression_scores = [float(i) for i in view[position, 0:20]]
             gene_model = Gene(view.ra.Gene[index-ix], self.file_name, self.filetype,
             gene_id = view.ra.Accession[position],
-            expression_scores=expression_scores)
+            expression_scores = expression_scores)
             transformed_data.append(gene_model.gene)
         return transformed_data
 
