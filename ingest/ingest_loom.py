@@ -5,8 +5,7 @@ This CLI passes extract and transforms functions into  ingest service thereby
 allowing the loom file to be ingested into Firestore.
 
 PREREQUISITES
-You must have google could firestore installed, authenticated
- configured.
+Must have python 3.6 or higher.
 
 EXAMPLES
 # Takes loom file and stores it into firestore

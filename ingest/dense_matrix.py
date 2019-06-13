@@ -4,8 +4,7 @@ DESCRIPTION
 Genes are mapped to expression values and cell  names and inputted into firestore
 
 PREREQUISITES
-You must have google could firestore installed, authenticated
- configured.
+Must have python 3.6 or higher.
 
 EXAMPLES
 # Takes dense file and stores it into firestore
@@ -30,7 +29,7 @@ class Dense():
         self.cell_names = self.file.readline()[1:1000]
         self.file_name, self.filetype = os.path.splitext(file_path)
 
-    def extract(self, size=500):
+    def extract(self, size = 500):
         while True:
             next_lines = list(islice(self.file, size))
             if not next_lines:

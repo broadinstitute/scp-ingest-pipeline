@@ -1,3 +1,27 @@
+"""
+Ingest Service for expression files and extentually metadata and cluster files
+into firestore.
+
+DESCRIPTION
+This module currently takes in extract and transform functions from file types
+then uploads them into Firestore.
+
+PREREQUISITES
+You must have google could Firestore installed, authenticated
+ configured. Must have python 3.6 or higher.
+
+EXAMPLES
+# Takes expression file and stores it into firestore
+From expression file:
+import ingest
+ingest.connect(<extract function>, <transform function>)
+ingest.ingest()
+Ex:
+import ingest
+ingest_service = ingest.connect(self.extract, self.transform)
+ingest_service.ingest()
+"""
+
 from typing import Union, Generator, Dict, List, Tuple
 import time
 
@@ -11,9 +35,10 @@ class IngestService:
         """Initializes variables in ingest service.
 
         Args:
-            extract_fn:  A function that extracts data for the given file
-            transform_fn: A function that transforms extracted data into db
-                datamodel
+            extract_fn:
+                A function that extracts data for the given file
+            transform_fn:
+                A function that transforms extracted data into db datamodel
 
         Returns:
             Nothing
@@ -27,8 +52,8 @@ class IngestService:
         """Loads data into firestore
 
         Args:
-            list_of_transformed_data (List[Gene]): A list of object type Gene
-                that's stored into Firestore
+            list_of_transformed_data : List[Gene]
+                A list of object type Gene that's stored into Firestore
 
         Returns:
             Nothing
@@ -44,7 +69,14 @@ class IngestService:
 
 
     def ingest(self):
-        """
+        """ Ingests files. Calls provided extract and transform functions. Then
+         loads data into firestore.
+
+        Args:
+            None
+
+        Returns:
+            Nothing
         """
         for data in self.extract():
             transformed_data = self.transform(*data)

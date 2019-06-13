@@ -1,3 +1,13 @@
+"""
+Creates a gene data model for Firestore
+
+DESCRIPTION
+This module currently takes in parameters from a file and creates a gene data
+model for Firesotre.
+
+PREREQUISITES
+Must have python 3.6 or higher.
+"""
 from typing import *
 
 
