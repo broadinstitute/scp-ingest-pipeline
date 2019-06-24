@@ -12,7 +12,7 @@ You must have google could Firestore installed, authenticated
 
 EXAMPLES
 # Takes expression file and stores it into firestore
-From expression file:
+From python expression file:
 import ingest
 ingest.connect(<extract function>, <transform function>)
 ingest.ingest()
@@ -21,17 +21,27 @@ import ingest
 ingest_service = ingest.connect(self.extract, self.transform)
 ingest_service.ingest()
 """
-
+import argparse
 from typing import Union, Generator, Dict, List, Tuple
 import time
+import os
 
 from google.cloud import firestore
 import numpy as np
 from gene_data_model import Gene
 import pprint
+from ingest_loom import Loom
+from mtx import Mtx
+from dense_matrix import Dense
 
-class IngestService:
-    def __init__(self,extract_fn, transform_fn):
+# Ingest file types
+
+EXPRESSION_FILE_TYPES = ['loom', 'dense', 'mtx']
+
+
+class IngestService(object):
+    def __init__(self, *, matrix_file: str, matrix_file_type: str,
+        matrix_bundle: List[str] =None):
         """Initializes variables in ingest service.
 
         Args:
@@ -43,13 +53,29 @@ class IngestService:
         Returns:
             Nothing
         """
-        self.extract = extract_fn
-        self.transform = transform_fn
+        if not os.path.exists(matrix_file):
+		          raise IOError(f"File '{file_path}' not found")
+        self.matrix_file_path=  matrix_file
+        self.matrix_file_type =  matrix_file_type
+        self.matrix_bundle = matrix_bundle
+        self.matrix = self.initialize_file_connection()
         self.db = firestore.Client()
 
 
-    def load(self, list_of_transformed_data: List[Gene]) -> None:
-        """Loads data into firestore
+    def initialize_file_connection(self):
+        file_connections = {
+                'loom': Loom,
+                'dense': Dense,
+                'mtx' : Mtx,
+                }
+
+        return(file_connections.get(self.matrix_file_type)(self.matrix_file_path))
+
+    def close_matrix(self):
+        self.matrix.close()
+
+    def load_expression_data(self, list_of_transformed_data: List[Gene]) -> None:
+        """Loads expression data into firestore
 
         Args:
             list_of_transformed_data : List[Gene]
@@ -68,9 +94,10 @@ class IngestService:
                     time.sleep(.2)
 
 
-    def ingest(self):
-        """ Ingests files. Calls provided extract and transform functions. Then
-         loads data into firestore.
+
+    def ingest_expression(self):
+        """ Ingests expression files. Calls file type's extract and transform
+        functions. Then loads data into firestore.
 
         Args:
             None
@@ -78,21 +105,57 @@ class IngestService:
         Returns:
             Nothing
         """
-        for data in self.extract():
-            transformed_data = self.transform(*data)
-            self.load(transformed_data)
+        for data in self.matrix.extract():
+            transformed_data = self.matrix.transform_expression_data(*data)
+            self.load_expression_data(transformed_data)
+
+def parse_args():
+    args = argparse.ArgumentParser(
+    prog = 'ingest.py',
+    description= __doc__,
+    formatter_class = argparse.RawDescriptionHelpFormatter)
+
+    args.add_argument('--matrix-file',
+    help='Absolute or relative path to expression file. \
+    For 10x data this is the .mtx file',
+    )
+
+    subargs = args.add_subparsers()
+
+    ## Ingest Expression files subparser
+    parser_ingest_xpression = subargs.add_parser('ingest_expression',
+        help='Indicates which expression files are being ingested')
+
+    parser_ingest_xpression.add_argument('--matrix-file-type',
+        choices= EXPRESSION_FILE_TYPES, type=str.lower,
+        required = True,
+        help='Type of expression file that is ingested'
+    )
+    parser_ingest_xpression.add_argument(
+        '--matrix-bundle', default=None, nargs='+',
+        help='Names of .genes.tsv, and .barcodes.tsv files'
+    )
+
+    parsed_args = args.parse_args()
+
+    if(parsed_args.matrix_file_type == 'mtx'):
+        if parsed_args.matrix_bundle is None:
+            raise ValueError('Mtx files must include .genes.tsv, and \
+            .barcodes.tsv files. See --help for more information')
+
+    return parsed_args
+
+def main():
+    """This function handles the actual logic of this script."""
+
+    opts = vars(parse_args())
+    print(f'{opts}')
+    ingest = IngestService(**opts)
+
+    if hasattr(ingest, 'ingest_expression'):
+        getattr(ingest, 'ingest_expression')()
 
 
-def connect(extract_fn, transform_fn) -> IngestService:
-    """
-    Connects to Ingest service.
 
-    Args:
-        extract_fn :  A function that extracts data for the given file
-        transform_fn: A function that transforms extracted data into db datamodel
-
-
-    Returns:
-        An Ingest_Service instance
-    """
-    return IngestService(extract_fn, transform_fn)
+if __name__ == "__main__":
+    main()

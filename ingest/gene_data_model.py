@@ -48,3 +48,12 @@ class Gene:
                                     }
                         }
                 }}
+    def get_expression_scores(self):
+        return self.gene.get('Gene', {}).get(self.name, {}).get('gene_expression')
+
+    def get_gene_expression(self):
+        return self.gene.get('Gene', {}).get(self.name, {}).get('gene_expression')
+
+    def get_without_gene_expression(self):
+        without_gene_expression = self.gene.get('Gene', {}).get(self.name, {}).pop('gene_expression')
+        return without_gene_expression

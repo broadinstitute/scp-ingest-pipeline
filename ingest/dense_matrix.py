@@ -19,10 +19,10 @@ import os
 from itertools import islice
 
 from gene_data_model import Gene
-import ingest
 
 class Dense():
     def __init__(self, file_path):
+        print('hi')
         if not os.path.exists(file_path):
 		          raise IOError(f"File '{file_path}' not found")
         self.file = open(file_path,'r')
@@ -36,7 +36,7 @@ class Dense():
                 break
             yield next_lines
 
-    def transform(self, *lines):
+    def transform_expression_data(self, *lines):
         """Transforms dense matrix into firestore data model
 
         Args:
@@ -57,34 +57,3 @@ class Dense():
             cell_names = self.cell_names)
             transformed_data.append(gene_model.gene)
         return transformed_data
-
-    def ingest(self) -> None:
-        """ Ingests dense matrix file via Ingest_Service
-
-        Args:
-            Nothing
-        Returns:
-        ------
-            Nothing
-        """
-        ingest_service = ingest.connect(self.extract, self.transform)
-        ingest_service.ingest()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog = 'dense_matrix.py',
-        description = __doc__,
-        formatter_class = argparse.RawDescriptionHelpFormatter
-    )
-
-    #Positional argument
-    parser.add_argument(
-        "dense_matrix",
-        help ='Absolute or relative path to expression file'
-    )
-    args = parser.parse_args()
-
-    dense_matrix_object = Dense(args.dense_matrix)
-    dense_matrix_object.ingest()
-    dense_matrix_object.loom.close()

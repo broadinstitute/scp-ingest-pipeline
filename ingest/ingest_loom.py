@@ -21,7 +21,6 @@ import os
 
 import loompy
 from gene_data_model import Gene
-import ingest
 
 class Loom:
     def __init__(self, file_path):
@@ -82,33 +81,33 @@ class Loom:
         return transformed_data
 
 
-    def ingest(self) -> None:
-        """ Ingests loom file via Ingest_Service
+    # def ingest(self) -> None:
+    #     """ Ingests loom file via Ingest_Service
+    #
+    #     Args:
+    #         Nothing
+    #     Returns:
+    #     ------
+    #         Nothing
+    #     """
+    #     ingest_service = ingest.connect(self.extract, self.transform)
+    #     ingest_service.ingest()
 
-        Args:
-            Nothing
-        Returns:
-        ------
-            Nothing
-        """
-        ingest_service = ingest.connect(self.extract, self.transform)
-        ingest_service.ingest()
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog ='ingest_loom.py',
-        description= __doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-
-    #Positional argument
-    parser.add_argument(
-        "loom_file",
-        help='Absolute or relative path to loom expression file'
-    )
-    args = parser.parse_args()
-
-    loom_object = Loom(args.loom_file)
-    loom_object.ingest()
-    loom_object.loom.close()
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser(
+#         prog ='ingest_loom.py',
+#         description= __doc__,
+#         formatter_class=argparse.RawDescriptionHelpFormatter
+#     )
+#
+#     #Positional argument
+#     parser.add_argument(
+#         "loom_file",
+#         help='Absolute or relative path to loom expression file'
+#     )
+#     args = parser.parse_args()
+#
+#     loom_object = Loom(args.loom_file)
+#     loom_object.ingest()
+#     loom_object.loom.close()
