@@ -14,12 +14,13 @@ EXAMPLES
 # Takes expression file and stores it into firestore
 From python expression file:
 import ingest
-ingest.connect(<extract function>, <transform function>)
-ingest.ingest()
-Ex:
+$python ingest.py --matrix-file <matrix file> ingest_expression
+--matrix-file-type <expression matrix file type>
+
+Ex: Ingest dense file
 import ingest
-ingest_service = ingest.connect(self.extract, self.transform)
-ingest_service.ingest()
+$python ingest.py --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt
+ingest_expression --matrix-file-type dense
 """
 import argparse
 from typing import Union, Generator, Dict, List, Tuple
@@ -63,6 +64,13 @@ class IngestService(object):
 
 
     def initialize_file_connection(self):
+        """ Initializes connection to file.
+
+        Args:
+            None
+        Returns:
+            File object.
+        """
         file_connections = {
                 'loom': Loom,
                 'dense': Dense,
@@ -72,17 +80,24 @@ class IngestService(object):
         return(file_connections.get(self.matrix_file_type)(self.matrix_file_path))
 
     def close_matrix(self):
+        """ Closes connection to file.
+
+        Args:
+            None
+        Returns:
+            None
+        """
         self.matrix.close()
 
     def load_expression_data(self, list_of_transformed_data: List[Gene]) -> None:
-        """Loads expression data into firestore
+        """ Loads expression data into firestore
 
         Args:
             list_of_transformed_data : List[Gene]
                 A list of object type Gene that's stored into Firestore
 
         Returns:
-            Nothing
+            None
         """
         batch = self.db.batch()
         for transformed_data in list_of_transformed_data:
@@ -95,7 +110,7 @@ class IngestService(object):
 
 
 
-    def ingest_expression(self):
+    def ingest_expression(self) -> None:
         """ Ingests expression files. Calls file type's extract and transform
         functions. Then loads data into firestore.
 
@@ -103,13 +118,23 @@ class IngestService(object):
             None
 
         Returns:
-            Nothing
+            None
         """
         for data in self.matrix.extract():
             transformed_data = self.matrix.transform_expression_data(*data)
             self.load_expression_data(transformed_data)
 
-def parse_args():
+def parse_arguments():
+    """ Parses and validates input arguments.
+
+    Args:
+        None
+
+    Returns:
+        parsed_args: Namespace
+            Validated input arguments
+
+    """
     args = argparse.ArgumentParser(
     prog = 'ingest.py',
     description= __doc__,
@@ -122,18 +147,20 @@ def parse_args():
 
     subargs = args.add_subparsers()
 
-    ## Ingest Expression files subparser
+    ## Ingest expression files subparser
     parser_ingest_xpression = subargs.add_parser('ingest_expression',
-        help='Indicates which expression files are being ingested')
+        help='Indicates that expression files are being ingested')
 
     parser_ingest_xpression.add_argument('--matrix-file-type',
         choices= EXPRESSION_FILE_TYPES, type=str.lower,
         required = True,
-        help='Type of expression file that is ingested'
+        help='Type of expression file that is ingested. If mtx files are being \
+        ingested, .genes.tsv and .barcodes.tsv files must be included using \
+        --matrix-bundle. See --help for more information'
     )
     parser_ingest_xpression.add_argument(
         '--matrix-bundle', default=None, nargs='+',
-        help='Names of .genes.tsv, and .barcodes.tsv files'
+        help='Names of .genes.tsv and .barcodes.tsv files'
     )
 
     parsed_args = args.parse_args()
@@ -145,12 +172,18 @@ def parse_args():
 
     return parsed_args
 
-def main():
-    """This function handles the actual logic of this script."""
+def main() -> None:
+    """This function handles the actual logic of this script.
 
-    opts = vars(parse_args())
-    print(f'{opts}')
-    ingest = IngestService(**opts)
+        Args:
+            None
+
+        Returns:
+            None
+    """
+
+    arugments = vars(parse_arguments())
+    ingest = IngestService(**arugments)
 
     if hasattr(ingest, 'ingest_expression'):
         getattr(ingest, 'ingest_expression')()
