@@ -75,7 +75,7 @@ class IngestService(object):
         """
         file_connections = {
             'loom': Loom,
-            'mtx': Mtx,
+            'dense': Dense,
         }
         if self.matrix_file_type == 'mtx':
             return Mtx(self.matrix_file_path, self.matrix_bundle)
@@ -111,13 +111,13 @@ class IngestService(object):
             for collection, document in transformed_data.items():
                 for gene, data in document.items():
                     doc_ref = self.db.collection(collection).document()
-                for subcollection in firestore_subcollections:
-                    if subcollection in data:
-                        data_subcollection = data.pop(subcollection)
-                        doc_subcol_ref = doc_ref.collection(
-                            subcollection).document()
-        batch.set(doc_ref, data)
-        batch.set(doc_subcol_ref, data_subcollection)
+                    for subcollection in firestore_subcollections:
+                        if subcollection in data:
+                            data_subcollection = data.pop(subcollection)
+                            doc_subcol_ref = doc_ref.collection(
+                                subcollection).document()
+            batch.set(doc_ref, data)
+            batch.set(doc_subcol_ref, data_subcollection)
         batch.commit()
 
     def ingest_expression(self) -> None:
@@ -132,10 +132,12 @@ class IngestService(object):
         """
         if self.matrix_bundle is not None:
             self.matrix.extract()
-            transformed_data = self.matrix.transform_expression_data()
+            transformed_data = self.matrix.transform_expression_data_by_gene()
         else:
             for data in self.matrix.extract():
-                transformed_data = self.matrix.transform_expression_data(*data)
+                transformed_data = self.matrix.transform_expression_data_by_gene(
+                    *data)
+                print(transformed_data)
         self.load_expression_data(transformed_data)
         self.close_matrix()
 
@@ -183,11 +185,13 @@ def parse_arguments():
     )
 
     parsed_args = args.parse_args()
-    if parsed_args.matrix_bundle is None:
-        raise ValueError(
-            ' Missin argument: --matrix-bundle. Mtx files must include '
-            '.genes.tsv, and .barcodes.tsv files. See --help for more '
-            'information')
+    print(parsed_args)
+    if parsed_args.matrix_file_type == 'mtx':
+        if parsed_args.matrix_bundle == None:
+            raise ValueError(
+                ' Missin argument: --matrix-bundle. Mtx files must include '
+                '.genes.tsv, and .barcodes.tsv files. See --help for more '
+                'information')
 
     return parsed_args
 
