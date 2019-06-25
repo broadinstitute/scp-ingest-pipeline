@@ -55,5 +55,13 @@ class Gene:
         }}
 
     def get_expression_scores(self):
+        """Get expression scores
+
+        Args:
+            None
+
+        Returns:
+            expression scores as list
+        """
         return self.gene.get('Gene', {}).get(self.name, {}).get(
             'gene_expression')['expression_scores']
