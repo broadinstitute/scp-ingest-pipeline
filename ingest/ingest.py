@@ -2,8 +2,8 @@
 files into firestore.
 
 DESCRIPTION
-This module currently takes in extract and transform functions from file types
-then uploads them into Firestore.
+This module currently takes in extract and transform functions from different
+file types then uploads them into Firestore.
 
 PREREQUISITES
 You must have google could Firestore installed, authenticated
@@ -17,9 +17,13 @@ $python ingest.py --matrix-file <matrix file> ingest_expression
 --matrix-file-type <expression matrix file type>
 
 Ex: Ingest dense file
-import ingest
 $python ingest.py --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt
-ingest_expression --matrix-file-type dense
+    ingest_expression --matrix-file-type dense
+
+Ex. Ingest mtx files
+python ingest.py --matrix-file ../tests/data/matrix.mtx ingest_expression
+    --matrix-file-type mtx --matrix-bundle ../tests/data/genes.tsv
+     ../tests/data/barcodes.tsv
 """
 import argparse
 import os
@@ -56,6 +60,7 @@ class IngestService(object):
             raise IOError(f"File '{file_path}' not found")
         self.matrix_file_path = matrix_file
         self.matrix_file_type = matrix_file_type
+        print(matrix_file_type)
         self.matrix_bundle = matrix_bundle
         self.matrix = self.initialize_file_connection()
         self.db = firestore.Client()
@@ -70,11 +75,13 @@ class IngestService(object):
         """
         file_connections = {
             'loom': Loom,
-            'dense': Dense,
             'mtx': Mtx,
         }
-
-        return(file_connections.get(self.matrix_file_type)(self.matrix_file_path))
+        if self.matrix_file_type == 'mtx':
+            return Mtx(self.matrix_file_path, self.matrix_bundle)
+        else:
+            return(
+                file_connections.get(self.matrix_file_type)(self.matrix_file_path))
 
     def close_matrix(self):
         """Closes connection to file.
@@ -96,15 +103,22 @@ class IngestService(object):
         Returns:
             None
         """
+        firestore_subcollections = ['gene_expression', 'all_cells', '1000',
+                                    '10000', '20000', '100000']
         batch = self.db.batch()
+
         for transformed_data in list_of_transformed_data:
             for collection, document in transformed_data.items():
                 for gene, data in document.items():
-                    gene_doc_ref = self.db.collection(
-                        collection).document(gene)
-                    batch.set(gene_doc_ref, data)
-                    batch.commit()
-                    time.sleep(.2)
+                    doc_ref = self.db.collection(collection).document()
+                for subcollection in firestore_subcollections:
+                    if subcollection in data:
+                        data_subcollection = data.pop(subcollection)
+                        doc_subcol_ref = doc_ref.collection(
+                            subcollection).document()
+        batch.set(doc_ref, data)
+        batch.set(doc_subcol_ref, data_subcollection)
+        batch.commit()
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -116,9 +130,14 @@ class IngestService(object):
         Returns:
             None
         """
-        for data in self.matrix.extract():
-            transformed_data = self.matrix.transform_expression_data(*data)
-            self.load_expression_data(transformed_data)
+        if self.matrix_bundle is not None:
+            self.matrix.extract()
+            transformed_data = self.matrix.transform_expression_data()
+        else:
+            for data in self.matrix.extract():
+                transformed_data = self.matrix.transform_expression_data(*data)
+        self.load_expression_data(transformed_data)
+        self.close_matrix()
 
 
 def parse_arguments():
@@ -138,14 +157,14 @@ def parse_arguments():
 
     args.add_argument('--matrix-file',
                       help='Absolute or relative path to expression file. \
-                      For 10x data this is the .mtx file',
-                      )
+                      For 10x data this is the .mtx file')
 
     subargs = args.add_subparsers()
 
     # Ingest expression files subparser
     parser_ingest_xpression = subargs.add_parser('ingest_expression',
-                                                 help='Indicates that expression files are being ingested')
+                                                 help='Indicates that expression'
+                                                 ' files are being ingested')
 
     matrix_file_type_txt = 'Type of expression file that is ingested. If mtx \
     files are being ingested, .genes.tsv and .barcodes.tsv files must be \
@@ -164,11 +183,11 @@ def parse_arguments():
     )
 
     parsed_args = args.parse_args()
-
-    if(parsed_args.matrix_file_type == 'mtx'):
-        if parsed_args.matrix_bundle is None:
-            raise ValueError('Mtx files must include .genes.tsv, and \
-            .barcodes.tsv files. See --help for more information')
+    if parsed_args.matrix_bundle is None:
+        raise ValueError(
+            ' Missin argument: --matrix-bundle. Mtx files must include '
+            '.genes.tsv, and .barcodes.tsv files. See --help for more '
+            'information')
 
     return parsed_args
 
@@ -182,9 +201,8 @@ def main() -> None:
     Returns:
         None
     """
-
-    arugments = vars(parse_arguments())
-    ingest = IngestService(**arugments)
+    arguments = vars(parse_arguments())
+    ingest = IngestService(**arguments)
 
     if hasattr(ingest, 'ingest_expression'):
         getattr(ingest, 'ingest_expression')()

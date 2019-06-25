@@ -27,7 +27,7 @@ class Dense():
         if not os.path.exists(file_path):
             raise IOError(f"File '{file_path}' not found")
         self.file = open(file_path, 'r')
-        self.cell_names = self.file.readline()[1:1000]
+        self.cell_names = self.file.readline().split(',')[1:1000]
         self.file_name, self.filetype = os.path.splitext(file_path)
 
     def extract(self, size: int = 500) -> List[str]:
@@ -47,8 +47,8 @@ class Dense():
                 break
             yield next_lines
 
-    def transform_expression_data(self, *lines: List[str]) -> List[Gene]:
-        """Transforms dense matrix into firestore data model.
+    def transform_expression_data_by_gene(self, *lines: List[str]) -> List[Gene]:
+        """Transforms dense matrix into firestore data model for genes.
 
         Args:
             lines : List[str]
@@ -67,3 +67,6 @@ class Dense():
                               cell_names=self.cell_names)
             transformed_data.append(gene_model.gene)
         return transformed_data
+
+    def close(self):
+        self.file.close()
