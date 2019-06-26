@@ -20,7 +20,7 @@ $python ingest.py --matrix-file <matrix file> ingest_expression
 $python ingest.py --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt
     ingest_expression --matrix-file-type dense
 
-Ex. Ingest mtx files
+# Ingest MTX file bundle
 python ingest.py --matrix-file ../tests/data/matrix.mtx ingest_expression
     --matrix-file-type mtx --matrix-bundle ../tests/data/genes.tsv
      ../tests/data/barcodes.tsv
