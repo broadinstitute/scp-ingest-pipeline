@@ -1,15 +1,11 @@
-"""Command-line interface for ingesting dense matrixes into firestore.
+"""Module for ingesting dense matrix files
 
 DESCRIPTION
-Genes are mapped to expression values and cell  names and inputted into firestore
+Module provides extract and transforms function for gene expression data for
+an dense matrix.
 
 PREREQUISITES
 Must have python 3.6 or higher.
-
-EXAMPLES
-# Takes dense file and stores it into firestore
-$ python dense_matrix.py <file path>
-$ python dense_matrix.py ../tests/data/dense_matrix_19_genes_100k_cells.txt
 """
 import argparse
 import os
@@ -23,7 +19,6 @@ from gene_data_model import Gene
 
 class Dense():
     def __init__(self, file_path):
-        print('hi')
         if not os.path.exists(file_path):
             raise IOError(f"File '{file_path}' not found")
         self.file = open(file_path, 'r')

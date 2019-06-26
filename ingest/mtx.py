@@ -1,20 +1,14 @@
-"""Command-line interface for ingesting MTX
+"""Module for ingesting MTX
 
 DESCRIPTION
-This CLI provides extract and transforms function for gene expression data for
+This module provides extract and transforms function for gene expression data for
 an MTX file bundle. An MTX file bundle consists of A) an .mtx file in Matrix
 Market matrix coordinate format, B) a genes.tsv file, and a barcodes.tsv file.
 These are commonly provided from 10x Genomics v2.
 
 PREREQUISITES
-None
-
-EXAMPLES
-#  and load MTX matrix bundle
-$ python mtx_ingest.py --input-dir ../tests/data --matrix-bundle matrix.mtx genes.tsv barcodes.tsv
+Must have python 3.6 or higher.
 """
-
-
 import os
 import sys
 from typing import Dict, Generator, List, Tuple, Union

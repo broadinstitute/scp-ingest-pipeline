@@ -1,27 +1,24 @@
-"""Ingest Service for expression files and extentually metadata and cluster
+"""Ingest Service for expression files and eventually metadata and cluster
 files into firestore.
 
 DESCRIPTION
-This module currently takes in extract and transform functions from different
+This cli currently takes in extract and transform functions from different
 file types then uploads them into Firestore.
 
 PREREQUISITES
-You must have google could Firestore installed, authenticated
+You must have Google Cloud Firestore installed, authenticated
  configured. Must have python 3.6 or higher.
 
 EXAMPLES
 # Takes expression file and stores it into firestore
 From python expression file:
-import ingest
-$python ingest.py --matrix-file <matrix file> ingest_expression
---matrix-file-type <expression matrix file type>
 
-Ex: Ingest dense file
+#Ingest dense file
 $python ingest.py --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt
     ingest_expression --matrix-file-type dense
 
-Ex. Ingest mtx files
-python ingest.py --matrix-file ../tests/data/matrix.mtx ingest_expression
+#Ingest mtx files
+python ingest.py ingest_expression --matrix-file ../tests/data/matrix.mtx
     --matrix-file-type mtx --matrix-bundle ../tests/data/genes.tsv
      ../tests/data/barcodes.tsv
 """
@@ -57,7 +54,7 @@ class IngestService(object):
             Nothing
         """
         if not os.path.exists(matrix_file):
-            raise IOError(f"File '{file_path}' not found")
+            raise IOError(f"File '{matrix_file}' not found")
         self.matrix_file_path = matrix_file
         self.matrix_file_type = matrix_file_type
         print(matrix_file_type)
@@ -73,6 +70,7 @@ class IngestService(object):
         Returns:
             File object.
         """
+        # Dense file types not included because class declaration is different
         file_connections = {
             'loom': Loom,
             'dense': Dense,
@@ -137,7 +135,6 @@ class IngestService(object):
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
                     *data)
-                print(transformed_data)
         self.load_expression_data(transformed_data)
         self.close_matrix()
 
@@ -157,10 +154,6 @@ def parse_arguments():
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    args.add_argument('--matrix-file',
-                      help='Absolute or relative path to expression file. \
-                      For 10x data this is the .mtx file')
-
     subargs = args.add_subparsers()
 
     # Ingest expression files subparser
@@ -168,9 +161,14 @@ def parse_arguments():
                                                  help='Indicates that expression'
                                                  ' files are being ingested')
 
+    parser_ingest_xpression.add_argument('--matrix-file', required=True,
+                                         help='Absolute or relative path to '
+                                         'expression file.For 10x data this is '
+                                         'the .mtx file')
+
     matrix_file_type_txt = 'Type of expression file that is ingested. If mtx \
-    files are being ingested, .genes.tsv and .barcodes.tsv files must be \
-    included using --matrix-bundle. See - -help for more information'
+        files are being ingested, .genes.tsv and .barcodes.tsv files must be \
+        included using --matrix-bundle. See - -help for more information'
 
     parser_ingest_xpression.add_argument('--matrix-file-type',
                                          choices=EXPRESSION_FILE_TYPES,
@@ -179,17 +177,17 @@ def parse_arguments():
                                          help=matrix_file_type_txt
                                          )
 
-    parser_ingest_xpression.add_argument(
-        '--matrix-bundle', default=None, nargs='+',
-        help='Names of .genes.tsv and .barcodes.tsv files'
-    )
+    parser_ingest_xpression.add_argument('--matrix-bundle', default=None,
+                                         nargs='+', help='Names of .genes.tsv '
+                                         'and .barcodes.tsv files'
+                                         )
 
     parsed_args = args.parse_args()
     print(parsed_args)
     if parsed_args.matrix_file_type == 'mtx':
         if parsed_args.matrix_bundle == None:
             raise ValueError(
-                ' Missin argument: --matrix-bundle. Mtx files must include '
+                ' Missing argument: --matrix-bundle. Mtx files must include '
                 '.genes.tsv, and .barcodes.tsv files. See --help for more '
                 'information')
 

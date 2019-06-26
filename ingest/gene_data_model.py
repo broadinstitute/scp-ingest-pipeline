@@ -1,9 +1,9 @@
 """
-Creates a gene data model for Firestore
+Creates a gene data model.
 
 DESCRIPTION
-This module currently takes in parameters from a file and creates a gene data
-model for Firesotre.
+This module currently takes in parameters from a file and creates a data model
+for genes.
 
 PREREQUISITES
 Must have python 3.6 or higher.
@@ -13,9 +13,9 @@ from typing import *
 
 class Gene:
     def __init__(self, name: str, source_file_name: str, source_file_type: str, *,
-                 gene_id: str = '', study_accession: str = "", taxon_name: str = "",
-                 taxon_common_name: str = "", ncbi_taxid: str = "", genome_assembly_accession: str = "",
-                 genome_annotation: str = "", cell_names: List[str] = [], expression_scores: List[float] = []) -> None:
+                 gene_id: str = '', study_accession: str = '', taxon_name: str = '',
+                 taxon_common_name: str = '', ncbi_taxid: str = '', genome_assembly_accession: str = '',
+                 genome_annotation: str = '', cell_names: List[str] = [], expression_scores: List[float] = []) -> None:
 
         self.name = name
         self.gene_id = gene_id
@@ -61,7 +61,7 @@ class Gene:
             None
 
         Returns:
-            expression scores as list
+            Expression scores as list
         """
         return self.gene.get('Gene', {}).get(self.name, {}).get(
             'gene_expression')['expression_scores']
