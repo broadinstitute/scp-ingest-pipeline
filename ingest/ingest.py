@@ -186,7 +186,7 @@ def parse_arguments():
 
     parsed_args = args.parse_args()
     print(parsed_args)
-    if parsed_args.matrix_file_type == 'mtx':
+    if parsed_args.matrix_file_type == 'mtx' and parsed_args.matrix_bundle == None:
         if parsed_args.matrix_bundle == None:
             raise ValueError(
                 ' Missing argument: --matrix-bundle. Mtx files must include '
