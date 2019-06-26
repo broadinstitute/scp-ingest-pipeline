@@ -38,7 +38,7 @@ class Dense():
 
         Returns:
                 next_lines : List[str]
-                    A list(chunk) of rows of from dense matrix.
+                    A list (chunk) of rows from a dense matrix.
         """
         while True:
             next_lines = list(islice(self.file, size))
