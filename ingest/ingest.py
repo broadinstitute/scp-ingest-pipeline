@@ -13,17 +13,16 @@ EXAMPLES
 # Takes expression file and stores it into firestore
 
 #Ingest dense file
-$python ingest_expression ingest.py --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt
+$python ingest.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt
      --matrix-file-type dense
 
 #Ingest mtx files
-python ingest.py ingest_expression --matrix-file ../tests/data/matrix.mtx
+$python ingest.py ingest_expression --matrix-file ../tests/data/matrix.mtx
     --matrix-file-type mtx --matrix-bundle ../tests/data/genes.tsv
      ../tests/data/barcodes.tsv
 """
 import argparse
 import os
-import pprint
 import time
 from typing import Dict, Generator, List, Tuple, Union
 
@@ -31,7 +30,6 @@ import numpy as np
 from dense_matrix import Dense
 from gene_data_model import Gene
 from google.cloud import firestore
-from ingest_loom import Loom
 from mtx import Mtx
 
 # Ingest file types
@@ -56,7 +54,6 @@ class IngestService(object):
             raise IOError(f"File '{matrix_file}' not found")
         self.matrix_file_path = matrix_file
         self.matrix_file_type = matrix_file_type
-        print(matrix_file_type)
         self.matrix_bundle = matrix_bundle
         self.matrix = self.initialize_file_connection()
         self.db = firestore.Client()
@@ -182,7 +179,6 @@ def parse_arguments():
                                          )
 
     parsed_args = args.parse_args()
-    print(parsed_args)
     if parsed_args.matrix_file_type == 'mtx' and parsed_args.matrix_bundle == None:
         if parsed_args.matrix_bundle == None:
             raise ValueError(
