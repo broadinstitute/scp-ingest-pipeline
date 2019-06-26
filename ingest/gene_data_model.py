@@ -1,4 +1,4 @@
-"""
+"""Creates a gene data model for Firestore
 Creates a gene data model for Firestore
 
 DESCRIPTION
