@@ -189,7 +189,7 @@ def parse_arguments():
     if parsed_args.matrix_file_type == 'mtx':
         if parsed_args.matrix_bundle == None:
             raise ValueError(
-                ' Missin argument: --matrix-bundle. Mtx files must include '
+                ' Missing argument: --matrix-bundle. Mtx files must include '
                 '.genes.tsv, and .barcodes.tsv files. See --help for more '
                 'information')
 
