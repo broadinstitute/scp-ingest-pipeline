@@ -1,7 +1,7 @@
 """Command-line interface for ingesting dense matrixes into firestore.
 
 DESCRIPTION
-Genes are mapped to expression values and cell  names and inputted into firestore
+Genes are mapped to expression values and cell names and inputted into Firestore
 
 PREREQUISITES
 Must have python 3.6 or higher.
