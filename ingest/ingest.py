@@ -11,11 +11,10 @@ You must have Google Cloud Firestore installed, authenticated
 
 EXAMPLES
 # Takes expression file and stores it into firestore
-From python expression file:
 
 #Ingest dense file
-$python ingest.py --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt
-    ingest_expression --matrix-file-type dense
+$python ingest_expression ingest.py --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt
+     --matrix-file-type dense
 
 #Ingest mtx files
 python ingest.py ingest_expression --matrix-file ../tests/data/matrix.mtx
@@ -70,7 +69,7 @@ class IngestService(object):
         Returns:
             File object.
         """
-        # Dense file types not included because class declaration is different
+        # Mtx file types not included because class declaration is different
         file_connections = {
             'loom': Loom,
             'dense': Dense,
@@ -184,7 +183,7 @@ def parse_arguments():
 
     parsed_args = args.parse_args()
     print(parsed_args)
-    if parsed_args.matrix_file_type == 'mtx':
+    if parsed_args.matrix_file_type == 'mtx' and parsed_args.matrix_bundle == None:
         if parsed_args.matrix_bundle == None:
             raise ValueError(
                 ' Missing argument: --matrix-bundle. Mtx files must include '

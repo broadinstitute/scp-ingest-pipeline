@@ -52,11 +52,9 @@ class Mtx:
         for i, j, exp_score in zip(self.matrix_file.row, self.matrix_file.col, self.matrix_file.data):
             gene_id, gene = self.genes[i].split('\t')
             exp_score = float(exp_score)
-            print(exp_score)
             if gene in exp_by_gene:
                 # Append new score to 'expression_scores' key in Gene object
                 exp_by_gene[gene].get_expression_scores().append(exp_score)
-                print (exp_by_gene[gene])
             else:
                 # Create new key value pair with value being Gene object
                 exp_by_gene[gene] = Gene(gene, self.mtx_path,

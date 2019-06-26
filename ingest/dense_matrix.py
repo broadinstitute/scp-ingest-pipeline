@@ -19,8 +19,6 @@ from gene_data_model import Gene
 
 class Dense():
     def __init__(self, file_path):
-        if not os.path.exists(file_path):
-            raise IOError(f"File '{file_path}' not found")
         self.file = open(file_path, 'r')
         self.cell_names = self.file.readline().split(',')[1:1000]
         self.file_name, self.filetype = os.path.splitext(file_path)
@@ -34,7 +32,7 @@ class Dense():
 
         Returns:
                 next_lines : List[str]
-                    A list(chunk) of rows of from dense matrix.
+                    A list (chunk) of rows from a dense matrix.
         """
         while True:
             next_lines = list(islice(self.file, size))
