@@ -23,7 +23,6 @@ from gene_data_model import Gene
 
 class Dense():
     def __init__(self, file_path):
-        print('hi')
         if not os.path.exists(file_path):
             raise IOError(f"File '{file_path}' not found")
         self.file = open(file_path, 'r')
