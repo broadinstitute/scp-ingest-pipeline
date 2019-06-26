@@ -1,4 +1,4 @@
-"""Ingest Service for expression files and extentually metadata and cluster
+"""Ingest Service for expression files and eventually metadata and cluster
 files into firestore.
 
 DESCRIPTION
