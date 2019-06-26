@@ -13,13 +13,10 @@ EXAMPLES
 # Takes expression file and stores it into firestore
 
 #Ingest dense file
-$python ingest.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt
-     --matrix-file-type dense
+$python ingest.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 #Ingest mtx files
-$python ingest.py ingest_expression --matrix-file ../tests/data/matrix.mtx
-    --matrix-file-type mtx --matrix-bundle ../tests/data/genes.tsv
-     ../tests/data/barcodes.tsv
+$python ingest.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --matrix-bundle ../tests/data/genes.tsv ../tests/data/barcodes.tsv
 """
 import argparse
 import os
@@ -27,13 +24,13 @@ import time
 from typing import Dict, Generator, List, Tuple, Union
 
 import numpy as np
-from dense_matrix import Dense
+from dense import Dense
 from gene_data_model import Gene
 from google.cloud import firestore
 from mtx import Mtx
 
 # Ingest file types
-EXPRESSION_FILE_TYPES = ['loom', 'dense', 'mtx']
+EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 
 
 class IngestService(object):
@@ -42,10 +39,14 @@ class IngestService(object):
         """Initializes variables in ingest service.
 
         Args:
-            extract_fn:
-                A function that extracts data for the given file
-            transform_fn:
-                A function that transforms extracted data into db datamodel
+            matrix_file: str,
+                For expression files, the relative or Absolute path to the
+                    matrix file
+            matrix_file_type: str,
+                The matrix file type
+            matrix_bundle: List[str]
+                Used for MTX files. The matrix bundle consister of the barcode
+                    and gene files. 
 
         Returns:
             Nothing
@@ -68,8 +69,7 @@ class IngestService(object):
         """
         # Mtx file types not included because class declaration is different
         file_connections = {
-            'loom': Loom,
-            'dense': Dense,
+            'dense': Dense
         }
         if self.matrix_file_type == 'mtx':
             return Mtx(self.matrix_file_path, self.matrix_bundle)
