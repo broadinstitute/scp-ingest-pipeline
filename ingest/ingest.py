@@ -16,7 +16,7 @@ import ingest
 $python ingest.py --matrix-file <matrix file> ingest_expression
 --matrix-file-type <expression matrix file type>
 
-Ex: Ingest dense file
+# Ingest dense matrix
 $python ingest.py --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt
     ingest_expression --matrix-file-type dense
 
