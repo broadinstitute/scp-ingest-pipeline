@@ -6,7 +6,7 @@ This module currently takes in extract and transform functions from different
 file types then uploads them into Firestore.
 
 PREREQUISITES
-You must have google could Firestore installed, authenticated
+You must have Google Cloud Firestore installed, authenticated
  configured. Must have python 3.6 or higher.
 
 EXAMPLES
