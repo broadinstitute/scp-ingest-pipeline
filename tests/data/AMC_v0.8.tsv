@@ -1,0 +1,35 @@
+attribute	required	default	type	array	class	ontology	ontology_root	controlled_list_entries	dependency	dependency_condition	dependent	attribute_description	
+organism_id			string										
+genus_species	Yes		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/ncbitaxon	NCBITaxon_2759					The scientific binomial name for the species of the organism.	
+genus_species-ontology_label	Yes		string		ontology_label				genus_species				
+vaccination			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/vo	VO_0000001					Any known vaccines administered to the donor organism. NOT a full vaccine history	
+vaccination-ontology_label			string		ontology_label				vaccination				
+vaccine_route			string		enum			"[""intradermal"", ""intranasal"", ""intravenous"", ""aerosol"", ""intramuscular"", ""mucosal"", ""oral""]"	vaccination			Intradermal, Intranasal, Intravenous, Aerosol	
+vaccine_dosage			string						vaccination				
+time_since_vaccine			string	TRUE	time				vaccination		time_since_vaccine-unit		
+time_since_vaccine-unit			string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	UO_0000003		time_since_vaccine				
+sex	Yes	unknown	string		enum			"[""male"", ""female"", ""mixed"", ""unknown""]"				Biological sex	
+geographical_region			string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/gaz	GAZ_00000013					Location where the sample was collected/donated	
+geographical_region-ontology_label			string		ontology_label				geographical_region				
+organism_age			string		time				organism_age-unit			Age of the organism at time of sample collection.	
+organism_age-unit			string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	UO_0000003		organism_age				
+biosample_id			string										
+organ	Yes		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uberon	UBERON_0000465					The organ that the biomaterial came from	
+organ-ontology_label	Yes		string		ontology_label				organ				
+sample_type	Yes		string		enum			"[""cell line"", ""organoid"", ""direct from donor - fresh"", ""direct from donor - frozen"", ""cultured primary cells""]"				one of: cell line, organoid, direct from donor (fresh), direct from donor (frozen), cultured primary cells	
+enrichment_method			string	TRUE	enum			"[""cell size selection"", ""fluorescence-activated cell sorting"", ""magnetic affinity cell sorting"", ""laser capture microdissection"", ""density gradient centrifugation"", ""Ficoll-Hypaque method"", ""enrichment of methylated DNA""]"				Method used to enrich cells before running library preparation. This could be flow cytometry, column enrichments, etc.	
+enriched_cell_type			string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/cl	CL_0000548		enrichment_method			The cell type that was sorted via an enrichment technique such as flow cytometry.	
+enriched_cell_type-ontology_label			string		ontology_label				enriched_cell_type				
+disease	Yes	healthy	string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/mondo	MONDO_0000001					The disease state(s) of the individual donating the sample at the time of donation	
+disease-ontology_label	Yes		string		ontology_label				disease				
+time_since_disease_onset			string		time				disease		time_since_disease_onset-unit	Amount of time since disease onset	Amount of time since disease onset
+time_since_disease_onset-unit			string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	UO_0000003		time_since_disease_onset				
+intracellular_pathogen			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/mondo	MONDO_0005550		disease			If evidence of a pathogen is detected in this cell	
+intracellular_pathogen-ontology_label			string		ontology_label				intracellular_pathogen				
+library_preparation_protocol	Yes		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/efo	EFO_0001457					The single cell RNA-sequencing protocol used for Library preparation	
+library_preparation_protocol-ontology_label	Yes		string		ontology_label				library_preparation_protocol				
+cell_id			string										
+cell_type			string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/cl	CL_0000548					Cell type name determined via unsupervised clustering and marker genes	
+cell_type-ontology_label			string		ontology_label				cell_type				
+ethnicity			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/hancestro	HANCESTRO:0004			genus_species == NCBITaxon_9606		The ethnicity or ethnicities of the human donor if known	
+ethnicity-ontology_label			string		ontology_label				ethnicity				
