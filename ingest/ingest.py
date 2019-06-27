@@ -46,7 +46,7 @@ class IngestService(object):
                 The matrix file type
             matrix_bundle: List[str]
                 Used for MTX files. The matrix bundle consister of the barcode
-                    and gene files. 
+                    and gene files.
 
         Returns:
             Nothing
@@ -97,6 +97,8 @@ class IngestService(object):
         Returns:
             None
         """
+
+        # Subcollections that are defined in various datamodels
         firestore_subcollections = ['gene_expression', 'all_cells', '1000',
                                     '10000', '20000', '100000']
         batch = self.db.batch()
