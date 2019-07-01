@@ -20,7 +20,7 @@ from gene_data_model import Gene
 class Dense():
     def __init__(self, file_path):
         self.file = open(file_path, 'r')
-        self.cell_names = self.file.readline().split(',')[1:1000]
+        self.cell_names = self.file.readline().split(',')[1:]
         self.file_name, self.filetype = os.path.splitext(file_path)
 
     def extract(self, size: int = 500) -> List[str]:
@@ -54,12 +54,15 @@ class Dense():
         transformed_data = []
         for line in lines:
             compute = line.rstrip('\n').split(',')
-            expression_scores = [float(x) for x in compute[1:1000]]
+            expression_scores = [float(x) for x in compute[1:]]
             gene_model = Gene(compute[0], self.file_name, self.filetype,
                               expression_scores=expression_scores,
                               cell_names=self.cell_names)
-            transformed_data.append(gene_model.gene)
+            transformed_data.append(gene_model)
         return transformed_data
 
     def close(self):
         self.file.close()
+
+    def split_expression_data(self, expression_ref):
+        amount_of_docs = self.determine_amount_of_doc(size_of_gene_doc)

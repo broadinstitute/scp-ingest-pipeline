@@ -12,10 +12,10 @@ You must have Google Cloud Firestore installed, authenticated
 EXAMPLES
 # Takes expression file and stores it into firestore
 
-#Ingest dense file
+# Ingest dense file
 $python ingest.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
-#Ingest mtx files
+# Ingest mtx files
 $python ingest.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --matrix-bundle ../tests/data/genes.tsv ../tests/data/barcodes.tsv
 """
 import argparse
@@ -87,7 +87,7 @@ class IngestService(object):
         """
         self.matrix.close()
 
-    def load_expression_data(self, list_of_transformed_data: List[Gene]) -> None:
+    def load_expression_data(self, list_of_expression_models: List[Gene]) -> None:
         """Loads expression data into firestore.
 
         Args:
@@ -98,23 +98,13 @@ class IngestService(object):
             None
         """
 
-        # Subcollections that are defined in various datamodels
-        firestore_subcollections = ['gene_expression', 'all_cells', '1000',
-                                    '10000', '20000', '100000']
-        batch = self.db.batch()
-
-        for transformed_data in list_of_transformed_data:
-            for collection, document in transformed_data.items():
-                for gene, data in document.items():
-                    doc_ref = self.db.collection(collection).document()
-                    for subcollection in firestore_subcollections:
-                        if subcollection in data:
-                            data_subcollection = data.pop(subcollection)
-                            doc_subcol_ref = doc_ref.collection(
-                                subcollection).document()
-            batch.set(doc_ref, data)
-            batch.set(doc_subcol_ref, data_subcollection)
-        batch.commit()
+        for expression_model in list_of_expression_models:
+            subcollection_name = expression_model.get_subcollection_name()
+            collection_name = expression_model.get_collection_name()
+            doc_ref = self.db.collection(collection_name).document()
+            doc_ref.set(expression_model.get_document())
+            doc_ref_sub = doc_ref.collection(subcollection_name).document()
+           `doc_ref_sub.set(expression_model.get_subcollection(), merge=True)
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -131,9 +121,11 @@ class IngestService(object):
             transformed_data = self.matrix.transform_expression_data_by_gene()
         else:
             for data in self.matrix.extract():
-                transformed_data = self.matrix.transform_expression_data_by_gene(
+                # transformed_data = self.matrix.transform_expression_data_by_gene(
+                #     *data)
+                self.matrix.transform_expression_data_by_gene(
                     *data)
-        self.load_expression_data(transformed_data)
+        # self.load_expression_data(transformed_data)
         self.close_matrix()
 
 
