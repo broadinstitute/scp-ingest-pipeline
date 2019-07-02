@@ -20,8 +20,9 @@ from gene_data_model import Gene
 class Dense():
     def __init__(self, file_path):
         self.file = open(file_path, 'r')
-        self.cell_names = self.file.readline().split(',')[1:]
-        self.file_name, self.filetype = os.path.splitext(file_path)
+        self.cell_names = self.file.readline().replace('"', '').split(',')[1:]
+        self.filetype = os.path.splitext(file_path)[1]
+        self.file_name = file_path
 
     def extract(self, size: int = 500) -> List[str]:
         """Extracts lines from dense matrix.
@@ -39,6 +40,7 @@ class Dense():
             if not next_lines:
                 break
             yield next_lines
+            break
 
     def transform_expression_data_by_gene(self, *lines: List[str]) -> List[Gene]:
         """Transforms dense matrix into firestore data model for genes.

@@ -53,6 +53,9 @@ class Gene:
         self.subcollection_name = 'gene_expression'
 
     def get_collection_name(self):
+        print(f'Gene is {self.name}')
+        if self.expression_scores is not None:
+            print(f'expression score length is {len(self.expression_scores)}')
         return 'Gene'
 
     def get_subcollection_name(self):
@@ -61,7 +64,7 @@ class Gene:
     def get_document(self):
         return self.gene
 
-    def has_expression_data(self):
+    def has_subcollection_data(self):
         return self.cell_names != None
 
     def get_subcollection(self):
@@ -96,17 +99,25 @@ class Gene:
             for gene_docs in self.chunk_gene_expression_documents():
                 print(f'Gene is : {self.name}.')
 
-    def determine_amount_of_chunks(self):
+    def chunk_gene_expression_documents(self):
+        # sum starts at 59 because key values take up 59 bytes of disk space
+        sum = 59
+        start_index = 0
+        float_storage = 8
+
+        for index, cell_name in enumerate(self.cell_names):
+            sum = sum + len[cell_name] + float_storage
+            if (sum - 1) > DOCUMENT_LIMIT_BYTES:
+                end_index = index - 1
+                yield {'cell_names': self.cell_names[start_index:end_index],
+                       'expression_scores':  self.expression_scores[start_index:end_index],
+                       'source_file_name': source_file_name,
+                       'source_file_type': source_file_type,
+                       }
+                sum = 59
+                start_index = index
+
         self.number_of_chunks = int(
             self.size_of_gene_expression_document / DOCUMENT_LIMIT_BYTES)
         print(f'Number of chunks are {self.number_of_chunks}')
         return self.number_of_chunks
-
-    def chunk_gene_expression_documents(self, SIZE=None):
-        it = iter(self.gene_expression_document)
-        for i in range(0, len(self.gene_expression_document), 2):
-            yield {k: self.gene_expression_document[k] for k in islice(it, 3)}
-
-    def is_larger_than_doc_size(self):
-        print(f'Size of gene expression subcollection before partian is: {self.size_of_gene_expression_document}')
-        return self.size_of_gene_expression_document > 0
