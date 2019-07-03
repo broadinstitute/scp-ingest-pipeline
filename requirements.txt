@@ -1,4 +1,6 @@
 google-cloud-firestore==1.2.0
-loompy==2.0.15
-zarr==2.2.0
 requests==2.22.0
+
+# Don't add these until we actually support Loom and Zarr
+#loompy==2.0.15
+#zarr==2.2.0
