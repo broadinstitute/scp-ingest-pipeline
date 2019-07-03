@@ -1,3 +1,10 @@
+# Ignore Python runtime assets
 env/
-.idea/
+__pycache__/
 
+# Ignore editor configuration
+.idea/
+.vscode/
+
+# Ignore other detritus
+*.log
