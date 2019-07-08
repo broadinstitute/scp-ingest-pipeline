@@ -12,7 +12,7 @@
 # https://github.com/GoogleContainerTools/base-images-docker/tree/master/ubuntu
 FROM marketplace.gcr.io/google/ubuntu1804:latest
 
-RUN echo "Uncomment to clear cached layers below this statement (20190703-1646)"
+#RUN echo "Uncomment to clear cached layers below this statement (20190708-1259)"
 
 # Install Python 3.6
 # (Auxiliary Ubuntu packages for Python assume Python 3.6;
@@ -24,7 +24,6 @@ RUN apt -y install python3.6
 RUN apt -y install python3-pip
 
 # Set cleaner defaults (`alias` fails)
-# These `ln` commands do not persist when running Bash in container -- why?
 RUN ln -s /usr/bin/python3 /usr/bin/python & \
     ln -s /usr/bin/pip3 /usr/bin/pip
 
@@ -37,4 +36,4 @@ WORKDIR /scp-ingest-service
 RUN pip install -r requirements.txt
 
 WORKDIR /scp-ingest-service/ingest
-CMD ["python3", "ingest.py", "--help"]
+CMD ["python", "ingest.py", "--help"]
