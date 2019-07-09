@@ -20,7 +20,7 @@ class Gene:
     def __init__(self, name: str, source_file_name: str, source_file_type: str, *,
                  gene_id: str = '', study_accession: str = '', taxon_name: str = '',
                  taxon_common_name: str = '', ncbi_taxid: str = '', genome_assembly_accession: str = '',
-                 genome_annotation: str = '', cell_names: List[str] = [], expression_scores: List[] = []) -> None:
+                 genome_annotation: str = '', cell_names: List[str] = [], expression_scores: List = []) -> None:
 
         self.name = name.replace('"', '')
         self.gene_id = gene_id
@@ -67,6 +67,8 @@ class Gene:
         print(f'Gene is {self.name}')
         if self.expression_scores is not None:
             print(f'expression score length is {len(self.expression_scores)}')
+        else:
+            print(f'expression score length is 0')
         return 'Gene'
 
     def get_subcollection_name(self):
@@ -81,6 +83,8 @@ class Gene:
         return 'gene_expression'
 
     def get_document(self):
+        """Returns top level document
+        """
         return self.gene
 
     def has_subcollection_data(self):
@@ -138,15 +142,16 @@ class Gene:
         return self.expression_scores
 
     def chunk_gene_expression_documents(self):
-            """Partitions gene expression documents in storage sizes that are
-                less than 104,857 bytes.
+        """Partitions gene expression documents in storage sizes that are
+            less than 104,857 bytes.
 
-            Args:
-                None
+        Args:
+            None
 
-            Returns:
-                Expression scores as list
-            """
+        Returns:
+            Dictionary that consist of expression scores and cell names,
+            file name and type.
+        """
         # sum starts at 59 (because key values take up 59 bytes) plus the
         # storage size of the source file name and file type
         sum = 59 + len(self.source_file_name) + len(self.source_file_type)
@@ -158,7 +163,7 @@ class Gene:
             sum = sum + len(cell_name) + float_storage
             # Subtract one  and 32 based off of firestore storage guidelines for strings
             # and documents
-            if (sum - 1) > DOCUMENT_LIMIT_BYTES:
+            if (sum - 1 - 32) > DOCUMENT_LIMIT_BYTES:
 
                 end_index = index - 1
                 yield {'cell_names': self.cell_names[start_index:end_index],

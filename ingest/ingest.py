@@ -106,18 +106,20 @@ class IngestService(object):
             if(expression_model.has_subcollection_data()):
                 try:
                     if expression_model.has_subcollection_data():
-                        expression_model.get_subcollection_name()
+                        subcollection_name = expression_model.get_subcollection_name()
                         doc_ref_sub = doc_ref.collection(
                             subcollection_name).document()
                         doc_ref_sub.set(
                             expression_model.get_subcollection())
                 except exceptions.InvalidArgument as e:
+                    # Catches invalid argument exception, which error "Maximum
+                    # document size falls under.
                     print(f'Exception is: {e}')
                     for subdoc in expression_model.chunk_gene_expression_documents():
-                        doc_ref.collection(
-                            subcollection_name).document().set(subdoc)
-                except exceptions as e:
-                    print(f'Exception is: {e}')
+                        subcollection_name = expression_model.get_subcollection_name()
+                        doc_ref_sub = doc_ref.collection(
+                            subcollection_name).document()
+                        doc_ref_sub.set(subdoc)
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
