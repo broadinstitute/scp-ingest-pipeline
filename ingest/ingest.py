@@ -103,7 +103,7 @@ class IngestService(object):
             collection_name = expression_model.get_collection_name()
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(expression_model.get_document())
-            if(expression_model.has_subcollection_data()):
+            if expression_model.has_subcollection_data():
                 try:
                     if expression_model.has_subcollection_data():
                         subcollection_name = expression_model.get_subcollection_name()
