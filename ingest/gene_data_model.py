@@ -121,7 +121,7 @@ class Gene:
         non_zero_cell_names = []
         non_zero_expression_scores = []
         for idx, value in enumerate(expression_scores):
-            expression_score = float(value)
+            expression_score = round(float(value), 3)
             if(expression_score > 0):
                 non_zero_cell_names.append(cell_names[idx])
                 non_zero_expression_scores.append(expression_score)
