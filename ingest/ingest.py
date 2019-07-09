@@ -26,6 +26,7 @@ from typing import Dict, Generator, List, Tuple, Union
 import numpy as np
 from dense import Dense
 from gene_data_model import Gene
+from google.api_core import exceptions
 from google.cloud import firestore
 from mtx import Mtx
 
@@ -104,13 +105,19 @@ class IngestService(object):
             doc_ref.set(expression_model.get_document())
             if(expression_model.has_subcollection_data()):
                 try:
-                    subcollection_name = expression_model.get_subcollection_name()
-                    doc_ref_sub = doc_ref.collection(
-                        subcollection_name).document()
-                    doc_ref_sub.set(
-                        expression_model.get_subcollection(), merge=True)
-                except google.api_core.exceptions.InvalidArgument as e:
-                    print(f'{e'})
+                    if expression_model.has_subcollection_data():
+                        expression_model.get_subcollection_name()
+                        doc_ref_sub = doc_ref.collection(
+                            subcollection_name).document()
+                        doc_ref_sub.set(
+                            expression_model.get_subcollection())
+                except exceptions.InvalidArgument as e:
+                    print(f'Exception is: {e}')
+                    for subdoc in expression_model.chunk_gene_expression_documents():
+                        doc_ref.collection(
+                            subcollection_name).document().set(subdoc)
+                except exceptions as e:
+                    print(f'Exception is: {e}')
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -129,7 +136,7 @@ class IngestService(object):
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
                     *data)
-        self.load_expression_data(transformed_data)
+                self.load_expression_data(transformed_data)
         self.close_matrix()
 
 
@@ -143,19 +150,19 @@ def parse_arguments():
         parsed_args: Namespace
             Validated input arguments
     """
-    args=argparse.ArgumentParser(
-        prog = 'ingest.py',
-        description = __doc__,
-        formatter_class = argparse.RawDescriptionHelpFormatter)
+    args = argparse.ArgumentParser(
+        prog='ingest.py',
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    subargs=args.add_subparsers()
+    subargs = args.add_subparsers()
 
     # Ingest expression files subparser
-    parser_ingest_xpression=subargs.add_parser('ingest_expression',
-                                                 help = 'Indicates that expression'
+    parser_ingest_xpression = subargs.add_parser('ingest_expression',
+                                                 help='Indicates that expression'
                                                  ' files are being ingested')
 
-    parser_ingest_xpression.add_argument('--matrix-file', required = True,
+    parser_ingest_xpression.add_argument('--matrix-file', required=True,
                                          help='Absolute or relative path to '
                                          'expression file.For 10x data this is '
                                          'the .mtx file')
