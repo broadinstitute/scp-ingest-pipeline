@@ -72,7 +72,7 @@ class Gene:
         return 'Gene'
 
     def get_subcollection_name(self):
-        """Get sub collection name of gene model.
+        """Get subcollection name of gene model.
 
         Args:
             None
