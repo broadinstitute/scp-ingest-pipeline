@@ -9,3 +9,4 @@ __pycache__/
 # Ignore other detritus
 *.log
 .DS_Store
+.git/
