@@ -20,8 +20,9 @@ from gene_data_model import Gene
 class Dense():
     def __init__(self, file_path):
         self.file = open(file_path, 'r')
-        self.cell_names = self.file.readline().split(',')[1:1000]
-        self.file_name, self.filetype = os.path.splitext(file_path)
+        self.cell_names = self.file.readline().replace('"', '').split(',')[1:]
+
+        self.file_name = file_path.strip(".")
 
     def extract(self, size: int = 500) -> List[str]:
         """Extracts lines from dense matrix.
@@ -53,13 +54,22 @@ class Dense():
         """
         transformed_data = []
         for line in lines:
+            expression_scores = line.rstrip('\n').split(',')
             compute = line.rstrip('\n').split(',')
-            expression_scores = [float(x) for x in compute[1:1000]]
-            gene_model = Gene(compute[0], self.file_name, self.filetype,
-                              expression_scores=expression_scores,
-                              cell_names=self.cell_names)
-            transformed_data.append(gene_model.gene)
+            gene_model = Gene(compute[0], source_file_type="Dense",
+                              expression_scores=expression_scores[1:],
+                              cell_names=self.cell_names,
+                              source_file_name=self.file_name)
+            transformed_data.append(gene_model)
         return transformed_data
 
     def close(self):
+        """Closes file
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         self.file.close()
