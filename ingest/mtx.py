@@ -9,6 +9,7 @@ These are commonly provided from 10x Genomics v2.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
+import json
 import os
 import sys
 from typing import Dict, Generator, List, Tuple, Union
@@ -49,21 +50,26 @@ class Mtx:
                 A list of Gene objects
         """
         exp_by_gene = {}
-        for i, j, exp_score in zip(self.matrix_file.row, self.matrix_file.col, self.matrix_file.data):
-            gene_id, gene = self.genes[i].split('\t')
-            exp_score = float(exp_score)
+        for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(self.matrix_file.row, self.matrix_file.col, self.matrix_file.data):
+            gene_id, gene = self.genes[int(raw_gene_idx)].split('\t')
+            cell_name = self.cells[int(raw_barcode_idx)]
+            exp_score = float(raw_exp_score)
             if gene in exp_by_gene:
                 # Append new score to 'expression_scores' key in Gene object
                 exp_by_gene[gene].get_expression_scores().append(exp_score)
+                exp_by_gene[gene].cell_names.append(cell_name)
+                print(exp_by_gene[gene].cell_names)
+                print(exp_by_gene[gene].get_expression_scores())
             else:
                 # Create new key value pair with value being Gene object
                 exp_by_gene[gene] = Gene(gene, self.mtx_path,
                                          self.source_file_type, gene_id=gene_id,
-                                         cell_names=self.cells,
-                                         expression_scores=[exp_score])
+                                         cell_names=[cell_name],
+                                         expression_scores=[exp_score],
+                                         check_for_zero_values=False)
         # Get 'gene' value from Gene Object
-        transformed_data = {k: v.gene for k, v in exp_by_gene.items()}
-        return transformed_data.values()
+        print(exp_by_gene.values())
+        return exp_by_gene.values()
 
     def close(self):
         self.genes_file.close()

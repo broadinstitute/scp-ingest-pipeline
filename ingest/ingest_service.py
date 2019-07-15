@@ -16,13 +16,15 @@ EXAMPLES
 $python ingest.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest mtx files
-$python ingest.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --matrix-bundle ../tests/data/genes.tsv ../tests/data/barcodes.tsv
+$python ingest.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
+import json
 import os
 import time
 from typing import Dict, Generator, List, Tuple, Union
 
+import grpc
 import numpy as np
 from dense import Dense
 from gene_data_model import Gene
@@ -99,27 +101,36 @@ class IngestService(object):
             None
         """
 
+        # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
-            collection_name = expression_model.get_collection_name()
-            doc_ref = self.db.collection(collection_name).document()
-            doc_ref.set(expression_model.get_document())
+            batch = self.db.batch()
+            # collection_name = expression_model.get_collection_name()
+            # doc_ref = self.db.collection(collection_name).document()
+            # doc_ref.set(expression_model.get_document())
+
             if expression_model.has_subcollection_data():
-                try:
-                    if expression_model.has_subcollection_data():
-                        subcollection_name = expression_model.get_subcollection_name()
-                        doc_ref_sub = doc_ref.collection(
-                            subcollection_name).document()
-                        doc_ref_sub.set(
-                            expression_model.get_subcollection())
-                except exceptions.InvalidArgument as e:
-                    # Catches invalid argument exception, which error "Maximum
-                    # document size falls under.
-                    print(f'Exception is: {e}')
-                    for subdoc in expression_model.chunk_gene_expression_documents():
-                        subcollection_name = expression_model.get_subcollection_name()
-                        doc_ref_sub = doc_ref.collection(
-                            subcollection_name).document()
-                        doc_ref_sub.set(subdoc)
+                print(expression_model.get_subcollection())
+                # try:
+                #     if expression_model.has_subcollection_data():
+                #         subcollection_name = expression_model.get_subcollection_name()
+                #         doc_ref_sub = doc_ref.collection(
+                #             subcollection_name).document()
+                #         doc_ref_sub.set(expression_model.get_subcollection())
+                #
+                # except exceptions.InvalidArgument as e:
+                #     # Catches invalid argument exception, which error "Maximum
+                #     # document size falls under
+                #     print(f'{e}')
+                #     batch = self.db.batch()
+                #     for subdoc in expression_model.chunk_gene_expression_documents():
+                #
+                #         subcollection_name = expression_model.get_subcollection_name()
+                #         doc_ref_sub = doc_ref.collection(
+                #             subcollection_name).document()
+                #         batch.set(doc_ref_sub, subdoc)
+                #         # print(f'This is batch: {batch.__dict__}')
+                #
+                #     batch.commit()
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -137,8 +148,8 @@ class IngestService(object):
         else:
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
-                    *data)
-                self.load_expression_data(transformed_data)
+                    data)
+        self.load_expression_data(transformed_data)
         self.close_matrix()
 
 
@@ -180,18 +191,21 @@ def parse_arguments():
                                          help=matrix_file_type_txt
                                          )
 
-    parser_ingest_xpression.add_argument('--matrix-bundle', default=None,
-                                         nargs='+', help='Names of .genes.tsv '
-                                         'and .barcodes.tsv files'
+    # Gene and Barcode arguments for MTX bundle
+    parser_ingest_xpression.add_argument('--barcode-file', default=None,
+                                         help='Names of .barcodes.tsv files'
+                                         )
+    parser_ingest_xpression.add_argument('--gene-file', default=None,
+                                         help='Names of .genes.tsv file'
                                          )
 
     parsed_args = args.parse_args()
-    if parsed_args.matrix_file_type == 'mtx' and parsed_args.matrix_bundle == None:
-        if parsed_args.matrix_bundle == None:
-            raise ValueError(
-                ' Missing argument: --matrix-bundle. Mtx files must include '
-                '.genes.tsv, and .barcodes.tsv files. See --help for more '
-                'information')
+    if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
+                                                  or parsed_args.barcode_file == None):
+        raise ValueError(
+            ' Missing argument: --matrix-bundle. Mtx files must include '
+            '.genes.tsv, and .barcodes.tsv files. See --help for more '
+            'information')
 
     return parsed_args
 
