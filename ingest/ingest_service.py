@@ -104,34 +104,33 @@ class IngestService(object):
 
         # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
-            # batch = self.db.batch()
-            # collection_name = expression_model.get_collection_name()
-            # doc_ref = self.db.collection(collection_name).document()
-            # doc_ref.set(expression_model.get_document())
+            batch = self.db.batch()
+            collection_name = expression_model.get_collection_name()
+            doc_ref = self.db.collection(collection_name).document()
+            doc_ref.set(expression_model.get_document())
 
             if expression_model.has_subcollection_data():
-                print(expression_model.get_subcollection())
-                # try:
-                #     if expression_model.has_subcollection_data():
-                #         subcollection_name = expression_model.get_subcollection_name()
-                #         doc_ref_sub = doc_ref.collection(
-                #             subcollection_name).document()
-                #         doc_ref_sub.set(expression_model.get_subcollection())
-                #
-                # except exceptions.InvalidArgument as e:
-                #     # Catches invalid argument exception, which error "Maximum
-                #     # document size falls under
-                #     print(f'{e}')
-                #     batch = self.db.batch()
-                #     for subdoc in expression_model.chunk_gene_expression_documents():
-                #
-                #         subcollection_name = expression_model.get_subcollection_name()
-                #         doc_ref_sub = doc_ref.collection(
-                #             subcollection_name).document()
-                #         batch.set(doc_ref_sub, subdoc)
-                #         # print(f'This is batch: {batch.__dict__}')
-                #
-                #     batch.commit()
+                try:
+                    if expression_model.has_subcollection_data():
+                        subcollection_name = expression_model.get_subcollection_name()
+                        doc_ref_sub = doc_ref.collection(
+                            subcollection_name).document()
+                        doc_ref_sub.set(expression_model.get_subcollection())
+
+                except exceptions.InvalidArgument as e:
+                    # Catches invalid argument exception, which error "Maximum
+                    # document size falls under
+                    print(f'{e}')
+                    batch = self.db.batch()
+                    for subdoc in expression_model.chunk_gene_expression_documents():
+
+                        subcollection_name = expression_model.get_subcollection_name()
+                        doc_ref_sub = doc_ref.collection(
+                            subcollection_name).document()
+                        batch.set(doc_ref_sub, subdoc)
+                        # print(f'This is batch: {batch.__dict__}')
+
+                    batch.commit()
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
