@@ -19,8 +19,7 @@ from gene_data_model import Gene
 
 
 class Mtx:
-    def __init__(self, mtx_path, bundle_paths):
-        genes_path, barcodes_path = bundle_paths
+    def __init__(self, mtx_path: str, genes_path: str, barcodes_path: str):
         self.genes_file = open(genes_path)
         self.barcodes_file = open(barcodes_path)
         self.mtx_path, self.source_file_type = os.path.splitext(
@@ -56,10 +55,8 @@ class Mtx:
             exp_score = float(raw_exp_score)
             if gene in exp_by_gene:
                 # Append new score to 'expression_scores' key in Gene object
-                exp_by_gene[gene].get_expression_scores().append(exp_score)
+                exp_by_gene[gene].expression_scores.append(exp_score)
                 exp_by_gene[gene].cell_names.append(cell_name)
-                print(exp_by_gene[gene].cell_names)
-                print(exp_by_gene[gene].get_expression_scores())
             else:
                 # Create new key value pair with value being Gene object
                 exp_by_gene[gene] = Gene(gene, self.mtx_path,
@@ -67,8 +64,6 @@ class Mtx:
                                          cell_names=[cell_name],
                                          expression_scores=[exp_score],
                                          check_for_zero_values=False)
-        # Get 'gene' value from Gene Object
-        print(exp_by_gene.values())
         return exp_by_gene.values()
 
     def close(self):

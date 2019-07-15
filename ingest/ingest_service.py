@@ -13,10 +13,10 @@ EXAMPLES
 # Takes expression file and stores it into firestore
 
 # Ingest dense file
-$python ingest.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+$python ingest_service.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest mtx files
-$python ingest.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+$python ingest_service.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 import json
@@ -38,7 +38,7 @@ EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 
 class IngestService(object):
     def __init__(self, *, matrix_file: str, matrix_file_type: str,
-                 matrix_bundle: List[str] = None):
+                 barcode_file: str = '', gene_file: str = ''):
         """Initializes variables in ingest service.
 
         Args:
@@ -58,7 +58,8 @@ class IngestService(object):
             raise IOError(f"File '{matrix_file}' not found")
         self.matrix_file_path = matrix_file
         self.matrix_file_type = matrix_file_type
-        self.matrix_bundle = matrix_bundle
+        self.gene_file = gene_file
+        self.barcodes_file = barcode_file
         self.matrix = self.initialize_file_connection()
         self.db = firestore.Client()
 
@@ -75,7 +76,7 @@ class IngestService(object):
             'dense': Dense
         }
         if self.matrix_file_type == 'mtx':
-            return Mtx(self.matrix_file_path, self.matrix_bundle)
+            return Mtx(self.matrix_file_path, self.gene_file, self.barcodes_file)
         else:
             return(
                 file_connections.get(self.matrix_file_type)(self.matrix_file_path))
@@ -103,7 +104,7 @@ class IngestService(object):
 
         # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
-            batch = self.db.batch()
+            # batch = self.db.batch()
             # collection_name = expression_model.get_collection_name()
             # doc_ref = self.db.collection(collection_name).document()
             # doc_ref.set(expression_model.get_document())
@@ -142,7 +143,7 @@ class IngestService(object):
         Returns:
             None
         """
-        if self.matrix_bundle is not None:
+        if self.gene_file is not None:
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
         else:
@@ -182,7 +183,8 @@ def parse_arguments():
 
     matrix_file_type_txt = 'Type of expression file that is ingested. If mtx \
         files are being ingested, .genes.tsv and .barcodes.tsv files must be \
-        included using --matrix-bundle. See - -help for more information'
+        included using --barcode-file <barcode file path> and --gene-file \
+        <gene file path>. See --help for more information'
 
     parser_ingest_xpression.add_argument('--matrix-file-type',
                                          choices=EXPRESSION_FILE_TYPES,
@@ -192,12 +194,10 @@ def parse_arguments():
                                          )
 
     # Gene and Barcode arguments for MTX bundle
-    parser_ingest_xpression.add_argument('--barcode-file', default=None,
-                                         help='Names of .barcodes.tsv files'
-                                         )
-    parser_ingest_xpression.add_argument('--gene-file', default=None,
-                                         help='Names of .genes.tsv file'
-                                         )
+    parser_ingest_xpression.add_argument('--barcode-file', type=str,
+                                         help='Names of .barcodes.tsv files')
+    parser_ingest_xpression.add_argument('--gene-file', type=str,
+                                         help='Names of .genes.tsv file')
 
     parsed_args = args.parse_args()
     if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
@@ -220,6 +220,7 @@ def main() -> None:
         None
     """
     arguments = vars(parse_arguments())
+    print(arguments)
     ingest = IngestService(**arguments)
 
     if hasattr(ingest, 'ingest_expression'):
