@@ -19,7 +19,6 @@ $python ingest_service.py ingest_expression --matrix-file ../tests/data/dense_ma
 $python ingest_service.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
-import json
 import os
 import time
 from typing import Dict, Generator, List, Tuple, Union
