@@ -142,17 +142,6 @@ class Gene:
         else:
             return non_zero_cell_names, non_zero_expression_scores
 
-    def get_expression_scores(self):
-        """Get expression scores
-
-        Args:
-            None
-
-        Returns:
-            Expression scores as list
-        """
-        return self.expression_scores
-
     def chunk_gene_expression_documents(self):
         """Partitions gene expression documents in storage sizes that are
             less than 104,857 bytes.

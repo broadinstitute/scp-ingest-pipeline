@@ -67,5 +67,13 @@ class Mtx:
         return exp_by_gene.values()
 
     def close(self):
+        """Closes file
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         self.genes_file.close()
         self.barcodes_file.close()
