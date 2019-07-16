@@ -13,17 +13,16 @@ EXAMPLES
 # Takes expression file and stores it into firestore
 
 # Ingest dense file
-$python ingest_service.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+$python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest mtx files
-$python ingest_service.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+$python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 import os
 import time
 from typing import Dict, Generator, List, Tuple, Union
 
-import grpc
 import numpy as np
 from dense import Dense
 from gene_data_model import Gene
@@ -118,8 +117,8 @@ class IngestService(object):
 
                 except exceptions.InvalidArgument as e:
                     # Catches invalid argument exception, which error "Maximum
-                    # document size falls under
-                    print(f'{e}')
+                    # document size" falls under
+                    print(e)
                     batch = self.db.batch()
                     for subdoc in expression_model.chunk_gene_expression_documents():
 
@@ -192,10 +191,10 @@ def parse_arguments():
                                           )
 
     # Gene and Barcode arguments for MTX bundle
-    parser_ingest_expression.add_argument('--barcode-file', type=str,
-                                          help='Names of .barcodes.tsv files')
-    parser_ingest_expression.add_argument('--gene-file', type=str,
-                                          help='Names of .genes.tsv file')
+    parser_ingest_expression.add_argument('--barcode-file',
+                                          help='Path to .barcodes.tsv files')
+    parser_ingest_expression.add_argument('--gene-file',
+                                          help='Path to .genes.tsv file')
 
     parsed_args = args.parse_args()
     if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
