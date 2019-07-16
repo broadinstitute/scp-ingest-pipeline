@@ -147,8 +147,8 @@ class IngestService(object):
         else:
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
-                    data)
-        self.load_expression_data(transformed_data)
+                    *data)
+        # self.load_expression_data(transformed_data)
         self.close_matrix()
 
 
@@ -170,32 +170,32 @@ def parse_arguments():
     subargs = args.add_subparsers()
 
     # Ingest expression files subparser
-    parser_ingest_xpression = subargs.add_parser('ingest_expression',
-                                                 help='Indicates that expression'
-                                                 ' files are being ingested')
+    parser_ingest_expression = subargs.add_parser('ingest_expression',
+                                                  help='Indicates that expression'
+                                                  ' files are being ingested')
 
-    parser_ingest_xpression.add_argument('--matrix-file', required=True,
-                                         help='Absolute or relative path to '
-                                         'expression file.For 10x data this is '
-                                         'the .mtx file')
+    parser_ingest_expression.add_argument('--matrix-file', required=True,
+                                          help='Absolute or relative path to '
+                                          'expression file.For 10x data this is '
+                                          'the .mtx file')
 
     matrix_file_type_txt = 'Type of expression file that is ingested. If mtx \
         files are being ingested, .genes.tsv and .barcodes.tsv files must be \
         included using --barcode-file <barcode file path> and --gene-file \
         <gene file path>. See --help for more information'
 
-    parser_ingest_xpression.add_argument('--matrix-file-type',
-                                         choices=EXPRESSION_FILE_TYPES,
-                                         type=str.lower,
-                                         required=True,
-                                         help=matrix_file_type_txt
-                                         )
+    parser_ingest_expression.add_argument('--matrix-file-type',
+                                          choices=EXPRESSION_FILE_TYPES,
+                                          type=str.lower,
+                                          required=True,
+                                          help=matrix_file_type_txt
+                                          )
 
     # Gene and Barcode arguments for MTX bundle
-    parser_ingest_xpression.add_argument('--barcode-file', type=str,
-                                         help='Names of .barcodes.tsv files')
-    parser_ingest_xpression.add_argument('--gene-file', type=str,
-                                         help='Names of .genes.tsv file')
+    parser_ingest_expression.add_argument('--barcode-file', type=str,
+                                          help='Names of .barcodes.tsv files')
+    parser_ingest_expression.add_argument('--gene-file', type=str,
+                                          help='Names of .genes.tsv file')
 
     parsed_args = args.parse_args()
     if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None

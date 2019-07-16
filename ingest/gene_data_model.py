@@ -13,13 +13,13 @@ import sys
 from itertools import islice
 from typing import *
 
-DOCUMENT_LIMIT_BYTES = 404_857
 # Actual document limit is 1 MiB (1,048,576 bytes) per
 # https://cloud.google.com/firestore/quotas#writes_and_transactions
 # However, due to an unclear calculation issue, we use a limit that is roughly
 # 90% smaller to avoid exceeding this Firestore constraint.
 #
 # TODO: Reconcile calculations and use documented size limit (1_048_576)
+DOCUMENT_LIMIT_BYTES = 404_857
 
 
 class Gene:
@@ -80,7 +80,7 @@ class Gene:
             print(f'expression score length is {len(self.expression_scores)}')
         else:
             print(f'expression score length is 0')
-        return 'Jene'
+        return 'Gene'
 
     def get_subcollection_name(self):
         """Get subcollection name of gene model.
