@@ -1,2 +1,2 @@
-# scp-ingest-service
-File Ingest Service for Single Cell Portal
+# scp-ingest-pipeline
+File Ingest Pipeline for Single Cell Portal
