@@ -217,7 +217,6 @@ def main() -> None:
         None
     """
     arguments = vars(parse_arguments())
-    print(arguments)
     ingest = IngestService(**arguments)
 
     if hasattr(ingest, 'ingest_expression'):
