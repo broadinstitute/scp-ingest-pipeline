@@ -36,7 +36,7 @@ EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 
 class IngestService(object):
     def __init__(self, *, matrix_file: str, matrix_file_type: str,
-                 barcode_file: str = '', gene_file: str = ''):
+                 barcode_file: str = '', gene_file: str = '', db=None):
         """Initializes variables in ingest service.
 
         Args:
@@ -59,7 +59,10 @@ class IngestService(object):
         self.gene_file = gene_file
         self.barcodes_file = barcode_file
         self.matrix = self.initialize_file_connection()
-        self.db = firestore.Client()
+        if db is None:
+            self.db = firestore.Client()
+        else:
+            self.db = db
 
     def initialize_file_connection(self):
         """Initializes connection to file.
@@ -103,6 +106,9 @@ class IngestService(object):
         # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
             batch = self.db.batch()
+            print('batch')
+            print(batch)
+            print(batch.__dict__)
             collection_name = expression_model.get_collection_name()
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(expression_model.get_document())
@@ -147,29 +153,27 @@ class IngestService(object):
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
                     *data)
-        # self.load_expression_data(transformed_data)
+        self.load_expression_data(transformed_data)
         self.close_matrix()
 
 
-def parse_arguments():
-    """Parses and validates input arguments.
+def create_parser():
+    """Creates parser for input arguments
 
     Args:
         None
 
     Returns:
-        parsed_args: Namespace
-            Validated input arguments
+        None
     """
-    args = argparse.ArgumentParser(
-        prog='ingest.py',
+    parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    subargs = args.add_subparsers()
+    subparser = parser.add_subparsers()
 
     # Ingest expression files subparser
-    parser_ingest_expression = subargs.add_parser('ingest_expression',
+    parser_ingest_expression = subparser.add_parser('ingest_expression',
                                                   help='Indicates that expression'
                                                   ' files are being ingested')
 
@@ -196,15 +200,25 @@ def parse_arguments():
     parser_ingest_expression.add_argument('--gene-file',
                                           help='Path to .genes.tsv file')
 
-    parsed_args = args.parse_args()
+    return parser
+
+def validate_arguments(parsed_args):
+    """Validates parsed input arguments.
+
+    Args:
+        parsed_args: Parsed arguments object
+
+    Returns:
+        None
+    """
+    print('parsed_args')
+    print(parsed_args)
     if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
                                                   or parsed_args.barcode_file == None):
         raise ValueError(
             ' Missing argument: --matrix-bundle. Mtx files must include '
             '.genes.tsv, and .barcodes.tsv files. See --help for more '
             'information')
-
-    return parsed_args
 
 
 def main() -> None:
@@ -216,8 +230,10 @@ def main() -> None:
     Returns:
         None
     """
-    arguments = vars(parse_arguments())
-    print(arguments)
+    
+    parsed_args = create_parser().parse_args()
+    validate_arguments(parsed_args)
+    arguments = vars(parsed_args)
     ingest = IngestService(**arguments)
 
     if hasattr(ingest, 'ingest_expression'):
