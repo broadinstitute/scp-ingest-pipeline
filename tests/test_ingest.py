@@ -18,23 +18,16 @@ def mock_load_expression_data(self, *args, **kwargs):
     self.load_expression_data_args = args
     self.load_expression_data_kwargs = kwargs
 
+
+IngestService.load_expression_data = mock_load_expression_data
+
 class IngestTestCase(unittest.TestCase):
 
-    def test_ingest_dense(self):
-        """Ingest Service should handle dense matrices
-        """
-        output_dir = 'test_output/'
-
-        args = [
-            'ingest_expression',
-            '--matrix-file', '../tests/data/dense_matrix_19_genes_100k_cells.txt',
-            '--matrix-file-type', 'dense'
-        ]
-        parsed_args = create_parser().parse_args(args)
+    def setup_ingest(self, args):
+        args_list = args.split(' ')
+        parsed_args = create_parser().parse_args(args_list)
         validate_arguments(parsed_args)
         arguments = vars(parsed_args)
-
-        IngestService.load_expression_data = mock_load_expression_data
 
         mock_db = MockFirestore()
 
@@ -42,6 +35,17 @@ class IngestTestCase(unittest.TestCase):
 
         if hasattr(ingest, 'ingest_expression'):
             getattr(ingest, 'ingest_expression')()
+
+        return ingest
+
+    def test_ingest_dense_matrix(self):
+        """Ingest Service should handle dense matrices
+        """
+
+        args = ('ingest_expression '
+            '--matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt '
+            '--matrix-file-type dense')
+        ingest = self.setup_ingest(args)
         
         expression_models = ingest.load_expression_data_args[0]
 
