@@ -34,7 +34,7 @@ from mtx import Mtx
 EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 
 
-class IngestService(object):
+class IngestPipeline(object):
     def __init__(self, *, matrix_file: str, matrix_file_type: str,
                  barcode_file: str = '', gene_file: str = '', db=None):
         """Initializes variables in ingest service.
@@ -106,9 +106,6 @@ class IngestService(object):
         # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
             batch = self.db.batch()
-            print('batch')
-            print(batch)
-            print(batch.__dict__)
             collection_name = expression_model.get_collection_name()
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(expression_model.get_document())
@@ -211,8 +208,6 @@ def validate_arguments(parsed_args):
     Returns:
         None
     """
-    print('parsed_args')
-    print(parsed_args)
     if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
                                                   or parsed_args.barcode_file == None):
         raise ValueError(
@@ -234,7 +229,7 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
-    ingest = IngestService(**arguments)
+    ingest = IngestPipeline(**arguments)
 
     if hasattr(ingest, 'ingest_expression'):
         getattr(ingest, 'ingest_expression')()

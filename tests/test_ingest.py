@@ -19,7 +19,7 @@ def mock_load_expression_data(self, *args, **kwargs):
     self.load_expression_data_kwargs = kwargs
 
 
-IngestService.load_expression_data = mock_load_expression_data
+IngestPipeline.load_expression_data = mock_load_expression_data
 
 
 class IngestTestCase(unittest.TestCase):
@@ -32,7 +32,7 @@ class IngestTestCase(unittest.TestCase):
 
         mock_db = MockFirestore()
 
-        ingest = IngestService(**arguments, db=mock_db)
+        ingest = IngestPipeline(**arguments, db=mock_db)
 
         if hasattr(ingest, 'ingest_expression'):
             getattr(ingest, 'ingest_expression')()
@@ -40,7 +40,7 @@ class IngestTestCase(unittest.TestCase):
         return ingest
 
     def test_ingest_dense_matrix(self):
-        """Ingest Service should handle dense matrices
+        """Ingest Pipeline should handle dense matrices
         """
 
         args = ('ingest_expression '
@@ -61,7 +61,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(first_model, expected_first_model)
 
     def test_ingest_mtx_matrix(self):
-        """Ingest Service should handle MTX matrix bundles
+        """Ingest Pipeline should handle MTX matrix bundles
         """
 
         args = ('ingest_expression '
