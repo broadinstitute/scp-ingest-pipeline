@@ -54,9 +54,31 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(num_models, expected_num_models)
 
         first_model = expression_models[0].__dict__
-        with open('mock_data/dense_matrix_19_genes_100k_cells/gene_model_1.json') as f:
+        with open('mock_data/dense_matrix_19_genes_100k_cells_txt/gene_model_1.json') as f:
             expected_first_model = json.loads(f.read())
 
+        self.assertEqual(first_model, expected_first_model)
+
+    def test_ingest_mtx_matrix(self):
+        """Ingest Service should handle MTX matrix bundles
+        """
+
+        args = ('ingest_expression '
+            '--matrix-file ../tests/data/matrix.mtx '
+            '--matrix-file-type mtx '
+            '--gene-file ../tests/data/genes.tsv '
+            '--barcode-file ../tests/data/barcodes.tsv')
+        ingest = self.setup_ingest(args)
+        
+        expression_models = ingest.load_expression_data_args[0]
+
+        num_models = len(expression_models)
+        expected_num_models = 25
+        self.assertEqual(num_models, expected_num_models)
+
+        first_model = list(expression_models)[0].__dict__
+        with open('mock_data/matrix_mtx/gene_model_1.json') as f:
+            expected_first_model = json.loads(f.read())
         self.assertEqual(first_model, expected_first_model)
 
 if __name__ == '__main__':

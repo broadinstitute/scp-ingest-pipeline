@@ -1,0 +1,51 @@
+{
+  "name": "A1BG",
+  "gene_id": "",
+  "study_accession": "",
+  "source_file_name": "/tests/data/dense_matrix_19_genes_100k_cells.txt",
+  "source_file_type": "Dense",
+  "taxon_name": "",
+  "taxon_common_name": "",
+  "ncbi_taxid": "",
+  "genome_assembly_accession": "",
+  "genome_annotation": "",
+  "cell_names": [
+    "Granuloma10_270",
+    "Granuloma10_902",
+    "Granuloma5_1043",
+    "Granuloma5_316"
+  ],
+  "expression_scores": [
+    0.602,
+    1.934,
+    1.161,
+    0.82
+  ],
+  "gene_expression_subdocument": {
+    "cell_names": [
+      "Granuloma10_270",
+      "Granuloma10_902",
+      "Granuloma5_1043",
+      "Granuloma5_316"
+    ],
+    "expression_scores": [
+      0.602,
+      1.934,
+      1.161,
+      0.82
+    ],
+    "source_file_name": "/tests/data/dense_matrix_19_genes_100k_cells.txt",
+    "source_file_type": "Dense"
+  },
+  "gene": {
+    "name": "A1BG",
+    "gene_id": "",
+    "study_accession": "",
+    "taxon_name": "",
+    "taxon_common_name": "",
+    "ncbi_taxid": "",
+    "genome_assembly_accession": "",
+    "genome_annotation": ""
+  },
+  "subcollection_name": "gene_expression"
+}
