@@ -21,6 +21,7 @@ def mock_load_expression_data(self, *args, **kwargs):
 
 IngestService.load_expression_data = mock_load_expression_data
 
+
 class IngestTestCase(unittest.TestCase):
 
     def setup_ingest(self, args):
@@ -43,10 +44,10 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = ('ingest_expression '
-            '--matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt '
-            '--matrix-file-type dense')
+                '--matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt '
+                '--matrix-file-type dense')
         ingest = self.setup_ingest(args)
-        
+
         expression_models = ingest.load_expression_data_args[0]
 
         num_models = len(expression_models)
@@ -64,12 +65,12 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = ('ingest_expression '
-            '--matrix-file ../tests/data/matrix.mtx '
-            '--matrix-file-type mtx '
-            '--gene-file ../tests/data/genes.tsv '
-            '--barcode-file ../tests/data/barcodes.tsv')
+                '--matrix-file ../tests/data/matrix.mtx '
+                '--matrix-file-type mtx '
+                '--gene-file ../tests/data/genes.tsv '
+                '--barcode-file ../tests/data/barcodes.tsv')
         ingest = self.setup_ingest(args)
-        
+
         expression_models = ingest.load_expression_data_args[0]
 
         num_models = len(expression_models)
@@ -80,6 +81,7 @@ class IngestTestCase(unittest.TestCase):
         with open('mock_data/matrix_mtx/gene_model_1.json') as f:
             expected_first_model = json.loads(f.read())
         self.assertEqual(first_model, expected_first_model)
+
 
 if __name__ == '__main__':
     unittest.main()
