@@ -17,6 +17,9 @@ pytest
 # Run tests with names containing the string "dense"
 pytest -k "dense"
 
+# Run all tests in a manner that shows any print() statements
+python3 test_ingest.py
+
 # Run all tests, using multiple CPUs
 # Details: https://pypi.org/project/pytest-xdist/
 pytest -n auto
@@ -67,6 +70,12 @@ def get_nth_gene_models(n, models, mock_dir):
     else:
         # For Mtx
         actual_model = list(models)[n].__dict__
+
+    # Uncomment to print out new baseline data
+    # Process to update baselines is manual: copy and paste it into new file
+    # TODO: Automate when reasonable
+    #print('actual_model')
+    #print(actual_model)
 
     with open(f'mock_data/{mock_dir}/gene_model_{n}.json') as f:
         expected_model = json.loads(f.read())
