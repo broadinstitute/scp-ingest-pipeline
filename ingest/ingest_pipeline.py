@@ -36,7 +36,7 @@ EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 
 class IngestPipeline(object):
     def __init__(self, *, matrix_file: str, matrix_file_type: str,
-                 barcode_file: str = '', gene_file: str = '', db=None):
+                 barcode_file: str = '', gene_file: str = ''):
         """Initializes variables in ingest service.
 
         Args:
@@ -59,10 +59,7 @@ class IngestPipeline(object):
         self.gene_file = gene_file
         self.barcodes_file = barcode_file
         self.matrix = self.initialize_file_connection()
-        if db is None:
-            self.db = firestore.Client()
-        else:
-            self.db = db
+        self.db = firestore.Client()
 
     def initialize_file_connection(self):
         """Initializes connection to file.

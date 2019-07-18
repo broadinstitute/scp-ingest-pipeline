@@ -4,11 +4,13 @@ EXAMPLES
 cd tests; python3 test_ingest.py
 """
 
-import unittest
 from glob import glob
 import json
 import sys
+import unittest
+from unittest.mock import patch
 
+import google.cloud
 from mockfirestore import MockFirestore
 
 sys.path.append('../ingest')
@@ -18,6 +20,8 @@ def mock_load_expression_data(self, *args, **kwargs):
     self.load_expression_data_args = args
     self.load_expression_data_kwargs = kwargs
 
+def mock_firestore_client(*args, **kwargs):
+    return
 
 IngestPipeline.load_expression_data = mock_load_expression_data
 
@@ -30,16 +34,17 @@ class IngestTestCase(unittest.TestCase):
         validate_arguments(parsed_args)
         arguments = vars(parsed_args)
 
-        mock_db = MockFirestore()
+        # mock_db = MockFirestore()
 
-        ingest = IngestPipeline(**arguments, db=mock_db)
+        ingest = IngestPipeline(**arguments)
 
         if hasattr(ingest, 'ingest_expression'):
             getattr(ingest, 'ingest_expression')()
 
         return ingest
 
-    def test_ingest_dense_matrix(self):
+    @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
+    def test_ingest_dense_matrix(self, mock_firestore_client):
         """Ingest Pipeline should handle dense matrices
         """
 
@@ -60,7 +65,8 @@ class IngestTestCase(unittest.TestCase):
 
         self.assertEqual(first_model, expected_first_model)
 
-    def test_ingest_mtx_matrix(self):
+    @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
+    def test_ingest_mtx_matrix(self, mock_firestore_client):
         """Ingest Pipeline should handle MTX matrix bundles
         """
 
