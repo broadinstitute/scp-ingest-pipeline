@@ -7,12 +7,20 @@ Mocks are used for test speed and isolation.
 
 PREREQUISITE
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
+Also, before "EXAMPLES" commands, run `cd tests`.
 
 EXAMPLES
 
-# Run Ingest Pipeline test suite, show code coverage metrics
-cd tests
-python3 test_ingest.py; coverage report -m --include *scp-ingest-pipeline/ingest*
+# Run all tests
+pytest
+
+# Run tests with names containing the string "dense"
+pytest -k "dense"
+
+# Run all tests, show code coverage metrics
+# For explanation of coverage report, see:
+# https://coverage.readthedocs.io/en/v4.5.x/branch.html
+coverage run --branch test_ingest.py; coverage report -m --include *scp-ingest-pipeline/ingest*
 
 """
 
