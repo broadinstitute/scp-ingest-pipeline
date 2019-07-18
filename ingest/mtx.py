@@ -9,7 +9,6 @@ These are commonly provided from 10x Genomics v2.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-import json
 import os
 import sys
 from typing import Dict, Generator, List, Tuple, Union
