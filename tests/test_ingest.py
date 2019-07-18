@@ -1,7 +1,19 @@
 """Unit tests for ingest.py
 
+These tests verify that various matrix file types can be extracted and
+transformed, as expected by code that loads transformed data into Firestore.
+
+Mocks are used for test speed and isolation.
+
+PREREQUISITE
+Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
+
 EXAMPLES
-cd tests; python3 test_ingest.py
+
+# Run Ingest Pipeline test suite
+cd tests
+python3 test_ingest.py
+
 """
 
 from glob import glob
@@ -28,20 +40,29 @@ def mock_load_expression_data(self, *args, **kwargs):
     self.load_expression_data_kwargs = kwargs
 
 def mock_firestore_client(*args, **kwargs):
-    """Return nothing upon invoking firestore.Client()
+    """Mocks firestore.Client() by returning nothing upon initializing client
     """
     return
 
 def get_nth_gene_models(n, models, mock_dir):
     """Return Nth actual and expected gene models, using actual and mock data
     """
-    actual_model = expression_models[0].__dict__
-    path = f'mock_data/${mock_path}/gene_model_${n}.json'
-    with open(path) as f:
+    # TODO: Dense loads models as a `list`, Mtx loads models as a `dict_values`
+    # It seems both would ideally load using the same type.  Reconcile.
+    if isinstance(models, list):
+        # For Dense
+        actual_model = models[n].__dict__
+    else:
+        # For Mtx
+        actual_model = list(models)[n].__dict__
+
+    with open(f'mock_data/{mock_dir}/gene_model_{n}.json') as f:
         expected_model = json.loads(f.read())
     return actual_model, expected_model
 
+# Mock method that loads data to Firestore
 IngestPipeline.load_expression_data = mock_load_expression_data
+
 
 class IngestTestCase(unittest.TestCase):
 
