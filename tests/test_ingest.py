@@ -10,9 +10,9 @@ Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
 
 EXAMPLES
 
-# Run Ingest Pipeline test suite
+# Run Ingest Pipeline test suite, show code coverage metrics
 cd tests
-python3 test_ingest.py
+python3 test_ingest.py; coverage report -m --include *scp-ingest-pipeline/ingest*
 
 """
 
