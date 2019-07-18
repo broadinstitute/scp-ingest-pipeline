@@ -11,7 +11,6 @@ import unittest
 from unittest.mock import patch
 
 import google.cloud
-from mockfirestore import MockFirestore
 
 sys.path.append('../ingest')
 from ingest_pipeline import *
@@ -33,8 +32,6 @@ class IngestTestCase(unittest.TestCase):
         parsed_args = create_parser().parse_args(args_list)
         validate_arguments(parsed_args)
         arguments = vars(parsed_args)
-
-        # mock_db = MockFirestore()
 
         ingest = IngestPipeline(**arguments)
 
