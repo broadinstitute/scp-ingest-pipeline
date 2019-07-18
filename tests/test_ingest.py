@@ -16,14 +16,32 @@ sys.path.append('../ingest')
 from ingest_pipeline import *
 
 def mock_load_expression_data(self, *args, **kwargs):
+    """Enables overwriting normal function with this placeholder.
+    Returning the arguments enables tests to verify that the code invokes
+    this method with expected argument values.
+
+    Ideally we would mock Firestore itself, but existing libraries to mock
+    Firestore (e.g. https://github.com/mdowds/python-mock-firestore) don't
+    implement important Firestore methods like "batch()".
+    """
     self.load_expression_data_args = args
     self.load_expression_data_kwargs = kwargs
 
 def mock_firestore_client(*args, **kwargs):
+    """Return nothing upon invoking firestore.Client()
+    """
     return
 
-IngestPipeline.load_expression_data = mock_load_expression_data
+def get_nth_gene_models(n, models, mock_dir):
+    """Return Nth actual and expected gene models, using actual and mock data
+    """
+    actual_model = expression_models[0].__dict__
+    path = f'mock_data/${mock_path}/gene_model_${n}.json'
+    with open(path) as f:
+        expected_model = json.loads(f.read())
+    return actual_model, expected_model
 
+IngestPipeline.load_expression_data = mock_load_expression_data
 
 class IngestTestCase(unittest.TestCase):
 
@@ -42,7 +60,7 @@ class IngestTestCase(unittest.TestCase):
 
     @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
     def test_ingest_dense_matrix(self, mock_firestore_client):
-        """Ingest Pipeline should handle dense matrices
+        """Ingest Pipeline should extract and transform dense matrices
         """
 
         args = ('ingest_expression '
@@ -50,21 +68,22 @@ class IngestTestCase(unittest.TestCase):
                 '--matrix-file-type dense')
         ingest = self.setup_ingest(args)
 
-        expression_models = ingest.load_expression_data_args[0]
+        models = ingest.load_expression_data_args[0]
 
-        num_models = len(expression_models)
+        # Verify that 19 gene models were passed into load method
+        num_models = len(models)
         expected_num_models = 19
         self.assertEqual(num_models, expected_num_models)
 
-        first_model = expression_models[0].__dict__
-        with open('mock_data/dense_matrix_19_genes_100k_cells_txt/gene_model_1.json') as f:
-            expected_first_model = json.loads(f.read())
+        # Verify that the first gene model looks as expected
+        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
+        model, expected_model = get_nth_gene_models(0, models, mock_dir)
 
-        self.assertEqual(first_model, expected_first_model)
+        self.assertEqual(model, expected_model)
 
     @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
     def test_ingest_mtx_matrix(self, mock_firestore_client):
-        """Ingest Pipeline should handle MTX matrix bundles
+        """Ingest Pipeline should extract and transform MTX matrix bundles
         """
 
         args = ('ingest_expression '
@@ -74,16 +93,17 @@ class IngestTestCase(unittest.TestCase):
                 '--barcode-file ../tests/data/barcodes.tsv')
         ingest = self.setup_ingest(args)
 
-        expression_models = ingest.load_expression_data_args[0]
+        models = ingest.load_expression_data_args[0]
 
-        num_models = len(expression_models)
+        # Verify that 25 gene models were passed into load method
+        num_models = len(models)
         expected_num_models = 25
         self.assertEqual(num_models, expected_num_models)
 
-        first_model = list(expression_models)[0].__dict__
-        with open('mock_data/matrix_mtx/gene_model_1.json') as f:
-            expected_first_model = json.loads(f.read())
-        self.assertEqual(first_model, expected_first_model)
+        # Verify that the first gene model looks as expected
+        mock_dir = 'matrix_mtx'
+        model, expected_model = get_nth_gene_models(0, models, mock_dir)
+        self.assertEqual(model, expected_model)
 
 
 if __name__ == '__main__':
