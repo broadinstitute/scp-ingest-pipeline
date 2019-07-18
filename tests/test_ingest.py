@@ -17,6 +17,10 @@ pytest
 # Run tests with names containing the string "dense"
 pytest -k "dense"
 
+# Run all tests, using multiple CPUs
+# Details: https://pypi.org/project/pytest-xdist/
+pytest -n auto
+
 # Run all tests, show code coverage metrics
 # For explanation of coverage report, see:
 # https://coverage.readthedocs.io/en/v4.5.x/branch.html
