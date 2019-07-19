@@ -104,8 +104,6 @@ class IngestService(object):
         for expression_model in list_of_expression_models:
             collection_name = expression_model.get_collection_name()
             doc_ref = self.db.collection(collection_name).document()
-            # Setting document id to 'id' value in gene model
-            expression_model.top_level_doc['id'] = doc_ref.id
             doc_ref.set(expression_model.top_level_doc)
             if expression_model.has_subcollection_data():
                 try:
