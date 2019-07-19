@@ -13,10 +13,10 @@ EXAMPLES
 # Takes expression file and stores it into firestore
 
 # Ingest dense file
-$python ingest.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+$python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest mtx files
-$python ingest.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --matrix-bundle ../tests/data/genes.tsv ../tests/data/barcodes.tsv
+$python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 import os
@@ -36,7 +36,7 @@ EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 
 class IngestService(object):
     def __init__(self, *, matrix_file: str, matrix_file_type: str,
-                 matrix_bundle: List[str] = None):
+                 barcode_file: str = '', gene_file: str = ''):
         """Initializes variables in ingest service.
 
         Args:
@@ -56,11 +56,12 @@ class IngestService(object):
             raise IOError(f"File '{matrix_file}' not found")
         self.matrix_file_path = matrix_file
         self.matrix_file_type = matrix_file_type
-        self.matrix_bundle = matrix_bundle
-        self.matrix = self.initialize_file_connection()
+        self.gene_file = gene_file
+        self.barcodes_file = barcode_file
+        self.matrix = self.initialize_file_connection(matrix_file_type)
         self.db = firestore.Client()
 
-    def initialize_file_connection(self):
+    def initialize_file_connection(self, file_type):
         """Initializes connection to file.
 
         Args:
@@ -73,10 +74,10 @@ class IngestService(object):
             'dense': Dense
         }
         if self.matrix_file_type == 'mtx':
-            return Mtx(self.matrix_file_path, self.matrix_bundle)
+            return Mtx(self.matrix_file_path, self.gene_file, self.barcodes_file)
         else:
             return(
-                file_connections.get(self.matrix_file_type)(self.matrix_file_path))
+                file_connections.get(file_type)(self.matrix_file_path))
 
     def close_matrix(self):
         """Closes connection to file.
@@ -99,27 +100,30 @@ class IngestService(object):
             None
         """
 
+        # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
             collection_name = expression_model.get_collection_name()
             doc_ref = self.db.collection(collection_name).document()
-            doc_ref.set(expression_model.get_document())
+            doc_ref.set(expression_model.top_level_doc)
             if expression_model.has_subcollection_data():
                 try:
-                    if expression_model.has_subcollection_data():
-                        subcollection_name = expression_model.get_subcollection_name()
-                        doc_ref_sub = doc_ref.collection(
-                            subcollection_name).document()
-                        doc_ref_sub.set(
-                            expression_model.get_subcollection())
+                    subcollection_name = expression_model.get_subcollection_name()
+                    doc_ref_sub = doc_ref.collection(
+                        subcollection_name).document()
+                    doc_ref_sub.set(expression_model.subdocument)
                 except exceptions.InvalidArgument as e:
                     # Catches invalid argument exception, which error "Maximum
-                    # document size falls under.
-                    print(f'Exception is: {e}')
+                    # document size" falls under
+                    print(e)
+                    batch = self.db.batch()
                     for subdoc in expression_model.chunk_gene_expression_documents():
+
                         subcollection_name = expression_model.get_subcollection_name()
                         doc_ref_sub = doc_ref.collection(
                             subcollection_name).document()
-                        doc_ref_sub.set(subdoc)
+                        batch.set(doc_ref_sub, subdoc)
+
+                    batch.commit()
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -131,14 +135,14 @@ class IngestService(object):
         Returns:
             None
         """
-        if self.matrix_bundle is not None:
+        if self.gene_file is not None:
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
         else:
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
                     *data)
-                self.load_expression_data(transformed_data)
+        self.load_expression_data(transformed_data)
         self.close_matrix()
 
 
@@ -160,38 +164,45 @@ def parse_arguments():
     subargs = args.add_subparsers()
 
     # Ingest expression files subparser
-    parser_ingest_xpression = subargs.add_parser('ingest_expression',
-                                                 help='Indicates that expression'
-                                                 ' files are being ingested')
+    parser_ingest_expression = subargs.add_parser('ingest_expression',
+                                                  help='Indicates that expression'
+                                                  ' files are being ingested')
 
-    parser_ingest_xpression.add_argument('--matrix-file', required=True,
-                                         help='Absolute or relative path to '
-                                         'expression file.For 10x data this is '
-                                         'the .mtx file')
+    parser_ingest_expression.add_argument('--matrix-file', required=True,
+                                          help='Absolute or relative path to '
+                                          'expression file.For 10x data this is '
+                                          'the .mtx file')
 
     matrix_file_type_txt = 'Type of expression file that is ingested. If mtx \
         files are being ingested, .genes.tsv and .barcodes.tsv files must be \
-        included using --matrix-bundle. See - -help for more information'
+        included using --barcode-file <barcode file path> and --gene-file \
+        <gene file path>. See --help for more information'
 
-    parser_ingest_xpression.add_argument('--matrix-file-type',
-                                         choices=EXPRESSION_FILE_TYPES,
-                                         type=str.lower,
-                                         required=True,
-                                         help=matrix_file_type_txt
-                                         )
+    parser_ingest_expression.add_argument('--matrix-file-type',
+                                          choices=EXPRESSION_FILE_TYPES,
+                                          type=str.lower,
+                                          required=True,
+                                          help=matrix_file_type_txt
+                                          )
 
-    parser_ingest_xpression.add_argument('--matrix-bundle', default=None,
-                                         nargs='+', help='Names of .genes.tsv '
-                                         'and .barcodes.tsv files'
-                                         )
+    # Gene and Barcode arguments for MTX bundle
+    parser_ingest_expression.add_argument('--barcode-file',
+                                          help='Path to .barcodes.tsv files')
+    parser_ingest_expression.add_argument('--gene-file',
+                                          help='Path to .genes.tsv file')
 
+    parser_ingest_cluster = subargs.add_parser('ingest_clusters',
+                                               help='Indicates that cluster'
+                                               ' files are being ingested')
+    parser_ingest_cluster.add_argument('--cluster-file',
+                                       help='Path to cluster files')
     parsed_args = args.parse_args()
-    if parsed_args.matrix_file_type == 'mtx' and parsed_args.matrix_bundle == None:
-        if parsed_args.matrix_bundle == None:
-            raise ValueError(
-                ' Missing argument: --matrix-bundle. Mtx files must include '
-                '.genes.tsv, and .barcodes.tsv files. See --help for more '
-                'information')
+    if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
+                                                  or parsed_args.barcode_file == None):
+        raise ValueError(
+            ' Missing argument: --matrix-bundle. Mtx files must include '
+            '.genes.tsv, and .barcodes.tsv files. See --help for more '
+            'information')
 
     return parsed_args
 
