@@ -58,10 +58,10 @@ class IngestService(object):
         self.matrix_file_type = matrix_file_type
         self.gene_file = gene_file
         self.barcodes_file = barcode_file
-        self.matrix = self.initialize_file_connection()
+        self.matrix = self.initialize_file_connection(matrix_file_type)
         self.db = firestore.Client()
 
-    def initialize_file_connection(self):
+    def initialize_file_connection(self, file_type):
         """Initializes connection to file.
 
         Args:
@@ -77,7 +77,7 @@ class IngestService(object):
             return Mtx(self.matrix_file_path, self.gene_file, self.barcodes_file)
         else:
             return(
-                file_connections.get(self.matrix_file_type)(self.matrix_file_path))
+                file_connections.get(file_type)(self.matrix_file_path))
 
     def close_matrix(self):
         """Closes connection to file.
@@ -102,19 +102,17 @@ class IngestService(object):
 
         # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
-            batch = self.db.batch()
             collection_name = expression_model.get_collection_name()
             doc_ref = self.db.collection(collection_name).document()
-            doc_ref.set(expression_model.get_document())
-
+            # Setting document id to 'id' value in gene model
+            expression_model.top_level_doc['id'] = doc_ref.id
+            doc_ref.set(expression_model.top_level_doc)
             if expression_model.has_subcollection_data():
                 try:
-                    if expression_model.has_subcollection_data():
-                        subcollection_name = expression_model.get_subcollection_name()
-                        doc_ref_sub = doc_ref.collection(
-                            subcollection_name).document()
-                        doc_ref_sub.set(expression_model.get_subcollection())
-
+                    subcollection_name = expression_model.get_subcollection_name()
+                    doc_ref_sub = doc_ref.collection(
+                        subcollection_name).document()
+                    doc_ref_sub.set(expression_model.subdocument)
                 except exceptions.InvalidArgument as e:
                     # Catches invalid argument exception, which error "Maximum
                     # document size" falls under
@@ -126,7 +124,6 @@ class IngestService(object):
                         doc_ref_sub = doc_ref.collection(
                             subcollection_name).document()
                         batch.set(doc_ref_sub, subdoc)
-                        # print(f'This is batch: {batch.__dict__}')
 
                     batch.commit()
 
@@ -147,7 +144,7 @@ class IngestService(object):
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
                     *data)
-        # self.load_expression_data(transformed_data)
+        self.load_expression_data(transformed_data)
         self.close_matrix()
 
 
@@ -196,6 +193,11 @@ def parse_arguments():
     parser_ingest_expression.add_argument('--gene-file',
                                           help='Path to .genes.tsv file')
 
+    parser_ingest_cluster = subargs.add_parser('ingest_clusters',
+                                               help='Indicates that cluster'
+                                               ' files are being ingested')
+    parser_ingest_cluster.add_argument('--cluster-file',
+                                       help='Path to cluster files')
     parsed_args = args.parse_args()
     if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
                                                   or parsed_args.barcode_file == None):
