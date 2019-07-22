@@ -45,9 +45,8 @@ jobs:
             . venv/bin/activate
             cd tests
             coverage run -m pytest
-            coverage report
+            coverage report --include *scp-ingest-pipeline/ingest*
             coverage html
 
       - store_artifacts:
-          path: tests/.coverage
-          destination: tests/.coverage
+          path: htmlcov
