@@ -31,8 +31,8 @@ coverage run --branch test_ingest.py; coverage report -m --include *scp-ingest-p
 
 """
 
+import ast
 from glob import glob
-import json
 import sys
 import unittest
 from unittest.mock import patch
@@ -74,11 +74,13 @@ def get_nth_gene_models(n, models, mock_dir):
     # Uncomment to print out new baseline data
     # Process to update baselines is manual: copy and paste it into new file
     # TODO: Automate when reasonable
-    #print('actual_model')
-    #print(actual_model)
+    # print('actual_model')
+    # print(actual_model)
 
-    with open(f'mock_data/{mock_dir}/gene_model_{n}.json') as f:
-        expected_model = json.loads(f.read())
+    with open(f'mock_data/{mock_dir}/gene_model_{n}.txt') as f:
+        # Create a dictionary from the string-literal mock
+        expected_model = ast.literal_eval(f.read())
+    
     return actual_model, expected_model
 
 # Mock method that loads data to Firestore
