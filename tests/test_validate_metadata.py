@@ -21,6 +21,7 @@ class TestValidateMetadata(unittest.TestCase):
 
         args = ('../tests/data/AMC_v0.8.json ' '../tests/data/error_test10.tsv')
         metadata = self.setup_validation(args)
+        self.assertFalse(metadata.validate_header_keyword())
 
         self.assertIn(
             'Error: Metadata file header row malformed, missing NAME',
@@ -35,6 +36,7 @@ class TestValidateMetadata(unittest.TestCase):
         args = ('../tests/data/AMC_v0.8.json ' '../tests/data/error_test11.tsv')
         metadata = self.setup_validation(args)
 
+        self.assertFalse(metadata.validate_type_keyword())
         self.assertIn(
             'Error:  Metadata file TYPE row malformed, missing TYPE',
             metadata.errors['format'],
@@ -48,11 +50,7 @@ class TestValidateMetadata(unittest.TestCase):
         args = ('../tests/data/AMC_v0.8.json ' '../tests/data/error_test12.tsv')
         metadata = self.setup_validation(args)
 
-        self.assertIn(
-            'Error: TYPE declarations should be "group" or "numeric"; ',
-            metadata.errors['format'],
-            "Validation should detect invalid TYPE values"
-        )
+        self.assertFalse(metadata.validate_type_annotations())
 
 
 if __name__ == '__main__':

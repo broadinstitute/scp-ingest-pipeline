@@ -30,38 +30,45 @@ class Cell_Metadata:
         self.errors = defaultdict(list)
 
     def validate_header_keyword(self):
+        valid = False
         if self.headers[0].casefold() == 'NAME'.casefold():
             try:
                 self.headers.pop(self.headers.index('NAME'))
+                valid = True
             except ValueError:
                 print(
                     'Warning: metadata file keyword "NAME" provided as {x}'.
                     format(x=self.headers[0])
                 )
                 self.headers.pop(0)
+                valid = True
         else:
             self.errors['format'].append(
                 ('Error: Metadata file header row malformed, missing NAME')
             )
-        return
+        return valid
 
     def validate_type_keyword(self):
+        valid = False
         if self.metadata_types[0].casefold() == 'TYPE'.casefold():
             try:
                 self.metadata_types.pop(self.metadata_types.index('TYPE'))
+                valid = True
             except ValueError:
                 print(
                     'Warning: metadata file keyword "TYPE" provided as {x}'.
                     format(x=self.metadata_types[0])
                 )
                 self.metadata_types.pop(0)
+                valid = True
         else:
             self.errors['format'].append(
                 ('Error:  Metadata file TYPE row malformed, missing TYPE')
             )
-        return
+        return valid
 
     def validate_type_annotations(self):
+        valid = False
         annot_err = False
         annots = []
         for t in self.metadata_types:
@@ -77,7 +84,9 @@ class Cell_Metadata:
                     )
                 )
             )
-        return
+        else:
+            valid = True
+        return valid
 
     def validate_against_header_count(self, list):
         if not len(self.headers) == len(list):
