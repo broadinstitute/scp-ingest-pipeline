@@ -1,16 +1,16 @@
-"""Ingest Service for expression files and eventually metadata and cluster
-files into firestore.
+"""Ingest Pipeline for expression files and eventually metadata and cluster
+files into Firestore.
 
 DESCRIPTION
 This cli currently takes in extract and transform functions from different
 file types then uploads them into Firestore.
 
 PREREQUISITES
-You must have Google Cloud Firestore installed, authenticated
- configured. Must have python 3.6 or higher.
+You must have Google Cloud Firestore installed, authenticated, and
+configured. Must have Python 3.6 or higher.
 
 EXAMPLES
-# Takes expression file and stores it into firestore
+# Takes expression file and stores it into Firestore
 
 # Ingest dense file
 $python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
@@ -37,11 +37,11 @@ EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 class IngestPipeline(object):
     def __init__(self, *, matrix_file: str, matrix_file_type: str,
                  barcode_file: str = '', gene_file: str = ''):
-        """Initializes variables in ingest service.
+        """Initializes variables in Ingest Pipeline.
 
         Args:
             matrix_file: str,
-                For expression files, the relative or Absolute path to the
+                For expression files, the relative or absolute path to the
                     matrix file
             matrix_file_type: str,
                 The matrix file type
@@ -90,7 +90,7 @@ class IngestPipeline(object):
         self.matrix.close()
 
     def load_expression_data(self, list_of_expression_models: List[Gene]) -> None:
-        """Loads expression data into firestore.
+        """Loads expression data into Firestore.
 
         Args:
             list_of_transformed_data : List[Gene]
@@ -127,7 +127,7 @@ class IngestPipeline(object):
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
-        functions. Then loads data into firestore.
+        functions. Then loads data into Firestore.
 
         Args:
             None
