@@ -50,7 +50,7 @@ class IngestPipeline(object):
                     and gene files.
 
         Returns:
-            Nothing
+            None
         """
         if not os.path.exists(matrix_file):
             raise IOError(f"File '{matrix_file}' not found")
@@ -147,13 +147,15 @@ class IngestPipeline(object):
 
 
 def create_parser():
-    """Creates parser for input arguments
+    """Creates parser for input arguments.
+
+    Structuring the argument parsing code like this eases automated testing.
 
     Args:
         None
 
     Returns:
-        None
+        parser: ArgumentParser object
     """
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -168,7 +170,7 @@ def create_parser():
 
     parser_ingest_expression.add_argument('--matrix-file', required=True,
                                           help='Absolute or relative path to '
-                                          'expression file.For 10x data this is '
+                                          'expression file. For 10x data this is '
                                           'the .mtx file')
 
     matrix_file_type_txt = 'Type of expression file that is ingested. If mtx \
@@ -197,8 +199,16 @@ def create_parser():
     return parser
 
 def validate_arguments(parsed_args):
- if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
-                                                  or parsed_args.barcode_file == None):
+    """Verify parsed input arguments
+
+    Args:
+        parsed_args: Parsed input arguments
+
+    Returns:
+        None
+    """
+    if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
+                                                    or parsed_args.barcode_file == None):
         raise ValueError(
             ' Missing argument: --matrix-bundle. Mtx files must include '
             '.genes.tsv, and .barcodes.tsv files. See --help for more '
