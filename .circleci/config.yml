@@ -46,7 +46,7 @@ jobs:
             cd tests
             coverage run -m pytest
             coverage report --include *scp-ingest-pipeline/ingest*
-            coverage html
+            coverage html --include *scp-ingest-pipeline/ingest*
 
       - store_artifacts:
           path: tests/htmlcov
