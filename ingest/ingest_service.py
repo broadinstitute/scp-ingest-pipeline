@@ -25,6 +25,8 @@ from typing import Dict, Generator, List, Tuple, Union
 
 import grpc
 import numpy as np
+from cell_metadata import CellMetadata
+from clusters import Clusters
 from dense import Dense
 from gene_data_model import Gene
 from google.api_core import exceptions
@@ -36,8 +38,9 @@ EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 
 
 class IngestService(object):
-    def __init__(self, *, matrix_file: str, matrix_file_type: str,
-                 barcode_file: str = '', gene_file: str = ''):
+    def __init__(self, *, matrix_file: str = None, matrix_file_type: str = None,
+                 barcode_file: str = None, gene_file: str = None, cell_metadata_file: str = None,
+                 cluster_file: str = None):
         """Initializes variables in ingest service.
 
         Args:
@@ -53,16 +56,30 @@ class IngestService(object):
         Returns:
             Nothing
         """
-        if not os.path.exists(matrix_file):
-            raise IOError(f"File '{matrix_file}' not found")
+
         self.matrix_file_path = matrix_file
         self.matrix_file_type = matrix_file_type
         self.gene_file = gene_file
         self.barcodes_file = barcode_file
-        self.matrix = self.initialize_file_connection()
         self.db = firestore.Client()
+        if matrix_file is not None:
+            self.matrix = self.initialize_file_connection(
+                matrix_file_type, matrix_file)
+        elif cell_metadata_file is not None:
+            self.cell_metadata = self.initialize_file_connection(
+                'cell_metadata', cell_metadata_file)
+        elif cluster_file is not None:
+            print('here')
+            self.cluster = self.initialize_file_connection(
+                'cluster', cluster_file)
+        elif matrix_file is None:
+            self.matrix = matrix_file
+        elif cluster_file is None:
+            self.cluster = cluster_file
+        elif cell_metadata_file is None:
+            self.cell_metadata = cell_metadata_file
 
-    def initialize_file_connection(self):
+    def initialize_file_connection(self, file_type, file_path):
         """Initializes connection to file.
 
         Args:
@@ -72,13 +89,15 @@ class IngestService(object):
         """
         # Mtx file types not included because class declaration is different
         file_connections = {
-            'dense': Dense
+            'dense': Dense,
+            'cell_metadata': CellMetadata,
+            'cluster': Clusters
         }
-        if self.matrix_file_type == 'mtx':
+
+        if file_type == 'mtx':
             return Mtx(self.matrix_file_path, self.gene_file, self.barcodes_file)
         else:
-            return(
-                file_connections.get(self.matrix_file_type)(self.matrix_file_path))
+            return file_connections.get(file_type)(file_path)
 
     def close_matrix(self):
         """Closes connection to file.
@@ -151,6 +170,28 @@ class IngestService(object):
         self.load_expression_data(transformed_data)
         self.close_matrix()
 
+    def ingest_cell_metadata(self):
+        """Ingests cell metadata files into firestore.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        self.cell_metadata.extract()
+
+    def ingest_cluster(self):
+        """Ingests cluster files into firestore.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        self.cluster.extract()
+
 
 def parse_arguments():
     """Parses and validates input arguments.
@@ -170,41 +211,56 @@ def parse_arguments():
     subargs = args.add_subparsers()
 
     # Ingest expression files subparser
-    parser_ingest_xpression = subargs.add_parser('ingest_expression',
-                                                 help='Indicates that expression'
-                                                 ' files are being ingested')
+    parser_ingest_expression = subargs.add_parser('ingest_expression',
+                                                  help='Indicates that expression'
+                                                  ' files are being ingested')
 
-    parser_ingest_xpression.add_argument('--matrix-file', required=True,
-                                         help='Absolute or relative path to '
-                                         'expression file.For 10x data this is '
-                                         'the .mtx file')
+    parser_ingest_expression.add_argument('--matrix-file', required=True,
+                                          help='Absolute or relative path to '
+                                          'expression file.For 10x data this is '
+                                          'the .mtx file')
 
     matrix_file_type_txt = 'Type of expression file that is ingested. If mtx \
         files are being ingested, .genes.tsv and .barcodes.tsv files must be \
         included using --barcode-file <barcode file path> and --gene-file \
         <gene file path>. See --help for more information'
 
-    parser_ingest_xpression.add_argument('--matrix-file-type',
-                                         choices=EXPRESSION_FILE_TYPES,
-                                         type=str.lower,
-                                         required=True,
-                                         help=matrix_file_type_txt
-                                         )
+    parser_ingest_expression.add_argument('--matrix-file-type',
+                                          choices=EXPRESSION_FILE_TYPES,
+                                          type=str.lower,
+                                          required=True,
+                                          help=matrix_file_type_txt
+                                          )
 
     # Gene and Barcode arguments for MTX bundle
-    parser_ingest_xpression.add_argument('--barcode-file', type=str,
-                                         help='Names of .barcodes.tsv files')
-    parser_ingest_xpression.add_argument('--gene-file', type=str,
-                                         help='Names of .genes.tsv file')
+    parser_ingest_expression.add_argument('--barcode-file', type=str,
+                                          help='Names of .barcodes.tsv files')
+    parser_ingest_expression.add_argument('--gene-file', type=str,
+                                          help='Names of .genes.tsv file')
+
+    parser_cell_metadata = subargs.add_parser('ingest_cell_metadata',
+                                              help='Indicates that cell '
+                                              ' metadata files are being '
+                                              'ingested')
+    parser_cell_metadata.add_argument('--cell-metadata-file', required=True,
+                                      help='Absolute or relative path to '
+                                      'cell metadata file.')
+
+    parser_cluster = subargs.add_parser('ingest_cluster',
+                                        help='Indicates that cluster '
+                                        'file is being ingested')
+    parser_cluster.add_argument('--cluster-file', required=True,
+                                help='Absolute or relative path to '
+                                'cluster file.')
 
     parsed_args = args.parse_args()
-    if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
-                                                  or parsed_args.barcode_file == None):
-        raise ValueError(
-            ' Missing argument: --matrix-bundle. Mtx files must include '
-            '.genes.tsv, and .barcodes.tsv files. See --help for more '
-            'information')
-
+    if hasattr(parsed_args, 'ingest_expression'):
+        if parsed_argsmatrix_file_type == 'mtx' and (parsed_args.gene_file == None
+                                                     or parsed_args.barcode_file == None):
+            raise ValueError(
+                ' Missing argument: --matrix-bundle. Mtx files must include '
+                '.genes.tsv, and .barcodes.tsv files. See --help for more '
+                'information')
     return parsed_args
 
 
@@ -221,8 +277,12 @@ def main() -> None:
     print(arguments)
     ingest = IngestService(**arguments)
 
-    if hasattr(ingest, 'ingest_expression'):
+    if hasattr(arguments, 'ingest_expression'):
         getattr(ingest, 'ingest_expression')()
+    elif hasattr(arguments, 'ingest_cell_metadata'):
+        getattr(ingest, 'ingest_cell_metadata')()
+    elif 'cluster_file' in arguments:
+        getattr(ingest, 'ingest_cluster')()
 
 
 if __name__ == "__main__":
