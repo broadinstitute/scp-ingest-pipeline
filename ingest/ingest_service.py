@@ -190,7 +190,7 @@ class IngestService(object):
         Returns:
             None
         """
-        # self.cluster.extract()
+        self.cluster.extract()
 
 
 def parse_arguments():
