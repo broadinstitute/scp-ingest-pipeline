@@ -49,4 +49,4 @@ jobs:
             coverage html
 
       - store_artifacts:
-          path: htmlcov
+          path: tests/htmlcov
