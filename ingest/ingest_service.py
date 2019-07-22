@@ -190,7 +190,7 @@ class IngestService(object):
         Returns:
             None
         """
-        self.cluster.extract()
+        # self.cluster.extract()
 
 
 def parse_arguments():
@@ -274,7 +274,6 @@ def main() -> None:
         None
     """
     arguments = vars(parse_arguments())
-    print(arguments)
     ingest = IngestService(**arguments)
 
     if hasattr(arguments, 'ingest_expression'):
