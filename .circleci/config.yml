@@ -44,8 +44,9 @@ jobs:
           command: |
             . venv/bin/activate
             cd tests
-            coverage run --branch test_ingest.py
-            coverage report -m --include *scp-ingest-pipeline/ingest*
+            coverage run -m pytest
+            coverage report
+            coverage html
 
       - store_artifacts:
           path: tests/.coverage
