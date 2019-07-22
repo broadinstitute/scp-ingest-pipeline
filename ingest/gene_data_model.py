@@ -27,18 +27,13 @@ class Gene:
                  gene_id: str = '', study_accession: str = '', taxon_name: str = '',
                  taxon_common_name: str = '', ncbi_taxid: str = '', genome_assembly_accession: str = '',
                  genome_annotation: str = '', cell_names: List[str] = [], expression_scores: List = [],
-                 check_for_zero_values: bool = True) -> None:
+                 check_for_zero_values: bool = True, field_id: str = '', id: str = '') -> None:
 
         self.name = name.replace('"', '')
         self.gene_id = gene_id
-        self.study_accession = study_accession
-        self.source_file_name = source_file_name
-        self.source_file_type = source_file_type
-        self.taxon_name = taxon_name
-        self.taxon_common_name = taxon_common_name
-        self.ncbi_taxid = ncbi_taxid
-        self.genome_assembly_accession = genome_assembly_accession
-        self.genome_annotation = genome_annotation
+        self.source_file_name = source_file_name,
+        self.source_file_type = source_file_type,
+
         if check_for_zero_values:
             self.cell_names, self.expression_scores = self.set_expression_scores_and_cell_names(
                 expression_scores, cell_names)
@@ -47,21 +42,23 @@ class Gene:
             self.expression_scores = expression_scores
         # Subdocument that contains all cell names and expression scores for a
         # given gene
-        self.gene_expression_subdocument = {'cell_names': self.cell_names,
-                                            'expression_scores':  self.expression_scores,
-                                            'source_file_name': source_file_name,
-                                            'source_file_type': source_file_type,
-                                            }
-       # This is the top level document
-        self.gene = {
+        self.subdocument = {'cell_names': self.cell_names,
+                            'expression_scores':  self.expression_scores,
+                            'source_file_name': source_file_name,
+                            'source_file_type': source_file_type,
+                            }
+       # This is the top level document for the gene data model
+        self.top_level_doc = {
+            'field_id': field_id,
+            'id': id,
             'name': self.name,
             'gene_id': self.gene_id,
-            'study_accession': self.study_accession,
-            'taxon_name': self.taxon_name,
-            'taxon_common_name': self.taxon_common_name,
-            'ncbi_taxid': self.ncbi_taxid,
-            'genome_assembly_accession': self.genome_assembly_accession,
-            'genome_annotation': self.genome_annotation,
+            'study_accession': study_accession,
+            'taxon_name': taxon_name,
+            'taxon_common_name': taxon_common_name,
+            'ncbi_taxid': ncbi_taxid,
+            'genome_assembly_accession': genome_assembly_accession,
+            'genome_annotation': genome_annotation,
         }
         self.subcollection_name = 'gene_expression'
 
@@ -93,25 +90,8 @@ class Gene:
         """
         return 'gene_expression'
 
-    def get_document(self):
-        """Returns top level document
-        """
-        return self.gene
-
     def has_subcollection_data(self):
         return self.cell_names != None
-
-    def get_subcollection(self):
-        """Returns subdocuments that belong to subcollection "gene_expression"
-
-        Args:
-            None
-
-        Returns:
-            self.gene_expression_subdocument: Dict[str]
-                A subdocument represtation that contains ALL gene names and cell names.
-        """
-        return self.gene_expression_subdocument
 
     def set_expression_scores_and_cell_names(self, expression_scores, cell_names):
         """Sets expression scores and cell names. Only keeps cell names that have
