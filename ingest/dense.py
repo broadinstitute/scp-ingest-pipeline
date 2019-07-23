@@ -14,15 +14,47 @@ from itertools import islice
 from typing import *
 
 import numpy as np
+from google.cloud import storage
+
 from gene_data_model import Gene
 
+def download_blob(bucket_name, source_blob_name, destination_file_name):
+    """Downloads a blob from the bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket(bucket_name)
+    blob = bucket.blob(source_blob_name)
+
+    blob.download_to_filename(destination_file_name)
+
+    print('Blob {} downloaded to {}.'.format(
+        source_blob_name,
+        destination_file_name))
 
 class Dense():
     def __init__(self, file_path):
-        self.file = open(file_path, 'r')
+        self.file = self.resolve_path(file_path)
         self.cell_names = self.file.readline().replace('"', '').split(',')[1:]
 
         self.file_name = file_path.strip(".")
+
+    def resolve_path(self, file_path):
+        """Localizes object if given a GS URI, returns open Python file object
+
+        Args:
+            file_path: Path to a local file, or a Google Cloud Storage URI
+
+        Returns:
+            Open Python file object
+        """
+        if file_path[:5] == 'gs://':
+            bucket_name = file_path[5:].split('/')[0]
+            source = '/'.join(file_path[5:].split('/')[1:])
+            destination = '/tmp/' + source.replace('/', '%2f')
+            download_blob(bucket_name, source, destination)
+            file_path = destination
+
+        return open(file_path, 'r')
+
 
     def extract(self, size: int = 500) -> List[str]:
         """Extracts lines from dense matrix.
