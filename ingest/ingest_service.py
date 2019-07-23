@@ -255,8 +255,8 @@ def parse_arguments():
 
     parsed_args = args.parse_args()
     if hasattr(parsed_args, 'ingest_expression'):
-        if parsed_argsmatrix_file_type == 'mtx' and (parsed_args.gene_file == None
-                                                     or parsed_args.barcode_file == None):
+        if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
+                                                      or parsed_args.barcode_file == None):
             raise ValueError(
                 ' Missing argument: --matrix-bundle. Mtx files must include '
                 '.genes.tsv, and .barcodes.tsv files. See --help for more '

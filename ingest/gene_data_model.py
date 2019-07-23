@@ -164,7 +164,7 @@ class Gene:
         for index, cell_name in enumerate(self.cell_names):
 
             cell_name_storage = len(cell_name) + 1 + size_of_cell_names_field
-            expression_scores_storage = size_of_field_expression_scores + + float_storage
+            expression_scores_storage = size_of_field_expression_scores + float_storage
             sum = sum + expression_scores_storage + cell_name_storage
             # Subtract one and 32 based off of firestore storage guidelines for strings
             # and documents
