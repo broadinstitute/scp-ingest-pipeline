@@ -155,13 +155,17 @@ class Gene:
         """
         # sum starts at 59 (because key values take up 59 bytes) plus the
         # storage size of the source file name and file type
+        size_of_cell_names_field = 10 + 1
+        size_of_field_expression_scores = 17 + 1
         sum = 59 + len(self.source_file_name) + len(self.source_file_type)
         start_index = 0
         float_storage = 8
 
         for index, cell_name in enumerate(self.cell_names):
 
-            sum = sum + len(cell_name) + float_storage
+            cell_name_storage = len(cell_name) + 1 + size_of_cell_names_field
+            expression_scores_storage = size_of_field_expression_scores + + float_storage
+            sum = sum + expression_scores_storage + cell_name_storage
             # Subtract one and 32 based off of firestore storage guidelines for strings
             # and documents
             # This and other storage size calculation figures are derived from:

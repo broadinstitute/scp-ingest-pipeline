@@ -14,7 +14,7 @@ class IngestFiles:
         self.file_type, self.file = self.open_file(file_path)
 
     # Inherited function
-
+    @staticmethod
     def open_file(self, file_path):
         # Check file type
         file_type = self.get_file_type(file_path)[0]
@@ -27,7 +27,6 @@ class IngestFiles:
                 'text/tab-separated-values': open,
             }
             file_reader = file_connections.get(file_type)
-            print(file_reader)
         # Return file object and type
         return file_type, file_reader
 
@@ -39,6 +38,7 @@ class IngestFiles:
         }
         return file_type_extract_fns.get(self.file_type)
 
+    @staticmethod
     def get_file_type(self, file_path):
         return mimetypes.guess_type(file_path)
 
