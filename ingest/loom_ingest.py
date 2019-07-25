@@ -1,16 +1,16 @@
 """THIS IS A WORK IN PROGRESS
-Command-line interface for ingesting loom files into firestore
+Command-line interface for ingesting Loom files into Firestore
 
 DESCRIPTION
 This CLI maps genes to expression values, cell ids, gene accesions from
-a loom file and puts them into firestore.
+a Loom file and puts them into Firestore.
 
 PREREQUISITES
 You must have google could firestore installed, authenticated
  configured.
 
 EXAMPLES
-# Takes loom file and stores it into firestore
+# Takes Loom file and stores it into Firestore
 $ python loom_ingest.py  200k_subsample_4k_PMBC.loom
 """
 
@@ -34,13 +34,13 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument(
     "loom_file", default=None,
-    help='Path to loom file'
+    help='Path to Loom file'
 )
 
 args = parser.parse_args()
 np.set_printoptions(precision=8, threshold=sys.maxsize, edgeitems=1e9)
 
-# Opens loom file
+# Opens Loom file
 
 
 def open_file(loom_file):
@@ -87,7 +87,7 @@ def add_data_to_firestore(data):
     time.sleep(2)
 
 
-# Open loom file
+# Open Loom file
 ds, loom_file_name = open_file(args.loom_file)
 
 # Map expression data to expression values and row attrobutes

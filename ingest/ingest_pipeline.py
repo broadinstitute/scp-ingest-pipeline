@@ -1,16 +1,16 @@
-"""Ingest Service for expression files and eventually metadata and cluster
-files into firestore.
+"""Ingest Pipeline for expression files and eventually metadata and cluster
+files into Firestore.
 
 DESCRIPTION
 This cli currently takes in extract and transform functions from different
 file types then uploads them into Firestore.
 
 PREREQUISITES
-You must have Google Cloud Firestore installed, authenticated
- configured. Must have python 3.6 or higher.
+You must have Google Cloud Firestore installed, authenticated, and
+configured. Must have Python 3.6 or higher.
 
 EXAMPLES
-# Takes expression file and stores it into firestore
+# Takes expression file and stores it into Firestore
 
 # Ingest dense file
 $python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
@@ -34,14 +34,14 @@ from mtx import Mtx
 EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 
 
-class IngestService(object):
+class IngestPipeline(object):
     def __init__(self, *, matrix_file: str, matrix_file_type: str,
                  barcode_file: str = '', gene_file: str = ''):
-        """Initializes variables in ingest service.
+        """Initializes variables in Ingest Pipeline.
 
         Args:
             matrix_file: str,
-                For expression files, the relative or Absolute path to the
+                For expression files, the relative or absolute path to the
                     matrix file
             matrix_file_type: str,
                 The matrix file type
@@ -50,7 +50,7 @@ class IngestService(object):
                     and gene files.
 
         Returns:
-            Nothing
+            None
         """
         if not os.path.exists(matrix_file):
             raise IOError(f"File '{matrix_file}' not found")
@@ -90,7 +90,7 @@ class IngestService(object):
         self.matrix.close()
 
     def load_expression_data(self, list_of_expression_models: List[Gene]) -> None:
-        """Loads expression data into firestore.
+        """Loads expression data into Firestore.
 
         Args:
             list_of_transformed_data : List[Gene]
@@ -127,7 +127,7 @@ class IngestService(object):
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
-        functions. Then loads data into firestore.
+        functions. Then loads data into Firestore.
 
         Args:
             None
@@ -146,31 +146,31 @@ class IngestService(object):
         self.close_matrix()
 
 
-def parse_arguments():
-    """Parses and validates input arguments.
+def create_parser():
+    """Creates parser for input arguments.
+
+    Structuring the argument parsing code like this eases automated testing.
 
     Args:
         None
 
     Returns:
-        parsed_args: Namespace
-            Validated input arguments
+        parser: ArgumentParser object
     """
-    args = argparse.ArgumentParser(
-        prog='ingest.py',
+    parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    subargs = args.add_subparsers()
+    subparser = parser.add_subparsers()
 
     # Ingest expression files subparser
-    parser_ingest_expression = subargs.add_parser('ingest_expression',
+    parser_ingest_expression = subparser.add_parser('ingest_expression',
                                                   help='Indicates that expression'
                                                   ' files are being ingested')
 
     parser_ingest_expression.add_argument('--matrix-file', required=True,
                                           help='Absolute or relative path to '
-                                          'expression file.For 10x data this is '
+                                          'expression file. For 10x data this is '
                                           'the .mtx file')
 
     matrix_file_type_txt = 'Type of expression file that is ingested. If mtx \
@@ -191,21 +191,28 @@ def parse_arguments():
     parser_ingest_expression.add_argument('--gene-file',
                                           help='Path to .genes.tsv file')
 
-    parser_ingest_cluster = subargs.add_parser('ingest_clusters',
+    parser_ingest_cluster = subparser.add_parser('ingest_clusters',
                                                help='Indicates that cluster'
                                                ' files are being ingested')
     parser_ingest_cluster.add_argument('--cluster-file',
                                        help='Path to cluster files')
-    parsed_args = args.parse_args()
+    return parser
+
+def validate_arguments(parsed_args):
+    """Verify parsed input arguments
+
+    Args:
+        parsed_args: Parsed input arguments
+
+    Returns:
+        None
+    """
     if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
-                                                  or parsed_args.barcode_file == None):
+                                                    or parsed_args.barcode_file == None):
         raise ValueError(
-            ' Missing argument: --matrix-bundle. Mtx files must include '
-            '.genes.tsv, and .barcodes.tsv files. See --help for more '
-            'information')
-
-    return parsed_args
-
+            ' Missing arguments: --gene-file and --barcode-file. Mtx files '
+            'must include .genes.tsv, and .barcodes.tsv files. See --help for '
+            'more information')
 
 def main() -> None:
     """This function handles the actual logic of this script.
@@ -216,8 +223,11 @@ def main() -> None:
     Returns:
         None
     """
-    arguments = vars(parse_arguments())
-    ingest = IngestService(**arguments)
+    
+    parsed_args = create_parser().parse_args()
+    validate_arguments(parsed_args)
+    arguments = vars(parsed_args)
+    ingest = IngestPipeline(**arguments)
 
     if hasattr(ingest, 'ingest_expression'):
         getattr(ingest, 'ingest_expression')()
