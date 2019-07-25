@@ -1,25 +1,26 @@
 #! /usr/bin/python
-"""Validate input metadata tsv file against metadata convention.
+"""Validate input metadata TSV file against metadata convention.
 
 DESCRIPTION
-This CLI takes a tsv metadata file and validates against a metadata convention
+This CLI takes a TSV metadata file and validates against a metadata convention
 using the python jsonschema library. The metadata convention JSON schema
 represents the rules that should be enforced on metadata files for studies
 participating under the convention.
 
 EXAMPLE
-# Using json file for Alexandria metadata convention tsv, validate input tsv
+# Using JSON file for Alexandria metadata convention TSV, validate input TSV
 $ validate_metadata.py AMC_v0.8.json metadata_test.tsv
 
 """
 
 import argparse
 import json
-import jsonschema
 from collections import defaultdict
 import logging
 import ast
 from itertools import islice
+
+import jsonschema
 
 # ToDo set up parameters to adjust log levels
 #  logging.basicConfig(level=logging.INFO, filename='app.log', filemode='w',
@@ -77,8 +78,9 @@ class Cell_Metadata:
                     format(x=self.headers[0])
                 )
         else:
+            ### line below and similar in next method have autoformat oddities
             self.errors['format'].append(
-                ('Error: Metadata file header row malformed, missing NAME')
+                'Error: Metadata file header row malformed, missing NAME'
             )
         return valid
 
@@ -93,13 +95,15 @@ class Cell_Metadata:
             valid = True
             if self.metadata_types[0] != 'TYPE':
                 # ToDO - capture warning below in error report
+                ### investigate f-string formatting here
                 logger.warning(
                     'Warning: metadata file keyword "TYPE" provided as {x}'.
                     format(x=self.metadata_types[0])
                 )
         else:
+            ### check black autoformatting on this long line
             self.errors['format'].append(
-                ('Error:  Metadata file TYPE row malformed, missing TYPE')
+                'Error:  Metadata file TYPE row malformed, missing TYPE'
             )
         return valid
 
@@ -200,28 +204,16 @@ def create_parser():
     #     default=None
     # )
     parser.add_argument(
-        'convention', type=str, help='Metadata convention json file [Required]'
+        'convention', help='Metadata convention JSON file '
     )
-    parser.add_argument('input_metadata', help='Metadata tsv file [Required]')
+    parser.add_argument('input_metadata', help='Metadata TSV file')
     return parser
 
 
-def load_schema(schemafile):
-    """Deserialize input json file as dict.
-
-    :param schemafile: metadata convention as serialized json file
-    :return: dict
-    """
-    with open(schemafile, 'r') as read_file:
-        deserialized_json = json.load(read_file)
-
-    return deserialized_json
-
-
 def validate_schema(json):
-    """Check validity of metadata convention as json schema.
+    """Check validity of metadata convention as JSON schema.
 
-    :param schemafile: metadata convention json file
+    :param schemafile: metadata convention JSON file
     :return: jsonschema validator object using input convention
     """
 
@@ -230,7 +222,7 @@ def validate_schema(json):
         valid_schema = jsonschema.Draft7Validator(json)
         return valid_schema
     except jsonschema.SchemaError as e:
-        print('Input json is invalid as jsonschema;', e)
+        print('Input JSON is invalid as jsonschema;', e)
         return None
 
 
@@ -277,9 +269,9 @@ def merge_numerics(metadata):
     logger.debug('Begin: merge_numerics')
     metadata.type['floats'] = metadata.type['convention']['number'][:]
     for n in metadata.type['numeric_headers']:
-        # autoformatting below (yapf) causes pycodestyle warning :(
-        if (n not in metadata.type['convention']['number']
-           ) and (n not in metadata.type['convention']['integer']):
+        n_not_number = n not in metadata.type['convention']['number']
+        n_not_integer = not in metadata.type['convention']['integer']
+        if n_not_number and n_not_integer:
             metadata.type['floats'].append(n)
     return
 
@@ -306,7 +298,7 @@ def collect_ontology_data(data, metadata):
 
 
 def process_metadata_row(metadata, convention, line):
-    """Read tsv metadata input file row by row
+    """Read TSV metadata input file row by row
 
     :param metadata: cell metadata object
     :param convention: dict representation of metadata convention
@@ -347,7 +339,7 @@ def process_metadata_row(metadata, convention, line):
 
 
 def process_metadata_content(metadata, convention):
-    """Evaluate tsv metadata input non-ontology errors and ontology info
+    """Evaluate TSV metadata input non-ontology errors and ontology info
 
     :param metadata: cell metadata object
     :param convention: dict representation of metadata convention
@@ -422,7 +414,7 @@ DEFER (loom): Read loom metadata, row by row?
 """
 """
 DEFER: Things to check before pass intended data types to FireStore
-ensure numeric (TYPE == numeric in tsv; type number or integer in loom)
+ensure numeric (TYPE == numeric in TSV file; type number or integer in loom)
     stored as numeric
 ensure group (even if it is a number) stored as string
 NaN stored as null?
@@ -435,7 +427,8 @@ error on empty cells
 if __name__ == '__main__':
     args = create_parser().parse_args()
     arguments = vars(args)
-    convention = load_schema(args.convention)
+    with open(args.convention, 'r') as f:
+        convention = json.load(f)
     filetsv = args.input_metadata
     metadata = Cell_Metadata(filetsv)
     print('Validating', filetsv)
