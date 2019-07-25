@@ -149,6 +149,16 @@ class IngestTestCase(unittest.TestCase):
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
         self.assertEqual(model, expected_model)
 
+    @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
+    def test_mtx_bundle_argument_validation(self, mock_firestore_client):
+        """Omitting --gene-file and --barcode-file in MTX ingest should error
+        """
+
+        args = ('ingest_expression '
+                '--matrix-file ../tests/data/matrix.mtx '
+                '--matrix-file-type mtx')
+
+        self.assertRaises(ValueError, self.setup_ingest, args)
 
 if __name__ == '__main__':
     unittest.main()

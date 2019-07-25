@@ -210,9 +210,9 @@ def validate_arguments(parsed_args):
     if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
                                                     or parsed_args.barcode_file == None):
         raise ValueError(
-            ' Missing argument: --matrix-bundle. Mtx files must include '
-            '.genes.tsv, and .barcodes.tsv files. See --help for more '
-            'information')
+            ' Missing arguments: --gene-file and --barcode-file. Mtx files '
+            'must include .genes.tsv, and .barcodes.tsv files. See --help for '
+            'more information')
 
 def main() -> None:
     """This function handles the actual logic of this script.
