@@ -203,9 +203,7 @@ def create_parser():
     #     help='Output file name [optional]',
     #     default=None
     # )
-    parser.add_argument(
-        'convention', help='Metadata convention JSON file '
-    )
+    parser.add_argument('convention', help='Metadata convention JSON file ')
     parser.add_argument('input_metadata', help='Metadata TSV file')
     return parser
 
@@ -270,7 +268,7 @@ def merge_numerics(metadata):
     metadata.type['floats'] = metadata.type['convention']['number'][:]
     for n in metadata.type['numeric_headers']:
         n_not_number = n not in metadata.type['convention']['number']
-        n_not_integer = not in metadata.type['convention']['integer']
+        n_not_integer = n not in metadata.type['convention']['integer']
         if n_not_number and n_not_integer:
             metadata.type['floats'].append(n)
     return
