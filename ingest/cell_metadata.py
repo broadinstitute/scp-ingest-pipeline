@@ -12,7 +12,7 @@ import json
 import os
 from typing import Dict, Generator, List, Tuple, Union
 
-from ingest_pipeline_files import IngestFiles
+from ingest_files import IngestFiles
 
 
 class CellMetadata(IngestFiles):
@@ -52,9 +52,12 @@ class CellMetadata(IngestFiles):
                 self.cell_names.append(column)
 
     def create_documents(self, file_path, file_id, study_accession):
+        """Creats top level documents for Cell Metadata data structure"""
         documents = {}
+
+        # Each annotation value has a top level document
         for idx, value in enumerate(self.header):
-            # skip first column because first column are cell names
+            # skip first column because first column contains cell names
             if idx == 0:
                 continue
                 # Copy document model so memory references are different
@@ -70,6 +73,7 @@ class CellMetadata(IngestFiles):
         return documents
 
     def create_subdocuments(self):
+        """Creats subdocuments for each annotation """
         sub_documents = {}
         for idx, value in enumerate(self.header):
             # Copy subdocument model so memory references are different
@@ -83,7 +87,9 @@ class CellMetadata(IngestFiles):
         return sub_documents
 
     def get_collection_name(self):
+        """Returns collection name"""
         return 'cell_metadata'
 
     def get_subcollection_name(self):
+        """Returns sub-collection name"""
         return 'data'

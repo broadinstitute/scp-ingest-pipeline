@@ -1,5 +1,5 @@
 """Ingest Service for expression, metadata and cluster
-files into firestore. 
+files into firestore.
 
 DESCRIPTION
 This cli currently takes in extract and transform functions from different
@@ -7,7 +7,8 @@ file types then uploads them into Firestore.
 
 PREREQUISITES
 You must have Google Cloud Firestore installed, authenticated
- configured. Must have python 3.6 or higher.
+ configured. Must have python 3.6 or higher. Indexing must be turned off for
+ Clusters,
 
 EXAMPLES
 # Takes expression file and stores it into firestore
@@ -16,7 +17,7 @@ EXAMPLES
 python ingest_service.py ingest_cluster --cluster-file ../tests/data/AB_toy_data_portal.cluster.txt
 
 #Ingest Cell file
-python ingest_service.py ingest_cell_metadata --cell-metadata-file ../tests/data/Workbook2.tsv
+python ingest_service.py ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv
 
 # Ingest dense file
 $python ingest_service.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
@@ -152,23 +153,23 @@ class IngestService(object):
 
                 batch.commit()
 
-    def load_cluster_files(self):
-        """Loads cluster files into firestore."""
-        collection_name = self.cluster.get_collection_name()
-        doc_ref = self.db.collection(collection_name).document()
-        doc_ref.set(self.cluster.top_level_doc)
-        subcollection_name = self.cluster.get_subcollection_name()
-        for annotation in self.cluster.annotation_subdocs.keys():
-            batch = self.db.batch()
-            doc_ref_sub = doc_ref.collection(
-                subcollection_name).document()
-            doc_ref_sub.set(self.cluster.annotation_subdocs[annotation])
+    # def load_cluster_files(self):
+    #     """Loads cluster files into firestore."""
+    #     collection_name = self.cluster.get_collection_name()
+    #     doc_ref = self.db.collection(collection_name).document()
+    #     doc_ref.set(self.cluster.top_level_doc)
+    #     subcollection_name = self.cluster.get_subcollection_name()
+    #     for annotation in self.cluster.annotation_subdocs.keys():
+    #         batch = self.db.batch()
+    #         doc_ref_sub = doc_ref.collection(
+    #             subcollection_name).document()
+    #         doc_ref_sub.set(self.cluster.annotation_subdocs[annotation])
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
 
-        collection_name = self.cluster.get_collection_name()
-        subcollection_name = self.cluster.get_subcollection_name()
+        collection_name = self.cell_metadata.get_collection_name()
+        subcollection_name = self.cell_metadata.get_subcollection_name()
         for annotation in self.cell_metadata.top_level_doc.keys():
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(self.cell_metadata.top_level_doc[annotation])
@@ -211,18 +212,18 @@ class IngestService(object):
             self.cell_metadata.transform(row)
         self.load_cell_metadata()
 
-    def ingest_cluster(self):
-        """Ingests cluster files into firestore.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        for data in self.cluster.extract():
-            self.cluster.transform(data)
-        self.load_cluster_files()
+    # def ingest_cluster(self):
+    #     """Ingests cluster files into firestore.
+    #
+    #     Args:
+    #         None
+    #
+    #     Returns:
+    #         None
+    #     """
+    #     for data in self.cluster.extract():
+    #         self.cluster.transform(data)
+    #     self.load_cluster_files()
 
 
 def parse_arguments():
@@ -312,8 +313,8 @@ def main() -> None:
         getattr(ingest, 'ingest_expression')()
     elif 'cell_metadata_file' in arguments:
         getattr(ingest, 'ingest_cell_metadata')()
-    elif 'cluster_file' in arguments:
-        getattr(ingest, 'ingest_cluster')()
+    # elif 'cluster_file' in arguments:
+    #     getattr(ingest, 'ingest_cluster')()
 
 
 if __name__ == "__main__":
