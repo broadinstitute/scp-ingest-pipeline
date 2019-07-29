@@ -1,5 +1,5 @@
-"""Ingest Service for expression files and eventually metadata and cluster
-files into firestore.
+"""Ingest Service for expression, metadata and cluster
+files into firestore. 
 
 DESCRIPTION
 This cli currently takes in extract and transform functions from different
@@ -12,6 +12,12 @@ You must have Google Cloud Firestore installed, authenticated
 EXAMPLES
 # Takes expression file and stores it into firestore
 
+#Ingest cluster file
+python ingest_service.py ingest_cluster --cluster-file ../tests/data/AB_toy_data_portal.cluster.txt
+
+#Ingest Cell file
+python ingest_service.py ingest_cell_metadata --cell-metadata-file ../tests/data/Workbook2.tsv
+
 # Ingest dense file
 $python ingest_service.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
@@ -23,7 +29,6 @@ import os
 import time
 from typing import Dict, Generator, List, Tuple, Union
 
-import grpc
 import numpy as np
 from cell_metadata import CellMetadata
 from clusters import Clusters
@@ -69,7 +74,6 @@ class IngestService(object):
             self.cell_metadata = self.initialize_file_connection(
                 'cell_metadata', cell_metadata_file)
         elif cluster_file is not None:
-            print('here')
             self.cluster = self.initialize_file_connection(
                 'cluster', cluster_file)
         elif matrix_file is None:
@@ -126,29 +130,56 @@ class IngestService(object):
             collection_name = expression_model.get_collection_name()
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(expression_model.get_document())
+            try:
+                if expression_model.has_subcollection_data():
+                    subcollection_name = expression_model.get_subcollection_name()
+                    doc_ref_sub = doc_ref.collection(
+                        subcollection_name).document()
+                    doc_ref_sub.set(expression_model.get_subcollection())
 
-            if expression_model.has_subcollection_data():
-                try:
-                    if expression_model.has_subcollection_data():
-                        subcollection_name = expression_model.get_subcollection_name()
-                        doc_ref_sub = doc_ref.collection(
-                            subcollection_name).document()
-                        doc_ref_sub.set(expression_model.get_subcollection())
+            except exceptions.InvalidArgument as e:
+                # Catches invalid argument exception, which error "Maximum
+                # document size falls under
+                print(f'{e}')
+                batch = self.db.batch()
+                for subdoc in expression_model.chunk_gene_expression_documents():
 
-                except exceptions.InvalidArgument as e:
-                    # Catches invalid argument exception, which error "Maximum
-                    # document size falls under
-                    print(f'{e}')
-                    batch = self.db.batch()
-                    for subdoc in expression_model.chunk_gene_expression_documents():
+                    subcollection_name = expression_model.get_subcollection_name()
+                    doc_ref_sub = doc_ref.collection(
+                        subcollection_name).document()
+                    batch.set(doc_ref_sub, subdoc)
+                    # print(f'This is batch: {batch.__dict__}')
 
-                        subcollection_name = expression_model.get_subcollection_name()
-                        doc_ref_sub = doc_ref.collection(
-                            subcollection_name).document()
-                        batch.set(doc_ref_sub, subdoc)
-                        # print(f'This is batch: {batch.__dict__}')
+                batch.commit()
 
-                    batch.commit()
+    def load_cluster_files(self):
+        """Loads cluster files into firestore."""
+        collection_name = self.cluster.get_collection_name()
+        doc_ref = self.db.collection(collection_name).document()
+        doc_ref.set(self.cluster.top_level_doc)
+        subcollection_name = self.cluster.get_subcollection_name()
+        for annotation in self.cluster.annotation_subdocs.keys():
+            batch = self.db.batch()
+            doc_ref_sub = doc_ref.collection(
+                subcollection_name).document()
+            doc_ref_sub.set(self.cluster.annotation_subdocs[annotation])
+
+    def load_cell_metadata(self):
+        """Loads cell metadata files into firestore."""
+
+        collection_name = self.cluster.get_collection_name()
+        subcollection_name = self.cluster.get_subcollection_name()
+        for annotation in self.cell_metadata.top_level_doc.keys():
+            doc_ref = self.db.collection(collection_name).document()
+            doc_ref.set(self.cell_metadata.top_level_doc[annotation])
+            try:
+                subcollection_doc = self.cell_metadata.data_subcollection[annotation]
+                doc_ref_sub = doc_ref.collection(subcollection_name).document()
+                doc_ref_sub.set(subcollection_doc)
+            except exceptions.InvalidArgument as e:
+                # Catches invalid argument exception, which error "Maximum
+                # document size falls under
+                print(e)
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -166,20 +197,19 @@ class IngestService(object):
         else:
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
-                    data)
+                    *data)
         self.load_expression_data(transformed_data)
         self.close_matrix()
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into firestore.
-
-        Args:
-            None
-
-        Returns:
-            None
         """
-        self.cell_metadata.extract()
+        while True:
+            row = self.cell_metadata.extract()
+            if(row == None):
+                break
+            self.cell_metadata.transform(row)
+        self.load_cell_metadata()
 
     def ingest_cluster(self):
         """Ingests cluster files into firestore.
@@ -190,7 +220,9 @@ class IngestService(object):
         Returns:
             None
         """
-        self.cluster.extract()
+        for data in self.cluster.extract():
+            self.cluster.transform(data)
+        self.load_cluster_files()
 
 
 def parse_arguments():
@@ -255,8 +287,8 @@ def parse_arguments():
 
     parsed_args = args.parse_args()
     if hasattr(parsed_args, 'ingest_expression'):
-        if parsed_argsmatrix_file_type == 'mtx' and (parsed_args.gene_file == None
-                                                     or parsed_args.barcode_file == None):
+        if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
+                                                      or parsed_args.barcode_file == None):
             raise ValueError(
                 ' Missing argument: --matrix-bundle. Mtx files must include '
                 '.genes.tsv, and .barcodes.tsv files. See --help for more '
@@ -276,9 +308,9 @@ def main() -> None:
     arguments = vars(parse_arguments())
     ingest = IngestService(**arguments)
 
-    if hasattr(arguments, 'ingest_expression'):
+    if 'matrix_file' in arguments:
         getattr(ingest, 'ingest_expression')()
-    elif hasattr(arguments, 'ingest_cell_metadata'):
+    elif 'cell_metadata_file' in arguments:
         getattr(ingest, 'ingest_cell_metadata')()
     elif 'cluster_file' in arguments:
         getattr(ingest, 'ingest_cluster')()
