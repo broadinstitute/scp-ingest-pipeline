@@ -11,7 +11,7 @@ class TestValidateMetadata(unittest.TestCase):
         args_list = args.split(' ')
         args = create_parser().parse_args(args_list)
         filetsv = args.input_metadata
-        metadata = Cell_Metadata(filetsv)
+        metadata = CellMetadata(filetsv)
         metadata.validate_format()
         metadata.file.close()
         return metadata
