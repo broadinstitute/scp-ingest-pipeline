@@ -1,7 +1,8 @@
 import sys
 import unittest
 
-sys.path.append('../validation')
+sys.path.append('../ingest')
+sys.path.append('../ingest/validation')
 from validate_metadata import *
 
 
