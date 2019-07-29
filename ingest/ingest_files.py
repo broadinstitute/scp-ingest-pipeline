@@ -22,12 +22,12 @@ class IngestFiles:
 
     def open_file(self, file_path):
         """ Opens txt, csv, or tsv formmatted files"""
-
+        open_file = open(file_path, encoding='utf-8-sig')
         file_connections = {
             # Remove BOM with encoding='utf-8-sig'
-            'text/csv': self.open_csv(open(file_path,  mode='r', encoding='utf-8-sig')),
-            'text/plain': open(file_path),
-            'text/tab-separated-values': self.open_tsv(open(file_path,  mode='r', encoding='utf-8-sig')),
+            'text/csv': self.open_csv(open_file),
+            'text/plain': open_file,
+            'text/tab-separated-values': self.open_tsv(open_file),
         }
         # Check file type
         file_type = self.get_file_type(file_path)[0]
@@ -39,7 +39,6 @@ class IngestFiles:
             raise ValueError('Unsupported file format')
 
     # Inherited function
-
     def extract(self):
         """ Calls extract function for txt, csv, or tsv formmatted files to
             retrieve all contents from file.
@@ -103,7 +102,7 @@ class IngestFiles:
             return next_row_revised
 
     def get_next_line(self, *, increase_line_count=True, split_line=True):
-        """Returns a single line of txt, cvs or tsv files"""
+        """Returns a single line of txt, csv or tsv files"""
 
         next_row = next(self.file)
         # Increase counter for line extracted

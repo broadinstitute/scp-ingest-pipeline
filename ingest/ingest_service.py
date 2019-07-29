@@ -1,4 +1,4 @@
-"""Ingest Service for expression, metadata and cluster
+"""Ingest Service for ingesting expression, metadata and cluster
 files into firestore.
 
 DESCRIPTION
@@ -8,7 +8,7 @@ file types then uploads them into Firestore.
 PREREQUISITES
 You must have Google Cloud Firestore installed, authenticated
  configured. Must have python 3.6 or higher. Indexing must be turned off for
- Clusters,
+ all collections.
 
 EXAMPLES
 # Takes expression file and stores it into firestore
@@ -47,21 +47,7 @@ class IngestService(object):
     def __init__(self, *, matrix_file: str = None, matrix_file_type: str = None,
                  barcode_file: str = None, gene_file: str = None, cell_metadata_file: str = None,
                  cluster_file: str = None):
-        """Initializes variables in ingest service.
-
-        Args:
-            matrix_file: str,
-                For expression files, the relative or Absolute path to the
-                    matrix file
-            matrix_file_type: str,
-                The matrix file type
-            matrix_bundle: List[str]
-                Used for MTX files. The matrix bundle consister of the barcode
-                    and gene files.
-
-        Returns:
-            Nothing
-        """
+        """Initializes variables in ingest service."""
 
         self.matrix_file_path = matrix_file
         self.matrix_file_type = matrix_file_type
@@ -271,6 +257,7 @@ def parse_arguments():
     parser_ingest_expression.add_argument('--gene-file', type=str,
                                           help='Names of .genes.tsv file')
 
+    # Parser ingesting cell metadata files
     parser_cell_metadata = subargs.add_parser('ingest_cell_metadata',
                                               help='Indicates that cell '
                                               ' metadata files are being '
@@ -279,6 +266,7 @@ def parse_arguments():
                                       help='Absolute or relative path to '
                                       'cell metadata file.')
 
+    # Parser ingesting cluster files
     parser_cluster = subargs.add_parser('ingest_cluster',
                                         help='Indicates that cluster '
                                         'file is being ingested')

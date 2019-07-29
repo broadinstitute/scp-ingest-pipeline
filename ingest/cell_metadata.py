@@ -1,7 +1,7 @@
-"""Module for ingesting cell metadat files
+"""Module for ingesting cell metadata files
 
 DESCRIPTION
-Module provides extract and transforms function for cell metadata files.
+Module provides extract and transform functions for cell metadata files.
 Text, CSV, and TSV files are supported.
 
 PREREQUISITES
@@ -56,13 +56,10 @@ class CellMetadata(IngestFiles):
         documents = {}
 
         # Each annotation value has a top level document
-        for idx, value in enumerate(self.header):
-            # skip first column because first column contains cell names
-            if idx == 0:
-                continue
-                # Copy document model so memory references are different
+        for value in self.header[1:]:
+            # Copy document model so memory references are different
             copy_of_doc_model = copy.copy({
-                'name': value.lower(),
+                'name': value,
                 'study_accession': study_accession,
                 'source_file_name': file_path.strip("."),
                 'source_file_type': 'metadata',
@@ -75,14 +72,12 @@ class CellMetadata(IngestFiles):
     def create_subdocuments(self):
         """Creats subdocuments for each annotation """
         sub_documents = {}
-        for idx, value in enumerate(self.header):
+        for value in self.header[1:]:
             # Copy subdocument model so memory references are different
             copy_of_subdoc_model = copy.copy({
                 'cell_names': self.cell_names,
                 'values': []
             })
-            if idx == 0:
-                continue
             sub_documents[value] = copy_of_subdoc_model
         return sub_documents
 
@@ -93,3 +88,5 @@ class CellMetadata(IngestFiles):
     def get_subcollection_name(self):
         """Returns sub-collection name"""
         return 'data'
+
+    def chunk_subdocs(self):
