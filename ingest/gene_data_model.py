@@ -19,7 +19,7 @@ from typing import *
 # 90% smaller to avoid exceeding this Firestore constraint.
 #
 # TODO: Reconcile calculations and use documented size limit (1_048_576)
-DOCUMENT_LIMIT_BYTES = 404_857
+DOCUMENT_LIMIT_BYTES = 1_048_576
 
 
 class Gene:
@@ -124,7 +124,7 @@ class Gene:
 
     def chunk_gene_expression_documents(self):
         """Partitions gene expression documents in storage sizes that are
-            less than 104,857 bytes.
+            less than 1,048,576 bytes.
 
         Args:
             None
@@ -135,24 +135,30 @@ class Gene:
         """
         # sum starts at 59 (because key values take up 59 bytes) plus the
         # storage size of the source file name and file type
-        sum = 59 + len(self.source_file_name) + len(self.source_file_type)
+        size_of_cell_names_field = 10 + 1
+        size_of_expression_scores_field = 17 + 1
+        starting_sum = 59 + len(self.source_file_name) + \
+            len(self.source_file_type) + 32
         start_index = 0
         float_storage = 8
+        sum = starting_sum
 
         for index, cell_name in enumerate(self.cell_names):
 
-            sum = sum + len(cell_name) + float_storage
+            cell_name_storage = len(cell_name) + 1 + size_of_cell_names_field
+            expression_scores_storage = size_of_expression_scores_field + float_storage
+            sum = sum + expression_scores_storage + cell_name_storage
             # Subtract one and 32 based off of firestore storage guidelines for strings
             # and documents
             # This and other storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
-            if (sum - 1 - 32) > DOCUMENT_LIMIT_BYTES:
+            if (sum) > DOCUMENT_LIMIT_BYTES or index == len(self.cell_names) - 1:
                 end_index = index - 1
+
                 yield {'cell_names': self.cell_names[start_index:end_index],
                        'expression_scores':  self.expression_scores[start_index:end_index],
                        'source_file_name': self.source_file_name,
                        'source_file_type': self.source_file_type,
                        }
-                sum = 59 + len(self.source_file_name) + \
-                    len(self.source_file_type)
+                sum = starting_sum
                 start_index = index
