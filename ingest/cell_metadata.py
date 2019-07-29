@@ -22,7 +22,7 @@ class CellMetadata(IngestFiles):
     def __init__(self, file_path, file_id: str = None, study_accession: str = None):
 
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
-        self.header = self.get_next_line(
+        self.headers = self.get_next_line(
             increase_line_count=False)
         self.metadata_types = self.get_next_line(
             increase_line_count=False)
@@ -32,6 +32,7 @@ class CellMetadata(IngestFiles):
         self.top_level_doc = self.create_documents(
             file_path, file_id, study_accession)
         self.data_subcollection = self.create_subdocuments()
+        self.errors = {}
 
     def transform(self, row: List[str]) -> None:
         """ Add data from cell metadata files into data model"""
@@ -45,7 +46,7 @@ class CellMetadata(IngestFiles):
                     if column not in self.uniqueValues:
                         self.uniqueValues.append(column)
                 # Get annotation name from header
-                annotation = self.header[idx]
+                annotation = self.headers[idx]
                 self.data_subcollection[annotation]['values'].append(column)
             else:
                 # If column isn't a annotation value, it's a cell name
@@ -56,7 +57,7 @@ class CellMetadata(IngestFiles):
         documents = {}
 
         # Each annotation value has a top level document
-        for value in self.header[1:]:
+        for value in self.headers[1:]:
             # Copy document model so memory references are different
             copy_of_doc_model = copy.copy({
                 'name': value,
@@ -72,7 +73,7 @@ class CellMetadata(IngestFiles):
     def create_subdocuments(self):
         """Creats subdocuments for each annotation """
         sub_documents = {}
-        for value in self.header[1:]:
+        for value in self.headers[1:]:
             # Copy subdocument model so memory references are different
             copy_of_subdoc_model = copy.copy({
                 'cell_names': self.cell_names,
@@ -89,4 +90,100 @@ class CellMetadata(IngestFiles):
         """Returns sub-collection name"""
         return 'data'
 
-    def chunk_subdocs(self):
+    def validate_header_keyword(self):
+        """Check metadata header row starts with NAME (case-insensitive).
+
+        :return: boolean   True if valid, False otherwise
+        """
+        valid = False
+        if self.headers[0].casefold() == 'NAME'.casefold():
+            valid = True
+            if self.headers[0] != 'NAME':
+                # ToDO - capture warning below in error report
+                print(
+                    'Warning: metadata file keyword "NAME" provided as {x}'.
+                    format(x=self.headers[0])
+                )
+        else:
+            # line below and similar in next method have autoformat oddities
+            self.errors['format'].append(
+                'Error: Metadata file header row malformed, missing NAME'
+            )
+        return valid
+
+    def validate_type_keyword(self):
+        """Check metadata second row starts with TYPE (case-insensitive).
+
+        :return: boolean   True if valid, False otherwise
+        """
+        valid = False
+        if self.metadata_types[0].casefold() == 'TYPE'.casefold():
+            valid = True
+            if self.metadata_types[0] != 'TYPE':
+                # ToDO - capture warning below in error report
+                # investigate f-string formatting here
+                print(
+                    'Warning: metadata file keyword "TYPE" provided as {x}'.
+                    format(x=self.metadata_types[0])
+                )
+        else:
+            # check black autoformatting on this long line
+            self.errors['format'].append(
+                'Error:  Metadata file TYPE row malformed, missing TYPE'
+            )
+        return valid
+
+    def validate_type_annotations(self):
+        """Check metadata second row contains only 'group' or 'numeric'.
+
+        :return: boolean   True if valid, False otherwise
+        """
+        valid = False
+        annot_err = False
+        annots = []
+        for t in self.metadata_types[1:]:
+            if t not in self.annotation_type:
+                annots.append(t)
+                annot_err = True
+        if annot_err:
+            self.errors['format'].append(
+                (
+                    'Error: TYPE declarations should be "group" or "numeric"; '
+                    'Please correct: {annots}'.format(
+                        annots=', '.join(map(str, annots))
+                    )
+                )
+            )
+        else:
+            valid = True
+        return valid
+
+    def validate_against_header_count(self):
+        """Metadata header and type counts should match.
+
+        :return: boolean   True if valid, False otherwise
+        """
+        valid = False
+        if not len(self.headers) == len(self.metadata_types):
+            self.errors['format'].append(
+                str(
+                    'Error: {x} TYPE declarations for {y} column headers'.
+                    format(x=len(self.headers), y=len(list))
+                )
+            )
+        else:
+            valid = True
+        return valid
+
+    def validate_format(self):
+        """Check all metadata file format criteria for file validity
+        """
+        self.validate_header_keyword()
+        self.validate_type_keyword()
+        self.validate_type_annotations()
+        self.validate_against_header_count()
+        if self.errors['format']:
+            valid = False
+        else:
+            valid = True
+        return valid
