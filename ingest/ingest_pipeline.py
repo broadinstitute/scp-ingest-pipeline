@@ -32,7 +32,7 @@ from typing import Dict, Generator, List, Tuple, Union
 
 import numpy as np
 from cell_metadata import CellMetadata
-from clusters import Clusters
+# from clusters import Clusters
 from dense import Dense
 from gene_data_model import Gene
 from google.api_core import exceptions
@@ -60,9 +60,9 @@ class IngestPipeline(object):
         elif cell_metadata_file is not None:
             self.cell_metadata = self.initialize_file_connection(
                 'cell_metadata', cell_metadata_file)
-        elif cluster_file is not None:
-            self.cluster = self.initialize_file_connection(
-                'cluster', cluster_file)
+        # elif cluster_file is not None:
+        #     self.cluster = self.initialize_file_connection(
+        #         'cluster', cluster_file)
         elif matrix_file is None:
             self.matrix = matrix_file
         elif cluster_file is None:
@@ -80,7 +80,7 @@ class IngestPipeline(object):
         file_connections = {
             'dense': Dense,
             'cell_metadata': CellMetadata,
-            'cluster': Clusters
+            # 'cluster': Clusters
         }
 
         if file_type == 'mtx':
@@ -124,15 +124,15 @@ class IngestPipeline(object):
                     # Catches invalid argument exception, which error "Maximum
                     # document size" falls under
                     print(e)
-                    batch = self.db.batch()
+                    # batch = self.db.batch()
                     for subdoc in expression_model.chunk_gene_expression_documents():
 
                         subcollection_name = expression_model.get_subcollection_name()
-                        doc_ref_sub = doc_ref.collection(
-                            subcollection_name).document()
-                        batch.set(doc_ref_sub, subdoc)
-
-                    batch.commit()
+                    #     doc_ref_sub = doc_ref.collection(
+                    #         subcollection_name).document()
+                    #     batch.set(doc_ref_sub, subdoc)
+                    #
+                    # batch.commit()
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""

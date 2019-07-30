@@ -31,6 +31,7 @@ class Gene:
 
         self.name = name.replace('"', '')
         self.gene_id = gene_id
+        print (source_file_name)
         self.source_file_name = source_file_name,
         self.source_file_type = source_file_type,
 
@@ -152,13 +153,17 @@ class Gene:
             # and documents
             # This and other storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
-            if (sum) > DOCUMENT_LIMIT_BYTES or index == len(self.cell_names) - 1:
-                end_index = index - 1
+            if (sum) > DOCUMENT_LIMIT_BYTES or index == (len(self.cell_names) - 1):
+                if index == (len(self.cell_names) - 1):
+                    end_index = index
+                else:
+                    end_index = index - 1
 
                 yield {'cell_names': self.cell_names[start_index:end_index],
                        'expression_scores':  self.expression_scores[start_index:end_index],
-                       'source_file_name': self.source_file_name,
-                       'source_file_type': self.source_file_type,
+                       'source_file_name': self.source_file_name[0],
+                       'source_file_type': self.source_file_type[0],
                        }
-                sum = starting_sum
+               # Reset sum and add storage size at current index
+                sum = starting_sum + cell_name_storage + expression_scores_storage
                 start_index = index
