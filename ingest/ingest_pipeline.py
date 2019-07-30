@@ -84,7 +84,7 @@ class IngestPipeline(object):
         }
 
         if file_type == 'mtx':
-            return Mtx(self.matrix_file_path, self.gene_file, self.barcodes_file)
+            return Mtx(file_path, self.gene_file, self.barcodes_file)
         else:
             return file_connections.get(file_type)(file_path)
 
