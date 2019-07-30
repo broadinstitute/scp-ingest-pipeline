@@ -32,7 +32,7 @@ from typing import Dict, Generator, List, Tuple, Union
 
 import numpy as np
 from cell_metadata import CellMetadata
-from clusters import Clusters
+# from clusters import Clusters
 from dense import Dense
 from gene_data_model import Gene
 from google.api_core import exceptions
@@ -80,7 +80,7 @@ class IngestPipeline(object):
         file_connections = {
             'dense': Dense,
             'cell_metadata': CellMetadata,
-            'cluster': Clusters
+            # 'cluster': Clusters
         }
 
         if file_type == 'mtx':
@@ -179,7 +179,8 @@ class IngestPipeline(object):
             if(row == None):
                 break
             self.cell_metadata.transform(row)
-        self.load_cell_metadata()
+        print(self.cell_metadata.metadata_types)
+        # self.load_cell_metadata()
 
     # def ingest_cluster(self):
     #     """Ingests cluster files into firestore.
@@ -299,9 +300,9 @@ def main() -> None:
     ingest = IngestPipeline(**arguments)
 
     if 'matrix_file' in arguments:
-        getattr(ingest, 'ingest_expression')()
+        ingest.ingest_expression()
     elif 'cell_metadata_file' in arguments:
-        getattr(ingest, 'ingest_cell_metadata')()
+        ingest.ingest_cell_metadata()
     # elif 'cluster_file' in arguments:
     #     getattr(ingest, 'ingest_cluster')()
 
