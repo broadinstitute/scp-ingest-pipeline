@@ -168,7 +168,8 @@ class IngestPipeline(object):
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
                     *data)
-        self.load_expression_data(transformed_data)
+        # self.load_expression_data(transformed_data)
+        print(transformed_data)
         self.close_matrix()
 
     def ingest_cell_metadata(self):
@@ -275,7 +276,7 @@ def validate_arguments(parsed_args):
     Returns:
         None
     """
-    if hasattr(parsed_args, 'ingest_expression'):
+    if 'matrix_file' in parsed_args:
         if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
                                                       or parsed_args.barcode_file == None):
             raise ValueError(
@@ -295,6 +296,7 @@ def main() -> None:
     """
 
     parsed_args = create_parser().parse_args()
+    print(parsed_args)
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     ingest = IngestPipeline(**arguments)
