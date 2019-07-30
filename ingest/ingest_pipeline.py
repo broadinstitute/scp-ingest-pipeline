@@ -168,8 +168,7 @@ class IngestPipeline(object):
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
                     *data)
-        # self.load_expression_data(transformed_data)
-        print(transformed_data)
+        self.load_expression_data(transformed_data)
         self.close_matrix()
 
     def ingest_cell_metadata(self):
