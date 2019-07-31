@@ -117,23 +117,21 @@ class IngestPipeline(object):
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(expression_model.top_level_doc)
             if expression_model.has_subcollection_data():
+                subcollection_name = expression_model.get_subcollection_name()
                 try:
-                    subcollection_name = expression_model.get_subcollection_name()
                     doc_ref_sub = doc_ref.collection(
                         subcollection_name).document()
                     doc_ref_sub.set(expression_model.subdocument)
                 except exceptions.InvalidArgument as e:
                     # Catches invalid argument exception, which error "Maximum
                     # document size" falls under
-                    print(e)
                     batch = self.db.batch()
-                    for subdoc in expression_model.chunk_gene_expression_documents():
-
+                    for subdoc in expression_model.chunk_gene_expression_documents(doc_ref.id):
                         subcollection_name = expression_model.get_subcollection_name()
                         doc_ref_sub = doc_ref.collection(
                             subcollection_name).document()
                         batch.set(doc_ref_sub, subdoc)
-
+                    # print(batch.__dict__)
                     batch.commit()
             print(f'Amount ingested is: {amount_ingested}')
 
@@ -171,7 +169,7 @@ class IngestPipeline(object):
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
                     *data)
-        self.load_expression_data(transformed_data)
+                self.load_expression_data(transformed_data)
         self.close_matrix()
 
     def ingest_cell_metadata(self):

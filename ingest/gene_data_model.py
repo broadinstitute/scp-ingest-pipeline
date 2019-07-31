@@ -122,7 +122,7 @@ class Gene:
         else:
             return non_zero_cell_names, non_zero_expression_scores
 
-    def chunk_gene_expression_documents(self):
+    def chunk_gene_expression_documents(self, docment_name):
         """Partitions gene expression documents in storage sizes that are
             less than 1,048,576 bytes.
 
@@ -135,10 +135,11 @@ class Gene:
         """
         # sum starts at 59 (because key values take up 59 bytes) plus the
         # storage size of the source file name and file type
+        document_name_storage = len(docment_name) +1
         size_of_cell_names_field = 10 + 1
         size_of_expression_scores_field = 17 + 1
         starting_sum = 59 + len(self.source_file_name) + \
-            len(self.source_file_type) + 32
+            len(self.source_file_type) + document_name_storage
         start_index = 0
         float_storage = 8
         sum = starting_sum
@@ -148,11 +149,11 @@ class Gene:
             cell_name_storage = len(cell_name) + 1 + size_of_cell_names_field
             expression_scores_storage = size_of_expression_scores_field + float_storage
             sum = sum + expression_scores_storage + cell_name_storage
-            # Subtract one and 32 based off of firestore storage guidelines for strings
+            # Subtract 32 based off of firestore storage guidelines for strings
             # and documents
             # This and other storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
-            if (sum) > DOCUMENT_LIMIT_BYTES or index == (len(self.cell_names) - 1):
+            if (sum+32) > DOCUMENT_LIMIT_BYTES or index == (len(self.cell_names) - 1):
                 if index == (len(self.cell_names) - 1):
                     end_index = index
                 else:
