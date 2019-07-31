@@ -98,7 +98,6 @@ class IngestFiles:
         """
         while True:
             next_row = self.file.readline()
-
             if not next_row:
                 break
             self.amount_of_lines += 1

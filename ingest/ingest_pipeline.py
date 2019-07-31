@@ -32,7 +32,7 @@ from typing import Dict, Generator, List, Tuple, Union
 
 import numpy as np
 from cell_metadata import CellMetadata
-# from clusters import Clusters
+from clusters import Clusters
 from dense import Dense
 from gene_data_model import Gene
 from google.api_core import exceptions
@@ -80,7 +80,7 @@ class IngestPipeline(object):
         file_connections = {
             'dense': Dense,
             'cell_metadata': CellMetadata,
-            # 'cluster': Clusters
+            'cluster': Clusters
         }
 
         if file_type == 'mtx':
@@ -151,6 +151,18 @@ class IngestPipeline(object):
                 # document size" falls under
                 print(e)
 
+    def load_cluster_files(self):
+        """Loads cluster files into firestore."""
+        collection_name = self.cluster.COLLECTION_NAME
+        doc_ref = self.db.collection(collection_name).document()
+        doc_ref.set(self.cluster.top_level_doc)
+        subcollection_name = self.cluster.SUBCOLLECTION_NAME
+        for annotation in self.cluster.annotation_subdocs.keys():
+            batch = self.db.batch()
+            doc_ref_sub = doc_ref.collection(
+                subcollection_name).document()
+            doc_ref_sub.set(self.cluster.annotation_subdocs[annotation])
+
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
     functions. Then loads data into Firestore.
@@ -172,8 +184,7 @@ class IngestPipeline(object):
         self.close_matrix()
 
     def ingest_cell_metadata(self):
-        """Ingests cell metadata files into Firestore.
-    """
+        """Ingests cell metadata files into Firestore."""
         while True:
             row = self.cell_metadata.extract()
             if(row == None):
@@ -181,18 +192,15 @@ class IngestPipeline(object):
             self.cell_metadata.transform(row)
         self.load_cell_metadata()
 
-    # def ingest_cluster(self):
-    #     """Ingests cluster files into firestore.
-#
-#     Args:
-#         None
-#
-#     Returns:
-#         None
-#     """
-#     for data in self.cluster.extract():
-#         self.cluster.transform(data)
-#     self.load_cluster_files()
+    def ingest_cluster(self):
+        """Ingests cluster files into Firestore."""
+        while True:
+            row = self.cluster.extract()
+            if(row == None):
+                break
+            self.cluster.transform(row)
+        # self.load_cluster_files()
+        print(self.cluster.amount_of_lines)
 
 
 def create_parser():
@@ -274,13 +282,12 @@ def validate_arguments(parsed_args):
     Returns:
         None
     """
-    if 'matrix_file' in parsed_args:
-        if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
-                                                      or parsed_args.barcode_file == None):
-            raise ValueError(
-                ' Missing arguments: --gene-file and --barcode-file. Mtx files '
-                'must include .genes.tsv, and .barcodes.tsv files. See --help for '
-                'more information')
+    if ('matrix_file' in parsed_args and parsed_args.matrix_file_type == 'mtx') and (parsed_args.gene_file == None
+                                                                                     or parsed_args.barcode_file == None):
+        raise ValueError(
+            ' Missing arguments: --gene-file and --barcode-file. Mtx files '
+            'must include .genes.tsv, and .barcodes.tsv files. See --help for '
+            'more information')
 
 
 def main() -> None:
@@ -294,7 +301,6 @@ def main() -> None:
     """
 
     parsed_args = create_parser().parse_args()
-    print(parsed_args)
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     ingest = IngestPipeline(**arguments)
@@ -303,8 +309,8 @@ def main() -> None:
         ingest.ingest_expression()
     elif 'cell_metadata_file' in arguments:
         ingest.ingest_cell_metadata()
-    # elif 'cluster_file' in arguments:
-    #     getattr(ingest, 'ingest_cluster')()
+    elif 'cluster_file' in arguments:
+        getattr(ingest, 'ingest_cluster')()
 
 
 if __name__ == "__main__":

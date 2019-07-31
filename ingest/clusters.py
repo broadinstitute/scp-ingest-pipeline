@@ -1,11 +1,7 @@
-
 import copy
-import json
-import re
-import time
 from typing import Dict, Generator, List, Tuple, Union
 
-from ingest_pipeline_files import IngestFiles
+from ingest_files import IngestFiles
 
 
 class Clusters(IngestFiles):
@@ -14,22 +10,21 @@ class Clusters(IngestFiles):
                           'text/plain', 'text/tab-separated-values']
     MAX_THRESHOLD = 100_000
     SUBSAMPLE_THRESHOLDS = [MAX_THRESHOLD, 20000, 10000, 1000]
+    COLLECTION_NAME = 'clusters'
+    SUBCOLLECTION_NAME = 'data'
 
-    def __init__(self, file_path, *, name: str, study_accession: str = "", domain_ranges=None):
+    def __init__(self, file_path, *, name: str = None, study_accession: str = "", domain_ranges=None):
 
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
-        self.header = self.split_line(self.file.readline().rstrip('\n'))
+        self.header = self.get_next_line(increase_line_count=False)
         # Second line in cluster is metadata_type
-        self.metadata_types = self.split_line(
-            self.file.readline().rstrip('\n'))
+        self.metadata_types = self.get_next_line(increase_line_count=False)
         self.uniqueValues = []
-        self.source_file_name = file_path.strip(".")
         self.source_file_type = 'cluster'
         # self.points = amount of rows
         self.top_level_doc = {
             'name': name,
             'study_accession': study_accession,
-            'source_file_name': file_path.strip("."),
             'source_file_type': 'cluster',
             'domain_ranges': domain_ranges,
             'points': self.amount_of_lines,
@@ -40,8 +35,7 @@ class Clusters(IngestFiles):
 
     def transform(self, rows):
         """ Add data from cluster files into annotation subdocs in cluster data model"""
-        data = self.split_line(rows)
-        for idx, column in enumerate(data):
+        for idx, column in enumerate(rows):
             if idx != 0:
                 if self.metadata_types[idx].lower() == 'numeric':
                     column = round(float(column), 3)
@@ -57,7 +51,7 @@ class Clusters(IngestFiles):
 
     def create_annotation_subdocs(self):
         """Creates annotation_subdocs"""
-        annotation_subdocs = dict.fromkeys(self.header)
+        annotation_subdocs = {}
         for value in self.header:
             value = value.lower()
             if value == 'name':
@@ -71,13 +65,8 @@ class Clusters(IngestFiles):
                     value, 'annotations')
         return annotation_subdocs
 
-    def get_collection_name(self):
-        return 'clusters'
-
-    def get_subcollection_name(self):
-        return 'data'
-
     def create_metadata_subdoc(self, name, header_value_type, *, value=[], subsampled_annotation=None):
+        """returns metadata subdoc"""
         return {
             'name': name,
             'array_index': 0,
