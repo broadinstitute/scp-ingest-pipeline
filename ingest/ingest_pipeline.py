@@ -197,10 +197,10 @@ class IngestPipeline(object):
         while True:
             row = self.cluster.extract()
             if(row == None):
+                self.cluster.update_points()
                 break
             self.cluster.transform(row)
-        # self.load_cluster_files()
-        print(self.cluster.amount_of_lines)
+        self.load_cluster_files()
 
 
 def create_parser():

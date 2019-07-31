@@ -33,6 +33,9 @@ class Clusters(IngestFiles):
         # sample size needs to be smaller than amount of points
         # for each cell annotations if there are any
 
+    def update_points(self):
+        self.top_level_doc['points'] = self.amount_of_lines
+
     def transform(self, rows):
         """ Add data from cluster files into annotation subdocs in cluster data model"""
         for idx, column in enumerate(rows):
