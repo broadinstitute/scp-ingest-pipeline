@@ -1,15 +1,15 @@
-"""Command-line interface for ingesting loom files into firestore
+"""Command-line interface for ingesting Loom files into Firestore
 
 DESCRIPTION
-This CLI passes extract and transforms functions into  ingest service thereby
-allowing the loom file to be ingested into Firestore.
+This CLI passes extract and transforms functions into Ingest Pipeline thereby
+allowing the Loom file to be ingested into Firestore.
 
 PREREQUISITES
 Must have python 3.6 or higher.
 
 EXAMPLES
-# Takes loom file and stores it into firestore
-$ python ingest_loom.py <path to loom file>
+# Takes Loom file and stores it into Firestore
+$ python ingest_loom.py <path to Loom file>
 $ python ingest_loom.py ../tests/data/L5_All.agg.loom
 """
 
@@ -30,7 +30,7 @@ class Loom:
         self.file_name, self.filetype = os.path.splitext(file_path)
 
     def extract(self, size=500) -> Iterable[Tuple[int, np.ndarray, loompy.LoomView]]:
-        """Reads loom file and extracts out batches of rows
+        """Reads Loom file and extracts out batches of rows
 
         Args:
             size: int
@@ -53,7 +53,7 @@ class Loom:
             yield ix, selection, view
 
     def transform(self, ix, selection, view) -> List[Gene]:
-        """Transforms loomfile into firestore data model
+        """Transforms Loom file into Firestore data model
 
         Args:
             Taken from https://github.com/linnarsson-lab/loompy/blob/master/loompy/loompy.py
@@ -80,7 +80,7 @@ class Loom:
         return transformed_data
 
     # def ingest(self) -> None:
-    #     """ Ingests loom file via Ingest_Service
+    #     """ Ingests Loom file via IngestPipeline
     #
     #     Args:
     #         Nothing
@@ -88,8 +88,8 @@ class Loom:
     #     ------
     #         Nothing
     #     """
-    #     ingest_service = ingest.connect(self.extract, self.transform)
-    #     ingest_service.ingest()
+    #     ingest_pipeline = ingest.connect(self.extract, self.transform)
+    #     ingest_pipeline.ingest()
 
 
 # if __name__ == "__main__":
