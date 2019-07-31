@@ -12,13 +12,14 @@ from itertools import islice
 
 
 class IngestFiles:
-    def __init__(self, file_path, allowed_file_types):
+    def __init__(self, file_path, allowed_file_types, is_MTX=False):
         if not os.path.exists(file_path):
             raise IOError(f"File '{file_path}' not found")
         self.allowed_file_types = allowed_file_types
         self.file_type, self.file = self.open_file(file_path)
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
+        self.is_MTX = is_MTX
 
     def open_file(self, file_path):
         """ Opens txt, csv, or tsv formmatted files"""
@@ -53,7 +54,12 @@ class IngestFiles:
 
     def split_line(self, line):
         """Splits lines on spaces, tabs, or commas"""
-        return re.findall(r'[^,\s\t]+', line)
+        
+        if self.is_MTX:
+            return re.findall(r'[^,\t]+', line)
+        else:
+            return re.findall(r'[^,\s\t]+', line)
+
 
     def get_file_type(self, file_path):
         """Returns file type"""
