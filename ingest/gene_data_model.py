@@ -31,7 +31,6 @@ class Gene:
 
         self.name = name.replace('"', '')
         self.gene_id = gene_id
-        print (source_file_name)
         self.source_file_name = source_file_name,
         self.source_file_type = source_file_type,
 
@@ -78,7 +77,7 @@ class Gene:
             print(f'expression score length is {len(self.expression_scores)}')
         else:
             print(f'expression score length is 0')
-        return 'Gene'
+        return 'gene'
 
     def get_subcollection_name(self):
         """Get subcollection name of gene model.

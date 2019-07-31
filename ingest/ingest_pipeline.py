@@ -101,16 +101,18 @@ class IngestPipeline(object):
     def load_expression_data(self, list_of_expression_models: List[Gene]) -> None:
         """Loads expression data into Firestore.
 
-    Args:
-        list_of_transformed_data: List[Gene]
-           A list of object type Gene that's stored into Firestore
+        Args:
+            list_of_transformed_data: List[Gene]
+               A list of object type Gene that's stored into Firestore
 
-    Returns:
-        None
-    """
+        Returns:
+            None
+        """
+        amount_ingested=0
 
         # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
+            amount_ingested+=1
             collection_name = expression_model.get_collection_name()
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(expression_model.top_level_doc)
@@ -124,15 +126,16 @@ class IngestPipeline(object):
                     # Catches invalid argument exception, which error "Maximum
                     # document size" falls under
                     print(e)
-                    # batch = self.db.batch()
+                    batch = self.db.batch()
                     for subdoc in expression_model.chunk_gene_expression_documents():
 
                         subcollection_name = expression_model.get_subcollection_name()
-                    #     doc_ref_sub = doc_ref.collection(
-                    #         subcollection_name).document()
-                    #     batch.set(doc_ref_sub, subdoc)
-                    #
-                    # batch.commit()
+                        doc_ref_sub = doc_ref.collection(
+                            subcollection_name).document()
+                        batch.set(doc_ref_sub, subdoc)
+
+                    batch.commit()
+            print(f'Amount ingested is: {amount_ingested}')
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
@@ -295,7 +298,6 @@ def main() -> None:
     """
 
     parsed_args = create_parser().parse_args()
-    print(parsed_args)
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     ingest = IngestPipeline(**arguments)
