@@ -28,7 +28,7 @@ class CellMetadata(IngestFiles):
         self.metadata_types = self.get_next_line(
             increase_line_count=False)
         # unique values for group-based annotations
-        self.uniqueValues = []
+        self.unique_values = []
         self.cell_names = []
         self.annotation_type = ['group', 'numeric']
         self.top_level_doc = self.create_documents(
@@ -47,35 +47,35 @@ class CellMetadata(IngestFiles):
                     column = round(float(column), 3)
                 elif self.metadata_types[idx].lower() == 'group':
                     # Check for unique values
-                    if column not in self.uniqueValues:
-                        self.uniqueValues.append(column)
+                    if column not in self.unique_values:
+                        self.unique_values.append(column)
                 # Get annotation name from header
                 annotation = self.headers[idx]
                 self.data_subcollection[annotation]['values'].append(column)
             else:
-                # If column isn't a annotation value, it's a cell name
+                # If column isn't an annotation value, it's a cell name
                 self.cell_names.append(column)
 
     def create_documents(self, file_path, file_id, study_accession):
-        """Creats top level documents for Cell Metadata data structure"""
+        """Creates top level documents for Cell Metadata data structure"""
         documents = {}
 
         # Each annotation value has a top level document
-        for value in self.headers[1:]:
+        for idx, value in enumerate(self.headers[1:]):
             # Copy document model so memory references are different
             copy_of_doc_model = copy.copy({
                 'name': value,
                 'study_accession': study_accession,
                 'source_file_name': file_path.strip("."),
                 'source_file_type': 'metadata',
-                'annotation_type': ['group', 'numeric'],
+                'annotation_type': self.metadata_types[idx + 1],
                 'file_id': file_id,
             })
             documents[value] = copy_of_doc_model
         return documents
 
     def create_subdocuments(self):
-        """Creats subdocuments for each annotation """
+        """Creates subdocuments for each annotation """
         sub_documents = {}
         for value in self.headers[1:]:
             # Copy subdocument model so memory references are different

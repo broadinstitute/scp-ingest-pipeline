@@ -7,7 +7,7 @@ file types then uploads them into Firestore.
 
 PREREQUISITES
 You must have Google Cloud Firestore installed, authenticated, and
-configured. Must have python 3.6 or higher. Indexing must be turned off for
+configured. Must have Python 3.6 or higher. Indexing must be turned off for
 all collections.
 
 EXAMPLES
@@ -148,7 +148,7 @@ class IngestPipeline(object):
                 doc_ref_sub.set(subcollection_doc)
             except exceptions.InvalidArgument as e:
                 # Catches invalid argument exception, which error "Maximum
-                # document size falls under
+                # document size" falls under
                 print(e)
 
     def ingest_expression(self) -> None:
@@ -172,15 +172,14 @@ class IngestPipeline(object):
         self.close_matrix()
 
     def ingest_cell_metadata(self):
-        """Ingests cell metadata files into firestore.
+        """Ingests cell metadata files into Firestore.
     """
         while True:
             row = self.cell_metadata.extract()
             if(row == None):
                 break
             self.cell_metadata.transform(row)
-        print(self.cell_metadata.metadata_types)
-        # self.load_cell_metadata()
+        self.load_cell_metadata()
 
     # def ingest_cluster(self):
     #     """Ingests cluster files into firestore.
@@ -211,12 +210,12 @@ def create_parser():
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    subargs = parser.add_subparsers()
+    subparsers = parser.add_subparsers()
 
-    # Ingest expression files subargs
-    parser_ingest_expression = subargs.add_parser('ingest_expression',
-                                                  help='Indicates that expression'
-                                                  ' files are being ingested')
+    # Ingest expression files subparsers
+    parser_ingest_expression = subparsers.add_parser('ingest_expression',
+                                                     help='Indicates that expression'
+                                                     ' files are being ingested')
 
     parser_ingest_expression.add_argument('--matrix-file', required=True,
                                           help='Absolute or relative path to '
@@ -241,25 +240,25 @@ def create_parser():
     parser_ingest_expression.add_argument('--gene-file',
                                           help='Path to .genes.tsv file')
 
-    parser_ingest_cluster = subargs.add_parser('ingest_clusters',
-                                               help='Indicates that cluster'
-                                               ' files are being ingested')
+    parser_ingest_cluster = subparsers.add_parser('ingest_clusters',
+                                                  help='Indicates that cluster'
+                                                  ' files are being ingested')
     parser_ingest_cluster.add_argument('--cluster-file',
                                        help='Path to cluster files')
 
     # Parser ingesting cell metadata files
-    parser_cell_metadata = subargs.add_parser('ingest_cell_metadata',
-                                              help='Indicates that cell '
-                                              ' metadata files are being '
-                                              'ingested')
+    parser_cell_metadata = subparsers.add_parser('ingest_cell_metadata',
+                                                 help='Indicates that cell '
+                                                 ' metadata files are being '
+                                                 'ingested')
     parser_cell_metadata.add_argument('--cell-metadata-file', required=True,
                                       help='Absolute or relative path to '
                                       'cell metadata file.')
 
     # Parser ingesting cluster files
-    parser_cluster = subargs.add_parser('ingest_cluster',
-                                        help='Indicates that cluster '
-                                        'file is being ingested')
+    parser_cluster = subparsers.add_parser('ingest_cluster',
+                                           help='Indicates that cluster '
+                                           'file is being ingested')
     parser_cluster.add_argument('--cluster-file', required=True,
                                 help='Absolute or relative path to '
                                 'cluster file.')
