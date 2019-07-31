@@ -122,9 +122,10 @@ class Gene:
         else:
             return non_zero_cell_names, non_zero_expression_scores
 
-    def chunk_gene_expression_documents(self, docment_name):
+    def chunk_gene_expression_documents(self, document_name):
         """Partitions gene expression documents in storage sizes that are
-            less than 1,048,576 bytes.
+            less than 1,048,576 bytes. Storage size calculation figures are derived from:
+            # https://cloud.google.com/firestore/docs/storage-size
 
         Args:
             None
@@ -133,13 +134,21 @@ class Gene:
             Dictionary that consist of expression scores and cell names,
             file name and type.
         """
-        # sum starts at 59 (because key values take up 59 bytes) plus the
+
+            self.subdocument = {'cell_names': self.cell_names,
+                                'expression_scores':  self.expression_scores,
+                                'source_file_name': source_file_name,
+                                'source_file_type': source_file_type,
+                                }
+
+
+        # starting sum is equal to 34 (because key names take up 59 bytes) plus the
         # storage size of the source file name and file type
-        document_name_storage = len(docment_name) +1
+        size_of_document_name = len(document_name) + 1
         size_of_cell_names_field = 10 + 1
         size_of_expression_scores_field = 17 + 1
-        starting_sum = 59 + len(self.source_file_name) + \
-            len(self.source_file_type) + document_name_storage
+        starting_sum = 34 + len(self.source_file_name) + \
+            len(self.source_file_type) + size_of_document_name
         start_index = 0
         float_storage = 8
         sum = starting_sum
@@ -164,6 +173,7 @@ class Gene:
                        'source_file_name': self.source_file_name[0],
                        'source_file_type': self.source_file_type[0],
                        }
+                print(sum)
                # Reset sum and add storage size at current index
                 sum = starting_sum + cell_name_storage + expression_scores_storage
                 start_index = index

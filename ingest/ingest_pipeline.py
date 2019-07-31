@@ -32,7 +32,7 @@ from typing import Dict, Generator, List, Tuple, Union
 
 import numpy as np
 from cell_metadata import CellMetadata
-# from clusters import Clusters
+from clusters import Clusters
 from dense import Dense
 from gene_data_model import Gene
 from google.api_core import exceptions
@@ -60,9 +60,9 @@ class IngestPipeline(object):
         elif cell_metadata_file is not None:
             self.cell_metadata = self.initialize_file_connection(
                 'cell_metadata', cell_metadata_file)
-        # elif cluster_file is not None:
-        #     self.cluster = self.initialize_file_connection(
-        #         'cluster', cluster_file)
+        elif cluster_file is not None:
+            self.cluster = self.initialize_file_connection(
+                'cluster', cluster_file)
         elif matrix_file is None:
             self.matrix = matrix_file
         elif cluster_file is None:
@@ -80,7 +80,7 @@ class IngestPipeline(object):
         file_connections = {
             'dense': Dense,
             'cell_metadata': CellMetadata,
-            # 'cluster': Clusters
+            'cluster': Clusters
         }
 
         if file_type == 'mtx':
@@ -113,6 +113,7 @@ class IngestPipeline(object):
         # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
             amount_ingested+=1
+            # batch
             collection_name = expression_model.get_collection_name()
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(expression_model.top_level_doc)
@@ -122,25 +123,27 @@ class IngestPipeline(object):
                     doc_ref_sub = doc_ref.collection(
                         subcollection_name).document()
                     doc_ref_sub.set(expression_model.subdocument)
+                # batch commit
                 except exceptions.InvalidArgument as e:
                     # Catches invalid argument exception, which error "Maximum
                     # document size" falls under
-                    batch = self.db.batch()
+                    # batch = self.db.batch()
                     for subdoc in expression_model.chunk_gene_expression_documents(doc_ref.id):
                         subcollection_name = expression_model.get_subcollection_name()
                         doc_ref_sub = doc_ref.collection(
                             subcollection_name).document()
-                        batch.set(doc_ref_sub, subdoc)
+                        doc_ref_sub.set(subdoc)
                     # print(batch.__dict__)
-                    batch.commit()
-            print(f'Amount ingested is: {amount_ingested}')
+                    # batch.commit()
+            print(f'Amount of genes ingested is: {amount_ingested}')
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
-
+        amount_ingested=0
         collection_name = self.cell_metadata.get_collection_name()
         subcollection_name = self.cell_metadata.get_subcollection_name()
         for annotation in self.cell_metadata.top_level_doc.keys():
+            amount_ingested+=1
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(self.cell_metadata.top_level_doc[annotation])
             try:
@@ -151,6 +154,7 @@ class IngestPipeline(object):
                 # Catches invalid argument exception, which error "Maximum
                 # document size falls under
                 print(e)
+            print(f'Amount ingested is: {amount_ingested}')
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -166,35 +170,40 @@ class IngestPipeline(object):
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
         else:
-            for data in self.matrix.extract():
+            for rows in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
-                    *data)
+                    *rows)
                 self.load_expression_data(transformed_data)
         self.close_matrix()
 
     def ingest_cell_metadata(self):
-        """Ingests cell metadata files into firestore.
-    """
+        """Ingests cell metadata files into firestore."""
         while True:
             row = self.cell_metadata.extract()
             if(row == None):
                 break
+            print(row)
             self.cell_metadata.transform(row)
-        print(self.cell_metadata.metadata_types)
-        # self.load_cell_metadata()
+        print(self.cell_metadata.data_subcollection)
+        self.load_cell_metadata()
 
-    # def ingest_cluster(self):
-    #     """Ingests cluster files into firestore.
-#
-#     Args:
-#         None
-#
-#     Returns:
-#         None
-#     """
-#     for data in self.cluster.extract():
-#         self.cluster.transform(data)
-#     self.load_cluster_files()
+    def ingest_cluster(self):
+        """Ingests cluster files into firestore."""
+        for data in self.cluster.extract():
+            self.cluster.transform(data)
+        self.load_cluster_files()
+
+    def load_cluster_files(self):
+        """Loads cluster files into firestore."""
+        collection_name = self.cluster.get_collection_name()
+        doc_ref = self.db.collection(collection_name).document()
+        doc_ref.set(self.cluster.top_level_doc)
+        subcollection_name = self.cluster.get_subcollection_name()
+        for annotation in self.cluster.annotation_subdocs.keys():
+            batch = self.db.batch()
+            doc_ref_sub = doc_ref.collection(
+                subcollection_name).document()
+            doc_ref_sub.set(self.cluster.annotation_subdocs[annotation])
 
 
 def create_parser():
@@ -304,8 +313,8 @@ def main() -> None:
         ingest.ingest_expression()
     elif 'cell_metadata_file' in arguments:
         ingest.ingest_cell_metadata()
-    # elif 'cluster_file' in arguments:
-    #     getattr(ingest, 'ingest_cluster')()
+    elif 'cluster_file' in arguments:
+        ingest.ingest_cluster()
 
 
 if __name__ == "__main__":
