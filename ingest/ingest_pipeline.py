@@ -84,7 +84,7 @@ class IngestPipeline(object):
         }
 
         if file_type == 'mtx':
-            return Mtx(self.matrix_file_path, self.gene_file, self.barcodes_file)
+            return Mtx(file_path, self.gene_file, self.barcodes_file)
         else:
             return file_connections.get(file_type)(file_path)
 
@@ -179,7 +179,8 @@ class IngestPipeline(object):
             if(row == None):
                 break
             self.cell_metadata.transform(row)
-        self.load_cell_metadata()
+        print(self.cell_metadata.metadata_types)
+        # self.load_cell_metadata()
 
     # def ingest_cluster(self):
     #     """Ingests cluster files into firestore.
@@ -274,7 +275,7 @@ def validate_arguments(parsed_args):
     Returns:
         None
     """
-    if hasattr(parsed_args, 'ingest_expression'):
+    if 'matrix_file' in parsed_args:
         if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
                                                       or parsed_args.barcode_file == None):
             raise ValueError(
@@ -294,14 +295,15 @@ def main() -> None:
     """
 
     parsed_args = create_parser().parse_args()
+    print(parsed_args)
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     ingest = IngestPipeline(**arguments)
 
     if 'matrix_file' in arguments:
-        getattr(ingest, 'ingest_expression')()
+        ingest.ingest_expression()
     elif 'cell_metadata_file' in arguments:
-        getattr(ingest, 'ingest_cell_metadata')()
+        ingest.ingest_cell_metadata()
     # elif 'cluster_file' in arguments:
     #     getattr(ingest, 'ingest_cluster')()
 

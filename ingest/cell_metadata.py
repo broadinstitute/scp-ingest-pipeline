@@ -10,6 +10,7 @@ Must have python 3.6 or higher.
 import copy
 import json
 import os
+from collections import defaultdict
 from typing import Dict, Generator, List, Tuple, Union
 
 from ingest_files import IngestFiles
@@ -29,10 +30,13 @@ class CellMetadata(IngestFiles):
         # unique values for group-based annotations
         self.uniqueValues = []
         self.cell_names = []
+        self.annotation_type = ['group', 'numeric']
         self.top_level_doc = self.create_documents(
             file_path, file_id, study_accession)
         self.data_subcollection = self.create_subdocuments()
-        self.errors = {}
+        self.errors = defaultdict(list)
+        self.ontology = defaultdict(lambda: defaultdict(set))
+        self.type = defaultdict(list)
 
     def transform(self, row: List[str]) -> None:
         """ Add data from cell metadata files into data model"""
