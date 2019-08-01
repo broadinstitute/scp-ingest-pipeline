@@ -308,7 +308,7 @@ def main() -> None:
     elif 'cell_metadata_file' in arguments:
         ingest.ingest_cell_metadata()
     elif 'cluster_file' in arguments:
-        getattr(ingest, 'ingest_cluster')()
+        ingest.ingest_cluster()
 
 
 if __name__ == "__main__":
