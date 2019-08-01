@@ -26,8 +26,6 @@ python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_ma
 python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
-import os
-import time
 from typing import Dict, Generator, List, Tuple, Union
 
 import numpy as np
@@ -152,7 +150,7 @@ class IngestPipeline(object):
                 print(e)
 
     def load_cluster_files(self):
-        """Loads cluster files into firestore."""
+        """Loads cluster files into Firestore."""
         collection_name = self.cluster.COLLECTION_NAME
         doc_ref = self.db.collection(collection_name).document()
         doc_ref.set(self.cluster.top_level_doc)
