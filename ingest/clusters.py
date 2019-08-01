@@ -19,9 +19,8 @@ class Clusters(IngestFiles):
         self.header = self.get_next_line(increase_line_count=False)
         # Second line in cluster is metadata_type
         self.metadata_types = self.get_next_line(increase_line_count=False)
-        self.uniqueValues = []
+        self.unique_values = {}
         self.source_file_type = 'cluster'
-        # self.points = amount of rows
         self.top_level_doc = {
             'name': name,
             'study_accession': study_accession,
@@ -51,6 +50,8 @@ class Clusters(IngestFiles):
                 self.annotation_subdocs[annotation]['value'])
             annotation_value.append(column)
             self.annotation_subdocs[annotation]['value'] = annotation_value
+
+    def create_unique
 
     def create_annotation_subdocs(self):
         """Creates annotation_subdocs"""
