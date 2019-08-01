@@ -26,8 +26,6 @@ python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_ma
 python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
-import os
-import time
 from typing import Dict, Generator, List, Tuple, Union
 
 import numpy as np
@@ -101,49 +99,45 @@ class IngestPipeline(object):
     def load_expression_data(self, list_of_expression_models: List[Gene]) -> None:
         """Loads expression data into Firestore.
 
-        Args:
-            list_of_transformed_data: List[Gene]
-               A list of object type Gene that's stored into Firestore
+    Args:
+        list_of_transformed_data: List[Gene]
+           A list of object type Gene that's stored into Firestore
 
-        Returns:
-            None
-        """
-        amount_ingested=0
+    Returns:
+        None
+    """
 
         # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
-            amount_ingested+=1
-            # batch
             collection_name = expression_model.get_collection_name()
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(expression_model.top_level_doc)
             if expression_model.has_subcollection_data():
-                subcollection_name = expression_model.get_subcollection_name()
                 try:
+                    subcollection_name = expression_model.get_subcollection_name()
                     doc_ref_sub = doc_ref.collection(
                         subcollection_name).document()
                     doc_ref_sub.set(expression_model.subdocument)
-                # batch commit
                 except exceptions.InvalidArgument as e:
                     # Catches invalid argument exception, which error "Maximum
                     # document size" falls under
-                    # batch = self.db.batch()
+                    print(e)
+                    batch = self.db.batch()
                     for subdoc in expression_model.chunk_gene_expression_documents(doc_ref.id):
+
                         subcollection_name = expression_model.get_subcollection_name()
                         doc_ref_sub = doc_ref.collection(
                             subcollection_name).document()
-                        doc_ref_sub.set(subdoc)
-                    # print(batch.__dict__)
-                    # batch.commit()
-            print(f'Amount of genes ingested is: {amount_ingested}')
+                        batch.set(doc_ref_sub, subdoc)
+
+                    batch.commit()
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
-        amount_ingested=0
+
         collection_name = self.cell_metadata.get_collection_name()
         subcollection_name = self.cell_metadata.get_subcollection_name()
         for annotation in self.cell_metadata.top_level_doc.keys():
-            amount_ingested+=1
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(self.cell_metadata.top_level_doc[annotation])
             try:
@@ -154,7 +148,6 @@ class IngestPipeline(object):
                 # Catches invalid argument exception, which error "Maximum
                 # document size" falls under
                 print(e)
-            print(f'Amount ingested is: {amount_ingested}')
 
     def load_cluster_files(self):
         """Loads cluster files into firestore."""
@@ -182,46 +175,19 @@ class IngestPipeline(object):
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
         else:
-            for rows in self.matrix.extract():
+            for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
-                    *rows)
-                self.load_expression_data(transformed_data)
+                    *data)
+        self.load_expression_data(transformed_data)
         self.close_matrix()
 
     def ingest_cell_metadata(self):
-<<<<<<< HEAD
-        """Ingests cell metadata files into firestore."""
-=======
         """Ingests cell metadata files into Firestore."""
->>>>>>> 0abeb02d061e9bb92276435ca033d9eb94fa1c7a
         while True:
             row = self.cell_metadata.extract()
             if(row == None):
                 break
-            print(row)
             self.cell_metadata.transform(row)
-<<<<<<< HEAD
-        print(self.cell_metadata.data_subcollection)
-        self.load_cell_metadata()
-
-    def ingest_cluster(self):
-        """Ingests cluster files into firestore."""
-        for data in self.cluster.extract():
-            self.cluster.transform(data)
-        self.load_cluster_files()
-
-    def load_cluster_files(self):
-        """Loads cluster files into firestore."""
-        collection_name = self.cluster.get_collection_name()
-        doc_ref = self.db.collection(collection_name).document()
-        doc_ref.set(self.cluster.top_level_doc)
-        subcollection_name = self.cluster.get_subcollection_name()
-        for annotation in self.cluster.annotation_subdocs.keys():
-            batch = self.db.batch()
-            doc_ref_sub = doc_ref.collection(
-                subcollection_name).document()
-            doc_ref_sub.set(self.cluster.annotation_subdocs[annotation])
-=======
         self.load_cell_metadata()
 
     def ingest_cluster(self):
@@ -233,7 +199,6 @@ class IngestPipeline(object):
                 break
             self.cluster.transform(row)
         self.load_cluster_files()
->>>>>>> 0abeb02d061e9bb92276435ca033d9eb94fa1c7a
 
 
 def create_parser():
@@ -343,11 +308,7 @@ def main() -> None:
     elif 'cell_metadata_file' in arguments:
         ingest.ingest_cell_metadata()
     elif 'cluster_file' in arguments:
-<<<<<<< HEAD
-        ingest.ingest_cluster()
-=======
         getattr(ingest, 'ingest_cluster')()
->>>>>>> 0abeb02d061e9bb92276435ca033d9eb94fa1c7a
 
 
 if __name__ == "__main__":

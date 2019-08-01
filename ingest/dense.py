@@ -58,8 +58,7 @@ class Dense():
             compute = line.rstrip('\n').split(',')
             gene_model = Gene(compute[0], source_file_type="Dense",
                               expression_scores=expression_scores[1:],
-                              cell_names=self.cell_names,
-                              source_file_name=self.file_name)
+                              cell_names=self.cell_names)
             transformed_data.append(gene_model)
         return transformed_data
 

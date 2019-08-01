@@ -23,7 +23,7 @@ DOCUMENT_LIMIT_BYTES = 1_048_576
 
 
 class Gene:
-    def __init__(self, name: str, source_file_name: str, source_file_type: str, *,
+    def __init__(self, name: str, source_file_type: str, *,
                  gene_id: str = '', study_accession: str = '', taxon_name: str = '',
                  taxon_common_name: str = '', ncbi_taxid: str = '', genome_assembly_accession: str = '',
                  genome_annotation: str = '', cell_names: List[str] = [], expression_scores: List = [],
@@ -31,7 +31,6 @@ class Gene:
 
         self.name = name.replace('"', '')
         self.gene_id = gene_id
-        self.source_file_name = source_file_name,
         self.source_file_type = source_file_type,
 
         if check_for_zero_values:
@@ -44,7 +43,6 @@ class Gene:
         # given gene
         self.subdocument = {'cell_names': self.cell_names,
                             'expression_scores':  self.expression_scores,
-                            'source_file_name': source_file_name,
                             'source_file_type': source_file_type,
                             }
        # This is the top level document for the gene data model
@@ -135,18 +133,12 @@ class Gene:
             file name and type.
         """
 
-        self.subdocument = {'cell_names': self.cell_names,
-                            'expression_scores':  self.expression_scores,
-                            'source_file_name': source_file_name,
-                            'source_file_type': source_file_type,
-                            }
-
         # starting sum is equal to 34 (because key names take up 59 bytes) plus the
         # storage size of the source file name and file type
         size_of_document_name = len(document_name) + 1
         size_of_cell_names_field = 10 + 1
         size_of_expression_scores_field = 17 + 1
-        starting_sum = 34 + len(self.source_file_name) + \
+        starting_sum = 17 + \
             len(self.source_file_type) + size_of_document_name
         start_index = 0
         float_storage = 8
@@ -169,7 +161,6 @@ class Gene:
 
                 yield {'cell_names': self.cell_names[start_index:end_index],
                        'expression_scores':  self.expression_scores[start_index:end_index],
-                       'source_file_name': self.source_file_name[0],
                        'source_file_type': self.source_file_type[0],
                        }
                 print(sum)

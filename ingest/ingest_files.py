@@ -53,11 +53,7 @@ class IngestFiles:
         return file_type_extract_fns.get(self.file_type)()
 
     def split_line(self, line):
-<<<<<<< HEAD
-        """Splits lines on spaces, tabs, or commas"""
-=======
         """Splits lines on file format-appropriate delimiters"""
->>>>>>> 0abeb02d061e9bb92276435ca033d9eb94fa1c7a
 
         if self.is_MTX:
             return re.findall(r'[^,\t]+', line)
@@ -106,7 +102,8 @@ class IngestFiles:
                 break
             self.amount_of_lines += 1
             # Create array with no new line, commas, or tab characters
-            return self.split_line(next_row.replace('\n', ''))
+            next_row_revised = self.split_line(next_row.replace('\n', ''))
+            return next_row_revised
 
     def get_next_line(self, *, increase_line_count=True, split_line=True):
         """Returns a single line of txt, csv or tsv files"""
