@@ -19,7 +19,7 @@ class Clusters(IngestFiles):
         self.header = self.get_next_line(increase_line_count=False)
         # Second line in cluster is metadata_type
         self.metadata_types = self.get_next_line(increase_line_count=False)
-        self.uniqueValues = []
+        self.unique_values = []
         self.source_file_type = 'cluster'
         # self.points = amount of rows
         self.top_level_doc = {
@@ -43,8 +43,8 @@ class Clusters(IngestFiles):
                 if self.metadata_types[idx].lower() == 'numeric':
                     column = round(float(column), 3)
                 elif self.metadata_types[idx].lower() == 'group':
-                    if column not in self.uniqueValues:
-                        self.uniqueValues.append(column)
+                    if column not in self.unique_values:
+                        self.unique_values.append(column)
             annotation = self.header[idx].lower()
             # perform a shallow copy
             annotation_value = copy.copy(
