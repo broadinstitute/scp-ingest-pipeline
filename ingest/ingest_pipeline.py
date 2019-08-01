@@ -7,7 +7,7 @@ file types then uploads them into Firestore.
 
 PREREQUISITES
 You must have Google Cloud Firestore installed, authenticated, and
-configured. Must have python 3.6 or higher. Indexing must be turned off for
+configured. Must have Python 3.6 or higher. Indexing must be turned off for
 all collections.
 
 EXAMPLES
@@ -20,10 +20,10 @@ python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/AB_toy_dat
 python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv
 
 # Ingest dense file
-$python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest mtx files
-$python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 import os
@@ -152,9 +152,21 @@ class IngestPipeline(object):
                 doc_ref_sub.set(subcollection_doc)
             except exceptions.InvalidArgument as e:
                 # Catches invalid argument exception, which error "Maximum
-                # document size falls under
+                # document size" falls under
                 print(e)
             print(f'Amount ingested is: {amount_ingested}')
+
+    def load_cluster_files(self):
+        """Loads cluster files into firestore."""
+        collection_name = self.cluster.COLLECTION_NAME
+        doc_ref = self.db.collection(collection_name).document()
+        doc_ref.set(self.cluster.top_level_doc)
+        subcollection_name = self.cluster.SUBCOLLECTION_NAME
+        for annotation in self.cluster.annotation_subdocs.keys():
+            batch = self.db.batch()
+            doc_ref_sub = doc_ref.collection(
+                subcollection_name).document()
+            doc_ref_sub.set(self.cluster.annotation_subdocs[annotation])
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -177,13 +189,18 @@ class IngestPipeline(object):
         self.close_matrix()
 
     def ingest_cell_metadata(self):
+<<<<<<< HEAD
         """Ingests cell metadata files into firestore."""
+=======
+        """Ingests cell metadata files into Firestore."""
+>>>>>>> 0abeb02d061e9bb92276435ca033d9eb94fa1c7a
         while True:
             row = self.cell_metadata.extract()
             if(row == None):
                 break
             print(row)
             self.cell_metadata.transform(row)
+<<<<<<< HEAD
         print(self.cell_metadata.data_subcollection)
         self.load_cell_metadata()
 
@@ -204,6 +221,19 @@ class IngestPipeline(object):
             doc_ref_sub = doc_ref.collection(
                 subcollection_name).document()
             doc_ref_sub.set(self.cluster.annotation_subdocs[annotation])
+=======
+        self.load_cell_metadata()
+
+    def ingest_cluster(self):
+        """Ingests cluster files into Firestore."""
+        while True:
+            row = self.cluster.extract()
+            if(row == None):
+                self.cluster.update_points()
+                break
+            self.cluster.transform(row)
+        self.load_cluster_files()
+>>>>>>> 0abeb02d061e9bb92276435ca033d9eb94fa1c7a
 
 
 def create_parser():
@@ -221,12 +251,12 @@ def create_parser():
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    subargs = parser.add_subparsers()
+    subparsers = parser.add_subparsers()
 
-    # Ingest expression files subargs
-    parser_ingest_expression = subargs.add_parser('ingest_expression',
-                                                  help='Indicates that expression'
-                                                  ' files are being ingested')
+    # Ingest expression files subparsers
+    parser_ingest_expression = subparsers.add_parser('ingest_expression',
+                                                     help='Indicates that expression'
+                                                     ' files are being ingested')
 
     parser_ingest_expression.add_argument('--matrix-file', required=True,
                                           help='Absolute or relative path to '
@@ -251,25 +281,25 @@ def create_parser():
     parser_ingest_expression.add_argument('--gene-file',
                                           help='Path to .genes.tsv file')
 
-    parser_ingest_cluster = subargs.add_parser('ingest_clusters',
-                                               help='Indicates that cluster'
-                                               ' files are being ingested')
+    parser_ingest_cluster = subparsers.add_parser('ingest_clusters',
+                                                  help='Indicates that cluster'
+                                                  ' files are being ingested')
     parser_ingest_cluster.add_argument('--cluster-file',
                                        help='Path to cluster files')
 
     # Parser ingesting cell metadata files
-    parser_cell_metadata = subargs.add_parser('ingest_cell_metadata',
-                                              help='Indicates that cell '
-                                              ' metadata files are being '
-                                              'ingested')
+    parser_cell_metadata = subparsers.add_parser('ingest_cell_metadata',
+                                                 help='Indicates that cell '
+                                                 ' metadata files are being '
+                                                 'ingested')
     parser_cell_metadata.add_argument('--cell-metadata-file', required=True,
                                       help='Absolute or relative path to '
                                       'cell metadata file.')
 
     # Parser ingesting cluster files
-    parser_cluster = subargs.add_parser('ingest_cluster',
-                                        help='Indicates that cluster '
-                                        'file is being ingested')
+    parser_cluster = subparsers.add_parser('ingest_cluster',
+                                           help='Indicates that cluster '
+                                           'file is being ingested')
     parser_cluster.add_argument('--cluster-file', required=True,
                                 help='Absolute or relative path to '
                                 'cluster file.')
@@ -285,13 +315,12 @@ def validate_arguments(parsed_args):
     Returns:
         None
     """
-    if 'matrix_file' in parsed_args:
-        if parsed_args.matrix_file_type == 'mtx' and (parsed_args.gene_file == None
-                                                      or parsed_args.barcode_file == None):
-            raise ValueError(
-                ' Missing arguments: --gene-file and --barcode-file. Mtx files '
-                'must include .genes.tsv, and .barcodes.tsv files. See --help for '
-                'more information')
+    if ('matrix_file' in parsed_args and parsed_args.matrix_file_type == 'mtx') and (parsed_args.gene_file == None
+                                                                                     or parsed_args.barcode_file == None):
+        raise ValueError(
+            ' Missing arguments: --gene-file and --barcode-file. Mtx files '
+            'must include .genes.tsv, and .barcodes.tsv files. See --help for '
+            'more information')
 
 
 def main() -> None:
@@ -314,7 +343,11 @@ def main() -> None:
     elif 'cell_metadata_file' in arguments:
         ingest.ingest_cell_metadata()
     elif 'cluster_file' in arguments:
+<<<<<<< HEAD
         ingest.ingest_cluster()
+=======
+        getattr(ingest, 'ingest_cluster')()
+>>>>>>> 0abeb02d061e9bb92276435ca033d9eb94fa1c7a
 
 
 if __name__ == "__main__":

@@ -135,12 +135,11 @@ class Gene:
             file name and type.
         """
 
-            self.subdocument = {'cell_names': self.cell_names,
-                                'expression_scores':  self.expression_scores,
-                                'source_file_name': source_file_name,
-                                'source_file_type': source_file_type,
-                                }
-
+        self.subdocument = {'cell_names': self.cell_names,
+                            'expression_scores':  self.expression_scores,
+                            'source_file_name': source_file_name,
+                            'source_file_type': source_file_type,
+                            }
 
         # starting sum is equal to 34 (because key names take up 59 bytes) plus the
         # storage size of the source file name and file type
@@ -162,7 +161,7 @@ class Gene:
             # and documents
             # This and other storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
-            if (sum+32) > DOCUMENT_LIMIT_BYTES or index == (len(self.cell_names) - 1):
+            if (sum + 32) > DOCUMENT_LIMIT_BYTES or index == (len(self.cell_names) - 1):
                 if index == (len(self.cell_names) - 1):
                     end_index = index
                 else:
