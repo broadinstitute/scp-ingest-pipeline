@@ -14,7 +14,6 @@ from itertools import islice
 from typing import *
 
 import numpy as np
-from google.cloud import storage
 
 from ingest_files import IngestFiles
 from gene_data_model import Gene

@@ -10,16 +10,66 @@ import os
 import re
 from itertools import islice
 
+from google.cloud import storage
+
 
 class IngestFiles:
     def __init__(self, file_path, allowed_file_types, is_MTX=False):
-        if not os.path.exists(file_path):
-            raise IOError(f"File '{file_path}' not found")
+
+        # File is remote (in GCS bucket) when running via PAPI,
+        # and typically local when developing
+        self.is_remote_file = (file_path[:5] == 'gs://')
+
+        self.verify_file_exists(file_path)
         self.allowed_file_types = allowed_file_types
         self.file_type, self.file = self.open_file(file_path)
+
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
         self.is_MTX = is_MTX
+
+    def download_from_bucket(self, file_path):
+        """Downloads file from Google Cloud Storage bucket."""
+        bucket = self.storage_client.get_bucket(self.bucket_name)
+        blob = self.bucket.blob(self.source)
+        destination = '/tmp/' + self.source.replace('/', '%2f')
+        blob.download_to_filename(destination)
+        print(f'{file_path} downloaded to {destination}.')
+        return destination
+
+    def set_gcs_attrs(self, file_path):
+        """Sets class attributes related to Google Cloud Storage"""
+        self.storage_client = storage.Client()
+        self.bucket_name = file_path[5:].split('/')[0]
+        self.bucket = self.storage_client.get_bucket(self.bucket_name)
+        self.source = '/'.join(file_path[5:].split('/')[1:])
+
+    def verify_file_exists(self, file_path):
+        """Determines if file can be found, throws error if not"""
+        if self.is_remote_file:
+            # File is in GCS bucket
+            self.set_gcs_attrs(file_path)
+            source_blob = storage.Blob(bucket=self.bucket, name=self.source)
+            if not source_blob.exists(self.storage_client):
+                raise IOError(f'Remote file "{file_path}" not found')
+        else:
+            # File is local
+            if not os.path.exists(file_path):
+                raise IOError(f'File "{file_path}" not found')
+
+    def resolve_path(self, file_path):
+        """Localizes object if given a GS URL, returns open Python file object
+
+        Args:
+            file_path: Path to a local file, or a Google Cloud Storage URL
+
+        Returns:
+            Open file object
+        """
+        if self.is_remote_file:
+            file_path = self.download_from_bucket(file_path)
+
+        return open(file_path, encoding='utf-8-sig')
 
     def open_file(self, file_path):
         """ Opens TXT, CSV, or TSV formatted files"""
@@ -38,25 +88,6 @@ class IngestFiles:
             return file_type, file_connections.get(file_type)
         else:
             raise ValueError(f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}")
-
-    def resolve_path(self, file_path):
-        """Localizes object if given a GS URL, returns open Python file object
-
-        Args:
-            file_path: Path to a local file, or a Google Cloud Storage URL
-
-        Returns:
-            Open file object
-        """
-        if file_path[:5] == 'gs://':
-            split_path = file_path[5:].split('/')
-            bucket_name = split_path[0]
-            source = '/'.join(split_path[1:])
-            destination = '/tmp/' + source.replace('/', '%2f')
-            download_blob(bucket_name, source, destination)
-            file_path = destination
-
-        return open(file_path, encoding='utf-8-sig')
 
     # Inherited function
     def extract(self):
