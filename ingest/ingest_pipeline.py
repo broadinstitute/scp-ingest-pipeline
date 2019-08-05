@@ -181,6 +181,7 @@ class IngestPipeline(object):
             row = self.cell_metadata.extract()
             if(row == None):
                 break
+            print(row)
             self.cell_metadata.transform(row)
         self.load_cell_metadata()
 

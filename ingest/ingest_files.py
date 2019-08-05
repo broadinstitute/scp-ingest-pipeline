@@ -74,10 +74,7 @@ class IngestFiles:
     def split_line(self, line):
         """Splits lines on file format-appropriate delimiters"""
 
-        if self.is_MTX:
-            return re.findall(r'[^,\t]+', line)
-        else:
-            return re.findall(r'[^,\s\t]+', line)
+        return re.findall(r'[^,\t]+', line)
 
     def get_file_type(self, file_path):
         """Returns file type"""
@@ -117,7 +114,6 @@ class IngestFiles:
         """
         while True:
             next_row = self.file.readline()
-
             if not next_row:
                 break
             self.amount_of_lines += 1
