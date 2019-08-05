@@ -47,9 +47,9 @@ class IngestPipeline(object):
     def __init__(self, *, matrix_file: str = None, matrix_file_type: str = None,
                  barcode_file: str = None, gene_file: str = None, cell_metadata_file: str = None,
                  cluster_file: str = None):
-        """Initializes variables in Ingest Pipeline."""
+        """Initializes Ingest Pipeline attributes."""
 
-        self.matrix_file_path = matrix_file    
+        self.matrix_file_path = matrix_file
         self.matrix_file_type = matrix_file_type
         self.gene_file = gene_file
         self.barcodes_file = barcode_file

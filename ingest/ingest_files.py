@@ -38,7 +38,7 @@ class IngestFiles:
         return destination
 
     def set_gcs_attrs(self, file_path):
-        """Sets class attributes related to Google Cloud Storage"""
+        """Sets instance attributes related to Google Cloud Storage"""
         self.storage_client = storage.Client()
         self.bucket_name = file_path[5:].split('/')[0]
         self.bucket = self.storage_client.get_bucket(self.bucket_name)
