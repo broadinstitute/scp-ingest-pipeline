@@ -19,7 +19,7 @@ class Clusters(IngestFiles):
         self.header = self.get_next_line(increase_line_count=False)
         # Second line in cluster is metadata_type
         self.metadata_types = self.get_next_line(increase_line_count=False)
-        self.unique_values = {}
+        self.unique_values = dict.fromkeys(self.headers[1:], [])
         self.source_file_type = 'cluster'
         self.top_level_doc = {
             'name': name,
@@ -37,21 +37,20 @@ class Clusters(IngestFiles):
 
     def transform(self, rows):
         """ Add data from cluster files into annotation subdocs in cluster data model"""
+        bins = dict.fromkeys(rows)
         for idx, column in enumerate(rows):
+            annotation = self.header[idx].lower()
             if idx != 0:
                 if self.metadata_types[idx].lower() == 'numeric':
                     column = round(float(column), 3)
-                elif self.metadata_types[idx].lower() == 'group':
-                    if column not in self.uniqueValues:
-                        self.uniqueValues.append(column)
-            annotation = self.header[idx].lower()
+                else self.metadata_types[idx].lower() == 'group':
+                    if column not in self.unique_values[annotation]:
+                        self.unique_values[annotation].append(column)
             # perform a shallow copy
             annotation_value = copy.copy(
                 self.annotation_subdocs[annotation]['value'])
             annotation_value.append(column)
             self.annotation_subdocs[annotation]['value'] = annotation_value
-
-    def create_unique
 
     def create_annotation_subdocs(self):
         """Creates annotation_subdocs"""
@@ -79,3 +78,6 @@ class Clusters(IngestFiles):
             'subsampled_annotation': subsampled_annotation,
             'subsamp_threashold': "",
         }
+
+    def bin(self):
+        for unique_value in self.unique_values.keys():
