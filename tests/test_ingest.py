@@ -80,7 +80,7 @@ def get_nth_gene_models(n, models, mock_dir):
     with open(f'mock_data/{mock_dir}/gene_model_{n}.txt') as f:
         # Create a dictionary from the string-literal mock
         expected_model = ast.literal_eval(f.read())
-    
+
     return actual_model, expected_model
 
 # Mock method that loads data to Firestore
@@ -157,6 +157,7 @@ class IngestTestCase(unittest.TestCase):
         args = ('ingest_expression '
                 '--matrix-file ../tests/data/matrix.mtx '
                 '--matrix-file-type mtx')
+
 
         self.assertRaises(ValueError, self.setup_ingest, args)
 
