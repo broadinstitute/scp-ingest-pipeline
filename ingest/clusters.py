@@ -1,4 +1,5 @@
 import copy
+import unicodedata
 from typing import Dict, Generator, List, Tuple, Union
 
 from ingest_files import IngestFiles
@@ -8,8 +9,6 @@ class Clusters(IngestFiles):
 
     ALLOWED_FILE_TYPES = ['text/csv',
                           'text/plain', 'text/tab-separated-values']
-    MAX_THRESHOLD = 100_000
-    SUBSAMPLE_THRESHOLDS = [MAX_THRESHOLD, 20000, 10000, 1000]
     COLLECTION_NAME = 'clusters'
     SUBCOLLECTION_NAME = 'data'
 
@@ -35,15 +34,25 @@ class Clusters(IngestFiles):
     def update_points(self):
         self.top_level_doc['points'] = self.amount_of_lines
 
-    def transform(self, rows):
+    def transform(self, row):
         """ Add data from cluster files into annotation subdocs in cluster data model"""
+<<<<<<< Updated upstream
         bins = dict.fromkeys(rows)
         for idx, column in enumerate(rows):
             annotation = self.header[idx].lower()
+=======
+
+        for idx, column in enumerate(row):
+            annotation = self.header[idx].casefold()
+>>>>>>> Stashed changes
             if idx != 0:
-                if self.metadata_types[idx].lower() == 'numeric':
+                if self.metadata_types[idx].casefold() == 'numeric':
                     column = round(float(column), 3)
+<<<<<<< Updated upstream
                 else self.metadata_types[idx].lower() == 'group':
+=======
+                else self.metadata_types[idx].casefold() == 'group':
+>>>>>>> Stashed changes
                     if column not in self.unique_values[annotation]:
                         self.unique_values[annotation].append(column)
             # perform a shallow copy
@@ -56,7 +65,7 @@ class Clusters(IngestFiles):
         """Creates annotation_subdocs"""
         annotation_subdocs = {}
         for value in self.header:
-            value = value.lower()
+            value = value.casefold()
             if value == 'name':
                 annotation_subdocs[value] = self.create_metadata_subdoc(
                     'text', 'cells')
@@ -79,5 +88,10 @@ class Clusters(IngestFiles):
             'subsamp_threashold': "",
         }
 
+<<<<<<< Updated upstream
     def bin(self):
+=======
+    def sub_sample(self, function):
+
+>>>>>>> Stashed changes
         for unique_value in self.unique_values.keys():

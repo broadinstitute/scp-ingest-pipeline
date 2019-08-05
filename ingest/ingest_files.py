@@ -10,6 +10,8 @@ import os
 import re
 from itertools import islice
 
+import pandas as pd
+
 
 class IngestFiles:
     def __init__(self, file_path, allowed_file_types, is_MTX=False):
@@ -21,7 +23,7 @@ class IngestFiles:
         self.amount_of_lines = 0
         self.is_MTX = is_MTX
 
-    def open_file(self, file_path):
+    def open_file(self, file_path, open_as=None):
         """ Opens txt, csv, or tsv formatted files"""
         open_file = open(file_path, encoding='utf-8-sig')
         file_connections = {
@@ -29,13 +31,17 @@ class IngestFiles:
             'text/csv': self.open_csv(open_file),
             'text/plain': open_file,
             'text/tab-separated-values': self.open_tsv(open_file),
+            'pandas': self.open_pandas(open_file, file_path)
         }
         # Check file type
         file_type = self.get_file_type(file_path)[0]
         # See if file type is allowed
         if file_type in self.allowed_file_types:
             # Return file object and type
-            return file_type, file_connections.get(file_type)
+            if open_as is None:
+                return file_type, file_connections.get(file_type)
+            else:
+                return file_type, file_connections.get(open_as)(type)
         else:
             raise ValueError(f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}")
 
@@ -64,13 +70,23 @@ class IngestFiles:
         """Returns file type"""
         return mimetypes.guess_type(file_path)
 
+    def open_pandas(self, opened_file, file_path):
+        opened_file.readline()
+        meta_data = opened_file.readline()
+        find_tab = meta_data.find('\t')
+        if meta_data.find('\t') != -1:
+            return pd.read_csv(file_path, sep='\t', header=0)
+        elif meta_data.find(',') != -1:
+            return pd.read_csv(file_path, sep=',', header=0)
+        else raise ValueError('File must be tab or comma delimited')
+
     def open_csv(self, opened_file_object):
         """Opens csv file"""
         csv.register_dialect('csvDialect',
                              delimiter=',',
                              quoting=csv.QUOTE_ALL,
                              skipinitialspace=True)
-        return csv.reader(opened_file_object, dialect='csvDialect')
+        return csv.DictReader(opened_file_object, dialect='csvDialect')
 
     def open_tsv(self, opened_file_object):
         """Opens tsv file"""
@@ -78,7 +94,7 @@ class IngestFiles:
                              delimiter='\t',
                              quoting=csv.QUOTE_ALL,
                              skipinitialspace=True)
-        return csv.reader(opened_file_object, dialect='tsvDialect')
+        return csv.DictReader(opened_file_object, dialect='tsvDialect')
 
     def extract_csv_or_tsv(self):
         """Extracts all rows from a csv or tsv file"""
