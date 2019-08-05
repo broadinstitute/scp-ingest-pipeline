@@ -49,7 +49,8 @@ class IngestPipeline(object):
                  cluster_file: str = None):
         """Initializes variables in ingest service."""
 
-        if matrix_file[:5] != 'gs://' and not os.path.exists(matrix_file):
+        if (matrix_file != None and
+            matrix_file[:5] != 'gs://' and not os.path.exists(matrix_file)):
             raise IOError(f"File '{matrix_file}' not found")
         self.matrix_file_path = matrix_file    
         self.matrix_file_type = matrix_file_type

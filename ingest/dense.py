@@ -37,25 +37,6 @@ class Dense():
 
         self.file_name = file_path.strip(".")
 
-    def resolve_path(self, file_path):
-        """Localizes object if given a GS URI, returns open Python file object
-
-        Args:
-            file_path: Path to a local file, or a Google Cloud Storage URI
-
-        Returns:
-            Open Python file object
-        """
-        if file_path[:5] == 'gs://':
-            bucket_name = file_path[5:].split('/')[0]
-            source = '/'.join(file_path[5:].split('/')[1:])
-            destination = '/tmp/' + source.replace('/', '%2f')
-            download_blob(bucket_name, source, destination)
-            file_path = destination
-
-        return open(file_path, 'r')
-
-
     def extract(self, size: int = 500) -> List[str]:
         """Extracts lines from dense matrix.
 

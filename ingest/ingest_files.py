@@ -23,7 +23,7 @@ class IngestFiles:
 
     def open_file(self, file_path):
         """ Opens txt, csv, or tsv formatted files"""
-        open_file = open(file_path, encoding='utf-8-sig')
+        open_file = self.resolve_path(file_path)
         file_connections = {
             # Remove BOM with encoding='utf-8-sig'
             'text/csv': self.open_csv(open_file),
@@ -38,6 +38,25 @@ class IngestFiles:
             return file_type, file_connections.get(file_type)
         else:
             raise ValueError(f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}")
+
+    def resolve_path(self, file_path):
+        """Localizes object if given a GS URL, returns open Python file object
+
+        Args:
+            file_path: Path to a local file, or a Google Cloud Storage URL
+
+        Returns:
+            Open file object
+        """
+        if file_path[:5] == 'gs://':
+            split_path = file_path[5:].split('/')
+            bucket_name = split_path[0]
+            source = '/'.join(split_path[1:])
+            destination = '/tmp/' + source.replace('/', '%2f')
+            download_blob(bucket_name, source, destination)
+            file_path = destination
+
+        return open(file_path, encoding='utf-8-sig')
 
     # Inherited function
     def extract(self):
