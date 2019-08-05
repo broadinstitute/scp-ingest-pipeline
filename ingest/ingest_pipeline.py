@@ -47,11 +47,8 @@ class IngestPipeline(object):
     def __init__(self, *, matrix_file: str = None, matrix_file_type: str = None,
                  barcode_file: str = None, gene_file: str = None, cell_metadata_file: str = None,
                  cluster_file: str = None):
-        """Initializes variables in ingest service."""
+        """Initializes variables in Ingest Pipeline."""
 
-        if (matrix_file != None and
-            matrix_file[:5] != 'gs://' and not os.path.exists(matrix_file)):
-            raise IOError(f"File '{matrix_file}' not found")
         self.matrix_file_path = matrix_file    
         self.matrix_file_type = matrix_file_type
         self.gene_file = gene_file
