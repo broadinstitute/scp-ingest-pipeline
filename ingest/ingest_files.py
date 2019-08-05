@@ -1,4 +1,4 @@
-"""Module for text, CSV, and TSV file types used in SCP ingest
+"""Module for TXT, CSV, and TSV file types used in SCP ingest
 
 DESCRIPTION
 Module provides extract capabilities for text, CSV, and TSV file types
@@ -22,7 +22,7 @@ class IngestFiles:
         self.is_MTX = is_MTX
 
     def open_file(self, file_path):
-        """ Opens txt, csv, or tsv formatted files"""
+        """ Opens TXT, CSV, or TSV formatted files"""
         open_file = self.resolve_path(file_path)
         file_connections = {
             # Remove BOM with encoding='utf-8-sig'
@@ -60,7 +60,7 @@ class IngestFiles:
 
     # Inherited function
     def extract(self):
-        """ Calls extract function for txt, csv, or tsv formatted files to
+        """Calls extract function for TXT, CSV, or TSV formatted files to
             retrieve all contents from file.
         """
 
@@ -84,7 +84,7 @@ class IngestFiles:
         return mimetypes.guess_type(file_path)
 
     def open_csv(self, opened_file_object):
-        """Opens csv file"""
+        """Opens CSV file"""
         csv.register_dialect('csvDialect',
                              delimiter=',',
                              quoting=csv.QUOTE_ALL,
@@ -92,7 +92,7 @@ class IngestFiles:
         return csv.reader(opened_file_object, dialect='csvDialect')
 
     def open_tsv(self, opened_file_object):
-        """Opens tsv file"""
+        """Opens TSV file"""
         csv.register_dialect('tsvDialect',
                              delimiter='\t',
                              quoting=csv.QUOTE_ALL,
@@ -100,7 +100,7 @@ class IngestFiles:
         return csv.reader(opened_file_object, dialect='tsvDialect')
 
     def extract_csv_or_tsv(self):
-        """Extracts all rows from a csv or tsv file"""
+        """Extracts all rows from a CSV or TSV file"""
         while(True):
             try:
                 row = next(self.file)
@@ -109,11 +109,11 @@ class IngestFiles:
                 break
 
     def extract_txt(self):
-        """Extracts all lines from txt files
+        """Extracts all lines from TXT files
 
         Returns:
                 next_row_revised : List[str]
-                    A single row from a txt file.
+                    A single row from a TXT file.
         """
         while True:
             next_row = self.file.readline()
@@ -126,7 +126,7 @@ class IngestFiles:
             return next_row_revised
 
     def get_next_line(self, *, increase_line_count=True, split_line=True):
-        """Returns a single line of txt, csv or tsv files"""
+        """Returns a single line of TXT, CSV, or TSV files"""
 
         next_row = next(self.file)
         # Increase counter for line extracted
