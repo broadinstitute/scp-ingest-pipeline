@@ -155,11 +155,11 @@ class IngestPipeline(object):
         doc_ref = self.db.collection(collection_name).document()
         doc_ref.set(self.cluster.top_level_doc)
         subcollection_name = self.cluster.SUBCOLLECTION_NAME
-        for annotation in self.cluster.annotation_subdocs.keys():
+        for annotation in self.cluster.cluster_subdocs.keys():
             batch = self.db.batch()
             doc_ref_sub = doc_ref.collection(
                 subcollection_name).document()
-            doc_ref_sub.set(self.cluster.annotation_subdocs[annotation])
+            doc_ref_sub.set(self.cluster.cluster_subdocs[annotation])
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform

@@ -53,24 +53,24 @@ class Clusters(IngestFiles):
             annotation_value.append(column)
             self.annotation_subdocs[annotation]['value'] = annotation_value
 
-    def create_annotation_subdocs(self):
+    def return_cluster_subdocs(self):
         """Creates annotation_subdocs"""
         annotation_subdocs = {}
         for annot_name in self.header:
-            annot_name = value.casefold()
-            if annot_name == 'name':
-                annotation_subdocs[value] = self.create_metadata_subdoc(
+            value = annot_name.casefold()
+            if value == 'name':
+                annotation_subdocs[value] = self.create_cluster_subdoc(
                     'text', 'cells')
             elif value in ('x', 'y', 'z'):
-                annotation_subdocs[value] = self.create_metadata_subdoc(
-                    annot_name, 'coordinates')
+                annotation_subdocs[value] = self.create_cluster_subdoc(
+                    value, 'coordinates')
             else:
-                annotation_subdocs[value] = self.create_metadata_subdoc(
+                annotation_subdocs[value] = self.create_cluster_subdoc(
                     annot_name, 'annotations')
         return annotation_subdocs
 
-    def create_metadata_subdoc(self, annot_name, header_value_type, *, value=[], subsample_annotation=None):
-        """returns metadata subdoc"""
+    def create_cluster_subdoc(self, annot_name, header_value_type, *, value=[], subsample_annotation=None):
+        """returns cluster subdoc"""
         return {
             'name': annot_name,
             'array_index': 0,
