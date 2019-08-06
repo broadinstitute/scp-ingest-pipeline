@@ -28,7 +28,7 @@ class Clusters(IngestFiles):
             'domain_ranges': domain_ranges,
             'points': self.amount_of_lines,
         }
-        self.annotation_subdocs = self.create_annotation_subdocs()
+        self.cluster_subdocs = self.return_cluster_subdocs()
         # sample size needs to be smaller than amount of points
         # for each cell annotations if there are any
 
@@ -40,6 +40,8 @@ class Clusters(IngestFiles):
 
         for idx, column in enumerate(row):
             annotation = self.header[idx].casefold()
+
+            # first index is cell name don't need to check annot type
             if idx != 0:
                 if self.metadata_types[idx].casefold() == 'numeric':
                     column = round(float(column), 3)
@@ -48,35 +50,35 @@ class Clusters(IngestFiles):
                         self.unique_values[annotation].append(column)
             # perform a shallow copy
             annotation_value = copy.copy(
-                self.annotation_subdocs[annotation]['value'])
+                self.cluster_subdocs[annotation]['value'])
             annotation_value.append(column)
-            self.annotation_subdocs[annotation]['value'] = annotation_value
+            self.cluster_subdocs[annotation]['value'] = annotation_value
 
-    def create_annotation_subdocs(self):
-        """Creates annotation_subdocs"""
-        annotation_subdocs = {}
-        for value in self.header:
-            value = value.casefold()
+    def return_cluster_subdocs(self):
+        """Creates cluster_subdocs"""
+        cluster_subdocs = {}
+        for annot_name in self.header:
+            value = annot_name.casefold()
             if value == 'name':
-                annotation_subdocs[value] = self.create_metadata_subdoc(
+                cluster_subdocs[value] = self.create_cluster_subdoc(
                     'text', 'cells')
             elif value in ('x', 'y', 'z'):
-                annotation_subdocs[value] = self.create_metadata_subdoc(
+                cluster_subdocs[value] = self.create_cluster_subdoc(
                     value, 'coordinates')
             else:
-                annotation_subdocs[value] = self.create_metadata_subdoc(
-                    value, 'annotations')
-        return annotation_subdocs
+                cluster_subdocs[value] = self.create_cluster_subdoc(
+                    annot_name, 'annotations')
+        return cluster_subdocs
 
-    def create_metadata_subdoc(self, name, header_value_type, *, value=[], subsampled_annotation=None):
-        """returns metadata subdoc"""
+    def create_cluster_subdoc(self, annot_name, header_value_type, *, value=[], subsample_annotation=None):
+        """Returns cluster subdoc"""
         return {
-            'name': name,
+            'name': annot_name,
             'array_index': 0,
             'value': value,
             'array_type': header_value_type,
-            'subsampled_annotation': subsampled_annotation,
-            'subsamp_threashold': "",
+            'subsample_annotation': subsample_annotation,
+            'subsample_threshold': '',
         }
 
     def can_subsample(self):

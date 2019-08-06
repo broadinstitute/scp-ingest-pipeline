@@ -71,9 +71,9 @@ class IngestFiles:
         opened_file.readline()
         meta_data = opened_file.readline()
         if meta_data.find('\t') != -1:
-            return pd.read_csv(file_path, sep='\t', header=0)
+            return pd.read_csv(file_path, sep='\t', header=[0, 1])
         elif meta_data.find(',') != -1:
-            return pd.read_csv(file_path, sep=',', header=0)
+            return pd.read_csv(file_path, sep=',', header=[0, 1])
         else:
             raise ValueError('File must be tab or comma delimited')
 

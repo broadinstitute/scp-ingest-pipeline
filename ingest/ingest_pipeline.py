@@ -14,7 +14,7 @@ EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/AB_toy_data_portal.cluster.txt
+python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt
 
 # Ingest Cell Metadata file
 python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv
@@ -154,11 +154,11 @@ class IngestPipeline(object):
         doc_ref = self.db.collection(collection_name).document()
         doc_ref.set(self.cluster.top_level_doc)
         subcollection_name = self.cluster.SUBCOLLECTION_NAME
-        for annotation in self.cluster.annotation_subdocs.keys():
+        for annot_name in self.cluster.cluster_subdocs.keys():
             batch = self.db.batch()
             doc_ref_sub = doc_ref.collection(
                 subcollection_name).document()
-            doc_ref_sub.set(self.cluster.annotation_subdocs[annotation])
+            doc_ref_sub.set(self.cluster.cluster_subdocs[annot_name])
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -184,7 +184,7 @@ class IngestPipeline(object):
         """Ingests cell metadata files into Firestore."""
         while True:
             row = self.cell_metadata.extract()
-            if(row == None):
+            if row == None:
                 break
             self.cell_metadata.transform(row)
         self.load_cell_metadata()
