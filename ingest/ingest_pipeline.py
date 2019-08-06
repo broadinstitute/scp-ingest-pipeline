@@ -195,7 +195,7 @@ class IngestPipeline(object):
         """Ingests cluster files into Firestore."""
         while True:
             row = self.cluster.extract()
-            if(row == None):
+            if row == None:
                 self.cluster.update_points()
                 break
             self.cluster.transform(row)
