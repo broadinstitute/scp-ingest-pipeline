@@ -135,7 +135,7 @@ class Gene:
         """
         # sum starts at 59 (because key values take up 59 bytes) plus the
         # storage size of the source file name and file type
-        size_of_cell_names_field = 10 + 1
+        size_of_cell_names_field = 10 + 1  # "cell_names" is 10 characters
         size_of_field_expression_scores = 17 + 1
         sum = 59 + len(self.source_file_name) + len(self.source_file_type)
         start_index = 0
