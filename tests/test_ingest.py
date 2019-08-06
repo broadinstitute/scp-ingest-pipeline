@@ -54,8 +54,15 @@ def mock_load_expression_data(self, *args, **kwargs):
     self.load_expression_data_args = args
     self.load_expression_data_kwargs = kwargs
 
+def mock_storage(*args, **kwargs):
+    """Mocks Google Cloud Storage library
+    """
+    return
+
 def mock_firestore_client(*args, **kwargs):
     """Mocks firestore.Client() by returning nothing upon initializing client
+
+    See notes in mock_load_expression_data for context.
     """
     return
 
@@ -89,6 +96,7 @@ IngestPipeline.load_expression_data = mock_load_expression_data
 
 class IngestTestCase(unittest.TestCase):
 
+    @patch('google.cloud.storage', side_effect=mock_storage)
     @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
     def setup_ingest(self, args, mock_firestore_client):
         args_list = args.split(' ')
@@ -102,6 +110,28 @@ class IngestTestCase(unittest.TestCase):
             getattr(ingest, 'ingest_expression')()
 
         return ingest
+
+    def test_ingest_dense_matrix(self):
+        """Ingest Pipeline should extract and transform remote file
+        """
+
+        args = ('ingest_expression '
+                '--matrix-file gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt '
+                '--matrix-file-type dense')
+        ingest = self.setup_ingest(args)
+
+        models = ingest.load_expression_data_args[0]
+
+        # Verify that 19 gene models were passed into load method
+        num_models = len(models)
+        expected_num_models = 19
+        self.assertEqual(num_models, expected_num_models)
+
+        # Verify that the first gene model looks as expected
+        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
+        model, expected_model = get_nth_gene_models(0, models, mock_dir)
+
+        self.assertEqual(model, expected_model)
 
     def test_ingest_dense_matrix(self):
         """Ingest Pipeline should extract and transform dense matrices

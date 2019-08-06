@@ -29,7 +29,7 @@ class IngestFiles:
         self.is_MTX = is_MTX
 
     def download_from_bucket(self, file_path):
-        """Downloads file from Google Cloud Storage bucket."""
+        """Downloads file from Google Cloud Storage bucket"""
         bucket = self.storage_client.get_bucket(self.bucket_name)
         blob = self.bucket.blob(self.source)
         destination = '/tmp/' + self.source.replace('/', '%2f')
