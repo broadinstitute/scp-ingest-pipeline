@@ -89,7 +89,8 @@ IngestPipeline.load_expression_data = mock_load_expression_data
 
 class IngestTestCase(unittest.TestCase):
 
-    def setup_ingest(self, args):
+    @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
+    def setup_ingest(self, args, mock_firestore_client):
         args_list = args.split(' ')
         parsed_args = create_parser().parse_args(args_list)
         validate_arguments(parsed_args)
@@ -102,8 +103,7 @@ class IngestTestCase(unittest.TestCase):
 
         return ingest
 
-    @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
-    def test_ingest_dense_matrix(self, mock_firestore_client):
+    def test_ingest_dense_matrix(self):
         """Ingest Pipeline should extract and transform dense matrices
         """
 
@@ -125,8 +125,7 @@ class IngestTestCase(unittest.TestCase):
 
         self.assertEqual(model, expected_model)
 
-    @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
-    def test_ingest_mtx_matrix(self, mock_firestore_client):
+    def test_ingest_mtx_matrix(self):
         """Ingest Pipeline should extract and transform MTX matrix bundles
         """
 
@@ -149,8 +148,7 @@ class IngestTestCase(unittest.TestCase):
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
         self.assertEqual(model, expected_model)
 
-    @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
-    def test_mtx_bundle_argument_validation(self, mock_firestore_client):
+    def test_mtx_bundle_argument_validation(self):
         """Omitting --gene-file and --barcode-file in MTX ingest should error
         """
 
