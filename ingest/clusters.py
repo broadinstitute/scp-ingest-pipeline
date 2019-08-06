@@ -77,7 +77,7 @@ class Clusters(IngestFiles):
             'value': value,
             'array_type': header_value_type,
             'subsample_annotation': subsample_annotation,
-            'subsample_threshold': "",
+            'subsample_threshold': '',
         }
 
     def can_subsample(self):
