@@ -28,7 +28,7 @@ class Clusters(IngestFiles):
             'domain_ranges': domain_ranges,
             'points': self.amount_of_lines,
         }
-        self.annotation_subdocs = self.create_annotation_subdocs()
+        self.cluster_subdocs = self.return_cluster_subdocs()
         # sample size needs to be smaller than amount of points
         # for each cell annotations if there are any
 
@@ -49,28 +49,28 @@ class Clusters(IngestFiles):
                         self.unique_values[annotation].append(column)
             # perform a shallow copy
             annotation_value = copy.copy(
-                self.annotation_subdocs[annotation]['value'])
+                self.cluster_subdocs[annotation]['value'])
             annotation_value.append(column)
-            self.annotation_subdocs[annotation]['value'] = annotation_value
+            self.cluster_subdocs[annotation]['value'] = annotation_value
 
     def return_cluster_subdocs(self):
-        """Creates annotation_subdocs"""
-        annotation_subdocs = {}
+        """Creates cluster_subdocs"""
+        cluster_subdocs = {}
         for annot_name in self.header:
             value = annot_name.casefold()
             if value == 'name':
-                annotation_subdocs[value] = self.create_cluster_subdoc(
+                cluster_subdocs[value] = self.create_cluster_subdoc(
                     'text', 'cells')
             elif value in ('x', 'y', 'z'):
-                annotation_subdocs[value] = self.create_cluster_subdoc(
+                cluster_subdocs[value] = self.create_cluster_subdoc(
                     value, 'coordinates')
             else:
-                annotation_subdocs[value] = self.create_cluster_subdoc(
+                cluster_subdocs[value] = self.create_cluster_subdoc(
                     annot_name, 'annotations')
-        return annotation_subdocs
+        return cluster_subdocs
 
     def create_cluster_subdoc(self, annot_name, header_value_type, *, value=[], subsample_annotation=None):
-        """returns cluster subdoc"""
+        """Returns cluster subdoc"""
         return {
             'name': annot_name,
             'array_index': 0,
