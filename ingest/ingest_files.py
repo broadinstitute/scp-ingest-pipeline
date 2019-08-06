@@ -40,9 +40,10 @@ class IngestFiles:
     def set_gcs_attrs(self, file_path):
         """Sets instance attributes related to Google Cloud Storage"""
         self.storage_client = storage.Client()
-        self.bucket_name = file_path[5:].split('/')[0]
+        path_segments = file_path[5:].split('/')
+        self.bucket_name = path_segments[0]
         self.bucket = self.storage_client.get_bucket(self.bucket_name)
-        self.source = '/'.join(file_path[5:].split('/')[1:])
+        self.source = '/'.join(path_segments[1:])
 
     def verify_file_exists(self, file_path):
         """Determines if file can be found, throws error if not"""
