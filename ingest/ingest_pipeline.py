@@ -36,6 +36,7 @@ from gene_data_model import Gene
 from google.api_core import exceptions
 from google.cloud import firestore
 from mtx import Mtx
+from subsample import SubSample
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ['dense', 'mtx']
@@ -63,10 +64,8 @@ class IngestPipeline(object):
                 'cluster', cluster_file)
         elif matrix_file is None:
             self.matrix = matrix_file
-        elif cluster_file is None:
-            self.cluster = cluster_file
-        elif cell_metadata_file is None:
-            self.cell_metadata = cell_metadata_file
+        self.cluster_file = cluster_file
+        self.cell_metadata_file = cell_metadata_file
 
     def initialize_file_connection(self, file_type, file_path):
         """Initializes connection to file.
@@ -192,13 +191,15 @@ class IngestPipeline(object):
 
     def ingest_cluster(self):
         """Ingests cluster files into Firestore."""
-        while True:
-            row = self.cluster.extract()
-            if(row == None):
-                self.cluster.update_points()
-                break
-            self.cluster.transform(row)
-        self.load_cluster_files()
+        # while True:
+        #     row = self.cluster.extract()
+        #     if(row == None):
+        #         self.cluster.update_points()
+        #         break
+        #     self.cluster.transform(row)
+        # self.load_cluster_files()
+        if self.cluster.can_subsample:
+            self.subsample = SubSample(self.cluster_file, 'cluster')
 
 
 def create_parser():

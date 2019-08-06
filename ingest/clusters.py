@@ -18,8 +18,9 @@ class Clusters(IngestFiles):
         self.header = self.get_next_line(increase_line_count=False)
         # Second line in cluster is metadata_type
         self.metadata_types = self.get_next_line(increase_line_count=False)
-        self.unique_values = dict.fromkeys(self.headers[1:], [])
+        self.unique_values = dict.fromkeys(self.header[1:], [])
         self.source_file_type = 'cluster'
+        self.has_z = 'z' in self.header
         self.top_level_doc = {
             'name': name,
             'study_accession': study_accession,
@@ -36,23 +37,13 @@ class Clusters(IngestFiles):
 
     def transform(self, row):
         """ Add data from cluster files into annotation subdocs in cluster data model"""
-<<<<<<< Updated upstream
-        bins = dict.fromkeys(rows)
-        for idx, column in enumerate(rows):
-            annotation = self.header[idx].lower()
-=======
 
         for idx, column in enumerate(row):
             annotation = self.header[idx].casefold()
->>>>>>> Stashed changes
             if idx != 0:
                 if self.metadata_types[idx].casefold() == 'numeric':
                     column = round(float(column), 3)
-<<<<<<< Updated upstream
-                else self.metadata_types[idx].lower() == 'group':
-=======
-                else self.metadata_types[idx].casefold() == 'group':
->>>>>>> Stashed changes
+                elif self.metadata_types[idx].casefold() == 'group':
                     if column not in self.unique_values[annotation]:
                         self.unique_values[annotation].append(column)
             # perform a shallow copy
@@ -88,10 +79,8 @@ class Clusters(IngestFiles):
             'subsamp_threashold': "",
         }
 
-<<<<<<< Updated upstream
-    def bin(self):
-=======
-    def sub_sample(self, function):
-
->>>>>>> Stashed changes
-        for unique_value in self.unique_values.keys():
+    def can_subsample(self):
+        if self.has_z:
+            return len(self.header) > 4
+        else:
+            return len(self.header) > 3

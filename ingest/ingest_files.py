@@ -14,11 +14,11 @@ import pandas as pd
 
 
 class IngestFiles:
-    def __init__(self, file_path, allowed_file_types, is_MTX=False):
+    def __init__(self, file_path, allowed_file_types, *, is_MTX=False, open_as=None):
         if not os.path.exists(file_path):
             raise IOError(f"File '{file_path}' not found")
         self.allowed_file_types = allowed_file_types
-        self.file_type, self.file = self.open_file(file_path)
+        self.file_type, self.file = self.open_file(file_path, open_as)
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
         self.is_MTX = is_MTX
@@ -30,7 +30,7 @@ class IngestFiles:
             # Remove BOM with encoding='utf-8-sig'
             'text/csv': self.open_csv(open_file),
             'text/plain': open_file,
-            'text/tab-separated-values': self.open_tsv(open_file),
+            'text/tab-separated-values': self.open_tsv,
             'pandas': self.open_pandas(open_file, file_path)
         }
         # Check file type
@@ -41,7 +41,7 @@ class IngestFiles:
             if open_as is None:
                 return file_type, file_connections.get(file_type)
             else:
-                return file_type, file_connections.get(open_as)(type)
+                return file_type, file_connections.get(open_as)
         else:
             raise ValueError(f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}")
 
@@ -61,10 +61,7 @@ class IngestFiles:
     def split_line(self, line):
         """Splits lines on file format-appropriate delimiters"""
 
-        if self.is_MTX:
-            return re.findall(r'[^,\t]+', line)
-        else:
-            return re.findall(r'[^,\s\t]+', line)
+        return re.findall(r'[^,\t]+', line)
 
     def get_file_type(self, file_path):
         """Returns file type"""
@@ -73,12 +70,12 @@ class IngestFiles:
     def open_pandas(self, opened_file, file_path):
         opened_file.readline()
         meta_data = opened_file.readline()
-        find_tab = meta_data.find('\t')
         if meta_data.find('\t') != -1:
             return pd.read_csv(file_path, sep='\t', header=0)
         elif meta_data.find(',') != -1:
             return pd.read_csv(file_path, sep=',', header=0)
-        else raise ValueError('File must be tab or comma delimited')
+        else:
+            raise ValueError('File must be tab or comma delimited')
 
     def open_csv(self, opened_file_object):
         """Opens csv file"""
