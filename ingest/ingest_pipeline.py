@@ -14,7 +14,7 @@ EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/AB_toy_data_portal.cluster.txt
+python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt
 
 # Ingest Cell Metadata file
 python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv

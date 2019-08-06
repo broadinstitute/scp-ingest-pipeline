@@ -40,6 +40,7 @@ class Clusters(IngestFiles):
 
         for idx, column in enumerate(row):
             annotation = self.header[idx].casefold()
+
             # first index is cell name don't need to check annot type
             if idx != 0:
                 if self.metadata_types[idx].casefold() == 'numeric':
