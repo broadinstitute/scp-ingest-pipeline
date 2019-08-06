@@ -185,7 +185,7 @@ class IngestPipeline(object):
         """Ingests cell metadata files into Firestore."""
         while True:
             row = self.cell_metadata.extract()
-            if(row == None):
+            if row == None:
                 break
             self.cell_metadata.transform(row)
         self.load_cell_metadata()
