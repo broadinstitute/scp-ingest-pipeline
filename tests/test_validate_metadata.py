@@ -3,6 +3,7 @@ import unittest
 
 sys.path.append('../ingest')
 sys.path.append('../ingest/validation')
+
 from validate_metadata import *
 
 
@@ -13,7 +14,6 @@ class TestValidateMetadata(unittest.TestCase):
         filetsv = args.input_metadata
         metadata = CellMetadata(filetsv)
         metadata.validate_format()
-        metadata.file.close()
         return metadata
 
     def test_format_name(self):
