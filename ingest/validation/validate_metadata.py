@@ -155,8 +155,7 @@ def process_metadata_row(metadata, convention, line):
     merge_numerics(metadata)
     metadata.headers[0] = 'CellID'
     keys = metadata.headers
-    values = line.rstrip('\n').split('\t')
-    row_info = dict(zip(keys, values))
+    row_info = dict(zip(keys, line))
     for k, v in row_info.items():
         if k in metadata.type['convention']['integer']:
             try:
@@ -174,7 +173,7 @@ def process_metadata_row(metadata, convention, line):
                 )
         elif k in metadata.type['convention']['array']:
             try:
-                row_info[k] = ast.literal_eval(v)
+                row_info[k] = v.split(",")
             except ValueError as e:
                 print(
                     'Warning: Issue with coercion based on type declaration', e
@@ -197,11 +196,15 @@ def process_metadata_content(metadata, convention):
     js_errors = defaultdict(list)
     schema = validate_schema(convention)
     if schema:
-        for chunk in metadata.extract_txt():
-            row = process_metadata_row(metadata, convention, chunk)
+        line = metadata.extract()
+        while line:
+            # print('line:', line)
+            row = process_metadata_row(metadata, convention, line)
+            # print('row:', row)
             collect_ontology_data(row, metadata)
             for error in schema.iter_errors(row):
                 js_errors[error.message].append(row['CellID'])
+            line = metadata.extract()
         metadata.errors['values'] = js_errors
         return
     else:
@@ -223,6 +226,11 @@ def print_collected_ontology_data(metadata):
 
 
 def report_errors(metadata):
+    """Report errors in error object
+
+    :param metadata: cell metadata object
+    :return: True if errors are reported, False if no errors to report
+    """
     logger.debug('Begin: report_errors')
     errors = False
     for k, v in metadata.errors.items():

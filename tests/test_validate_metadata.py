@@ -15,9 +15,8 @@ class TestValidateMetadata(unittest.TestCase):
             convention = json.load(f)
         filetsv = args.input_metadata
         metadata = CellMetadata(filetsv)
-        return (metadata, convention)
         metadata.validate_format()
-        return metadata
+        return (metadata, convention)
 
     def test_header_format(self):
         """Header rows of metadata file should conform to standard
@@ -72,11 +71,14 @@ class TestValidateMetadata(unittest.TestCase):
         metadata_valid = metadata.validate_format()
         self.assertTrue(
             metadata.validate_format(),
-            'Header rows of metadata file should conform to standard'
+            'Valid metadata headers should not elicit error'
         )
         if metadata_valid:
             process_metadata_content(metadata, convention)
-        self.assertFalse(report_errors(metadata))
+        self.assertFalse(
+            report_errors(metadata),
+            'Valid metadata content should not elicit error'
+        )
 
 
 if __name__ == '__main__':
