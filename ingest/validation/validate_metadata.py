@@ -85,15 +85,15 @@ def extract_numeric_headers(metadata):
     return
 
 
-def extract_convention_types(convention):
+def extract_convention_types(convention, metadata):
     """
 
     :param convention: dict representation of metadata convention
+    :param metadata: cell metadata object
     :return: list of metadata headers of type numeric
     """
     logger.debug('Begin: extract_numeric_from_convention')
-    ### setup of metadata.type['convention']['ontology'] has onotology labels
-    ### why does the assignment below work? I didn't pass the metadata object
+    # setup of metadata.type['convention']['ontology'] has onotology labels
     metadata.type['convention'] = defaultdict(list)
     for k in convention['properties'].keys():
         if convention['properties'][k]['type'] == 'number':
@@ -151,7 +151,7 @@ def process_metadata_row(metadata, convention, line):
     # linter complaining about complexity index, suggestions welcomed
     logger.debug('Begin: process_metadata_input')
     extract_numeric_headers(metadata)
-    extract_convention_types(convention)
+    extract_convention_types(convention, metadata)
     merge_numerics(metadata)
     metadata.headers[0] = 'CellID'
     keys = metadata.headers
@@ -224,18 +224,19 @@ def print_collected_ontology_data(metadata):
 
 def report_errors(metadata):
     logger.debug('Begin: report_errors')
-    no_errors = True
+    errors = False
     for k, v in metadata.errors.items():
         if k == 'format' and v:
             print('Metadata format errors:', v)
-            no_errors = False
+            errors = True
         if k == 'values' and v:
             print('Non-ontology metadata errors:')
             for error, cells in v.items():
                 print(error, '[Error count:', len(cells), ']')
-                no_errors = False
-    if no_errors:
+                errors = True
+    if not errors:
         print('No errors detected in input metadata file')
+    return errors
 
 
 # ToDo

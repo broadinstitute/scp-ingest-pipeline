@@ -7,51 +7,73 @@ from validate_metadata import *
 
 
 class TestValidateMetadata(unittest.TestCase):
-    def setup_validation(self, args):
+    def setup_metadata(self, args):
         args_list = args.split(' ')
         args = create_parser().parse_args(args_list)
+        with open(args.convention, 'r') as f:
+            convention = json.load(f)
         filetsv = args.input_metadata
         metadata = CellMetadata(filetsv)
-        metadata.validate_format()
-        metadata.file.close()
-        return metadata
+        return (metadata, convention)
 
-    def test_format_name(self):
-        """Header row of metadata file should start with NAME keyword
+    def test_header_format(self):
+        """Header rows of metadata file should conform to standard
         """
 
-        args = ('../tests/data/AMC_v0.8.json ' '../tests/data/error_test10.tsv')
-        metadata = self.setup_validation(args)
+        args = (
+            '../tests/data/AMC_v0.8.json '
+            '../tests/data/error_headers.tsv'
+        )
+        metadata = self.setup_metadata(args)[0]
         self.assertFalse(metadata.validate_header_keyword())
-
         self.assertIn(
             'Error: Metadata file header row malformed, missing NAME',
             metadata.errors['format'],
-            "Validation should detect malformed NAME keyword"
+            'Validation should detect malformed NAME keyword'
         )
-
-    def test_format_type(self):
-        """Second row of metadata file should start with TYPE keyword
-        """
-
-        args = ('../tests/data/AMC_v0.8.json ' '../tests/data/error_test11.tsv')
-        metadata = self.setup_validation(args)
 
         self.assertFalse(metadata.validate_type_keyword())
         self.assertIn(
             'Error:  Metadata file TYPE row malformed, missing TYPE',
             metadata.errors['format'],
-            "Validation should detect malformed TYPE keyword"
+            'Validation should detect malformed TYPE keyword'
         )
 
-    def test_format_type_annotations(self):
-        """TYPE values restricted to "group" or "numeric"
-        """
+        self.assertFalse(
+            metadata.validate_type_annotations(),
+            'Validation should restrict type annotations to allowed values'
+        )
 
-        args = ('../tests/data/AMC_v0.8.json ' '../tests/data/error_test12.tsv')
-        metadata = self.setup_validation(args)
+    def test_convention_content(self):
+        """Metadata convention should be valid jsonschema
+            """
 
-        self.assertFalse(metadata.validate_type_annotations())
+        args = (
+            '../tests/data/AMC_invalid.json '
+            '../tests/data/metadata_valid.tsv'
+        )
+        convention = self.setup_metadata(args)[1]
+        self.assertIsNone(
+            validate_schema(convention),
+            'Invalid metadata schema should be detected'
+        )
+
+    def test_nonontology_content(self):
+        """Non-ontology metadata should conform to convention requirements
+            """
+        args = (
+            '../tests/data/AMC_v0.8.json '
+            '../tests/data/metadata_valid.tsv'
+        )
+        metadata, convention = self.setup_metadata(args)
+        metadata_valid = metadata.validate_format()
+        self.assertTrue(
+            metadata.validate_format(),
+            'Header rows of metadata file should conform to standard'
+        )
+        if metadata_valid:
+            process_metadata_content(metadata, convention)
+        self.assertFalse(report_errors(metadata))
 
 
 if __name__ == '__main__':
