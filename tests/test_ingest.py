@@ -93,8 +93,12 @@ class IngestTestCase(unittest.TestCase):
 
         ingest = IngestPipeline(**arguments)
 
-        if hasattr(ingest, 'ingest_expression'):
-            getattr(ingest, 'ingest_expression')()
+        if 'matrix_file' in arguments:
+            ingest.ingest_expression()
+        elif 'cell_metadata_file' in arguments:
+            ingest.ingest_cell_metadata()
+        elif 'cluster_file' in arguments:
+            ingest.ingest_cluster()
 
         return ingest
 
