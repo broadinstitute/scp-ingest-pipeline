@@ -1,4 +1,4 @@
-"""Unit tests for ingest.py
+"""Integration tests for Ingest Pipeline; isolated tests for observable output
 
 These tests verify that various matrix file types can be extracted and
 transformed, as expected by code that loads transformed data into Firestore.
@@ -33,12 +33,10 @@ coverage run --branch test_ingest.py; coverage report -m --include *scp-ingest-p
 import ast
 from glob import glob
 import sys
-import os
 import unittest
 from unittest.mock import patch
-from shutil import copyfile
 
-import google.cloud
+from gcp_mocks import *
 
 sys.path.append('../ingest')
 from ingest_pipeline import *
@@ -54,56 +52,6 @@ def mock_load_expression_data(self, *args, **kwargs):
     """
     self.load_expression_data_args = args
     self.load_expression_data_kwargs = kwargs
-
-def mock_storage_client():
-
-    class MockStorageBucket():
-        def __init__(self, name):
-            self.name = name
-            return
-
-        def blob(self, blob_name):
-            return mock_storage_blob(bucket=self.name, name=blob_name)
-
-    class MockStorageClient():
-        def __init__(self):
-            return
-
-        def get_bucket(bucket_name):
-            return MockStorageBucket(bucket_name)
-
-    return MockStorageClient
-
-def mock_storage_blob(*args, **kwargs):
-    """Mocks Google Cloud Storage library
-
-    TODO: Watch progress on official Storage emulator for integration tests:
-        - https://github.com/googleapis/google-cloud-python/issues/8728
-        - https://github.com/googleapis/google-cloud-python/issues/4840
-
-    When such an emulator is released, use it and remove this custom mock.
-    """
-
-    class MockStorageBlob():
-        def __init__(self, bucket=None, name=None):
-            self.bucket = bucket
-            self.name = '../' + name
-
-        def exists(self, storage_client):
-            return os.path.exists(self.name)
-
-        def download_to_filename(self, filename):
-            """Mock; doesn't actually download.  Makes local copy instead."""
-            copyfile(self.name, filename)
-
-    return MockStorageBlob(*args, **kwargs)
-
-def mock_firestore_client():
-    """Mocks firestore.Client() by returning nothing upon initializing client
-
-    See notes in mock_load_expression_data for context.
-    """
-    return
 
 def get_nth_gene_models(n, models, mock_dir):
     """Return Nth actual and expected gene models, using actual and mock data
@@ -151,7 +99,7 @@ class IngestTestCase(unittest.TestCase):
         return ingest
 
     def test_ingest_dense_matrix(self):
-        """Ingest Pipeline should extract and transform remote file
+        """Ingest Pipeline should extract and transform dense matrices
         """
 
         args = ('ingest_expression '
@@ -182,9 +130,8 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(model, expected_model)
 
     def test_ingest_missing_file(self):
-        """Ingest Pipeline should extract and transform remote file
+        """Ingest Pipeline should throw error for missing file
         """
-        print('in test_ingest_dense_matrix')
 
         args = ('ingest_expression '
                 '--matrix-file gs://fake-bucket/remote-matrix-file-does-not-exist.txt '
@@ -193,7 +140,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertRaises(OSError, self.setup_ingest, args)
 
     def test_ingest_local_dense_matrix(self):
-        """Ingest Pipeline should extract and transform dense matrices
+        """Ingest Pipeline should extract and transform local dense matrices
         """
 
         args = ('ingest_expression '
@@ -213,6 +160,16 @@ class IngestTestCase(unittest.TestCase):
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
 
         self.assertEqual(model, expected_model)
+
+    def test_ingest_missing_local_file(self):
+        """Ingest Pipeline should throw error for missing local file
+        """
+
+        args = ('ingest_expression '
+                '--matrix-file /this/file/does/not_exist.txt '
+                '--matrix-file-type dense')
+
+        self.assertRaises(OSError, self.setup_ingest, args)
 
     def test_ingest_mtx_matrix(self):
         """Ingest Pipeline should extract and transform MTX matrix bundles
