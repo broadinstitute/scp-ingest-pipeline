@@ -30,12 +30,13 @@ pytest -n auto
 coverage run --branch test_ingest.py; coverage report -m --include *scp-ingest-pipeline/ingest*
 
 """
-
 import ast
 from glob import glob
 import sys
+import os
 import unittest
 from unittest.mock import patch
+from shutil import copyfile
 
 import google.cloud
 
@@ -54,12 +55,50 @@ def mock_load_expression_data(self, *args, **kwargs):
     self.load_expression_data_args = args
     self.load_expression_data_kwargs = kwargs
 
-def mock_storage(*args, **kwargs):
-    """Mocks Google Cloud Storage library
-    """
-    return
+def mock_storage_client():
 
-def mock_firestore_client(*args, **kwargs):
+    class MockStorageBucket():
+        def __init__(self, name):
+            self.name = name
+            return
+
+        def blob(self, blob_name):
+            return mock_storage_blob(bucket=self.name, name=blob_name)
+
+    class MockStorageClient():
+        def __init__(self):
+            return
+
+        def get_bucket(bucket_name):
+            return MockStorageBucket(bucket_name)
+
+    return MockStorageClient
+
+def mock_storage_blob(*args, **kwargs):
+    """Mocks Google Cloud Storage library
+
+    TODO: Watch progress on official Storage emulator for integration tests:
+        - https://github.com/googleapis/google-cloud-python/issues/8728
+        - https://github.com/googleapis/google-cloud-python/issues/4840
+
+    When such an emulator is released, use it and remove this custom mock.
+    """
+
+    class MockStorageBlob():
+        def __init__(self, bucket=None, name=None):
+            self.bucket = bucket
+            self.name = '../' + name
+
+        def exists(self, storage_client):
+            return os.path.exists(self.name)
+
+        def download_to_filename(self, filename):
+            """Mock; doesn't actually download.  Makes local copy instead."""
+            copyfile(self.name, filename)
+
+    return MockStorageBlob(*args, **kwargs)
+
+def mock_firestore_client():
     """Mocks firestore.Client() by returning nothing upon initializing client
 
     See notes in mock_load_expression_data for context.
@@ -93,12 +132,12 @@ def get_nth_gene_models(n, models, mock_dir):
 # Mock method that loads data to Firestore
 IngestPipeline.load_expression_data = mock_load_expression_data
 
-
 class IngestTestCase(unittest.TestCase):
 
-    @patch('google.cloud.storage', side_effect=mock_storage)
+    @patch('google.cloud.storage.Blob', side_effect=mock_storage_blob)
+    @patch('google.cloud.storage.Client', side_effect=mock_storage_client)
     @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
-    def setup_ingest(self, args, mock_firestore_client):
+    def setup_ingest(self, args, mock_firestore_client, mock_storage_client, mock_storage_blob):
         args_list = args.split(' ')
         parsed_args = create_parser().parse_args(args_list)
         validate_arguments(parsed_args)
@@ -131,9 +170,18 @@ class IngestTestCase(unittest.TestCase):
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
 
+        # Adjust for change needed per mock
+        expected_source_file_name =\
+            'gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt'
+        actual_source_file_name = model['source_file_name'][0]  # Why does app code make this a tuple?
+        self.assertEqual(actual_source_file_name, expected_source_file_name)
+
+        model['source_file_name'] = ('/tests/data/dense_matrix_19_genes_100k_cells.txt',)  # Why does app code make this a tuple?
+        model['subdocument']['source_file_name'] = '/tests/data/dense_matrix_19_genes_100k_cells.txt'
+
         self.assertEqual(model, expected_model)
 
-    def test_ingest_dense_matrix(self):
+    def test_ingest_local_dense_matrix(self):
         """Ingest Pipeline should extract and transform dense matrices
         """
 
