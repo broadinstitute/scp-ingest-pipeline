@@ -52,11 +52,11 @@ class IngestFiles:
             self.set_gcs_attrs(file_path)
             source_blob = storage.Blob(bucket=self.bucket, name=self.source)
             if not source_blob.exists(self.storage_client):
-                raise IOError(f'Remote file "{file_path}" not found')
+                raise OSError(f'Remote file "{file_path}" not found')
         else:
             # File is local
             if not os.path.exists(file_path):
-                raise IOError(f'File "{file_path}" not found')
+                raise OSError(f'File "{file_path}" not found')
 
     def resolve_path(self, file_path):
         """Localizes object if given a GS URL, returns open Python file object
