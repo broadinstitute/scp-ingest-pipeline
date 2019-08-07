@@ -46,9 +46,13 @@ def mock_load_expression_data(self, *args, **kwargs):
     Returning the arguments enables tests to verify that the code invokes
     this method with expected argument values.
 
-    Ideally we would mock Firestore itself, but existing libraries to mock
-    Firestore (e.g. https://github.com/mdowds/python-mock-firestore) don't
-    implement important Firestore methods like "batch()".
+    TODO:
+    Use Google's official Firestore mock,
+    https://github.com/googleapis/google-cloud-ruby/blob/master/google-cloud-firestore/EMULATOR.md#google-cloud-firestore-emulator
+
+    This will enable us to also verify (and thus cover) loading code *outputs*,
+    unlike here where we merely give a way to verify loading code *inputs*.
+    Doing so via integration tests will isolate us from implementation changes.
     """
     self.load_expression_data_args = args
     self.load_expression_data_kwargs = kwargs
