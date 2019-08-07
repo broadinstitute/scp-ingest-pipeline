@@ -181,6 +181,17 @@ class IngestTestCase(unittest.TestCase):
 
         self.assertEqual(model, expected_model)
 
+    def test_ingest_missing_file(self):
+        """Ingest Pipeline should extract and transform remote file
+        """
+        print('in test_ingest_dense_matrix')
+
+        args = ('ingest_expression '
+                '--matrix-file gs://fake-bucket/remote-matrix-file-does-not-exist.txt '
+                '--matrix-file-type dense')
+
+        self.assertRaises(OSError, self.setup_ingest, args)
+
     def test_ingest_local_dense_matrix(self):
         """Ingest Pipeline should extract and transform dense matrices
         """
@@ -233,7 +244,6 @@ class IngestTestCase(unittest.TestCase):
         args = ('ingest_expression '
                 '--matrix-file ../tests/data/matrix.mtx '
                 '--matrix-file-type mtx')
-
 
         self.assertRaises(ValueError, self.setup_ingest, args)
 
