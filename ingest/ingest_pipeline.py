@@ -89,23 +89,23 @@ class IngestPipeline(object):
     def close_matrix(self):
         """Closes connection to file.
 
-    Args:
-        None
-    Returns:
-        None
-    """
+        Args:
+            None
+        Returns:
+            None
+        """
         self.matrix.close()
 
     def load_expression_data(self, list_of_expression_models: List[Gene]) -> None:
         """Loads expression data into Firestore.
 
-    Args:
-        list_of_transformed_data: List[Gene]
-           A list of object type Gene that's stored into Firestore
+        Args:
+            list_of_transformed_data: List[Gene]
+            A list of object type Gene that's stored into Firestore
 
-    Returns:
-        None
-    """
+        Returns:
+            None
+        """
 
         # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
@@ -133,7 +133,7 @@ class IngestPipeline(object):
                     batch.commit()
 
     def load_cell_metadata(self):
-        """Loads cell metadata files into firestore."""
+        """Loads cell metadata files into Firestore."""
 
         collection_name = self.cell_metadata.get_collection_name()
         subcollection_name = self.cell_metadata.get_subcollection_name()
@@ -163,14 +163,14 @@ class IngestPipeline(object):
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
-    functions. Then loads data into Firestore.
+        functions. Then loads data into Firestore.
 
-    Args:
-        None
+        Args:
+            None
 
-    Returns:
-        None
-    """
+        Returns:
+            None
+        """
         if self.gene_file is not None:
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
