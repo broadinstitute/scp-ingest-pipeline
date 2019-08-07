@@ -16,7 +16,7 @@ class IngestFiles:
         if not os.path.exists(file_path):
             raise IOError(f"File '{file_path}' not found")
         self.allowed_file_types = allowed_file_types
-        self.file_type, self.file = self.open_file(file_path)
+        self.file_type, self.file, self.filehandle = self.open_file(file_path)
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
         self.is_MTX = is_MTX
@@ -35,9 +35,11 @@ class IngestFiles:
         # See if file type is allowed
         if file_type in self.allowed_file_types:
             # Return file object and type
-            return file_type, file_connections.get(file_type)
+            return file_type, file_connections.get(file_type), open_file
         else:
-            raise ValueError(f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}")
+            raise ValueError(
+                f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}"
+            )
 
     # Inherited function
     def extract(self):
@@ -63,23 +65,27 @@ class IngestFiles:
 
     def open_csv(self, opened_file_object):
         """Opens csv file"""
-        csv.register_dialect('csvDialect',
-                             delimiter=',',
-                             quoting=csv.QUOTE_ALL,
-                             skipinitialspace=True)
+        csv.register_dialect(
+            'csvDialect',
+            delimiter=',',
+            quoting=csv.QUOTE_ALL,
+            skipinitialspace=True
+        )
         return csv.reader(opened_file_object, dialect='csvDialect')
 
     def open_tsv(self, opened_file_object):
         """Opens tsv file"""
-        csv.register_dialect('tsvDialect',
-                             delimiter='\t',
-                             quoting=csv.QUOTE_ALL,
-                             skipinitialspace=True)
+        csv.register_dialect(
+            'tsvDialect',
+            delimiter='\t',
+            quoting=csv.QUOTE_ALL,
+            skipinitialspace=True
+        )
         return csv.reader(opened_file_object, dialect='tsvDialect')
 
     def extract_csv_or_tsv(self):
         """Extracts all rows from a csv or tsv file"""
-        while(True):
+        while (True):
             try:
                 row = next(self.file)
                 return row

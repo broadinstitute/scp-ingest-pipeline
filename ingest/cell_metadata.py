@@ -17,26 +17,27 @@ from ingest_files import IngestFiles
 
 
 class CellMetadata(IngestFiles):
-    ALLOWED_FILE_TYPES = ['text/csv',
-                          'text/plain', 'text/tab-separated-values']
+    ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
 
-    def __init__(self, file_path, file_id: str = None, study_accession: str = None):
+    def __init__(
+        self, file_path, file_id: str = None, study_accession: str = None
+    ):
 
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
-        self.headers = self.get_next_line(
-            increase_line_count=False)
-        self.metadata_types = self.get_next_line(
-            increase_line_count=False)
+        self.headers = self.get_next_line(increase_line_count=False)
+        self.metadata_types = self.get_next_line(increase_line_count=False)
         # unique values for group-based annotations
         self.unique_values = []
         self.cell_names = []
         self.annotation_type = ['group', 'numeric']
         self.top_level_doc = self.create_documents(
-            file_path, file_id, study_accession)
+            file_path, file_id, study_accession
+        )
         self.data_subcollection = self.create_subdocuments()
         self.errors = defaultdict(list)
         self.ontology = defaultdict(lambda: defaultdict(set))
         self.type = defaultdict(list)
+        self.cells = []
 
     def transform(self, row: List[str]) -> None:
         """ Add data from cell metadata files into data model"""
@@ -63,14 +64,16 @@ class CellMetadata(IngestFiles):
         # Each annotation value has a top level document
         for idx, value in enumerate(self.headers[1:]):
             # Copy document model so memory references are different
-            copy_of_doc_model = copy.copy({
-                'name': value,
-                'study_accession': study_accession,
-                'source_file_name': file_path.strip("."),
-                'source_file_type': 'metadata',
-                'annotation_type': self.metadata_types[idx + 1],
-                'file_id': file_id,
-            })
+            copy_of_doc_model = copy.copy(
+                {
+                    'name': value,
+                    'study_accession': study_accession,
+                    'source_file_name': file_path.strip("."),
+                    'source_file_type': 'metadata',
+                    'annotation_type': self.metadata_types[idx + 1],
+                    'file_id': file_id,
+                }
+            )
             documents[value] = copy_of_doc_model
         return documents
 
@@ -79,10 +82,12 @@ class CellMetadata(IngestFiles):
         sub_documents = {}
         for value in self.headers[1:]:
             # Copy subdocument model so memory references are different
-            copy_of_subdoc_model = copy.copy({
-                'cell_names': self.cell_names,
-                'values': []
-            })
+            copy_of_subdoc_model = copy.copy(
+                {
+                    'cell_names': self.cell_names,
+                    'values': []
+                }
+            )
             sub_documents[value] = copy_of_subdoc_model
         return sub_documents
 
@@ -112,6 +117,20 @@ class CellMetadata(IngestFiles):
             # line below and similar in next method have autoformat oddities
             self.errors['format'].append(
                 'Error: Metadata file header row malformed, missing NAME'
+            )
+        return valid
+
+    def validate_unique_header(self):
+        """Check all metadata header names are unique.
+
+        :return: boolean   True if valid, False otherwise
+        """
+        valid = False
+        if len(self.headers[1:]) == len(set(self.headers[1:])):
+            valid = True
+        else:
+            self.errors['format'].append(
+                'Error:  Duplicate column headers in metadata file'
             )
         return valid
 
@@ -147,13 +166,16 @@ class CellMetadata(IngestFiles):
         annots = []
         for t in self.metadata_types[1:]:
             if t not in self.annotation_type:
-                annots.append(t)
+                if not t:
+                    annots.append("<empty value>")
+                else:
+                    annots.append(t)
                 annot_err = True
         if annot_err:
             self.errors['format'].append(
                 (
                     'Error: TYPE declarations should be "group" or "numeric"; '
-                    'Please correct: {annots}'.format(
+                    'Invalid type annotation(s): {annots}'.format(
                         annots=', '.join(map(str, annots))
                     )
                 )
@@ -172,7 +194,7 @@ class CellMetadata(IngestFiles):
             self.errors['format'].append(
                 str(
                     'Error: {x} TYPE declarations for {y} column headers'.
-                    format(x=len(self.headers), y=len(list))
+                    format(x=len(self.metadata_types), y=len(self.headers))
                 )
             )
         else:
@@ -185,6 +207,7 @@ class CellMetadata(IngestFiles):
         self.validate_header_keyword()
         self.validate_type_keyword()
         self.validate_type_annotations()
+        self.validate_unique_header()
         self.validate_against_header_count()
         if self.errors['format']:
             valid = False
