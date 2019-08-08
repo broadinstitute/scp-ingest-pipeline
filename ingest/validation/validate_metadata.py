@@ -75,6 +75,8 @@ def extract_numeric_headers(metadata):
     """Find metadata headers of type numeric.
 
     ASSUMES metadata.validate_format() == True
+    If the file headers are improperly formatted, extract_numeric_headers
+    may not be able to correctly identify the headers intended to be numeric
 
     :param metadata: cell metadata object
     list of numeric-type metadata headers at metadata.type['numeric_headers']
@@ -129,7 +131,9 @@ def list_duplicates(cells):
     seen = set()
     # save add function to avoid repeated lookups
     seen_add = seen.add
+    # list comprehension below chosen for computational efficiency
     # adds all new elements to seen and all other to seen_twice
+    # "or" allows seen_add(x) evaluation only if x is not in seen
     seen_twice = set(x for x in cells if x in seen or seen_add(x))
     return list(seen_twice)
 

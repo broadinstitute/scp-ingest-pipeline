@@ -164,8 +164,12 @@ class CellMetadata(IngestFiles):
         valid = False
         annot_err = False
         annots = []
+        # skipping the TYPE keyword, iterate through the types
+        # collecting invalid type annotations in list annots
         for t in self.metadata_types[1:]:
             if t not in self.annotation_type:
+                # if the value is a blank space, store a higher visibility
+                # string for error reporting
                 if not t:
                     annots.append("<empty value>")
                 else:
