@@ -70,13 +70,13 @@ class IngestFiles:
         if self.is_remote_file:
             file_path = self.download_from_bucket(file_path)
 
+        # Remove BOM with encoding='utf-8-sig
         return open(file_path, encoding='utf-8-sig')
-# Remove BOM with encoding='utf-8-sig
+
     def open_file(self, file_path):
         """ Opens TXT, CSV, or TSV formatted files"""
         open_file = self.resolve_path(file_path)
         file_connections = {
-            # Remove BOM with encoding='utf-8-sig'
             'text/csv': self.open_csv(open_file),
             'text/plain': open_file,
             'text/tab-separated-values': self.open_tsv(open_file),
