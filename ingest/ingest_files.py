@@ -71,7 +71,7 @@ class IngestFiles:
             file_path = self.download_from_bucket(file_path)
 
         return open(file_path, encoding='utf-8-sig')
-
+# Remove BOM with encoding='utf-8-sig
     def open_file(self, file_path):
         """ Opens TXT, CSV, or TSV formatted files"""
         open_file = self.resolve_path(file_path)
