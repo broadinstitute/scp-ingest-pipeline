@@ -28,7 +28,7 @@ class Clusters(IngestFiles):
             'domain_ranges': domain_ranges,
             'points': self.amount_of_lines,
         }
-        self.cluster_subdocs = self.return_cluster_subdocs()
+        self.cluster_subdocs = self.return_cluster_subdocs(self.header)
         # sample size needs to be smaller than amount of points
         # for each cell annotations if there are any
 
@@ -54,7 +54,7 @@ class Clusters(IngestFiles):
             annotation_value.append(column)
             self.cluster_subdocs[annotation]['value'] = annotation_value
 
-    def return_cluster_subdocs(self):
+    def return_cluster_subdocs(self, headers):
         """Creates cluster_subdocs"""
         cluster_subdocs = {}
         for annot_name in self.header:
@@ -70,7 +70,8 @@ class Clusters(IngestFiles):
                     annot_name, 'annotations')
         return cluster_subdocs
 
-    def create_cluster_subdoc(self, annot_name, header_value_type, *, value=[], subsample_annotation=None):
+    @staticmethod
+    def create_cluster_subdoc(annot_name, header_value_type, *, value=[], subsample_annotation=None, subsample_threshold=None):
         """Returns cluster subdoc"""
         return {
             'name': annot_name,
@@ -78,7 +79,7 @@ class Clusters(IngestFiles):
             'value': value,
             'array_type': header_value_type,
             'subsample_annotation': subsample_annotation,
-            'subsample_threshold': '',
+            'subsample_threshold': subsample_threshold,
         }
 
     def can_subsample(self):

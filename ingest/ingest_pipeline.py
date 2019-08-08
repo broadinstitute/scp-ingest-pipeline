@@ -200,6 +200,9 @@ class IngestPipeline(object):
         # self.load_cluster_files()
         if self.cluster.can_subsample:
             self.subsample = SubSample(self.cluster_file, 'cluster')
+            for subdoc in self.subsample.subsample():
+                print(Clusters.create_cluster_subdoc(
+                    subdoc[0], subdoc[1], value=subdoc[2], subsample_annotation=subdoc[3], subsample_threshold=subdoc[4]))
 
 
 def create_parser():
