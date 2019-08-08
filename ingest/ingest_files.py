@@ -16,7 +16,7 @@ class IngestFiles:
         if not os.path.exists(file_path):
             raise IOError(f"File '{file_path}' not found")
         self.allowed_file_types = allowed_file_types
-        self.file_type, self.file, self.filehandle = self.open_file(file_path)
+        self.file_type, self.file, self.file_handle = self.open_file(file_path)
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
         self.is_MTX = is_MTX

@@ -74,7 +74,7 @@ def validate_schema(json):
 def extract_numeric_headers(metadata):
     """Find metadata headers of type numeric.
 
-    REQUIRES if metadata_valid:
+    ASSUMES metadata.validate_format() == True
 
     :param metadata: cell metadata object
     list of numeric-type metadata headers at metadata.type['numeric_headers']
@@ -145,15 +145,14 @@ def validate_cells_unique(metadata):
     else:
         dups = list_duplicates(metadata.cells)
         metadata.errors['format'].append(
-            'Error:  Duplicate CellID(s) in metadata file: {dup}'.format(
-                dup=', '.join(map(str, dups))
-            )
+            'Error:  Duplicate CellID(s) in metadata file:'
+            f' {", ".join(map(str, dups))}'
         )
     return valid
 
 
 def collect_ontology_data(data, metadata):
-    """
+    """Collect unique ontology IDs for ontology validation
     """
     ### function is not yet working, fix extract_convention_types
     logger.debug('Begin: collect_ontology_data')
@@ -209,7 +208,7 @@ def process_metadata_row(metadata, convention, line):
                 )
         elif k in metadata.type['convention']['array']:
             try:
-                row_info[k] = v.split(",")
+                row_info[k] = v.split(',')
             except ValueError as e:
                 print(
                     'Warning: Issue with coercion based on type declaration', e

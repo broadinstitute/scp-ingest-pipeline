@@ -20,7 +20,7 @@ class TestValidateMetadata(unittest.TestCase):
         return (metadata, convention)
 
     def teardown_metadata(self, metadata):
-        metadata.filehandle.close()
+        metadata.file_handle.close()
 
     def test_header_format(self):
         """Header rows of metadata file should conform to standard

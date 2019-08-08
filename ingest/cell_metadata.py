@@ -110,8 +110,8 @@ class CellMetadata(IngestFiles):
             if self.headers[0] != 'NAME':
                 # ToDO - capture warning below in error report
                 print(
-                    'Warning: metadata file keyword "NAME" provided as {x}'.
-                    format(x=self.headers[0])
+                    f'Warning: metadata file keyword "NAME" provided as '
+                    '{self.headers[0]}'
                 )
         else:
             # line below and similar in next method have autoformat oddities
@@ -146,8 +146,8 @@ class CellMetadata(IngestFiles):
                 # ToDO - capture warning below in error report
                 # investigate f-string formatting here
                 print(
-                    'Warning: metadata file keyword "TYPE" provided as {x}'.
-                    format(x=self.metadata_types[0])
+                    'Warning: metadata file keyword "TYPE" provided as '
+                    '{self.metadata_types[0]}'
                 )
         else:
             # check black autoformatting on this long line
@@ -175,9 +175,7 @@ class CellMetadata(IngestFiles):
             self.errors['format'].append(
                 (
                     'Error: TYPE declarations should be "group" or "numeric"; '
-                    'Invalid type annotation(s): {annots}'.format(
-                        annots=', '.join(map(str, annots))
-                    )
+                    f'Invalid type(s): {", ".join(map(str, annots))}'
                 )
             )
         else:
@@ -192,10 +190,8 @@ class CellMetadata(IngestFiles):
         valid = False
         if not len(self.headers) == len(self.metadata_types):
             self.errors['format'].append(
-                str(
-                    'Error: {x} TYPE declarations for {y} column headers'.
-                    format(x=len(self.metadata_types), y=len(self.headers))
-                )
+                'Error: {len(self.metadata_types)} TYPE declarations '
+                f'for {len(self.headers)} column headers'
             )
         else:
             valid = True
