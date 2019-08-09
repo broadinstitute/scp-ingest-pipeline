@@ -53,6 +53,7 @@ class Dense():
                 A list of Gene objects
         """
         transformed_data = []
+        print(f'starting ingesting {len(lines)} lines')
         for line in lines:
             expression_scores = line.rstrip('\n').split(',')
             compute = line.rstrip('\n').split(',')

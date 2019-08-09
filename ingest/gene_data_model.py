@@ -23,6 +23,9 @@ DOCUMENT_LIMIT_BYTES = 1_048_576
 
 
 class Gene:
+    COLLECTION_NAME = 'Gene'
+    SUBCOLLECTION_NAME = 'gene_expression'
+
     def __init__(self, name: str, source_file_type: str, *,
                  gene_id: str = '', study_accession: str = '', taxon_name: str = '',
                  taxon_common_name: str = '', ncbi_taxid: str = '', genome_assembly_accession: str = '',
@@ -58,35 +61,7 @@ class Gene:
             'genome_assembly_accession': genome_assembly_accession,
             'genome_annotation': genome_annotation,
         }
-        self.subcollection_name = 'gene_expression'
-
-    def get_collection_name(self):
-        """Get collection name of gene model.
-
-        Args:
-            None
-
-        Returns:
-            'Gene'
-        """
-
-        print(f'Gene is {self.name}')
-        if self.expression_scores is not None:
-            print(f'expression score length is {len(self.expression_scores)}')
-        else:
-            print(f'expression score length is 0')
-        return 'gene'
-
-    def get_subcollection_name(self):
-        """Get subcollection name of gene model.
-
-        Args:
-            None
-
-        Returns:
-            'gene_expression''
-        """
-        return 'gene_expression'
+        print(cell_names)
 
     def has_subcollection_data(self):
         return self.cell_names != None

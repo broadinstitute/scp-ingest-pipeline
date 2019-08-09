@@ -109,12 +109,13 @@ class IngestPipeline(object):
 
         # for expression_model in list_of_expression_models:
         for expression_model in list_of_expression_models:
-            collection_name = expression_model.get_collection_name()
+            collection_name = expression_model.COLLECTION_NAME
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(expression_model.top_level_doc)
+            print(f"Gene is: {expression_model.top_level_doc['name']}")
             if expression_model.has_subcollection_data():
                 try:
-                    subcollection_name = expression_model.get_subcollection_name()
+                    subcollection_name = expression_model.SUBCOLLECTION_NAME
                     doc_ref_sub = doc_ref.collection(
                         subcollection_name).document()
                     doc_ref_sub.set(expression_model.subdocument)
@@ -124,8 +125,6 @@ class IngestPipeline(object):
                     print(e)
                     batch = self.db.batch()
                     for subdoc in expression_model.chunk_gene_expression_documents(doc_ref.id):
-
-                        subcollection_name = expression_model.get_subcollection_name()
                         doc_ref_sub = doc_ref.collection(
                             subcollection_name).document()
                         batch.set(doc_ref_sub, subdoc)
@@ -178,7 +177,7 @@ class IngestPipeline(object):
             for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
                     *data)
-        self.load_expression_data(transformed_data)
+                self.load_expression_data(transformed_data)
         self.close_matrix()
 
     def ingest_cell_metadata(self):
