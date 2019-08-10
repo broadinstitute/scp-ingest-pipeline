@@ -76,27 +76,20 @@ class SubSample(IngestFiles):
                 # bin = ("unique value in column" : dataframe)
                 for bin in self.return_sorted_bin(anotation_dict, annotation_name):
                     cells_left = sample_size
-                    # print(bin[1])
-                    suffled_df = bin[1].reindex(
-                        np.random.permutation(bin[1].index))
-                    print(f'This is the annotation : {annotation_name}')
-                    # print(type(bin))
-
-                    for column in suffled_df:
-                        print(f'This is a column {[column[0]]}')
-                    #     column_name = column[0]
-                    #     col_values = bin[1][column_name].values.flatten()
-                    #     print(col_values)
-                    #     # Shuffle array randomly using the same seed
-                    #     random.shuffle(col_values)
-                    #     # rows_in_column = len(col_values)
-                    #     print(col_values)
+                    amount_of_rows = bin[1].shape[0]
                     # If the amounf of sampled values we need is larger
                     # than the whole array, take the whole array
-                    # if num_per_group > rows_in_column:
-                    #     len_picked_values = rows_in_column - 1
-                    # else:
-                    #     len_picked_values = num_per_group - 1
+                    if num_per_group > amount_of_rows:
+                        amount_picked_rows = amount_of_rows
+                    else:
+                        amount_picked_rows = num_per_group
+                    suffled_df = bin[1].reindex(
+                        np.random.permutation(bin[1].index)).sample(n=amount_picked_rows)
+                    print(f'This is the annotation : {annotation_name}')
+
+                    for column in suffled_df:
+                        print(f'This is a column {column[0]}')
+
                     #
                     # picked_values = y[:len_picked_values]
                     # yield (x, self.header[idx][1], picked_values, f'{annotation_name[0]}-{annotation_name[1]}-{self.annot_scope}', threshold)
