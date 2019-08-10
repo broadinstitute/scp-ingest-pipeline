@@ -77,8 +77,8 @@ class SubSample(IngestFiles):
                 for bin in self.return_sorted_bin(anotation_dict, annotation_name):
                     cells_left = sample_size
                     random.seed(0)
-                    # print(f'This is the annotation : {annotation_name}')
-                    # print(f"This is the bin {bin[1]}")
+                    print(f'This is the annotation : {annotation_name}')
+                    print(f"This is the bin {bin[1]}")
                     # print(bin[1].columns)
                     # print(f"This is a df : {bin[1].loc[:,  bin[1].columns != annotation_name[0]]}")
 
