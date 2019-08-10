@@ -76,26 +76,25 @@ class SubSample(IngestFiles):
                 # bin = ("unique value in column" : dataframe)
                 for bin in self.return_sorted_bin(anotation_dict, annotation_name):
                     cells_left = sample_size
-                    random.seed(0)
+                    print(bin[1])
+                    suffled_df = bin[1].reindex(
+                        np.random.permutation(bin[1].index))
                     print(f'This is the annotation : {annotation_name}')
-                    print(f"This is the bin {bin[1]}")
-                    # print(bin[1].columns)
-                    # print(f"This is a df : {bin[1].loc[:,  bin[1].columns != annotation_name[0]]}")
+                    print(type(bin))
 
-                    # for column in bin[1].loc[:,  bin[1].columns != list(annotation_name)]:
-                    #     print(f'This is a column {column}')
-                    # Iterate over columns in dataframe where
-                    # column = annotation_name (name of current collumn)
-                    # for column in dataframe.loc[:, dataframe.columns != annotation_name]:
-                    #     print(column)
-                    # Grab value or x, y, z coordinates, or cell names
-
-                    # Shuffle array randomly using the same seed
-                    # random.shuffle(y)
-                    # # If the amounf of sampled values we need is larger
-                    # # than the whole array, take the whole array
-                    # if num_per_group > len(y):
-                    #     len_picked_values = len(y) - 1
+                    # for column in bin[1]:
+                    #     print(f'This is a column {[column[0]]}')
+                    #     column_name = column[0]
+                    #     col_values = bin[1][column_name].values.flatten()
+                    #     print(col_values)
+                    #     # Shuffle array randomly using the same seed
+                    #     random.shuffle(col_values)
+                    #     # rows_in_column = len(col_values)
+                    #     print(col_values)
+                    # If the amounf of sampled values we need is larger
+                    # than the whole array, take the whole array
+                    # if num_per_group > rows_in_column:
+                    #     len_picked_values = rows_in_column - 1
                     # else:
                     #     len_picked_values = num_per_group - 1
                     #
