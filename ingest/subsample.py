@@ -42,20 +42,21 @@ class SubSample(IngestFiles):
     def bin(self, annotation):
         bin = {}
         if 'group' in annotation:
-            # get unique values from columns if the annotation is of type 'group'
+            # get unique values in column
             unique_values = self.file[annotation].unique()
 
             for col_val in unique_values:
+                # get subset of data where
                 subset = self.file[self.file[annotation] == col_val]
                 bin[col_val] = subset[self.coordinates_and_cell_names]
         else:
-            columns = self.coordinates_and_cell_names
+            columns = copy.copy(self.coordinates_and_cell_names)
             columns.append(annotation[0])
             subset = self.file[columns]
             subset.sort_values(
                 by=[annotation], inplace=True)
             for index, df in enumerate(np.array_split(subset, 20)):
-                bin[str(index)] = df
+                bin[str(index)] = df[self.coordinates_and_cell_names]
         return bin, annotation
 
     def subsample(self):
@@ -63,40 +64,47 @@ class SubSample(IngestFiles):
         sample_sizes = [
             sample_size for sample_size in self.SUBSAMPLE_THRESHOLDS if sample_size < len(self.file.index)]
         for bins in map(self.bin, self.columns):
-            print('shit')
-            print(bins)
+            # (name of current collumn)
             annotation_name = bins[1]
+            # {"Unique value #1" : dataframe, "Unique value #2": dataframe,...}
             anotation_dict = bins[0]
             group_size = len(anotation_dict.keys())
             for sample_size in sample_sizes:
                 unique_keys = anotation_dict.keys()
                 num_per_group = int(sample_size / group_size)
-                print(f'num per group in {num_per_group}')
 
-                # k is a single group
-                for k in self.return_sorted_bin(anotation_dict, annotation_name):
-                    print(f'This is k: {k}')
+                # bin = ("unique value in column" : dataframe)
+                for bin in self.return_sorted_bin(anotation_dict, annotation_name):
                     cells_left = sample_size
                     random.seed(0)
-                    # Iterate over columns in df minus column = annotation_name
-                    for idx, x in enumerate(anotation_dict[k[0]].keys()):
-                            # Grab value or x, y, z coordinates, or cell names
-                    y = anotation_dict[k[0]][x]
-                    # Shuffle array randomly using the same seed
-                    random.shuffle(y)
-                    # If the amounf of sampled values we need is larger
-                    # than the whole array, take the whole array
-                    if num_per_group > len(y):
-                        len_picked_values = len(y) - 1
-                    else:
-                        len_picked_values = num_per_group - 1
+                    # print(f'This is the annotation : {annotation_name}')
+                    # print(f"This is the bin {bin[1]}")
+                    # print(bin[1].columns)
+                    # print(f"This is a df : {bin[1].loc[:,  bin[1].columns != annotation_name[0]]}")
 
-                    picked_values = y[:len_picked_values]
-                    yield (x, self.header[idx][1], picked_values, f'{annotation_name[0]}-{annotation_name[1]}-{self.annot_scope}', threshold)
-                    if idx < len(anotation_dict[k[0]].keys()) - 1:
-                        cells_left -= len_picked_values
-                        group_size -= 1
-                        num_per_group = int(cells_left / (group_size))
+                    # for column in bin[1].loc[:,  bin[1].columns != list(annotation_name)]:
+                    #     print(f'This is a column {column}')
+                    # Iterate over columns in dataframe where
+                    # column = annotation_name (name of current collumn)
+                    # for column in dataframe.loc[:, dataframe.columns != annotation_name]:
+                    #     print(column)
+                    # Grab value or x, y, z coordinates, or cell names
+
+                    # Shuffle array randomly using the same seed
+                    # random.shuffle(y)
+                    # # If the amounf of sampled values we need is larger
+                    # # than the whole array, take the whole array
+                    # if num_per_group > len(y):
+                    #     len_picked_values = len(y) - 1
+                    # else:
+                    #     len_picked_values = num_per_group - 1
+                    #
+                    # picked_values = y[:len_picked_values]
+                    # yield (x, self.header[idx][1], picked_values, f'{annotation_name[0]}-{annotation_name[1]}-{self.annot_scope}', threshold)
+                    # if idx < len(anotation_dict[k[0]].keys()) - 1:
+                    #     cells_left -= len_picked_values
+                    #     group_size -= 1
+                    #     num_per_group = int(cells_left / (group_size))
 
     def return_sorted_bin(self, bin, annot_name):
 
