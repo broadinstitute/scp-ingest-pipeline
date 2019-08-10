@@ -76,14 +76,14 @@ class SubSample(IngestFiles):
                 # bin = ("unique value in column" : dataframe)
                 for bin in self.return_sorted_bin(anotation_dict, annotation_name):
                     cells_left = sample_size
-                    print(bin[1])
+                    # print(bin[1])
                     suffled_df = bin[1].reindex(
                         np.random.permutation(bin[1].index))
                     print(f'This is the annotation : {annotation_name}')
-                    print(type(bin))
+                    # print(type(bin))
 
-                    # for column in bin[1]:
-                    #     print(f'This is a column {[column[0]]}')
+                    for column in suffled_df:
+                        print(f'This is a column {[column[0]]}')
                     #     column_name = column[0]
                     #     col_values = bin[1][column_name].values.flatten()
                     #     print(col_values)
