@@ -69,6 +69,7 @@ class SubSample(IngestFiles):
             # {"Unique value #1" : dataframe, "Unique value #2": dataframe,...}
             anotation_dict = bins[0]
             group_size = len(anotation_dict.keys())
+            values = dict.fromkeys(self.coordinates_and_cell_names)
             for sample_size in sample_sizes:
                 unique_keys = anotation_dict.keys()
                 num_per_group = int(sample_size / group_size)
@@ -88,11 +89,9 @@ class SubSample(IngestFiles):
                     print(f'This is the annotation : {annotation_name}')
 
                     for column in suffled_df:
-                        print(f'This is a column {column[0]}')
-
-                    #
-                    # picked_values = y[:len_picked_values]
-                    # yield (x, self.header[idx][1], picked_values, f'{annotation_name[0]}-{annotation_name[1]}-{self.annot_scope}', threshold)
+                        print(f'This is a column {column}')
+                        print(suffled_df[column].values)
+                        yield (column[0], column[1], suffled_df[column].values, f'{annotation_name[0]}-{annotation_name[1]}-{self.annot_scope}', sample_size)
                     # if idx < len(anotation_dict[k[0]].keys()) - 1:
                     #     cells_left -= len_picked_values
                     #     group_size -= 1
