@@ -110,7 +110,7 @@ class SubSample(IngestFiles):
                         num_per_group = int(cells_left / (group_size))
 
                 yield (points)
-                # print(points)
+                print(points)
 
     def return_sorted_bin(self, bin, annot_name):
 
