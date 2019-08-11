@@ -66,12 +66,8 @@ class SubSample(IngestFiles):
         for bins in map(self.bin, self.columns):
             # (name of current collumn)
             annotation_name = bins[1]
-            # {"Unique value #1" : dataframe, "Unique value #2": dataframe,...}
+            # Looks like {"Unique value #1" : dataframe, "Unique value #2": dataframe,...}
             anotation_dict = bins[0]
-            print(anotation_dict.keys())
-            print(bins)
-            print(f'This is points: {points}')
-            print(sample_sizes)
             for sample_size in sample_sizes:
                 group_size = len(anotation_dict.keys())
                 # values for the x, y, and z coordinates
@@ -80,7 +76,6 @@ class SubSample(IngestFiles):
 
                 # bin = ("unique value in column" : dataframe)
                 for bin in self.return_sorted_bin(anotation_dict, annotation_name):
-                    print(f'This is bin:{bin[0]}')
                     cells_left = sample_size
                     amount_of_rows = bin[1].shape[0]
                     # If the amounf of sampled values we need is larger
@@ -91,26 +86,18 @@ class SubSample(IngestFiles):
                         amount_picked_rows = num_per_group
                     suffled_df = bin[1].reindex(
                         np.random.permutation(bin[1].index)).sample(n=amount_picked_rows)
-                    # print(f'This is the annotation : {annotation_name}')
-
                     for column in suffled_df:
-                        # print(f'This is a column {column}')
-                        # print(suffled_df[column].values.tolist())
                         points[column[0]].extend(
                             suffled_df[column].values.tolist())
-
                     # Subtract number of cells 'subsampled' from the number of cells left
                     cells_left -= amount_picked_rows
-                    print(list(anotation_dict.keys())[-2])
-                    print(bin[0])
                     if bin[0] == list(anotation_dict.keys())[-2]:
                         num_per_group = cells_left
                     else:
                         group_size -= 1
                         num_per_group = int(cells_left / (group_size))
 
-                yield (points)
-                print(points)
+                yield (points, annotation_name, sample_size)
 
     def return_sorted_bin(self, bin, annot_name):
 
