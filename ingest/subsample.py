@@ -70,12 +70,12 @@ class SubSample(IngestFiles):
             anotation_dict = bins[0]
             print(anotation_dict.keys())
             print(bins)
-            group_size = len(anotation_dict.keys())
-            # values for the x, y, and z coordinates
-            points = {k: [] for k in self.coordinates_and_cell_names}
             print(f'This is points: {points}')
             print(sample_sizes)
             for sample_size in sample_sizes:
+                group_size = len(anotation_dict.keys())
+                # values for the x, y, and z coordinates
+                points = {k: [] for k in self.coordinates_and_cell_names}
                 num_per_group = int(sample_size / group_size)
 
                 # bin = ("unique value in column" : dataframe)
@@ -108,7 +108,8 @@ class SubSample(IngestFiles):
                     else:
                         group_size -= 1
                         num_per_group = int(cells_left / (group_size))
-                group_size = len(anotation_dict.keys())
+
+                yield (points)
                 # print(points)
 
     def return_sorted_bin(self, bin, annot_name):
