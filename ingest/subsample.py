@@ -26,14 +26,17 @@ class SubSample(IngestFiles):
         columns = self.file.xs("numeric", axis=1, level=1,
                                drop_level=False).columns.tolist()
         self.file[columns] = self.file[columns].round(2)
-        self.round_numeric_annot()
+        self.correct_annot_types()
         # print(self.file)
         # conver_group_to_string()
 
-    def round_numeric_annot(self):
+    def correct_annot_types(self):
         numeric_columns = self.file.xs("numeric", axis=1, level=1,
                                        drop_level=False).columns.tolist()
         self.file[numeric_columns] = self.file[numeric_columns].round(2)
+        group_columns = numeric_columns = self.file.xs("group", axis=1, level=1,
+                                                       drop_level=False).columns.tolist()
+        self.file[group_columns] = self.file[group_columns].astype(str)
 
     def dermine_coordinates_and_cell_names(self):
         if self.annot_scope is 'cluster':
