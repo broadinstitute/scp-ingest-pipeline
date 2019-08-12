@@ -347,7 +347,6 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
-    print(arguments)
     ingest = IngestPipeline(**arguments)
 
     if 'matrix_file' in arguments:

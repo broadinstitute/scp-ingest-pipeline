@@ -73,6 +73,7 @@ class Clusters(IngestFiles):
     @staticmethod
     def create_cluster_subdoc(annot_name, header_value_type, *, value=[], subsample_annotation=None, subsample_threshold=None):
         """Returns cluster subdoc"""
+
         return {
             'name': annot_name,
             'array_index': 0,
