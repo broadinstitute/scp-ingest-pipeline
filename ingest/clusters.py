@@ -22,9 +22,9 @@ class Clusters(IngestFiles):
         self.source_file_type = 'cluster'
         self.has_z = 'z' in self.header
         self.top_level_doc = {
+            'cluster_type': '3d' if self.has_z else '2d',
             'name': name,
             'study_accession': study_accession,
-            'source_file_type': 'cluster',
             'domain_ranges': domain_ranges,
             'points': self.amount_of_lines,
         }

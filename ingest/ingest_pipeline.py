@@ -22,6 +22,10 @@ python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/dat
 # Ingest dense file
 python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
+# Subsample cluster file
+python ingest_pipeline.py ingest_subsample --cluster-file ../tests/data/cluster_ex.txt --subsample True
+
+
 # Ingest mtx files
 python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
@@ -45,7 +49,7 @@ EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 class IngestPipeline(object):
     def __init__(self, *, matrix_file: str = None, matrix_file_type: str = None,
                  barcode_file: str = None, gene_file: str = None, cell_metadata_file: str = None,
-                 cluster_file: str = None):
+                 cluster_file: str = None, subsample=False):
         """Initializes variables in ingest service."""
 
         self.matrix_file_path = matrix_file
@@ -53,6 +57,8 @@ class IngestPipeline(object):
         self.gene_file = gene_file
         self.barcodes_file = barcode_file
         self.db = firestore.Client()
+        self.cluster_file = cluster_file
+        self.cell_metadata_file = cell_metadata_file
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(
                 matrix_file_type, matrix_file)
@@ -64,8 +70,7 @@ class IngestPipeline(object):
                 'cluster', cluster_file)
         elif matrix_file is None:
             self.matrix = matrix_file
-        self.cluster_file = cluster_file
-        self.cell_metadata_file = cell_metadata_file
+        print(self.cluster_file)
 
     def initialize_file_connection(self, file_type, file_path):
         """Initializes connection to file.
@@ -191,22 +196,33 @@ class IngestPipeline(object):
 
     def ingest_cluster(self):
         """Ingests cluster files into Firestore."""
-        # while True:
-        #     row = self.cluster.extract()
-        #     if(row == None):
-        #         self.cluster.update_points()
-        #         break
-        #     self.cluster.transform(row)
-        # self.load_cluster_files()
-        if self.cluster.can_subsample:
-            self.subsample = SubSample(self.cluster_file, 'cluster')
+        while True:
+            row = self.cluster.extract()
+            if(row == None):
+                self.cluster.update_points()
+                break
+            self.cluster.transform(row)
+        self.load_cluster_files()
+
+    def subsample(self):
+        self.subsample = SubSample(
+            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file)
+
+        def create_cluster_subdoc():
             for subdoc in self.subsample.subsample():
                 annot_name = subdoc[1][0]
                 annot_type = subdoc[1][1]
                 sample_size = subdoc[2]
                 for key_value in subdoc[0].items():
-                    print(Clusters.create_cluster_subdoc(
-                        key_value[0],  annot_type, value=key_value[1], subsample_annotation=f"{annot_name}--{annot_type}--cluster", subsample_threshold=sample_size))
+                    Clusters.create_cluster_subdoc(
+                        key_value[0],  annot_type, value=key_value[1],
+                        subsample_annotation=f"{annot_name}--{annot_type}--cluster",
+                        subsample_threshold=sample_size)
+
+        create_cluster_subdoc()
+        if self.cell_metadata_file is not None:
+            self.subsampe.prepare_cell_metadata()
+            create_cluster_subdoc()
 
 
 def create_parser():
@@ -268,6 +284,9 @@ def create_parser():
     parser_cell_metadata.add_argument('--cell-metadata-file', required=True,
                                       help='Absolute or relative path to '
                                       'cell metadata file.')
+    parser_cell_metadata.add_argument('--ingest-cell-metadata', required=True,
+                                      help='Indicates that subsampliing '
+                                      'functionality should be invoked')
 
     # Parser ingesting cluster files
     parser_cluster = subparsers.add_parser('ingest_cluster',
@@ -276,6 +295,25 @@ def create_parser():
     parser_cluster.add_argument('--cluster-file', required=True,
                                 help='Absolute or relative path to '
                                 'cluster file.')
+    parser_cluster.add_argument('--ingest_cluster', required=True,
+                                help='Indicates that subsampliing '
+                                'functionality should be invoked')
+
+    # Parser ingesting cluster files
+    parser_subsample = subparsers.add_parser('ingest_subsample',
+                                             help='Indicates that subsampling '
+                                             'will be initialized')
+    parser_subsample.add_argument('--subsample', required=True,
+                                  help='Indicates that subsampliing functionality'
+                                  ' should be invoked',
+                                  choices=['True', 'False'])
+    parser_subsample.add_argument('--cluster-file', required=True,
+                                  help='Absolute or relative path to '
+                                  'cluster file.')
+    parser_subsample.add_argument('--cell-metadata-file',
+                                  help='Absolute or relative path to '
+                                  'cell metadata file.')
+
     return parser
 
 
@@ -309,14 +347,20 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
+    print(arguments)
     ingest = IngestPipeline(**arguments)
 
     if 'matrix_file' in arguments:
         ingest.ingest_expression()
-    elif 'cell_metadata_file' in arguments:
-        ingest.ingest_cell_metadata()
-    elif 'cluster_file' in arguments:
-        ingest.ingest_cluster()
+    elif 'ingest_cell_metadata' in arguments:
+        if arguments.ingest_cell_metadata:
+            ingest.ingest_cell_metadata()
+    elif 'ingest_cluster' in arguments:
+        if arguments.ingest_cluster:
+            ingest.ingest_cluster()
+    elif 'subsample' in arguments:
+        if arguments['subsample']:
+            ingest.subsample()
 
 
 if __name__ == "__main__":
