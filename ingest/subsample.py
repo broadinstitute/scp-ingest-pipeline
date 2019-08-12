@@ -23,12 +23,17 @@ class SubSample(IngestFiles):
         self.has_z = 'z' in (annot[0].lower()
                              for annot in self.header[0])
         self.coordinates_and_cell_names,  self.columns = self.dermine_coordinates_and_cell_names()
+        columns = self.file.xs("numeric", axis=1, level=1,
+                               drop_level=False).columns.tolist()
+        self.file[columns] = self.file[columns].round(2)
+        self.round_numeric_annot()
+        # print(self.file)
         # conver_group_to_string()
 
     def round_numeric_annot(self):
-        for idx, annot_name in enumerate(self.header):
-            if annot_name[1] == 'numeric':
-                self.file.round({annot_name: 3})
+        numeric_columns = self.file.xs("numeric", axis=1, level=1,
+                                       drop_level=False).columns.tolist()
+        self.file[numeric_columns] = self.file[numeric_columns].round(2)
 
     def dermine_coordinates_and_cell_names(self):
         if self.annot_scope is 'cluster':
@@ -96,7 +101,7 @@ class SubSample(IngestFiles):
                     else:
                         group_size -= 1
                         num_per_group = int(cells_left / (group_size))
-
+                # returns tuple = (subsampled values: dict, annotation name, sample size )
                 yield (points, annotation_name, sample_size)
 
     def return_sorted_bin(self, bin, annot_name):
