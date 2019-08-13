@@ -13,7 +13,7 @@ class SubSample(IngestFiles):
     ALLOWED_FILE_TYPES = ['text/csv',
                           'text/plain', 'text/tab-separated-values']
     MAX_THRESHOLD = 100_000
-    SUBSAMPLE_THRESHOLDS = [MAX_THRESHOLD, 10_000, 200]
+    SUBSAMPLE_THRESHOLDS = [MAX_THRESHOLD, 10_000, 1_000]
 
     def __init__(self, *, cluster_file=None, cell_metadata_file=None):
         IngestFiles.__init__(self,
@@ -22,7 +22,7 @@ class SubSample(IngestFiles):
         self.has_z = 'z' in (annot[0].lower()
                              for annot in self.header[0])
         self.coordinates_and_cell_names,  self.columns = self.dermine_coordinates_and_cell_names()
-        print(self.columns)
+        self.cell_metadata_file = cell_metadata_file
         self.correct_annot_types()
 
     def correct_annot_types(self):
@@ -65,12 +65,12 @@ class SubSample(IngestFiles):
         return bin, annotation
 
     def subsample(self):
+        print(len(self.file.index))
         sample_sizes = [
-            sample_size for sample_size in self.SUBSAMPLE_THRESHOLDS if sample_size < len(self.file.index)]
+            sample_size for sample_size in self.SUBSAMPLE_THRESHOLDS if sample_size <= len(self.file.index)]
         for bins in map(self.bin, self.columns):
             # (name of current collumn)
             annotation_name = bins[1]
-            print(annotation_name)
             # Looks like {"Unique value #1" : dataframe, "Unique value #2": dataframe,...}
             anotation_dict = bins[0]
             for sample_size in sample_sizes:
@@ -82,7 +82,7 @@ class SubSample(IngestFiles):
                 # bin = ("unique value in column" : dataframe)
                 for bin in self.return_sorted_bin(anotation_dict, annotation_name):
                     cells_left = sample_size
-                    amount_of_rows = bin[1].shape[0]
+                    amount_of_rows = len(bin[1].index)
                     # If the amounf of sampled values is larger
                     # than the whole array, take the whole array
                     if num_per_group > amount_of_rows:
@@ -102,9 +102,8 @@ class SubSample(IngestFiles):
                     else:
                         group_size -= 1
                         num_per_group = int(cells_left / (group_size))
-                    print((points, annotation_name, sample_size))
                 # returns tuple = (subsampled values as dictionary, annotation name, sample size )
-                yield (points, annotation_name, sample_size)
+            yield (points, annotation_name, sample_size)
 
     def return_sorted_bin(self, bin, annot_name):
         # Sorts binned groups in order of size from smallest to largest

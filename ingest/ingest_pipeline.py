@@ -49,7 +49,7 @@ EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 class IngestPipeline(object):
     def __init__(self, *, matrix_file: str = None, matrix_file_type: str = None,
                  barcode_file: str = None, gene_file: str = None, cell_metadata_file: str = None,
-                 cluster_file: str = None, subsample=False):
+                 cluster_file: str = None, subsample=False, ingest_cell_metadata=False, ingest_cluster=False):
         """Initializes variables in ingest service."""
 
         self.matrix_file_path = matrix_file
@@ -62,15 +62,14 @@ class IngestPipeline(object):
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(
                 matrix_file_type, matrix_file)
-        elif cell_metadata_file is not None:
+        elif ingest_cell_metadata:
             self.cell_metadata = self.initialize_file_connection(
                 'cell_metadata', cell_metadata_file)
-        elif cluster_file is not None:
+        elif ingest_cluster:
             self.cluster = self.initialize_file_connection(
                 'cluster', cluster_file)
         elif matrix_file is None:
             self.matrix = matrix_file
-        print(self.cluster_file)
 
     def initialize_file_connection(self, file_type, file_path):
         """Initializes connection to file.
@@ -205,11 +204,12 @@ class IngestPipeline(object):
         self.load_cluster_files()
 
     def subsample(self):
-        self.subsample = SubSample(
+        subsample = SubSample(
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file)
 
         def create_cluster_subdoc():
-            for subdoc in self.subsample.subsample():
+            for subdoc in subsample.subsample():
+                print(subdoc)
                 annot_name = subdoc[1][0]
                 annot_type = subdoc[1][1]
                 sample_size = subdoc[2]
@@ -219,10 +219,10 @@ class IngestPipeline(object):
                         subsample_annotation=f"{annot_name}--{annot_type}--cluster",
                         subsample_threshold=sample_size)
 
-        create_cluster_subdoc()
+        # create_cluster_subdoc()
         if self.cell_metadata_file is not None:
-            self.subsampe.prepare_cell_metadata()
-            create_cluster_subdoc()
+            subsample.prepare_cell_metadata()
+            # create_cluster_subdoc()
 
 
 def create_parser():
@@ -347,6 +347,7 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
+    print(arguments)
     ingest = IngestPipeline(**arguments)
 
     if 'matrix_file' in arguments:
