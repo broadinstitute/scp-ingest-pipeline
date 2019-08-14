@@ -2,6 +2,7 @@
 env/
 __pycache__/
 
+
 # Ignore editor configuration
 .idea/
 .vscode/
@@ -9,3 +10,5 @@ __pycache__/
 # Ignore other detritus
 *.log
 .DS_Store
+.coverage
+htmlcov/
