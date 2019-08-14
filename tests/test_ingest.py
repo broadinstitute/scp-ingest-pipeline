@@ -110,6 +110,8 @@ class IngestTestCase(unittest.TestCase):
         """Ingest Pipeline should extract and transform dense matrices
         """
 
+        self.assertEqual(1, 2) # Tests should fail; debugging
+
         args = ('ingest_expression '
                 '--matrix-file gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt '
                 '--matrix-file-type dense')
