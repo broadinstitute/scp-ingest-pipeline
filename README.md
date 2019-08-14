@@ -25,8 +25,17 @@ cd tests
 pytest
 ```
 
-# Commit and push
-Install pre-push hooks to automatically ensure that Ingest Pipeline tests pass:
+# Git hooks
+After installing Ingest Pipeline, add Git hooks to help automatically ensure code quality:
 ```
 pre-commit install -t pre-push
 ```
+
+## Bypass hooks
+You can skip hooks for Git actions like so:
+
+* Skip commit hooks:
+`git commit --no-verify ...`
+
+* Skip pre-push hooks:
+`git push --no-verify ...`
