@@ -115,6 +115,8 @@ class IngestTestCase(unittest.TestCase):
                 '--matrix-file-type dense')
         ingest = self.setup_ingest(args)
 
+        self.assertEqual(1, 2)  # Wrong!
+
         models = ingest.load_expression_data_args[0]
 
         # Verify that 19 gene models were passed into load method
