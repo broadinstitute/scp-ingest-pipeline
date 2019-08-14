@@ -21,9 +21,11 @@ pip install -r requirements.txt
 # Test
 After installing:
 ```
-cd tests
-pytest
+cd tests; pytest
 ```
+
+# Use
+See [`ingest_pipeline.py`](https://github.com/broadinstitute/scp-ingest-pipeline/blob/ew-tests-hook/ingest/ingest_pipeline.py) for usage examples.
 
 # Git hooks
 After installing Ingest Pipeline, add Git hooks to help ensure code quality:
