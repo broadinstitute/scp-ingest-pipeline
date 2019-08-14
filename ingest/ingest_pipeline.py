@@ -14,7 +14,7 @@ EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/AB_toy_data_portal.cluster.txt
+python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt
 
 # Ingest Cell Metadata file
 python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv
@@ -49,11 +49,7 @@ EXPRESSION_FILE_TYPES = ['dense', 'mtx']
 class IngestPipeline(object):
     def __init__(self, *, matrix_file: str = None, matrix_file_type: str = None,
                  barcode_file: str = None, gene_file: str = None, cell_metadata_file: str = None,
-<<<<<<< Updated upstream
-                 cluster_file: str = None):
-=======
                  cluster_file: str = None, subsample=False, ingest_cell_metadata=False, ingest_cluster=False):
->>>>>>> Stashed changes
         """Initializes variables in ingest service."""
 
         self.matrix_file_path = matrix_file
@@ -114,31 +110,6 @@ class IngestPipeline(object):
         None
     """
 
-<<<<<<< Updated upstream
-        # for expression_model in list_of_expression_models:
-        for expression_model in list_of_expression_models:
-            collection_name = expression_model.COLLECTION_NAME
-            doc_ref = self.db.collection(collection_name).document()
-            doc_ref.set(expression_model.top_level_doc)
-            print(f"Gene is: {expression_model.top_level_doc['name']}")
-            if expression_model.has_subcollection_data():
-                try:
-                    subcollection_name = expression_model.SUBCOLLECTION_NAME
-                    doc_ref_sub = doc_ref.collection(
-                        subcollection_name).document()
-                    doc_ref_sub.set(expression_model.subdocument)
-                except exceptions.InvalidArgument as e:
-                    # Catches invalid argument exception, which error "Maximum
-                    # document size" falls under
-                    print(e)
-                    batch = self.db.batch()
-                    for subdoc in expression_model.chunk_gene_expression_documents(doc_ref.id):
-                        doc_ref_sub = doc_ref.collection(
-                            subcollection_name).document()
-                        batch.set(doc_ref_sub, subdoc)
-
-                    batch.commit()
-=======
         collection_name = expression_model.COLLECTION_NAME
         batch = self.db.batch()
         doc_ref = self.db.collection(collection_name).document()
@@ -163,7 +134,6 @@ class IngestPipeline(object):
                     i += 1
 
                 batch.commit()
->>>>>>> Stashed changes
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
@@ -183,16 +153,16 @@ class IngestPipeline(object):
                 print(e)
 
     def load_cluster_files(self):
-        """Loads cluster files into firestore."""
+        """Loads cluster files into Firestore."""
         collection_name = self.cluster.COLLECTION_NAME
         doc_ref = self.db.collection(collection_name).document()
         doc_ref.set(self.cluster.top_level_doc)
         subcollection_name = self.cluster.SUBCOLLECTION_NAME
-        for annotation in self.cluster.annotation_subdocs.keys():
+        for annot_name in self.cluster.cluster_subdocs.keys():
             batch = self.db.batch()
             doc_ref_sub = doc_ref.collection(
                 subcollection_name).document()
-            doc_ref_sub.set(self.cluster.annotation_subdocs[annotation])
+            doc_ref_sub.set(self.cluster.cluster_subdocs[annot_name])
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -213,11 +183,7 @@ class IngestPipeline(object):
                 if row == None:
                     break
                 transformed_data = self.matrix.transform_expression_data_by_gene(
-<<<<<<< Updated upstream
-                    *data)
-=======
                     row)
->>>>>>> Stashed changes
                 self.load_expression_data(transformed_data)
         self.close_matrix()
 
@@ -225,7 +191,7 @@ class IngestPipeline(object):
         """Ingests cell metadata files into Firestore."""
         while True:
             row = self.cell_metadata.extract()
-            if(row == None):
+            if row == None:
                 break
             self.cell_metadata.transform(row)
         self.load_cell_metadata()
@@ -388,12 +354,6 @@ def main() -> None:
 
     if 'matrix_file' in arguments:
         ingest.ingest_expression()
-<<<<<<< Updated upstream
-    elif 'cell_metadata_file' in arguments:
-        ingest.ingest_cell_metadata()
-    elif 'cluster_file' in arguments:
-        getattr(ingest, 'ingest_cluster')()
-=======
     elif 'ingest_cell_metadata' in arguments:
         if arguments.ingest_cell_metadata:
             ingest.ingest_cell_metadata()
@@ -403,7 +363,6 @@ def main() -> None:
     elif 'subsample' in arguments:
         if arguments['subsample']:
             ingest.subsample()
->>>>>>> Stashed changes
 
 
 if __name__ == "__main__":
