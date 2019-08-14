@@ -13,7 +13,7 @@ The SCP Ingest Pipeline is an ETL pipeline for single-cell RNA-seq data.
 
 # Install
 ```
-git clone https://github.com/broadinstitute/scp-ingest-pipeline
+git clone git@github.com:broadinstitute/scp-ingest-pipeline.git
 python3 -m venv env --copies
 pip install -r requirements.txt
 ```
