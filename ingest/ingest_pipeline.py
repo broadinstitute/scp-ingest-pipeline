@@ -22,9 +22,8 @@ python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/dat
 # Ingest dense file
 python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
-# Subsample cluster file
-python ingest_pipeline.py ingest_subsample --cluster-file ../tests/data/cluster_ex.txt --subsample True
-
+# Subsample cluster and metadata file
+python ingest_pipeline.py ingest_subsample --cluster-file /Users/eaugusti/Projects/scp-ingest-service/tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample True
 
 # Ingest mtx files
 python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
