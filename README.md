@@ -8,8 +8,8 @@ The SCP Ingest Pipeline is an ETL pipeline for single-cell RNA-seq data.
 # Prerequisites
 * Python 3.6+
 * Google Cloud project, including
- * Firestore in Native Mode
- * Service accounts
+  * Firestore in Native Mode
+  * Service accounts
 
 # Install
 ```

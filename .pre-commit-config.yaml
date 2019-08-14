@@ -3,7 +3,7 @@
     hooks:
     -   id: tests
         name: run tests
-        entry: cd tests; pytest
+        entry: cd tests; pytest -v
         language: system
         types: [python]
         stages: [push]
