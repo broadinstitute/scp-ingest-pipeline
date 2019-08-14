@@ -32,7 +32,7 @@ pre-commit install -t pre-push
 ```
 
 ## Bypass hooks
-In rare cases, you might need to skip hooks for Git actions, like so:
+In rare cases, you might need to skip Git hooks, like so:
 
 * Skip commit hooks:
 `git commit --no-verify ...`
