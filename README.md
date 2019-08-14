@@ -26,13 +26,13 @@ pytest
 ```
 
 # Git hooks
-After installing Ingest Pipeline, add Git hooks to help automatically ensure code quality:
+After installing Ingest Pipeline, add Git hooks to help ensure code quality:
 ```
 pre-commit install -t pre-push
 ```
 
 ## Bypass hooks
-You can skip hooks for Git actions like so:
+In rare cases, you might need to skip hooks for Git actions, like so:
 
 * Skip commit hooks:
 `git commit --no-verify ...`
