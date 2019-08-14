@@ -8,6 +8,7 @@ jsonschema==3.0.1
 pytest==5.0.1
 coverage==4.5.3
 pytest-xdist==1.29.0
+pre-commit==1.18.1
 
 # Don't add these until we actually support Loom and Zarr
 #loompy==2.0.15
