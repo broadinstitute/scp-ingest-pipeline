@@ -219,10 +219,11 @@ class IngestPipeline(object):
                         subsample_annotation=f"{annot_name}--{annot_type}--cluster",
                         subsample_threshold=sample_size)
 
-        # create_cluster_subdoc()
+        create_cluster_subdoc()
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
-            # create_cluster_subdoc()
+            subsample.dermine_coordinates_and_cell_names()
+            create_cluster_subdoc()
 
 
 def create_parser():

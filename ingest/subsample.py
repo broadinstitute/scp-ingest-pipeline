@@ -2,6 +2,7 @@ import copy
 import json
 import pprint
 import random
+import re
 
 import numpy as np
 import pandas
@@ -18,12 +19,11 @@ class SubSample(IngestFiles):
     def __init__(self, *, cluster_file=None, cell_metadata_file=None):
         IngestFiles.__init__(self,
                              cluster_file, self.ALLOWED_FILE_TYPES, open_as='pandas')
-        self.header = list(self.file.head())
-        self.has_z = 'z' in (annot[0].lower()
-                             for annot in self.header[0])
-        self.coordinates_and_cell_names,  self.columns = self.dermine_coordinates_and_cell_names()
+
+        self.dermine_coordinates_and_cell_names()
         self.cell_metadata_file = cell_metadata_file
         self.correct_annot_types()
+        print(self.columns)
 
     def correct_annot_types(self):
         numeric_columns = self.file.xs("numeric", axis=1, level=1,
@@ -39,10 +39,11 @@ class SubSample(IngestFiles):
                           self.file[self.coordinates_and_cell_names])
 
     def dermine_coordinates_and_cell_names(self):
-        if self.has_z:
-            return [header_name[0] for header_name in self.header[:4]], self.file.iloc[:, 4:]
-        else:
-            return [header_name[0] for header_name in self.header[:3]], self.file.iloc[:, 4:]
+        self.coordinates_and_cell_names = [annot[0] for annot in self.file.columns if annot[0].lower() in (
+            'z', 'y', 'x', 'name')]
+        # annotation column names
+        self.columns = [annot for annot in self.file.columns if annot[0].lower() not in (
+            'z', 'y', 'x', 'name')]
 
     def bin(self, annotation):
         bin = {}
@@ -51,11 +52,12 @@ class SubSample(IngestFiles):
             unique_values = self.file[annotation].unique()
 
             for col_val in unique_values:
-                # get subset of data where column value is a unique value
+                # get subset of data where row is equal to the unique value
                 subset = self.file[self.file[annotation] == col_val]
                 bin[col_val] = subset[self.coordinates_and_cell_names]
         else:
             columns = copy.copy(self.coordinates_and_cell_names)
+            # cordinates, cell names and annotation name
             columns.append(annotation[0])
             subset = self.file[columns].copy()
             subset.sort_values(by=[annotation], inplace=True)
@@ -65,7 +67,6 @@ class SubSample(IngestFiles):
         return bin, annotation
 
     def subsample(self):
-        print(len(self.file.index))
         sample_sizes = [
             sample_size for sample_size in self.SUBSAMPLE_THRESHOLDS if sample_size <= len(self.file.index)]
         for bins in map(self.bin, self.columns):
