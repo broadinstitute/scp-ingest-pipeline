@@ -90,11 +90,6 @@ class IngestPipeline(object):
 
     def close_matrix(self):
         """Closes connection to file.
-
-    Args:
-        None
-    Returns:
-        None
     """
         self.matrix.close()
 
@@ -210,6 +205,7 @@ class IngestPipeline(object):
 
         def create_cluster_subdoc(scope):
             for subdoc in subsample.subsample():
+                print(subdoc)
                 annot_name = subdoc[1][0]
                 annot_type = subdoc[1][1]
                 sample_size = subdoc[2]

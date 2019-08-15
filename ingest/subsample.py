@@ -1,8 +1,7 @@
 import copy
 import json
-import pprint
 import random
-import re
+from typing import *
 
 import numpy as np
 import pandas
@@ -24,12 +23,12 @@ class SubSample(IngestFiles):
         self.correct_annot_types()
 
     def correct_annot_types(self):
-        """Ensures that numeric columns are rounded to 2 decimals points and
+        """Ensures that numeric columns are rounded to 3 decimals points and
         group annotations are strings
         """
         numeric_columns = self.file.xs("numeric", axis=1, level=1,
                                        drop_level=False).columns.tolist()
-        self.file[numeric_columns] = self.file[numeric_columns].round(2)
+        self.file[numeric_columns] = self.file[numeric_columns].round(3)
         group_columns = self.file.xs("group", axis=1, level=1,
                                      drop_level=False).columns.tolist()
         self.file[group_columns] = self.file[group_columns].astype(str)
@@ -48,8 +47,21 @@ class SubSample(IngestFiles):
         self.columns = [annot for annot in self.file.columns if annot[0].lower() not in (
             'z', 'y', 'x', 'name')]
 
-    def bin(self, annotation):
-        """Creates bins for a givien group"""
+    def bin(self, annotation: Tuple[str, str]):
+        """Creates bins for a givien group
+
+        Args:
+            annotation: Tuple[str, str]
+                This is the annotation for a single column. For example annotation
+                would look like ('annotation_name', 'numeric') or ('annotation_name', 'group')
+
+        Returns:
+            bin: Tuple[Dict[str: dataframe]], Tuple[str, str]]
+                The first tuple return contains all the bins for a given column/
+                annotation. It would look like {'unique_value1': filtered dataframe where rows=unique_value1}
+                for group values and there can be up to 20 bins for numeric columns.
+                The second value in the tuple is structured exactly like the input value.
+            """
         bin = {}
         if 'group' in annotation:
             # get unique values in column
@@ -113,7 +125,7 @@ class SubSample(IngestFiles):
 
     def return_sorted_bin(self, bin, annot_name):
         """Sorts binned groups in order of size from smallest to largest for group annotations """
-        #
+
         if('group' in annot_name):
             return sorted(bin.items(), key=lambda x: len(x[1]))
         else:
