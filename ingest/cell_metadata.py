@@ -25,6 +25,7 @@ class CellMetadata(IngestFiles):
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
         self.headers = self.get_next_line(
             increase_line_count=False)
+        print(self.headers)
         self.metadata_types = self.get_next_line(
             increase_line_count=False)
         # unique values for group-based annotations

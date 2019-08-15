@@ -276,6 +276,10 @@ def create_parser():
                                                   ' files are being ingested')
     parser_ingest_cluster.add_argument('--cluster-file',
                                        help='Path to cluster files')
+    parser_ingest_cluster.add_argument('--ingest-cluster-file', required=True,
+                                       choices=['True', 'False'],
+                                       help='Indicates that cluster  '
+                                       'file should be ingested')
 
     # Parser ingesting cell metadata files
     parser_cell_metadata = subparsers.add_parser('ingest_cell_metadata',
@@ -286,6 +290,8 @@ def create_parser():
                                       help='Absolute or relative path to '
                                       'cell metadata file.')
     parser_cell_metadata.add_argument('--ingest-cell-metadata', required=True,
+
+                                      choices=['True', 'False'],
                                       help='Indicates that subsampliing '
                                       'functionality should be invoked')
 
@@ -348,16 +354,15 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
-    print(arguments)
     ingest = IngestPipeline(**arguments)
 
     if 'matrix_file' in arguments:
         ingest.ingest_expression()
     elif 'ingest_cell_metadata' in arguments:
-        if arguments.ingest_cell_metadata:
+        if arguments[ingest_cell_metadata]:
             ingest.ingest_cell_metadata()
     elif 'ingest_cluster' in arguments:
-        if arguments.ingest_cluster:
+        if arguments[ingest_cluster]:
             ingest.ingest_cluster()
     elif 'subsample' in arguments:
         if arguments['subsample']:

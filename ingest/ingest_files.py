@@ -19,6 +19,7 @@ class IngestFiles:
             raise IOError(f"File '{file_path}' not found")
         self.allowed_file_types = allowed_file_types
         self.file_type, self.file = self.open_file(file_path, open_as)
+        print(self.file_type)
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
         self.is_MTX = is_MTX
@@ -28,20 +29,20 @@ class IngestFiles:
         open_file = open(file_path, encoding='utf-8-sig')
         file_connections = {
             # Remove BOM with encoding='utf-8-sig'
-            'text/csv': self.open_csv(open_file),
+            'text/csv': self.open_csv,
             'text/plain': open_file,
             'text/tab-separated-values': self.open_tsv,
-            'pandas': self.open_pandas(open_file, file_path)
+            'pandas': self.open_pandas
         }
         # Check file type
         file_type = self.get_file_type(file_path)[0]
         # See if file type is allowed
         if file_type in self.allowed_file_types:
             # Return file object and type
-            if open_as is None:
-                return file_type, file_connections.get(file_type)
+            if open_as == None:
+                return file_type, file_connections.get(file_type)(open_file)
             else:
-                return file_type, file_connections.get(open_as)
+                return file_type, file_connections.get(open_as)(open_file, file_path)
         else:
             raise ValueError(f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}")
 
@@ -84,7 +85,6 @@ class IngestFiles:
 
         self.file = pd.merge(second_file, first_df,
                              on=[('NAME', 'TYPE')])
-        print(self.file)
 
     def open_csv(self, opened_file_object):
         """Opens csv file"""
@@ -92,7 +92,7 @@ class IngestFiles:
                              delimiter=',',
                              quoting=csv.QUOTE_ALL,
                              skipinitialspace=True)
-        return csv.DictReader(opened_file_object, dialect='csvDialect')
+        return csv.reader(opened_file_object, dialect='csvDialect')
 
     def open_tsv(self, opened_file_object):
         """Opens tsv file"""
@@ -100,7 +100,7 @@ class IngestFiles:
                              delimiter='\t',
                              quoting=csv.QUOTE_ALL,
                              skipinitialspace=True)
-        return csv.DictReader(opened_file_object, dialect='tsvDialect')
+        return csv.reader(opened_file_object, dialect='tsvDialect')
 
     def extract_csv_or_tsv(self):
         """Extracts all rows from a csv or tsv file"""
@@ -131,6 +131,7 @@ class IngestFiles:
         """Returns a single line of txt, csv or tsv files"""
 
         next_row = next(self.file)
+        print(next_row)
         # Increase counter for line extracted
         if increase_line_count:
             self.amount_of_lines += 1
