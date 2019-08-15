@@ -30,8 +30,8 @@ class SubSample(IngestFiles):
         numeric_columns = self.file.xs("numeric", axis=1, level=1,
                                        drop_level=False).columns.tolist()
         self.file[numeric_columns] = self.file[numeric_columns].round(2)
-        group_columns = numeric_columns = self.file.xs("group", axis=1, level=1,
-                                                       drop_level=False).columns.tolist()
+        group_columns = self.file.xs("group", axis=1, level=1,
+                                     drop_level=False).columns.tolist()
         self.file[group_columns] = self.file[group_columns].astype(str)
 
     def prepare_cell_metadata(self):
@@ -73,7 +73,7 @@ class SubSample(IngestFiles):
     def subsample(self):
         """Subsamples groups accross a given file"""
         sample_sizes = [
-            sample_size for sample_size in self.SUBSAMPLE_THRESHOLDS if sample_size <= len(self.file.index)]
+            sample_size for sample_size in self.SUBSAMPLE_THRESHOLDS if sample_size >= len(self.file.index)]
         for bins in map(self.bin, self.columns):
             # (name of current collumn)
             annotation_name = bins[1]

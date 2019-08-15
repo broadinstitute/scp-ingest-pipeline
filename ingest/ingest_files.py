@@ -19,7 +19,6 @@ class IngestFiles:
             raise IOError(f"File '{file_path}' not found")
         self.allowed_file_types = allowed_file_types
         self.file_type, self.file = self.open_file(file_path, open_as)
-        print(self.file_type)
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
         self.is_MTX = is_MTX
@@ -131,7 +130,6 @@ class IngestFiles:
         """Returns a single line of txt, csv or tsv files"""
 
         next_row = next(self.file)
-        print(next_row)
         # Increase counter for line extracted
         if increase_line_count:
             self.amount_of_lines += 1
