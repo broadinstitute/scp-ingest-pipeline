@@ -19,13 +19,14 @@ class SubSample(IngestFiles):
     def __init__(self, *, cluster_file=None, cell_metadata_file=None):
         IngestFiles.__init__(self,
                              cluster_file, self.ALLOWED_FILE_TYPES, open_as='pandas')
-
         self.dermine_coordinates_and_cell_names()
         self.cell_metadata_file = cell_metadata_file
         self.correct_annot_types()
-        print(self.columns)
 
     def correct_annot_types(self):
+        """Ensures that numeric columns are rounded to 2 decimals points and
+        group annotations are strings
+        """
         numeric_columns = self.file.xs("numeric", axis=1, level=1,
                                        drop_level=False).columns.tolist()
         self.file[numeric_columns] = self.file[numeric_columns].round(2)
@@ -34,11 +35,13 @@ class SubSample(IngestFiles):
         self.file[group_columns] = self.file[group_columns].astype(str)
 
     def prepare_cell_metadata(self):
+        """ Does an inner join on cell and cluster file """
         if self.cell_metadata_file is not None:
             self.merge_df(self.cell_metadata_file,
                           self.file[self.coordinates_and_cell_names])
 
     def dermine_coordinates_and_cell_names(self):
+        """Finds column names for coordinates, annotations, and cell names"""
         self.coordinates_and_cell_names = [annot[0] for annot in self.file.columns if annot[0].lower() in (
             'z', 'y', 'x', 'name')]
         # annotation column names
@@ -46,6 +49,7 @@ class SubSample(IngestFiles):
             'z', 'y', 'x', 'name')]
 
     def bin(self, annotation):
+        """Creates bins for a givien group"""
         bin = {}
         if 'group' in annotation:
             # get unique values in column
@@ -57,7 +61,7 @@ class SubSample(IngestFiles):
                 bin[col_val] = subset[self.coordinates_and_cell_names]
         else:
             columns = copy.copy(self.coordinates_and_cell_names)
-            # cordinates, cell names and annotation name
+            # coordinates, cell names and annotation name
             columns.append(annotation[0])
             subset = self.file[columns].copy()
             subset.sort_values(by=[annotation], inplace=True)
@@ -67,6 +71,7 @@ class SubSample(IngestFiles):
         return bin, annotation
 
     def subsample(self):
+        """Subsamples groups accross a given file"""
         sample_sizes = [
             sample_size for sample_size in self.SUBSAMPLE_THRESHOLDS if sample_size <= len(self.file.index)]
         for bins in map(self.bin, self.columns):
@@ -107,7 +112,8 @@ class SubSample(IngestFiles):
             yield (points, annotation_name, sample_size)
 
     def return_sorted_bin(self, bin, annot_name):
-        # Sorts binned groups in order of size from smallest to largest
+        """Sorts binned groups in order of size from smallest to largest for group annotations """
+        #
         if('group' in annot_name):
             return sorted(bin.items(), key=lambda x: len(x[1]))
         else:

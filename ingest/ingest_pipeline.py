@@ -203,26 +203,27 @@ class IngestPipeline(object):
         self.load_cluster_files()
 
     def subsample(self):
+        """Method for subsampling cluster and metadata files"""
+
         subsample = SubSample(
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file)
 
-        def create_cluster_subdoc():
+        def create_cluster_subdoc(scope):
             for subdoc in subsample.subsample():
-                print(subdoc)
                 annot_name = subdoc[1][0]
                 annot_type = subdoc[1][1]
                 sample_size = subdoc[2]
                 for key_value in subdoc[0].items():
                     Clusters.create_cluster_subdoc(
                         key_value[0],  annot_type, value=key_value[1],
-                        subsample_annotation=f"{annot_name}--{annot_type}--cluster",
+                        subsample_annotation=f"{annot_name}--{annot_type}--{scope}",
                         subsample_threshold=sample_size)
 
-        create_cluster_subdoc()
+        create_cluster_subdoc('cluster')
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
             subsample.dermine_coordinates_and_cell_names()
-            create_cluster_subdoc()
+            create_cluster_subdoc('study')
 
 
 def create_parser():

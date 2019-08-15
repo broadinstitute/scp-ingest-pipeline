@@ -68,6 +68,7 @@ class IngestFiles:
         return mimetypes.guess_type(file_path)
 
     def open_pandas(self, opened_file, file_path):
+        """Opens file as a panda """
         opened_file.readline()
         meta_data = opened_file.readline()
         if meta_data.find('\t') != -1:
@@ -78,6 +79,7 @@ class IngestFiles:
             raise ValueError('File must be tab or comma delimited')
 
     def merge_df(self, file, first_df):
+        """ Does an inner join on a file """
         second_file = self.open_file(file, open_as='pandas')[1]
 
         self.file = pd.merge(second_file, first_df,
