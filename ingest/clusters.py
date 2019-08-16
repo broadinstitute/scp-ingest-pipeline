@@ -24,13 +24,12 @@ class Clusters(IngestFiles):
         self.top_level_doc = {
             'cluster_type': '3d' if self.has_z else '2d',
             'name': name,
+            'cell_annotations': ''
             'study_accession': study_accession,
             'domain_ranges': domain_ranges,
             'points': self.amount_of_lines,
         }
         self.cluster_subdocs = self.return_cluster_subdocs(self.header)
-        # sample size needs to be smaller than amount of points
-        # for each cell annotations if there are any
 
     def update_points(self):
         self.top_level_doc['points'] = self.amount_of_lines
@@ -58,7 +57,7 @@ class Clusters(IngestFiles):
         """Creates cluster_subdocs"""
         cluster_subdocs = {}
         for annot_name in self.header:
-            value = annot_name.casefold()
+            value = annot_name.lower()
             if value == 'name':
                 cluster_subdocs[value] = self.create_cluster_subdoc(
                     'text', 'cells')
@@ -84,6 +83,8 @@ class Clusters(IngestFiles):
         }
 
     def can_subsample(self):
+        # TODO add more validations
+
         if self.has_z:
             return len(self.header) > 4
         else:
