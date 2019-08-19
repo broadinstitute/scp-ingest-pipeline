@@ -14,15 +14,14 @@ from itertools import islice
 from typing import *
 
 import numpy as np
-
-from ingest_files import IngestFiles
 from gene_data_model import Gene
+from ingest_files import IngestFiles
 
 
 class Dense(IngestFiles):
     def __init__(self, file_path):
         self.ALLOWED_FILE_TYPES = ['text/csv',
-                          'text/plain', 'text/tab-separated-values']
+                                   'text/plain', 'text/tab-separated-values']
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
         self.cell_names = self.file.readline().replace('"', '').split(',')[1:]
 

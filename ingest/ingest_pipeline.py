@@ -14,10 +14,10 @@ EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt
+python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv
+python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
 
 # Ingest dense file
 python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
@@ -354,10 +354,10 @@ def main() -> None:
     if 'matrix_file' in arguments:
         ingest.ingest_expression()
     elif 'ingest_cell_metadata' in arguments:
-        if arguments[ingest_cell_metadata]:
+        if arguments['ingest_cell_metadata']:
             ingest.ingest_cell_metadata()
     elif 'ingest_cluster' in arguments:
-        if arguments[ingest_cluster]:
+        if arguments['ingest_cluster']:
             ingest.ingest_cluster()
     elif 'subsample' in arguments:
         if arguments['subsample']:
