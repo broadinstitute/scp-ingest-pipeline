@@ -13,12 +13,12 @@ class SubSample(IngestFiles):
     ALLOWED_FILE_TYPES = ['text/csv',
                           'text/plain', 'text/tab-separated-values']
     MAX_THRESHOLD = 100_000
-    SUBSAMPLE_THRESHOLDS = [MAX_THRESHOLD, 10_000, 1_000]
+    SUBSAMPLE_THRESHOLDS = [MAX_THRESHOLD, 20_000, 10_000, 1_000]
 
     def __init__(self, *, cluster_file=None, cell_metadata_file=None):
         IngestFiles.__init__(self,
-                             cluster_file, self.ALLOWED_FILE_TYPES, open_as='pandas')
-        self.dermine_coordinates_and_cell_names()
+                             cluster_file, self.ALLOWED_FILE_TYPES, open_as='dataframe')
+        self.determine_coordinates_and_cell_names()
         self.cell_metadata_file = cell_metadata_file
         self.correct_annot_types()
 
@@ -26,6 +26,7 @@ class SubSample(IngestFiles):
         """Ensures that numeric columns are rounded to 3 decimals points and
         group annotations are strings
         """
+        # TODO: implement a case insenitivite solution
         numeric_columns = self.file.xs("numeric", axis=1, level=1,
                                        drop_level=False).columns.tolist()
         self.file[numeric_columns] = self.file[numeric_columns].round(3)
@@ -39,7 +40,7 @@ class SubSample(IngestFiles):
             self.merge_df(self.cell_metadata_file,
                           self.file[self.coordinates_and_cell_names])
 
-    def dermine_coordinates_and_cell_names(self):
+    def determine_coordinates_and_cell_names(self):
         """Finds column names for coordinates, annotations, and cell names"""
         self.coordinates_and_cell_names = [annot[0] for annot in self.file.columns if annot[0].lower() in (
             'z', 'y', 'x', 'name')]
@@ -48,7 +49,7 @@ class SubSample(IngestFiles):
             'z', 'y', 'x', 'name')]
 
     def bin(self, annotation: Tuple[str, str]):
-        """Creates bins for a givien group
+        """Creates bins for a given group
 
         Args:
             annotation: Tuple[str, str]
@@ -83,12 +84,13 @@ class SubSample(IngestFiles):
         return bin, annotation
 
     def subsample(self):
-        """Subsamples groups accross a given file"""
+        """Subsamples groups across a given file"""
         sample_sizes = [
-            sample_size for sample_size in self.SUBSAMPLE_THRESHOLDS if sample_size >= len(self.file.index)]
+            sample_size for sample_size in self.SUBSAMPLE_THRESHOLDS if sample_size < len(self.file.index)]
         for bins in map(self.bin, self.columns):
-            # (name of current collumn)
+            # (name of current column)
             annotation_name = bins[1]
+            # Holds bins for annotation
             # Looks like {"Unique value #1" : dataframe, "Unique value #2": dataframe,...}
             anotation_dict = bins[0]
             for sample_size in sample_sizes:
@@ -101,7 +103,7 @@ class SubSample(IngestFiles):
                 for bin in self.return_sorted_bin(anotation_dict, annotation_name):
                     cells_left = sample_size
                     amount_of_rows = len(bin[1].index)
-                    # If the amounf of sampled values is larger
+                    # If the amount of sampled values is larger
                     # than the whole array, take the whole array
                     if num_per_group > amount_of_rows:
                         amount_picked_rows = amount_of_rows
