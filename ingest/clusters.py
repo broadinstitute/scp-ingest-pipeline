@@ -24,7 +24,7 @@ class Clusters(IngestFiles):
         self.top_level_doc = {
             'name': name,
             'cluster_type': '3d' if self.has_z else '2d',
-            'cell_annotations', [],
+            'cell_annotations': [],
             'study_accession': study_accession,
             'source_file_type': 'cluster',
             'domain_ranges': domain_ranges,
