@@ -11,3 +11,4 @@ __pycache__/
 *.log
 .DS_Store
 .coverage
+htmlcov/

@@ -22,9 +22,8 @@ python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/dat
 # Ingest dense file
 python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
-# Subsample cluster file
-python ingest_pipeline.py ingest_subsample --cluster-file ../tests/data/cluster_ex.txt --subsample True
-
+# Subsample cluster and metadata file
+python ingest_pipeline.py ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample True
 
 # Ingest mtx files
 python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
@@ -90,16 +89,10 @@ class IngestPipeline(object):
             return file_connections.get(file_type)(file_path)
 
     def close_matrix(self):
-        """Closes connection to file.
-
-    Args:
-        None
-    Returns:
-        None
-    """
+        """Closes connection to file."""
         self.matrix.close()
 
-    def load_expression_data(self, expression_model: Gene) -> None:
+    def load_expression_data(self, list_of_expression_models: List[Gene]) -> None:
         """Loads expression data into Firestore.
 
     Args:
@@ -110,30 +103,30 @@ class IngestPipeline(object):
         None
     """
 
-        collection_name = expression_model.COLLECTION_NAME
-        batch = self.db.batch()
-        doc_ref = self.db.collection(collection_name).document()
-        batch.set(doc_ref, expression_model.top_level_doc)
-        i = 0
-        if expression_model.has_subcollection_data():
-            try:
-                print(f'Ingesting {expression_model.name}')
-                subcollection_name = expression_model.SUBCOLLECTION_NAME
-                doc_ref_sub = doc_ref.collection(
-                    subcollection_name).document()
-                print(f'Length of scores is: {len(expression_model.expression_scores)}')
-                doc_ref_sub.set(expression_model.subdocument)
-            except exceptions.InvalidArgument as e:
-                # Catches invalid argument exception, which error "Maximum
-                # document size" falls under
-                print(e)
-                batch = self.db.batch()
-                for subdoc in expression_model.chunk_gene_expression_documents(doc_ref_sub.id, doc_ref_sub._document_path):
-                    print({i})
-                    batch.set(doc_ref_sub, subdoc)
-                    i += 1
+        # for expression_model in list_of_expression_models:
+        for expression_model in list_of_expression_models:
+            collection_name = expression_model.get_collection_name()
+            doc_ref = self.db.collection(collection_name).document()
+            doc_ref.set(expression_model.top_level_doc)
+            if expression_model.has_subcollection_data():
+                try:
+                    subcollection_name = expression_model.get_subcollection_name()
+                    doc_ref_sub = doc_ref.collection(
+                        subcollection_name).document()
+                    doc_ref_sub.set(expression_model.subdocument)
+                except exceptions.InvalidArgument as e:
+                    # Catches invalid argument exception, which error "Maximum
+                    # document size" falls under
+                    print(e)
+                    batch = self.db.batch()
+                    for subdoc in expression_model.chunk_gene_expression_documents():
 
-                batch.commit()
+                        subcollection_name = expression_model.get_subcollection_name()
+                        doc_ref_sub = doc_ref.collection(
+                            subcollection_name).document()
+                        batch.set(doc_ref_sub, subdoc)
+
+                    batch.commit()
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
@@ -178,13 +171,10 @@ class IngestPipeline(object):
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
         else:
-            while True:
-                row = self.matrix.extract()
-                if row == None:
-                    break
+            for data in self.matrix.extract():
                 transformed_data = self.matrix.transform_expression_data_by_gene(
-                    row)
-                self.load_expression_data(transformed_data)
+                    *data)
+        self.load_expression_data(transformed_data)
         self.close_matrix()
 
     def ingest_cell_metadata(self):
@@ -207,10 +197,12 @@ class IngestPipeline(object):
         self.load_cluster_files()
 
     def subsample(self):
+        """Method for subsampling cluster and metadata files"""
+
         subsample = SubSample(
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file)
 
-        def create_cluster_subdoc():
+        def create_cluster_subdoc(scope):
             for subdoc in subsample.subsample():
                 print(subdoc)
                 annot_name = subdoc[1][0]
@@ -219,13 +211,14 @@ class IngestPipeline(object):
                 for key_value in subdoc[0].items():
                     Clusters.create_cluster_subdoc(
                         key_value[0],  annot_type, value=key_value[1],
-                        subsample_annotation=f"{annot_name}--{annot_type}--cluster",
+                        subsample_annotation=f"{annot_name}--{annot_type}--{scope}",
                         subsample_threshold=sample_size)
 
-        # create_cluster_subdoc()
+        create_cluster_subdoc('cluster')
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
-            # create_cluster_subdoc()
+            subsample.dermine_coordinates_and_cell_names()
+            create_cluster_subdoc('study')
 
 
 def create_parser():
@@ -278,6 +271,10 @@ def create_parser():
                                                   ' files are being ingested')
     parser_ingest_cluster.add_argument('--cluster-file',
                                        help='Path to cluster files')
+    parser_ingest_cluster.add_argument('--ingest-cluster-file', required=True,
+                                       choices=['True', 'False'],
+                                       help='Indicates that cluster  '
+                                       'file should be ingested')
 
     # Parser ingesting cell metadata files
     parser_cell_metadata = subparsers.add_parser('ingest_cell_metadata',
@@ -288,6 +285,8 @@ def create_parser():
                                       help='Absolute or relative path to '
                                       'cell metadata file.')
     parser_cell_metadata.add_argument('--ingest-cell-metadata', required=True,
+
+                                      choices=['True', 'False'],
                                       help='Indicates that subsampliing '
                                       'functionality should be invoked')
 
@@ -298,7 +297,7 @@ def create_parser():
     parser_cluster.add_argument('--cluster-file', required=True,
                                 help='Absolute or relative path to '
                                 'cluster file.')
-    parser_cluster.add_argument('--ingest_cluster', required=True, choices=['True'],
+    parser_cluster.add_argument('--ingest_cluster', required=True,
                                 help='Indicates that subsampliing '
                                 'functionality should be invoked')
 
@@ -355,10 +354,10 @@ def main() -> None:
     if 'matrix_file' in arguments:
         ingest.ingest_expression()
     elif 'ingest_cell_metadata' in arguments:
-        if arguments.ingest_cell_metadata:
+        if arguments[ingest_cell_metadata]:
             ingest.ingest_cell_metadata()
     elif 'ingest_cluster' in arguments:
-        if arguments.ingest_cluster:
+        if arguments[ingest_cluster]:
             ingest.ingest_cluster()
     elif 'subsample' in arguments:
         if arguments['subsample']:

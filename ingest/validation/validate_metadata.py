@@ -17,7 +17,6 @@ import argparse
 import json
 from collections import defaultdict
 import logging
-import ast
 import sys
 
 import jsonschema
@@ -58,7 +57,8 @@ def validate_schema(json):
     """Check validity of metadata convention as JSON schema.
 
     :param schemafile: metadata convention JSON file
-    :return: jsonschema validator object using input convention
+    :return: if valid, jsonschema validator object using input convention
+                or returns None
     """
 
     try:
@@ -66,17 +66,20 @@ def validate_schema(json):
         valid_schema = jsonschema.Draft7Validator(json)
         return valid_schema
     except jsonschema.SchemaError as e:
+        ### save this output as part of error output
         print('Input JSON is invalid as jsonschema;', e)
         return None
 
 
 def extract_numeric_headers(metadata):
-    """
+    """Find metadata headers of type numeric.
 
-    REQUIRES if metadata_valid:
+    ASSUMES metadata.validate_format() == True
+    If the file headers are improperly formatted, extract_numeric_headers
+    may not be able to correctly identify the headers intended to be numeric
 
     :param metadata: cell metadata object
-    :return: list of metadata headers of type numeric
+    list of numeric-type metadata headers at metadata.type['numeric_headers']
     """
     logger.debug('Begin: extract_numeric_headers')
     for index, mtype in enumerate(metadata.metadata_types):
@@ -85,15 +88,14 @@ def extract_numeric_headers(metadata):
     return
 
 
-def extract_convention_types(convention):
-    """
+def extract_convention_types(convention, metadata):
+    """Populates metadata.type with property type from metadata convention
 
     :param convention: dict representation of metadata convention
-    :return: list of metadata headers of type numeric
+    :param metadata: cell metadata object
     """
     logger.debug('Begin: extract_numeric_from_convention')
-    ### setup of metadata.type['convention']['ontology'] has onotology labels
-    ### why does the assignment below work? I didn't pass the metadata object
+    # setup of metadata.type['convention']['ontology'] has onotology labels
     metadata.type['convention'] = defaultdict(list)
     for k in convention['properties'].keys():
         if convention['properties'][k]['type'] == 'number':
@@ -110,6 +112,8 @@ def extract_convention_types(convention):
 
 
 def merge_numerics(metadata):
+    """Add numeric headers from metadata file to appropriate metadata.fype
+    """
     logger.debug('Begin: merge_numerics')
     metadata.type['floats'] = metadata.type['convention']['number'][:]
     for n in metadata.type['numeric_headers']:
@@ -120,7 +124,40 @@ def merge_numerics(metadata):
     return
 
 
+def list_duplicates(cells):
+    """Find duplicates in list for detailed reporting
+    """
+    # reference https://stackoverflow.com/questions/9835762
+    seen = set()
+    # save add function to avoid repeated lookups
+    seen_add = seen.add
+    # list comprehension below chosen for computational efficiency
+    # adds all new elements to seen and all other to seen_twice
+    # "or" allows seen_add(x) evaluation only if x is not in seen
+    seen_twice = set(x for x in cells if x in seen or seen_add(x))
+    return list(seen_twice)
+
+
+def validate_cells_unique(metadata):
+    """Check all CellID are unique.
+
+    :return: boolean   True if valid, False otherwise
+    """
+    valid = False
+    if len(metadata.cells) == len(set(metadata.cells)):
+        valid = True
+    else:
+        dups = list_duplicates(metadata.cells)
+        metadata.errors['format'].append(
+            'Error:  Duplicate CellID(s) in metadata file:'
+            f' {", ".join(map(str, dups))}'
+        )
+    return valid
+
+
 def collect_ontology_data(data, metadata):
+    """Collect unique ontology IDs for ontology validation
+    """
     ### function is not yet working, fix extract_convention_types
     logger.debug('Begin: collect_ontology_data')
     local_errors = set()
@@ -151,13 +188,14 @@ def process_metadata_row(metadata, convention, line):
     # linter complaining about complexity index, suggestions welcomed
     logger.debug('Begin: process_metadata_input')
     extract_numeric_headers(metadata)
-    extract_convention_types(convention)
+    extract_convention_types(convention, metadata)
     merge_numerics(metadata)
     metadata.headers[0] = 'CellID'
     keys = metadata.headers
-    values = line.rstrip('\n').split('\t')
-    row_info = dict(zip(keys, values))
+    row_info = dict(zip(keys, line))
     for k, v in row_info.items():
+        if not v:
+            row_info[k] = None
         if k in metadata.type['convention']['integer']:
             try:
                 row_info[k] = int(v)
@@ -174,7 +212,7 @@ def process_metadata_row(metadata, convention, line):
                 )
         elif k in metadata.type['convention']['array']:
             try:
-                row_info[k] = ast.literal_eval(v)
+                row_info[k] = v.split(',')
             except ValueError as e:
                 print(
                     'Warning: Issue with coercion based on type declaration', e
@@ -197,12 +235,18 @@ def process_metadata_content(metadata, convention):
     js_errors = defaultdict(list)
     schema = validate_schema(convention)
     if schema:
-        for chunk in metadata.extract_txt():
-            row = process_metadata_row(metadata, convention, chunk)
+        line = metadata.extract()
+        while line:
+            # print('line:', line)
+            row = process_metadata_row(metadata, convention, line)
+            # print('row:', row)
+            metadata.cells.append(row['CellID'])
             collect_ontology_data(row, metadata)
             for error in schema.iter_errors(row):
                 js_errors[error.message].append(row['CellID'])
+            line = metadata.extract()
         metadata.errors['values'] = js_errors
+        validate_cells_unique(metadata)
         return
     else:
         print('Validation failed: Invalid metadata convention')
@@ -223,19 +267,26 @@ def print_collected_ontology_data(metadata):
 
 
 def report_errors(metadata):
+    """Report errors in error object
+
+    :param metadata: cell metadata object
+    :return: True if errors are reported, False if no errors to report
+    """
     logger.debug('Begin: report_errors')
-    no_errors = True
+    errors = False
     for k, v in metadata.errors.items():
         if k == 'format' and v:
             print('Metadata format errors:', v)
-            no_errors = False
+            errors = True
         if k == 'values' and v:
             print('Non-ontology metadata errors:')
             for error, cells in v.items():
-                print(error, '[Error count:', len(cells), ']')
-                no_errors = False
-    if no_errors:
+                print(error, '[ Error count:', len(cells), ']')
+                errors = True
+    if not errors:
+        ### deal with this print statement
         print('No errors detected in input metadata file')
+    return errors
 
 
 # ToDo
@@ -276,8 +327,8 @@ if __name__ == '__main__':
     filetsv = args.input_metadata
     metadata = CellMetadata(filetsv)
     print('Validating', filetsv)
-    metadata_valid = metadata.validate_format()
-    if metadata_valid:
+    format_valid = metadata.validate_format()
+    if format_valid:
         process_metadata_content(metadata, convention)
     report_errors(metadata)
 #    print_collected_ontology_data(metadata)
