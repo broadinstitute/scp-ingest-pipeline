@@ -1,11 +1,11 @@
-import json
 import sys
 import unittest
-
-from validation.validate_metadata import *
+import json
 
 sys.path.append('../ingest')
 sys.path.append('../ingest/validation')
+
+from validate_metadata import *
 
 
 class TestValidateMetadata(unittest.TestCase):
@@ -19,8 +19,8 @@ class TestValidateMetadata(unittest.TestCase):
         metadata.validate_format()
         return (metadata, convention)
 
-    # def teardown_metadata(self, metadata):
-    #     metadata.file_handle.close()
+    def teardown_metadata(self, metadata):
+        metadata.file_handle.close()
 
     def test_header_format(self):
         """Header rows of metadata file should conform to standard
@@ -65,8 +65,8 @@ class TestValidateMetadata(unittest.TestCase):
             report_errors(metadata),
             'Invalid metadata content should report errors'
         )
-        #
-        # self.teardown_metadata(metadata)
+
+        self.teardown_metadata(metadata)
 
     def test_convention_content(self):
         """Metadata convention should be valid jsonschema
@@ -81,7 +81,7 @@ class TestValidateMetadata(unittest.TestCase):
             validate_schema(convention),
             'Invalid metadata schema should be detected'
         )
-        # self.teardown_metadata(metadata)
+        self.teardown_metadata(metadata)
 
     def test_valid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
@@ -102,7 +102,7 @@ class TestValidateMetadata(unittest.TestCase):
             report_errors(metadata),
             'Valid metadata content should not elicit error'
         )
-        # self.teardown_metadata(metadata)
+        self.teardown_metadata(metadata)
 
     def test_invalid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
@@ -142,7 +142,7 @@ class TestValidateMetadata(unittest.TestCase):
             'Expected duplicate cellID error does not match reference'
         )
 
-        # self.teardown_metadata(metadata)
+        self.teardown_metadata(metadata)
 
 
 if __name__ == '__main__':
