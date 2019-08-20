@@ -23,10 +23,8 @@ class CellMetadata(IngestFiles):
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
         self.headers = self.get_next_line(
             increase_line_count=False)
-        print(self.headers)
         self.metadata_types = self.get_next_line(
             increase_line_count=False)
-        print(self.metadata_types)
         # unique values for group-based annotations
         self.unique_values = []
         self.cell_names = []
@@ -37,7 +35,7 @@ class CellMetadata(IngestFiles):
         self.errors = defaultdict(list)
         self.ontology = defaultdict(lambda: defaultdict(set))
         self.type = defaultdict(list)
-        self.cells =[]
+        self.cells = []
 
     def transform(self, row: List[str]) -> None:
         """ Add data from cell metadata files into data model"""

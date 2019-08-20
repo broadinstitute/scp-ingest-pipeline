@@ -134,6 +134,7 @@ class IngestPipeline(object):
         collection_name = self.cell_metadata.get_collection_name()
         subcollection_name = self.cell_metadata.get_subcollection_name()
         for annotation in self.cell_metadata.top_level_doc.keys():
+            print(self.cell_metadata.top_level_doc[annotation])
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(self.cell_metadata.top_level_doc[annotation])
             try:
