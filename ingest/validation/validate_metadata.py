@@ -15,14 +15,14 @@ $ validate_metadata.py AMC_v0.8.json metadata_test.tsv
 
 import argparse
 import json
-from collections import defaultdict
 import logging
 import sys
+from collections import defaultdict
 
 import jsonschema
+from cell_metadata import *
 
 sys.path.append('..')
-from cell_metadata import *
 
 # ToDo set up parameters to adjust log levels
 #  logging.basicConfig(level=logging.INFO, filename='app.log', filemode='w',
@@ -66,7 +66,7 @@ def validate_schema(json):
         valid_schema = jsonschema.Draft7Validator(json)
         return valid_schema
     except jsonschema.SchemaError as e:
-        ### save this output as part of error output
+        # save this output as part of error output
         print('Input JSON is invalid as jsonschema;', e)
         return None
 
@@ -158,7 +158,7 @@ def validate_cells_unique(metadata):
 def collect_ontology_data(data, metadata):
     """Collect unique ontology IDs for ontology validation
     """
-    ### function is not yet working, fix extract_convention_types
+    # function is not yet working, fix extract_convention_types
     logger.debug('Begin: collect_ontology_data')
     local_errors = set()
     for entry in data.keys():
@@ -169,11 +169,11 @@ def collect_ontology_data(data, metadata):
         try:
             metadata.ontology[entry]['label'].add(data[label_key])
         except KeyError:
-            ### prefer to capture below to errors
+            # prefer to capture below to errors
             msg = 'Warning: missing key' + label_key
             local_errors.add(msg)
         except UnboundLocalError:
-            ### ToDo - figure out best practice for this
+            # ToDo - figure out best practice for this
             local_errors.add('UnboundLocalError - needs to be addressed')
     return
 
@@ -284,7 +284,7 @@ def report_errors(metadata):
                 print(error, '[ Error count:', len(cells), ']')
                 errors = True
     if not errors:
-        ### deal with this print statement
+        # deal with this print statement
         print('No errors detected in input metadata file')
     return errors
 

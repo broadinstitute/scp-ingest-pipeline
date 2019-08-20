@@ -1,9 +1,7 @@
 """Module for ingesting cell metadata files
-
 DESCRIPTION
 Module provides extract and transform functions for cell metadata files.
 Text, CSV, and TSV files are supported.
-
 PREREQUISITES
 Must have python 3.6 or higher.
 """
@@ -17,22 +15,22 @@ from ingest_files import IngestFiles
 
 
 class CellMetadata(IngestFiles):
-    ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
+    ALLOWED_FILE_TYPES = ['text/csv',
+                          'text/plain', 'text/tab-separated-values']
 
-    def __init__(
-        self, file_path, file_id: str = None, study_accession: str = None
-    ):
+    def __init__(self, file_path, file_id: str = None, study_accession: str = None):
 
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
-        self.headers = self.get_next_line(increase_line_count=False)
-        self.metadata_types = self.get_next_line(increase_line_count=False)
+        self.headers = self.get_next_line(
+            increase_line_count=False)
+        self.metadata_types = self.get_next_line(
+            increase_line_count=False)
         # unique values for group-based annotations
         self.unique_values = []
         self.cell_names = []
         self.annotation_type = ['group', 'numeric']
         self.top_level_doc = self.create_documents(
-            file_path, file_id, study_accession
-        )
+            file_path, file_id, study_accession)
         self.data_subcollection = self.create_subdocuments()
         self.errors = defaultdict(list)
         self.ontology = defaultdict(lambda: defaultdict(set))
@@ -64,16 +62,14 @@ class CellMetadata(IngestFiles):
         # Each annotation value has a top level document
         for idx, value in enumerate(self.headers[1:]):
             # Copy document model so memory references are different
-            copy_of_doc_model = copy.copy(
-                {
-                    'name': value,
-                    'study_accession': study_accession,
-                    'source_file_name': file_path.strip("."),
-                    'source_file_type': 'metadata',
-                    'annotation_type': self.metadata_types[idx + 1],
-                    'file_id': file_id,
-                }
-            )
+            copy_of_doc_model = copy.copy({
+                'name': value,
+                'study_accession': study_accession,
+                'source_file_name': file_path.strip("."),
+                'source_file_type': 'metadata',
+                'annotation_type': self.metadata_types[idx + 1],
+                'file_id': file_id,
+            })
             documents[value] = copy_of_doc_model
         return documents
 
@@ -82,12 +78,10 @@ class CellMetadata(IngestFiles):
         sub_documents = {}
         for value in self.headers[1:]:
             # Copy subdocument model so memory references are different
-            copy_of_subdoc_model = copy.copy(
-                {
-                    'cell_names': self.cell_names,
-                    'values': []
-                }
-            )
+            copy_of_subdoc_model = copy.copy({
+                'cell_names': self.cell_names,
+                'values': []
+            })
             sub_documents[value] = copy_of_subdoc_model
         return sub_documents
 
@@ -101,8 +95,7 @@ class CellMetadata(IngestFiles):
 
     def validate_header_keyword(self):
         """Check metadata header row starts with NAME (case-insensitive).
-
-        :return: boolean   True if valid, False otherwise
+            :return: boolean   True if valid, False otherwise
         """
         valid = False
         if self.headers[0].casefold() == 'NAME'.casefold():
@@ -122,7 +115,6 @@ class CellMetadata(IngestFiles):
 
     def validate_unique_header(self):
         """Check all metadata header names are unique.
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -136,7 +128,6 @@ class CellMetadata(IngestFiles):
 
     def validate_type_keyword(self):
         """Check metadata second row starts with TYPE (case-insensitive).
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -158,7 +149,6 @@ class CellMetadata(IngestFiles):
 
     def validate_type_annotations(self):
         """Check metadata second row contains only 'group' or 'numeric'.
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -188,7 +178,6 @@ class CellMetadata(IngestFiles):
 
     def validate_against_header_count(self):
         """Metadata header and type counts should match.
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
