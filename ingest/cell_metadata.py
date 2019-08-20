@@ -23,6 +23,7 @@ class CellMetadata(IngestFiles):
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
         self.headers = self.get_next_line(
             increase_line_count=False)
+        print(self.headers)
         self.metadata_types = self.get_next_line(
             increase_line_count=False)
         print(self.metadata_types)
@@ -36,7 +37,7 @@ class CellMetadata(IngestFiles):
         self.errors = defaultdict(list)
         self.ontology = defaultdict(lambda: defaultdict(set))
         self.type = defaultdict(list)
-        self.cells = []
+        self.cells =[]
 
     def transform(self, row: List[str]) -> None:
         """ Add data from cell metadata files into data model"""
@@ -96,8 +97,7 @@ class CellMetadata(IngestFiles):
 
     def validate_header_keyword(self):
         """Check metadata header row starts with NAME (case-insensitive).
-
-        :return: boolean   True if valid, False otherwise
+            :return: boolean   True if valid, False otherwise
         """
         valid = False
         if self.headers[0].casefold() == 'NAME'.casefold():
@@ -117,7 +117,6 @@ class CellMetadata(IngestFiles):
 
     def validate_unique_header(self):
         """Check all metadata header names are unique.
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -131,7 +130,6 @@ class CellMetadata(IngestFiles):
 
     def validate_type_keyword(self):
         """Check metadata second row starts with TYPE (case-insensitive).
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -153,7 +151,6 @@ class CellMetadata(IngestFiles):
 
     def validate_type_annotations(self):
         """Check metadata second row contains only 'group' or 'numeric'.
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -183,7 +180,6 @@ class CellMetadata(IngestFiles):
 
     def validate_against_header_count(self):
         """Metadata header and type counts should match.
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False

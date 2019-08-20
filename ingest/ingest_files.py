@@ -69,14 +69,13 @@ class IngestFiles:
         if self.is_remote_file:
             file_path = self.download_from_bucket(file_path)
 
-        # Remove BOM with encoding='utf-8-sig
+        # Remove BOM with encoding ='utf - 8 - sig'
         return open(file_path, encoding='utf-8-sig')
 
     def open_file(self, file_path, open_as=None):
         """ Opens txt, csv, or tsv formatted files"""
-        open_file = open_file = self.resolve_path(file_path)
+        open_file = self.resolve_path(file_path)
         file_connections = {
-            # Remove BOM with encoding='utf-8-sig'
             'text/csv': self.open_csv(open_file),
             'text/plain': open_file,
             'text/tab-separated-values': self.open_tsv(open_file),
@@ -88,11 +87,12 @@ class IngestFiles:
         if file_type in self.allowed_file_types:
             # Return file object and type
             if open_as == None:
-                return file_type, file_connections.get(file_type), open_file
+                return file_type, file_connections.get(file_type),open_file
             else:
-                return file_type, file_connections.get(open_as)(open_file, file_path), open_file
+                return file_type, file_connections.get('dataframe')(open_file, file_path),open_file
         else:
-            raise ValueError(f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}")
+            raise ValueError(
+                f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}")
 
     # Inherited function
     def extract(self):
@@ -117,7 +117,7 @@ class IngestFiles:
         return mimetypes.guess_type(file_path)
 
     def open_pandas(self, opened_file, file_path):
-        """Opens file as a panda """
+        """Opens file as a dataframe """
         opened_file.readline()
         meta_data = opened_file.readline()
         if meta_data.find('\t') != -1:
@@ -128,7 +128,7 @@ class IngestFiles:
             raise ValueError('File must be tab or comma delimited')
 
     def merge_df(self, file, first_df):
-        """ Does an inner join on a file """
+        """ Does an inner join on a dataframe """
         second_file = self.open_file(file, open_as='dataframe')[1]
 
         self.file = pd.merge(second_file, first_df,
