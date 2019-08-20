@@ -1,9 +1,7 @@
 """Module for ingesting cell metadata files
-
 DESCRIPTION
 Module provides extract and transform functions for cell metadata files.
 Text, CSV, and TSV files are supported.
-
 PREREQUISITES
 Must have python 3.6 or higher.
 """
@@ -37,6 +35,7 @@ class CellMetadata(IngestFiles):
         self.errors = defaultdict(list)
         self.ontology = defaultdict(lambda: defaultdict(set))
         self.type = defaultdict(list)
+        self.cells = []
 
     def transform(self, row: List[str]) -> None:
         """ Add data from cell metadata files into data model"""
@@ -96,8 +95,7 @@ class CellMetadata(IngestFiles):
 
     def validate_header_keyword(self):
         """Check metadata header row starts with NAME (case-insensitive).
-
-        :return: boolean   True if valid, False otherwise
+            :return: boolean   True if valid, False otherwise
         """
         valid = False
         if self.headers[0].casefold() == 'NAME'.casefold():
@@ -115,9 +113,21 @@ class CellMetadata(IngestFiles):
             )
         return valid
 
+    def validate_unique_header(self):
+        """Check all metadata header names are unique.
+        :return: boolean   True if valid, False otherwise
+        """
+        valid = False
+        if len(self.headers[1:]) == len(set(self.headers[1:])):
+            valid = True
+        else:
+            self.errors['format'].append(
+                'Error:  Duplicate column headers in metadata file'
+            )
+        return valid
+
     def validate_type_keyword(self):
         """Check metadata second row starts with TYPE (case-insensitive).
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -139,7 +149,6 @@ class CellMetadata(IngestFiles):
 
     def validate_type_annotations(self):
         """Check metadata second row contains only 'group' or 'numeric'.
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -164,7 +173,6 @@ class CellMetadata(IngestFiles):
 
     def validate_against_header_count(self):
         """Metadata header and type counts should match.
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False

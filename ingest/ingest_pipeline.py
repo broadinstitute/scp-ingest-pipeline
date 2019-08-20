@@ -14,16 +14,16 @@ EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt
+python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv
+python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
 
 # Ingest dense file
 python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample True
+python ingest_pipeline.py ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
 python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
@@ -89,10 +89,10 @@ class IngestPipeline(object):
             return file_connections.get(file_type)(file_path)
 
     def close_matrix(self):
-        """Closes connection to file."""
+        """Closes connection to file"""
         self.matrix.close()
 
-    def load_expression_data(self, list_of_expression_models: List[Gene]) -> None:
+    def load_expression_data(self, expression_model: Gene) -> None:
         """Loads expression data into Firestore.
 
     Args:
@@ -103,30 +103,31 @@ class IngestPipeline(object):
         None
     """
 
-        # for expression_model in list_of_expression_models:
-        for expression_model in list_of_expression_models:
-            collection_name = expression_model.get_collection_name()
-            doc_ref = self.db.collection(collection_name).document()
-            doc_ref.set(expression_model.top_level_doc)
-            if expression_model.has_subcollection_data():
-                try:
-                    subcollection_name = expression_model.get_subcollection_name()
-                    doc_ref_sub = doc_ref.collection(
-                        subcollection_name).document()
-                    doc_ref_sub.set(expression_model.subdocument)
-                except exceptions.InvalidArgument as e:
-                    # Catches invalid argument exception, which error "Maximum
-                    # document size" falls under
-                    print(e)
-                    batch = self.db.batch()
-                    for subdoc in expression_model.chunk_gene_expression_documents():
+        collection_name = expression_model.COLLECTION_NAME
+        batch = self.db.batch()
+        doc_ref = self.db.collection(collection_name).document()
+        batch.set(doc_ref, expression_model.top_level_doc)
+        batch.commit()
+        i = 0
+        if expression_model.has_subcollection_data():
+            try:
+                print(f'Ingesting {expression_model.name}')
+                subcollection_name = expression_model.SUBCOLLECTION_NAME
+                doc_ref_sub = doc_ref.collection(
+                    subcollection_name).document()
+                print(f'Length of scores is: {len(expression_model.expression_scores)}')
+                doc_ref_sub.set(expression_model.subdocument)
+            except exceptions.InvalidArgument as e:
+                # Catches invalid argument exception, which error "Maximum
+                # document size" falls under
+                print(e)
+                batch = self.db.batch()
+                for subdoc in expression_model.chunk_gene_expression_documents(doc_ref_sub.id, doc_ref_sub._document_path):
+                    print({i})
+                    batch.set(doc_ref_sub, subdoc)
+                    i += 1
 
-                        subcollection_name = expression_model.get_subcollection_name()
-                        doc_ref_sub = doc_ref.collection(
-                            subcollection_name).document()
-                        batch.set(doc_ref_sub, subdoc)
-
-                    batch.commit()
+                batch.commit()
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
@@ -170,11 +171,15 @@ class IngestPipeline(object):
         if self.gene_file is not None:
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
+            self.load_expression_data(transformed_data)
         else:
-            for data in self.matrix.extract():
+            while True:
+                row = self.matrix.extract()
+                if row == None:
+                    break
                 transformed_data = self.matrix.transform_expression_data_by_gene(
-                    *data)
-        self.load_expression_data(transformed_data)
+                    row)
+                self.load_expression_data(transformed_data)
         self.close_matrix()
 
     def ingest_cell_metadata(self):
@@ -217,7 +222,7 @@ class IngestPipeline(object):
         create_cluster_subdoc('cluster')
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
-            subsample.dermine_coordinates_and_cell_names()
+            subsample.determine_coordinates_and_cell_names()
             create_cluster_subdoc('study')
 
 
@@ -272,7 +277,7 @@ def create_parser():
     parser_ingest_cluster.add_argument('--cluster-file',
                                        help='Path to cluster files')
     parser_ingest_cluster.add_argument('--ingest-cluster-file', required=True,
-                                       choices=['True', 'False'],
+                                       action='store_true',
                                        help='Indicates that cluster  '
                                        'file should be ingested')
 
@@ -285,8 +290,7 @@ def create_parser():
                                       help='Absolute or relative path to '
                                       'cell metadata file.')
     parser_cell_metadata.add_argument('--ingest-cell-metadata', required=True,
-
-                                      choices=['True', 'False'],
+                                      action='store_true',
                                       help='Indicates that subsampliing '
                                       'functionality should be invoked')
 
@@ -297,18 +301,19 @@ def create_parser():
     parser_cluster.add_argument('--cluster-file', required=True,
                                 help='Absolute or relative path to '
                                 'cluster file.')
-    parser_cluster.add_argument('--ingest_cluster', required=True,
-                                help='Indicates that subsampliing '
-                                'functionality should be invoked')
+    parser_cluster.add_argument('--ingest-cluster', required=True,
+                                action='store_true',
+                                help='Indicates that ingest of cluster file '
+                                'should be invoked')
 
     # Parser ingesting cluster files
     parser_subsample = subparsers.add_parser('ingest_subsample',
                                              help='Indicates that subsampling '
                                              'will be initialized')
     parser_subsample.add_argument('--subsample', required=True,
+                                  action='store_true',
                                   help='Indicates that subsampliing functionality'
-                                  ' should be invoked',
-                                  choices=['True', 'False'])
+                                  ' should be invoked')
     parser_subsample.add_argument('--cluster-file', required=True,
                                   help='Absolute or relative path to '
                                   'cluster file.')
@@ -354,10 +359,10 @@ def main() -> None:
     if 'matrix_file' in arguments:
         ingest.ingest_expression()
     elif 'ingest_cell_metadata' in arguments:
-        if arguments[ingest_cell_metadata]:
+        if arguments['ingest_cell_metadata']:
             ingest.ingest_cell_metadata()
     elif 'ingest_cluster' in arguments:
-        if arguments[ingest_cluster]:
+        if arguments['ingest_cluster']:
             ingest.ingest_cluster()
     elif 'subsample' in arguments:
         if arguments['subsample']:
