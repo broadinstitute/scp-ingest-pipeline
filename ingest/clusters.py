@@ -22,9 +22,9 @@ class Clusters(IngestFiles):
         self.source_file_type = 'cluster'
         self.has_z = 'z' in self.header
         self.top_level_doc = {
-            'cluster_type': '3d' if self.has_z else '2d',
             'name': name,
-            'cell_annotations': '',
+            'cluster_type': '3d' if self.has_z else '2d',
+            'cell_annotations': [],
             'study_accession': study_accession,
             'domain_ranges': domain_ranges,
             'points': self.amount_of_lines,
@@ -83,8 +83,7 @@ class Clusters(IngestFiles):
         }
 
     def can_subsample(self):
-        # TODO add more validations
-
+        # TODO: Add more subsample validations
         if self.has_z:
             return len(self.header) > 4
         else:

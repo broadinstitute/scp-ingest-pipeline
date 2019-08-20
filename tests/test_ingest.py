@@ -127,14 +127,9 @@ class IngestTestCase(unittest.TestCase):
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
 
         # Adjust for change needed per mock
-        expected_source_file_name =\
-            'gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt'
-        actual_source_file_name = model['source_file_name'][0]  # Why does app code make this a tuple?
-        self.assertEqual(actual_source_file_name, expected_source_file_name)
-
-        model['source_file_name'] = ('/tests/data/dense_matrix_19_genes_100k_cells.txt',)  # Why does app code make this a tuple?
-        model['subdocument']['source_file_name'] = '/tests/data/dense_matrix_19_genes_100k_cells.txt'
-
+        expected_expression_scores = [0.602, 1.934, 1.161, 0.82]
+        actual_expression_scores = model['expression_scores']  # Why does app code make this a tuple?
+        self.assertEqual(expected_expression_scores, expected_expression_scores)
         self.assertEqual(model, expected_model)
 
     def test_ingest_missing_file(self):

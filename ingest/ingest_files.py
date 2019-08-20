@@ -23,7 +23,8 @@ class IngestFiles:
         self.verify_file_exists(file_path)
 
         self.allowed_file_types = allowed_file_types
-        self.file_type, self.file, self.file_handle = self.open_file(file_path, open_as)
+        self.file_type, self.file, self.file_handle = self.open_file(
+            file_path, open_as)
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
 
@@ -87,9 +88,9 @@ class IngestFiles:
         if file_type in self.allowed_file_types:
             # Return file object and type
             if open_as == None:
-                return file_type, file_connections.get(file_type),open_file
+                return file_type, file_connections.get(file_type), open_file
             else:
-                return file_type, file_connections.get('dataframe')(open_file, file_path),open_file
+                return file_type, file_connections.get('dataframe')(open_file, file_path), open_file
         else:
             raise ValueError(
                 f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}")
@@ -172,7 +173,8 @@ class IngestFiles:
                 break
             self.amount_of_lines += 1
             # Create array with no new line, commas, or tab characters
-            next_row_revised = self.split_line(next_row.replace('\n', ''))
+            next_row_revised = self.split_line(
+                next_row.replace('\n', '').replace('"', ''))
             return next_row_revised
 
     def get_next_line(self, *, increase_line_count=True, split_line=True):

@@ -19,19 +19,21 @@ from typing import *
 # 90% smaller to avoid exceeding this Firestore constraint.
 #
 # TODO: Reconcile calculations and use documented size limit (1_048_576)
-DOCUMENT_LIMIT_BYTES = 404_857
+DOCUMENT_LIMIT_BYTES = 1_048_576
 
 
 class Gene:
-    def __init__(self, name: str, source_file_name: str, source_file_type: str, *,
+    SUBCOLLECTION_NAME = 'gene_expression'
+    COLLECTION_NAME = 'gene'
+
+    def __init__(self, name: str, source_file_type: str, *,
                  gene_id: str = '', study_accession: str = '', taxon_name: str = '',
                  taxon_common_name: str = '', ncbi_taxid: str = '', genome_assembly_accession: str = '',
                  genome_annotation: str = '', cell_names: List[str] = [], expression_scores: List = [],
-                 check_for_zero_values: bool = True, field_id: str = '', id: str = '') -> None:
+                 check_for_zero_values: bool = True, field_id: str = '') -> None:
 
         self.name = name.replace('"', '')
         self.gene_id = gene_id
-        self.source_file_name = source_file_name,
         self.source_file_type = source_file_type,
 
         if check_for_zero_values:
@@ -44,13 +46,12 @@ class Gene:
         # given gene
         self.subdocument = {'cell_names': self.cell_names,
                             'expression_scores':  self.expression_scores,
-                            'source_file_name': source_file_name,
                             'source_file_type': source_file_type,
                             }
        # This is the top level document for the gene data model
         self.top_level_doc = {
             'field_id': field_id,
-            'id': id,
+            'searchable_name': "",
             'name': self.name,
             'gene_id': self.gene_id,
             'study_accession': study_accession,
@@ -60,35 +61,6 @@ class Gene:
             'genome_assembly_accession': genome_assembly_accession,
             'genome_annotation': genome_annotation,
         }
-        self.subcollection_name = 'gene_expression'
-
-    def get_collection_name(self):
-        """Get collection name of gene model.
-
-        Args:
-            None
-
-        Returns:
-            'Gene'
-        """
-
-        print(f'Gene is {self.name}')
-        if self.expression_scores is not None:
-            print(f'expression score length is {len(self.expression_scores)}')
-        else:
-            print(f'expression score length is 0')
-        return 'Gene'
-
-    def get_subcollection_name(self):
-        """Get subcollection name of gene model.
-
-        Args:
-            None
-
-        Returns:
-            'gene_expression''
-        """
-        return 'gene_expression'
 
     def has_subcollection_data(self):
         return self.cell_names != None
@@ -122,9 +94,10 @@ class Gene:
         else:
             return non_zero_cell_names, non_zero_expression_scores
 
-    def chunk_gene_expression_documents(self):
+    def chunk_gene_expression_documents(self, doc_name, doc_path):
         """Partitions gene expression documents in storage sizes that are
-            less than 104,857 bytes.
+            less than 1,048,576 bytes. Storage size calculation figures are derived from:
+            # https://cloud.google.com/firestore/docs/storage-size
 
         Args:
             None
@@ -137,26 +110,33 @@ class Gene:
         # storage size of the source file name and file type
         size_of_cell_names_field = 10 + 1  # "cell_names" is 10 characters
         size_of_field_expression_scores = 17 + 1
-        sum = 59 + len(self.source_file_name) + len(self.source_file_type)
+        starting_sum = 17 + len(self.source_file_type) + \
+            len(doc_name) + 1 + len(doc_path) + 1 + \
+            len(self.SUBCOLLECTION_NAME) + 1 + len(self.COLLECTION_NAME) + 1
         start_index = 0
         float_storage = 8
+        sum = starting_sum
 
         for index, cell_name in enumerate(self.cell_names):
 
-            cell_name_storage = len(cell_name) + 1 + size_of_cell_names_field
+            cell_name_storage = len(cell_name) + \
+                1 + size_of_cell_names_field
             expression_scores_storage = size_of_field_expression_scores + float_storage
             sum = sum + expression_scores_storage + cell_name_storage
-            # Subtract one and 32 based off of firestore storage guidelines for strings
+            # Subtract 32 based off of firestore storage guidelines for strings
             # and documents
             # This and other storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
-            if (sum - 1 - 32) > DOCUMENT_LIMIT_BYTES:
-                end_index = index - 1
+            if (sum + 32) > DOCUMENT_LIMIT_BYTES or index == (len(self.cell_names) - 1):
+                if index == (len(self.cell_names) - 1):
+                    end_index = index
+                else:
+                    end_index = index - 1
+                print(sum)
                 yield {'cell_names': self.cell_names[start_index:end_index],
                        'expression_scores':  self.expression_scores[start_index:end_index],
-                       'source_file_name': self.source_file_name,
-                       'source_file_type': self.source_file_type,
+                       'source_file_type': self.source_file_type[0],
                        }
-                sum = 59 + len(self.source_file_name) + \
-                    len(self.source_file_type)
+               # Reset sum and add storage size at current index
+                sum = starting_sum + cell_name_storage + expression_scores_storage
                 start_index = index

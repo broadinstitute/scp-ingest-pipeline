@@ -57,7 +57,7 @@ class Mtx:
                 exp_by_gene[gene].cell_names.append(cell_name)
             else:
                 # Create new key value pair with value being Gene object
-                exp_by_gene[gene] = Gene(gene, self.mtx_path.strip("."),
+                exp_by_gene[gene] = Gene(gene,
                                          'Mtx', gene_id=gene_id,
                                          cell_names=[cell_name],
                                          expression_scores=[exp_score],

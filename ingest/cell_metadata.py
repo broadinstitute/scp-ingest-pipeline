@@ -95,7 +95,8 @@ class CellMetadata(IngestFiles):
 
     def validate_header_keyword(self):
         """Check metadata header row starts with NAME (case-insensitive).
-            :return: boolean   True if valid, False otherwise
+
+        :return: boolean   True if valid, False otherwise
         """
         valid = False
         if self.headers[0].casefold() == 'NAME'.casefold():
@@ -115,6 +116,7 @@ class CellMetadata(IngestFiles):
 
     def validate_unique_header(self):
         """Check all metadata header names are unique.
+
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -128,6 +130,7 @@ class CellMetadata(IngestFiles):
 
     def validate_type_keyword(self):
         """Check metadata second row starts with TYPE (case-insensitive).
+
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -149,6 +152,7 @@ class CellMetadata(IngestFiles):
 
     def validate_type_annotations(self):
         """Check metadata second row contains only 'group' or 'numeric'.
+
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -178,6 +182,7 @@ class CellMetadata(IngestFiles):
 
     def validate_against_header_count(self):
         """Metadata header and type counts should match.
+
         :return: boolean   True if valid, False otherwise
         """
         valid = False

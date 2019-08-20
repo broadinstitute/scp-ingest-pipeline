@@ -95,46 +95,46 @@ class IngestPipeline(object):
     def load_expression_data(self, list_of_expression_models: List[Gene]) -> None:
         """Loads expression data into Firestore.
 
-        Args:
-            list_of_transformed_data: List[Gene]
-            A list of object type Gene that's stored into Firestore
+    Args:
+        list_of_transformed_data: List[Gene]
+           A list of object type Gene that's stored into Firestore
 
-        Returns:
-            None
-        """
-
-        # for expression_model in list_of_expression_models:
+    Returns:
+        None
+    """
         for expression_model in list_of_expression_models:
-            collection_name = expression_model.get_collection_name()
+            collection_name = expression_model.COLLECTION_NAME
+            batch = self.db.batch()
             doc_ref = self.db.collection(collection_name).document()
-            doc_ref.set(expression_model.top_level_doc)
+            batch.set(doc_ref, expression_model.top_level_doc)
+            batch.commit()
+            i = 0
             if expression_model.has_subcollection_data():
                 try:
-                    subcollection_name = expression_model.get_subcollection_name()
+                    print(f'Ingesting {expression_model.name}')
+                    subcollection_name = expression_model.SUBCOLLECTION_NAME
                     doc_ref_sub = doc_ref.collection(
                         subcollection_name).document()
+                    print(f'Length of scores is: {len(expression_model.expression_scores)}')
                     doc_ref_sub.set(expression_model.subdocument)
                 except exceptions.InvalidArgument as e:
                     # Catches invalid argument exception, which error "Maximum
                     # document size" falls under
                     print(e)
                     batch = self.db.batch()
-                    for subdoc in expression_model.chunk_gene_expression_documents():
-
-                        subcollection_name = expression_model.get_subcollection_name()
-                        doc_ref_sub = doc_ref.collection(
-                            subcollection_name).document()
+                    for subdoc in expression_model.chunk_gene_expression_documents(doc_ref_sub.id, doc_ref_sub._document_path):
+                        print({i})
                         batch.set(doc_ref_sub, subdoc)
+                        i += 1
 
                     batch.commit()
 
     def load_cell_metadata(self):
-        """Loads cell metadata files into Firestore."""
+        """Loads cell metadata files into firestore."""
 
         collection_name = self.cell_metadata.get_collection_name()
         subcollection_name = self.cell_metadata.get_subcollection_name()
         for annotation in self.cell_metadata.top_level_doc.keys():
-            print(self.cell_metadata.top_level_doc[annotation])
             doc_ref = self.db.collection(collection_name).document()
             doc_ref.set(self.cell_metadata.top_level_doc[annotation])
             try:
@@ -160,21 +160,25 @@ class IngestPipeline(object):
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
-        functions. Then loads data into Firestore.
+    functions. Then loads data into Firestore.
 
-        Args:
-            None
+    Args:
+        None
 
-        Returns:
-            None
-        """
+    Returns:
+        None
+    """
         if self.gene_file is not None:
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
         else:
-            for data in self.matrix.extract():
-                transformed_data = self.matrix.transform_expression_data_by_gene(
-                    *data)
+            transformed_data = []
+            while True:
+                row = self.matrix.extract()
+                if row == None:
+                    break
+                transformed_data.append(self.matrix.transform_expression_data_by_gene(
+                    row))
         self.load_expression_data(transformed_data)
         self.close_matrix()
 
