@@ -95,7 +95,8 @@ class CellMetadata(IngestFiles):
 
     def validate_header_keyword(self):
         """Check metadata header row starts with NAME (case-insensitive).
-            :return: boolean   True if valid, False otherwise
+
+        :return: boolean   True if valid, False otherwise
         """
         valid = False
         if self.headers[0].casefold() == 'NAME'.casefold():
@@ -103,8 +104,8 @@ class CellMetadata(IngestFiles):
             if self.headers[0] != 'NAME':
                 # ToDO - capture warning below in error report
                 print(
-                    'Warning: metadata file keyword "NAME" provided as {x}'.
-                    format(x=self.headers[0])
+                    f'Warning: metadata file keyword "NAME" provided as '
+                    '{self.headers[0]}'
                 )
         else:
             # line below and similar in next method have autoformat oddities
@@ -115,6 +116,7 @@ class CellMetadata(IngestFiles):
 
     def validate_unique_header(self):
         """Check all metadata header names are unique.
+
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -128,6 +130,7 @@ class CellMetadata(IngestFiles):
 
     def validate_type_keyword(self):
         """Check metadata second row starts with TYPE (case-insensitive).
+
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -137,8 +140,8 @@ class CellMetadata(IngestFiles):
                 # ToDO - capture warning below in error report
                 # investigate f-string formatting here
                 print(
-                    'Warning: metadata file keyword "TYPE" provided as {x}'.
-                    format(x=self.metadata_types[0])
+                    'Warning: metadata file keyword "TYPE" provided as '
+                    '{self.metadata_types[0]}'
                 )
         else:
             # check black autoformatting on this long line
@@ -149,22 +152,28 @@ class CellMetadata(IngestFiles):
 
     def validate_type_annotations(self):
         """Check metadata second row contains only 'group' or 'numeric'.
+
         :return: boolean   True if valid, False otherwise
         """
         valid = False
         annot_err = False
         annots = []
+        # skipping the TYPE keyword, iterate through the types
+        # collecting invalid type annotations in list annots
         for t in self.metadata_types[1:]:
             if t not in self.annotation_type:
-                annots.append(t)
+                # if the value is a blank space, store a higher visibility
+                # string for error reporting
+                if not t:
+                    annots.append("<empty value>")
+                else:
+                    annots.append(t)
                 annot_err = True
         if annot_err:
             self.errors['format'].append(
                 (
                     'Error: TYPE declarations should be "group" or "numeric"; '
-                    'Please correct: {annots}'.format(
-                        annots=', '.join(map(str, annots))
-                    )
+                    f'Invalid type(s): {", ".join(map(str, annots))}'
                 )
             )
         else:
@@ -173,15 +182,14 @@ class CellMetadata(IngestFiles):
 
     def validate_against_header_count(self):
         """Metadata header and type counts should match.
+
         :return: boolean   True if valid, False otherwise
         """
         valid = False
         if not len(self.headers) == len(self.metadata_types):
             self.errors['format'].append(
-                str(
-                    'Error: {x} TYPE declarations for {y} column headers'.
-                    format(x=len(self.headers), y=len(list))
-                )
+                'Error: {len(self.metadata_types)} TYPE declarations '
+                f'for {len(self.headers)} column headers'
             )
         else:
             valid = True
@@ -193,6 +201,7 @@ class CellMetadata(IngestFiles):
         self.validate_header_keyword()
         self.validate_type_keyword()
         self.validate_type_annotations()
+        self.validate_unique_header()
         self.validate_against_header_count()
         if self.errors['format']:
             valid = False
