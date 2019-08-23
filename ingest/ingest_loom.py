@@ -13,10 +13,8 @@ $ python ingest_loom.py <path to Loom file>
 $ python ingest_loom.py ../tests/data/L5_All.agg.loom
 """
 
-import argparse
 import os
-import sys
-from typing import *
+from typing import Iterable, Tuple, List
 
 import loompy
 import numpy as np
@@ -73,9 +71,13 @@ class Loom:
         for index in selection:
             position = index - ix
             expression_scores = [float(i) for i in view[position, 0:20]]
-            gene_model = Gene(view.ra.Gene[index - ix], self.file_name, self.filetype,
-                              gene_id=view.ra.Accession[position],
-                              expression_scores=expression_scores)
+            gene_model = Gene(
+                view.ra.Gene[index - ix],
+                self.file_name,
+                self.filetype,
+                gene_id=view.ra.Accession[position],
+                expression_scores=expression_scores,
+            )
             transformed_data.append(gene_model.gene)
         return transformed_data
 

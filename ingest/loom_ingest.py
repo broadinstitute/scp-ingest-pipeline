@@ -28,14 +28,9 @@ from google.cloud import firestore
 expression_dictionaries = dict()
 db = firestore.Client()
 
-parser = argparse.ArgumentParser(
-    prog='loom_ingest.py'
-)
+parser = argparse.ArgumentParser(prog='loom_ingest.py')
 
-parser.add_argument(
-    "loom_file", default=None,
-    help='Path to Loom file'
-)
+parser.add_argument("loom_file", default=None, help='Path to Loom file')
 
 args = parser.parse_args()
 np.set_printoptions(precision=8, threshold=sys.maxsize, edgeitems=1e9)
@@ -45,6 +40,7 @@ np.set_printoptions(precision=8, threshold=sys.maxsize, edgeitems=1e9)
 
 def open_file(loom_file):
     return loompy.connect(loom_file), os.path.splitext(loom_file)[0]
+
 
 # creating dictoionary
 
@@ -56,7 +52,9 @@ def map_genes_to_expression_values():
         accessions = view.ra.Accession.tolist()
         cell_ids = view.ca.CellID.tolist()
         expression_dictionaries.update(
-            zip(view.ra.Gene.tolist(), zip(accessions, cell_ids, exppressions_values)))
+            zip(view.ra.Gene.tolist(), zip(accessions, cell_ids, exppressions_values))
+        )
+
 
 # Returns a subset (500) of dictionaries
 
@@ -65,6 +63,7 @@ def chunk(data, SIZE=500):
     it = iter(data)
     for i in range(0, len(data), SIZE):
         yield {k: data[k] for k in islice(it, SIZE)}
+
 
 # Abstract this out
 
@@ -75,14 +74,14 @@ def add_data_to_firestore(data):
     # Need to measure write speeds and size of uploads
     for key, val in data.items():
         doc_ref = db.collection("loom_gene").document(key)
-        batch.set(doc_ref, {
-            'accession': val[0],
-            'file_name': loom_file_name,
-            'cells': {
-                'cell_id': val[1],
-                'expression_values': val[2]
-            }
-        })
+        batch.set(
+            doc_ref,
+            {
+                'accession': val[0],
+                'file_name': loom_file_name,
+                'cells': {'cell_id': val[1], 'expression_values': val[2]},
+            },
+        )
     batch.commit()
     time.sleep(2)
 

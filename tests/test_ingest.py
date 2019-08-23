@@ -31,15 +31,15 @@ coverage run --branch test_ingest.py; coverage report -m --include *scp-ingest-p
 
 """
 import ast
-from glob import glob
 import sys
 import unittest
 from unittest.mock import patch
 
-from gcp_mocks import *
+from gcp_mocks import mock_storage_client, mock_storage_blob, mock_firestore_client
 
 sys.path.append('../ingest')
-from ingest_pipeline import *
+from ingest_pipeline import create_parser, validate_arguments, IngestPipeline
+
 
 def mock_load_expression_data(self, *args, **kwargs):
     """Enables overwriting normal function with this placeholder.
@@ -56,6 +56,7 @@ def mock_load_expression_data(self, *args, **kwargs):
     """
     self.load_expression_data_args = args
     self.load_expression_data_kwargs = kwargs
+
 
 def get_nth_gene_models(n, models, mock_dir):
     """Return Nth actual and expected gene models, using actual and mock data
@@ -81,15 +82,18 @@ def get_nth_gene_models(n, models, mock_dir):
 
     return actual_model, expected_model
 
+
 # Mock method that loads data to Firestore
 IngestPipeline.load_expression_data = mock_load_expression_data
 
-class IngestTestCase(unittest.TestCase):
 
+class IngestTestCase(unittest.TestCase):
     @patch('google.cloud.storage.Blob', side_effect=mock_storage_blob)
     @patch('google.cloud.storage.Client', side_effect=mock_storage_client)
     @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
-    def setup_ingest(self, args, mock_firestore_client, mock_storage_client, mock_storage_blob):
+    def setup_ingest(
+        self, args, mock_firestore_client, mock_storage_client, mock_storage_blob
+    ):
         args_list = args.split(' ')
         parsed_args = create_parser().parse_args(args_list)
         validate_arguments(parsed_args)
@@ -110,9 +114,11 @@ class IngestTestCase(unittest.TestCase):
         """Ingest Pipeline should extract and transform dense matrices
         """
 
-        args = ('ingest_expression '
-                '--matrix-file gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt '
-                '--matrix-file-type dense')
+        args = (
+            'ingest_expression '
+            '--matrix-file gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt '
+            '--matrix-file-type dense'
+        )
         ingest = self.setup_ingest(args)
 
         models = ingest.load_expression_data_args[0]
@@ -125,20 +131,17 @@ class IngestTestCase(unittest.TestCase):
         # Verify that the first gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
-
-        # Adjust for change needed per mock
-        expected_expression_scores = [0.602, 1.934, 1.161, 0.82]
-        actual_expression_scores = model['expression_scores']  # Why does app code make this a tuple?
-        self.assertEqual(expected_expression_scores, expected_expression_scores)
         self.assertEqual(model, expected_model)
 
     def test_ingest_missing_file(self):
         """Ingest Pipeline should throw error for missing file
         """
 
-        args = ('ingest_expression '
-                '--matrix-file gs://fake-bucket/remote-matrix-file-does-not-exist.txt '
-                '--matrix-file-type dense')
+        args = (
+            'ingest_expression '
+            '--matrix-file gs://fake-bucket/remote-matrix-file-does-not-exist.txt '
+            '--matrix-file-type dense'
+        )
 
         self.assertRaises(OSError, self.setup_ingest, args)
 
@@ -146,9 +149,11 @@ class IngestTestCase(unittest.TestCase):
         """Ingest Pipeline should extract and transform local dense matrices
         """
 
-        args = ('ingest_expression '
-                '--matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt '
-                '--matrix-file-type dense')
+        args = (
+            'ingest_expression '
+            '--matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt '
+            '--matrix-file-type dense'
+        )
         ingest = self.setup_ingest(args)
 
         models = ingest.load_expression_data_args[0]
@@ -168,9 +173,11 @@ class IngestTestCase(unittest.TestCase):
         """Ingest Pipeline should throw error for missing local file
         """
 
-        args = ('ingest_expression '
-                '--matrix-file /this/file/does/not_exist.txt '
-                '--matrix-file-type dense')
+        args = (
+            'ingest_expression '
+            '--matrix-file /this/file/does/not_exist.txt '
+            '--matrix-file-type dense'
+        )
 
         self.assertRaises(OSError, self.setup_ingest, args)
 
@@ -178,11 +185,13 @@ class IngestTestCase(unittest.TestCase):
         """Ingest Pipeline should extract and transform MTX matrix bundles
         """
 
-        args = ('ingest_expression '
-                '--matrix-file ../tests/data/matrix.mtx '
-                '--matrix-file-type mtx '
-                '--gene-file ../tests/data/genes.tsv '
-                '--barcode-file ../tests/data/barcodes.tsv')
+        args = (
+            'ingest_expression '
+            '--matrix-file ../tests/data/matrix.mtx '
+            '--matrix-file-type mtx '
+            '--gene-file ../tests/data/genes.tsv '
+            '--barcode-file ../tests/data/barcodes.tsv'
+        )
         ingest = self.setup_ingest(args)
 
         models = ingest.load_expression_data_args[0]
@@ -201,11 +210,14 @@ class IngestTestCase(unittest.TestCase):
         """Omitting --gene-file and --barcode-file in MTX ingest should error
         """
 
-        args = ('ingest_expression '
-                '--matrix-file ../tests/data/matrix.mtx '
-                '--matrix-file-type mtx')
+        args = (
+            'ingest_expression '
+            '--matrix-file ../tests/data/matrix.mtx '
+            '--matrix-file-type mtx'
+        )
 
         self.assertRaises(ValueError, self.setup_ingest, args)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -7,21 +7,19 @@ an dense matrix.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-import argparse
-import os
-import sys
-from itertools import islice
-from typing import *
+from typing import List  # noqa: F401
 
-import numpy as np
 from gene_data_model import Gene
 from ingest_files import IngestFiles
 
 
 class Dense(IngestFiles):
     def __init__(self, file_path):
-        self.ALLOWED_FILE_TYPES = ['text/csv',
-                                   'text/plain', 'text/tab-separated-values']
+        self.ALLOWED_FILE_TYPES = [
+            'text/csv',
+            'text/plain',
+            'text/tab-separated-values',
+        ]
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
         self.cell_names = self.get_next_line(increase_line_count=False)[1:]
 
@@ -36,9 +34,12 @@ class Dense(IngestFiles):
                 transformed_data : List[Gene]
                 A list of Gene objects
         """
-        gene_model = Gene(expression_scores[0], source_file_type="Dense",
-                          expression_scores=expression_scores[1:],
-                          cell_names=self.cell_names)
+        gene_model = Gene(
+            expression_scores[0],
+            source_file_type="Dense",
+            expression_scores=expression_scores[1:],
+            cell_names=self.cell_names,
+        )
         return gene_model
 
     def close(self):

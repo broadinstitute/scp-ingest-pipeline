@@ -9,9 +9,8 @@ These are commonly provided from 10x Genomics v2.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-import os
-import sys
-from typing import Dict, Generator, List, Tuple, Union
+
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
 import scipy.io
 from gene_data_model import Gene
@@ -47,7 +46,9 @@ class Mtx:
                 A list of Gene objects
         """
         exp_by_gene = {}
-        for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(self.matrix_file.row, self.matrix_file.col, self.matrix_file.data):
+        for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(
+            self.matrix_file.row, self.matrix_file.col, self.matrix_file.data
+        ):
             gene_id, gene = self.genes[int(raw_gene_idx)].split('\t')
             cell_name = self.cells[int(raw_barcode_idx)]
             exp_score = round(float(raw_exp_score), 3)
@@ -57,11 +58,14 @@ class Mtx:
                 exp_by_gene[gene].cell_names.append(cell_name)
             else:
                 # Create new key value pair with value being Gene object
-                exp_by_gene[gene] = Gene(gene,
-                                         'Mtx', gene_id=gene_id,
-                                         cell_names=[cell_name],
-                                         expression_scores=[exp_score],
-                                         check_for_zero_values=False)
+                exp_by_gene[gene] = Gene(
+                    gene,
+                    'Mtx',
+                    gene_id=gene_id,
+                    cell_names=[cell_name],
+                    expression_scores=[exp_score],
+                    check_for_zero_values=False,
+                )
         return exp_by_gene.values()
 
     def close(self):
