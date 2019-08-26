@@ -32,7 +32,7 @@ See [`ingest_pipeline.py`](https://github.com/broadinstitute/scp-ingest-pipeline
 # Git hooks
 After installing Ingest Pipeline, add Git hooks to help ensure code quality:
 ```
-pre-commit install -t pre-push
+pre-commit install && pre-commit install -t pre-push
 ```
 
 ## Bypass hooks
