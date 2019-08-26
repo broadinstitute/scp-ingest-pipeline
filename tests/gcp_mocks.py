@@ -1,7 +1,7 @@
 """Mocks for Google Cloud Platform (GCP) services
 
 These mocks enable tests to run in a manner that is fast and isolated.
-GCP aspires to provide "emulators" for these services; see 
+GCP aspires to provide "emulators" for these services; see
 https://github.com/googleapis/google-cloud-python/issues/4840.
 Until those are available, custom mocks like these are the best available
 alternative to enable integration tests to run quickly.
@@ -10,11 +10,9 @@ alternative to enable integration tests to run quickly.
 import os
 from shutil import copyfile
 
-import google.cloud
 
 def mock_storage_client():
-
-    class MockStorageBucket():
+    class MockStorageBucket:
         def __init__(self, name):
             self.name = name
             return
@@ -22,7 +20,7 @@ def mock_storage_client():
         def blob(self, blob_name):
             return mock_storage_blob(bucket=self.name, name=blob_name)
 
-    class MockStorageClient():
+    class MockStorageClient:
         def __init__(self):
             return
 
@@ -30,6 +28,7 @@ def mock_storage_client():
             return MockStorageBucket(bucket_name)
 
     return MockStorageClient
+
 
 def mock_storage_blob(*args, **kwargs):
     """Mocks Google Cloud Storage library
@@ -41,7 +40,7 @@ def mock_storage_blob(*args, **kwargs):
     When such an emulator is released, use it and remove this custom mock.
     """
 
-    class MockStorageBlob():
+    class MockStorageBlob:
         def __init__(self, bucket=None, name=None):
             self.bucket = bucket
             self.name = '../' + name
@@ -54,6 +53,7 @@ def mock_storage_blob(*args, **kwargs):
             copyfile(self.name, filename)
 
     return MockStorageBlob(*args, **kwargs)
+
 
 def mock_firestore_client():
     """Mocks firestore.Client() by returning nothing upon initializing client

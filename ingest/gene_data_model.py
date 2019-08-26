@@ -9,9 +9,7 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 
-import sys
-from itertools import islice
-from typing import *
+from typing import List  # noqa: F401
 
 # Actual document limit is 1 MiB (1,048,576 bytes) per
 # https://cloud.google.com/firestore/quotas#writes_and_transactions
@@ -26,29 +24,43 @@ class Gene:
     SUBCOLLECTION_NAME = 'gene_expression'
     COLLECTION_NAME = 'gene'
 
-    def __init__(self, name: str, source_file_type: str, *,
-                 gene_id: str = '', study_accession: str = '', taxon_name: str = '',
-                 taxon_common_name: str = '', ncbi_taxid: str = '', genome_assembly_accession: str = '',
-                 genome_annotation: str = '', cell_names: List[str] = [], expression_scores: List = [],
-                 check_for_zero_values: bool = True, field_id: str = '') -> None:
+    def __init__(
+        self,
+        name: str,
+        source_file_type: str,
+        *,
+        gene_id: str = '',
+        study_accession: str = '',
+        taxon_name: str = '',
+        taxon_common_name: str = '',
+        ncbi_taxid: str = '',
+        genome_assembly_accession: str = '',
+        genome_annotation: str = '',
+        cell_names: List[str] = [],
+        expression_scores: List = [],
+        check_for_zero_values: bool = True,
+        field_id: str = '',
+    ) -> None:
 
         self.name = name.replace('"', '')
         self.gene_id = gene_id
-        self.source_file_type = source_file_type,
+        self.source_file_type = (source_file_type,)
 
         if check_for_zero_values:
             self.cell_names, self.expression_scores = self.set_expression_scores_and_cell_names(
-                expression_scores, cell_names)
+                expression_scores, cell_names
+            )
         else:
             self.cell_names = cell_names
             self.expression_scores = expression_scores
         # Subdocument that contains all cell names and expression scores for a
         # given gene
-        self.subdocument = {'cell_names': self.cell_names,
-                            'expression_scores':  self.expression_scores,
-                            'source_file_type': source_file_type,
-                            }
-       # This is the top level document for the gene data model
+        self.subdocument = {
+            'cell_names': self.cell_names,
+            'expression_scores': self.expression_scores,
+            'source_file_type': source_file_type,
+        }
+        # This is the top level document for the gene data model
         self.top_level_doc = {
             'field_id': field_id,
             'searchable_name': "",
@@ -63,7 +75,7 @@ class Gene:
         }
 
     def has_subcollection_data(self):
-        return self.cell_names != None
+        return self.cell_names is not None
 
     def set_expression_scores_and_cell_names(self, expression_scores, cell_names):
         """Sets expression scores and cell names. Only keeps cell names that have
@@ -110,17 +122,25 @@ class Gene:
         # storage size of the source file name and file type
         size_of_cell_names_field = 10 + 1  # "cell_names" is 10 characters
         size_of_field_expression_scores = 17 + 1
-        starting_sum = 17 + len(self.source_file_type) + \
-            len(doc_name) + 1 + len(doc_path) + 1 + \
-            len(self.SUBCOLLECTION_NAME) + 1 + len(self.COLLECTION_NAME) + 1
+        starting_sum = (
+            17
+            + len(self.source_file_type)
+            + len(doc_name)
+            + 1
+            + len(doc_path)
+            + 1
+            + len(self.SUBCOLLECTION_NAME)
+            + 1
+            + len(self.COLLECTION_NAME)
+            + 1
+        )
         start_index = 0
         float_storage = 8
         sum = starting_sum
 
         for index, cell_name in enumerate(self.cell_names):
 
-            cell_name_storage = len(cell_name) + \
-                1 + size_of_cell_names_field
+            cell_name_storage = len(cell_name) + 1 + size_of_cell_names_field
             expression_scores_storage = size_of_field_expression_scores + float_storage
             sum = sum + expression_scores_storage + cell_name_storage
             # Subtract 32 based off of firestore storage guidelines for strings
@@ -133,10 +153,11 @@ class Gene:
                 else:
                     end_index = index - 1
                 print(sum)
-                yield {'cell_names': self.cell_names[start_index:end_index],
-                       'expression_scores':  self.expression_scores[start_index:end_index],
-                       'source_file_type': self.source_file_type[0],
-                       }
-               # Reset sum and add storage size at current index
+                yield {
+                    'cell_names': self.cell_names[start_index:end_index],
+                    'expression_scores': self.expression_scores[start_index:end_index],
+                    'source_file_type': self.source_file_type[0],
+                }
+                # Reset sum and add storage size at current index
                 sum = starting_sum + cell_name_storage + expression_scores_storage
                 start_index = index

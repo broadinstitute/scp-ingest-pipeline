@@ -16,20 +16,15 @@ $ validate_metadata.py AMC_v0.8.json metadata_test.tsv
 import argparse
 import json
 import logging
-import sys
 from collections import defaultdict
 
 import jsonschema
-from cell_metadata import *
-
-sys.path.append('..')
+from cell_metadata import CellMetadata
 
 # ToDo set up parameters to adjust log levels
 #  logging.basicConfig(level=logging.INFO, filename='app.log', filemode='w',
 #   format='%(name)s - %(levelname)s - %(message)s')
-logging.basicConfig(
-    level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -38,8 +33,7 @@ def create_parser():
     """
     logger.debug('Begin: create_parser')
     parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     # parser.add_argument(
     #     '--output',
@@ -200,23 +194,17 @@ def process_metadata_row(metadata, convention, line):
             try:
                 row_info[k] = int(v)
             except ValueError as e:
-                print(
-                    'Warning: Issue with coercion based on type declaration', e
-                )
+                print('Warning: Issue with coercion based on type declaration', e)
         elif k in metadata.type['floats']:
             try:
                 row_info[k] = float(v)
             except ValueError as e:
-                print(
-                    'Warning: Issue with coercion based on type declaration', e
-                )
+                print('Warning: Issue with coercion based on type declaration', e)
         elif k in metadata.type['convention']['array']:
             try:
                 row_info[k] = v.split(',')
             except ValueError as e:
-                print(
-                    'Warning: Issue with coercion based on type declaration', e
-                )
+                print('Warning: Issue with coercion based on type declaration', e)
     return row_info
 
 
@@ -259,7 +247,8 @@ def print_collected_ontology_data(metadata):
         print(entry)
         print(
             'Ontology data for entry: (count =',
-            len(metadata.ontology[entry]['CellID']), ')'
+            len(metadata.ontology[entry]['CellID']),
+            ')',
         )
         print('Uniq ontologyIDs:', metadata.ontology[entry]['ontologyID'])
         print('Uniq labels:', metadata.ontology[entry]['label'])

@@ -6,31 +6,25 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 import copy
-import json
-import os
 from collections import defaultdict
-from typing import Dict, Generator, List, Tuple, Union
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
 from ingest_files import IngestFiles
 
 
 class CellMetadata(IngestFiles):
-    ALLOWED_FILE_TYPES = ['text/csv',
-                          'text/plain', 'text/tab-separated-values']
+    ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
 
     def __init__(self, file_path, file_id: str = None, study_accession: str = None):
 
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
-        self.headers = self.get_next_line(
-            increase_line_count=False)
-        self.metadata_types = self.get_next_line(
-            increase_line_count=False)
+        self.headers = self.get_next_line(increase_line_count=False)
+        self.metadata_types = self.get_next_line(increase_line_count=False)
         # unique values for group-based annotations
         self.unique_values = []
         self.cell_names = []
         self.annotation_type = ['group', 'numeric']
-        self.top_level_doc = self.create_documents(
-            file_path, file_id, study_accession)
+        self.top_level_doc = self.create_documents(file_path, file_id, study_accession)
         self.data_subcollection = self.create_subdocuments()
         self.errors = defaultdict(list)
         self.ontology = defaultdict(lambda: defaultdict(set))
@@ -62,14 +56,16 @@ class CellMetadata(IngestFiles):
         # Each annotation value has a top level document
         for idx, value in enumerate(self.headers[1:]):
             # Copy document model so memory references are different
-            copy_of_doc_model = copy.copy({
-                'name': value,
-                'study_accession': study_accession,
-                'source_file_name': file_path.strip("."),
-                'source_file_type': 'metadata',
-                'annotation_type': self.metadata_types[idx + 1],
-                'file_id': file_id,
-            })
+            copy_of_doc_model = copy.copy(
+                {
+                    'name': value,
+                    'study_accession': study_accession,
+                    'source_file_name': file_path.strip("."),
+                    'source_file_type': 'metadata',
+                    'annotation_type': self.metadata_types[idx + 1],
+                    'file_id': file_id,
+                }
+            )
             documents[value] = copy_of_doc_model
         return documents
 
@@ -78,10 +74,9 @@ class CellMetadata(IngestFiles):
         sub_documents = {}
         for value in self.headers[1:]:
             # Copy subdocument model so memory references are different
-            copy_of_subdoc_model = copy.copy({
-                'cell_names': self.cell_names,
-                'values': []
-            })
+            copy_of_subdoc_model = copy.copy(
+                {'cell_names': self.cell_names, 'values': []}
+            )
             sub_documents[value] = copy_of_subdoc_model
         return sub_documents
 

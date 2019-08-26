@@ -14,7 +14,6 @@ python3 validate_ontology_terms.py ../tests/data/cell_metadata_toy.tsv --columns
 
 import argparse
 import time
-import os
 import requests
 import urllib.parse as encoder
 
@@ -27,32 +26,34 @@ error_filename = "metadata_errors.txt"
 parser = argparse.ArgumentParser(
     prog='validate_ontology_terms.py',
     description=__doc__,
-    formatter_class=argparse.RawDescriptionHelpFormatter
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+)
+
+parser.add_argument('metadata_path', help='Path to tsv/csv cell metadata file')
+
+parser.add_argument(
+    '--columns',
+    default=None,
+    help='Comma-delimited list of specific columns to validate from cell metadata file',
 )
 
 parser.add_argument(
-    'metadata_path',
-    help='Path to tsv/csv cell metadata file'
+    '--ignore-columns',
+    default="Cell ID",
+    help='Comma-delimited list of specific columns to ignore from cell metadata file',
 )
 
 parser.add_argument(
-    '--columns', default=None,
-    help='Comma-delimited list of specific columns to validate from cell metadata file'
+    '--delimiter',
+    default="\t",
+    help='Delimiter for cell metadata file ("\\t" as default)',
 )
 
 parser.add_argument(
-    '--ignore-columns', default="Cell ID",
-    help='Comma-delimited list of specific columns to ignore from cell metadata file'
-)
-
-parser.add_argument(
-    '--delimiter', default="\t",
-    help='Delimiter for cell metadata file ("\\t" as default)'
-)
-
-parser.add_argument(
-    '--ancestors', default=False, action='store_true',
-    help='Retrieve ancestors for ontology terms from defining ontology (False as default)'
+    '--ancestors',
+    default=False,
+    action='store_true',
+    help='Retrieve ancestors for ontology terms from defining ontology (False as default)',
 )
 
 args = parser.parse_args()
@@ -194,7 +195,9 @@ def output_error_report(invalid_terms):
 
 
 print("Ingesting cell metadata...")
-cell_metadata = load_cell_metadata(args.metadata_path, validation_columns, excluded_columns)
+cell_metadata = load_cell_metadata(
+    args.metadata_path, validation_columns, excluded_columns
+)
 print("Ingest complete! Detected the following unique values")
 for column in cell_metadata.keys():
     print("Column: " + column)
@@ -242,5 +245,3 @@ if terms_not_found:
     exit(1)
 else:
     exit(0)
-
-

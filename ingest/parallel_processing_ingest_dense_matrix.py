@@ -17,18 +17,12 @@ $ python parallel_processing_ingest_dense_matrix.py --file-path ../tests/data/de
 
 """
 import argparse
-import linecache
 import multiprocessing
-import os
-import queue
 import sys
 import time
 from itertools import islice
 from signal import SIG_DFL, SIGPIPE, signal
-from sys import getsizeof
 
-import loompy
-import numpy as np
 from google.cloud import firestore
 
 # Broken pipe error is happening because main program finished before processes causing error
@@ -41,14 +35,12 @@ db = firestore.Client()
 parser = argparse.ArgumentParser(
     prog='parallel_processing_ingest_dense_matrix_.py',
     description=__doc__,
-    formatter_class=argparse.RawDescriptionHelpFormatter
+    formatter_class=argparse.RawDescriptionHelpFormatter,
 )
 
 # Positional argument
 parser.add_argument(
-    "--file-path",
-    required=True,
-    help='Absolute or relative path to dense matrix'
+    "--file-path", required=True, help='Absolute or relative path to dense matrix'
 )
 
 args = parser.parse_args()
@@ -68,7 +60,7 @@ def determine_size_of_chunks(file_object, file_path):
     line = file_object.readline()
 
     # file_size will be eventually used to track loading and transforming progress
-    file_size = os.path.getsize(file_path)
+    # file_size = os.path.getsize(file_path)
     size_of_single_row = sys.getsizeof(line)
     print("Size of one line is %i " % size_of_single_row)
     amount_of_lines = 1048487 / size_of_single_row
@@ -89,6 +81,7 @@ def extract(file, number_of_lines):
             return []
             break
         yield next_lines
+
 
 # worker function
 
@@ -127,6 +120,7 @@ def transform(process_name, extracted_data, transformed_data):
         except EOFError as error:
             # signal transform worker to quit if the queue is empty
             print('[%s] transform routine quits' % process_name)
+            print(error)
             break
 
     return
@@ -150,11 +144,12 @@ def load(process_name, transformed_data):
                     doc_ref = db.collection("gene").document(key)
                     batch.set(doc_ref, val)
                 batch.commit()
-                time.sleep(.2)
+                time.sleep(0.2)
             transformed_data.task_done()
         except EOFError as error:
             # signal load worker function to quit if the queue is empty
             print('Process Load [%s]  routine quits' % process_name)
+            print(error)
             break
 
     return
@@ -181,10 +176,13 @@ if __name__ == "__main__":
         load_process_name = 'Load P%i' % i
 
         # Create the process, and connect it to the worker function
-        transform_process = multiprocessing.Process(target=transform, args=(
-            transform_process_name, extracted_data, transformed_data))
+        transform_process = multiprocessing.Process(
+            target=transform,
+            args=(transform_process_name, extracted_data, transformed_data),
+        )
         load_process = multiprocessing.Process(
-            target=load, args=(load_process_name, transformed_data))
+            target=load, args=(load_process_name, transformed_data)
+        )
 
         # Start the process
         transform_process.start()

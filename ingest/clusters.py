@@ -1,18 +1,22 @@
 import copy
-import unicodedata
-from typing import Dict, Generator, List, Tuple, Union
 
 from ingest_files import IngestFiles
 
 
 class Clusters(IngestFiles):
 
-    ALLOWED_FILE_TYPES = ['text/csv',
-                          'text/plain', 'text/tab-separated-values']
+    ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
     COLLECTION_NAME = 'clusters'
     SUBCOLLECTION_NAME = 'data'
 
-    def __init__(self, file_path, *, name: str = None, study_accession: str = "", domain_ranges=None):
+    def __init__(
+        self,
+        file_path,
+        *,
+        name: str = None,
+        study_accession: str = "",
+        domain_ranges=None
+    ):
 
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
         self.header = self.get_next_line(increase_line_count=False)
@@ -48,8 +52,7 @@ class Clusters(IngestFiles):
                     if column not in self.unique_values[annotation]:
                         self.unique_values[annotation].append(column)
             # perform a shallow copy
-            annotation_value = copy.copy(
-                self.cluster_subdocs[annotation]['value'])
+            annotation_value = copy.copy(self.cluster_subdocs[annotation]['value'])
             annotation_value.append(column)
             self.cluster_subdocs[annotation]['value'] = annotation_value
 
@@ -59,18 +62,26 @@ class Clusters(IngestFiles):
         for annot_name in self.header:
             value = annot_name.lower()
             if value == 'name':
-                cluster_subdocs[value] = self.create_cluster_subdoc(
-                    'text', 'cells')
+                cluster_subdocs[value] = self.create_cluster_subdoc('text', 'cells')
             elif value in ('x', 'y', 'z'):
                 cluster_subdocs[value] = self.create_cluster_subdoc(
-                    value, 'coordinates')
+                    value, 'coordinates'
+                )
             else:
                 cluster_subdocs[value] = self.create_cluster_subdoc(
-                    annot_name, 'annotations')
+                    annot_name, 'annotations'
+                )
         return cluster_subdocs
 
     @staticmethod
-    def create_cluster_subdoc(annot_name, header_value_type, *, value=[], subsample_annotation=None, subsample_threshold=None):
+    def create_cluster_subdoc(
+        annot_name,
+        header_value_type,
+        *,
+        value=[],
+        subsample_annotation=None,
+        subsample_threshold=None
+    ):
         """Returns cluster subdoc"""
 
         return {
