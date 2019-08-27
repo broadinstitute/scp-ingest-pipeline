@@ -17,8 +17,10 @@ import argparse
 import json
 import logging
 from collections import defaultdict
+import sys
 
 import jsonschema
+sys.path.append('..')
 from cell_metadata import CellMetadata
 
 # ToDo set up parameters to adjust log levels
