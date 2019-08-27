@@ -1,11 +1,3 @@
-#! /usr/bin/python
-
-import argparse
-import csv
-import os
-import json
-import re
-
 """Produce JSON Schema from metadata convention tsv file
 
 DESCRIPTION
@@ -22,6 +14,11 @@ $ serialize_convention.py -p . Alexandria ../tests/data/AMC_v0.8.tsv
 
 """
 
+import argparse
+import csv
+import os
+import json
+import re
 
 def create_parser():
     """
