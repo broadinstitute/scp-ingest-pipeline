@@ -215,7 +215,7 @@
             "type": "string"
         },
         "disease": {
-            "default": "PATO_0000461",
+            "default": "MONDO_0000001",
             "description": "The disease state(s) of the individual donating the sample at the time of donation",
             "items": {
                 "type": "string"
@@ -290,9 +290,6 @@
                 "type": "string"
             },
             "type": "array"
-        },
-        "donor_id": {
-            "type": "string"
         },
         "end_bias": {
             "description": "The end bias of the library preparation protocol used",
@@ -516,7 +513,7 @@
             "items": {
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/chebi ",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/chebi",
             "type": "array"
         },
         "small_molecule_perturbation__concentration": {
@@ -586,7 +583,7 @@
             "type": "array"
         },
         "vaccination__dosage": {
-            "description": "The dosage and units for the vaccine ",
+            "description": "The dosage and units for the vaccine",
             "items": {
                 "type": "string"
             },

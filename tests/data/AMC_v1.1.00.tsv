@@ -1,5 +1,4 @@
 attribute	required	default	type	array	class	ontology	ontology_root	controlled_list_entries	dependency	dependency_condition	dependent	attribute_description		20190822 index
-donor_id			string											1
 species	Yes		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/ncbitaxon	NCBITaxon_2759					The scientific binomial name for the species of the organism.		2
 species__ontology_label	Yes		string		ontology_label				species			species__ontology_label		3
 ethnicity			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/hancestro	HANCESTRO:0004			species == NCBITaxon_9606		The ethnicity or ethnicities of the human donor if known		4
@@ -11,7 +10,7 @@ mouse_strain__ontology_label			string		ontology_label				mouse_strain			mouse_st
 vaccination			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/vo	VO_0000001					Any known vaccines administered to the donor organism. NOT a full vaccine history		10
 vaccination__ontology_label			string	TRUE	ontology_label				vaccination			vaccination__ontology_label		11
 vaccination__route			string	TRUE	enum			["intradermal", "intranasal", "intravenous", "aerosol", "intramuscular", "mucosal", "oral"]	vaccination			Intradermal, Intranasal, Intravenous, Aerosol		12
-vaccination__dosage			string	TRUE					vaccination			The dosage and units for the vaccine 		13
+vaccination__dosage			string	TRUE					vaccination			The dosage and units for the vaccine		13
 vaccination__adjuvants			string	TRUE					vaccination			Any adjuvants administered in the vaccine		14
 vaccination__time_since			number	TRUE					vaccination		vaccination__time_since__unit	Amount of time since vaccine was administered		15
 vaccination__time_since__unit			string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	UO_0000003		vaccination__time_since			Time since each vaccine in the vaccination field was administered		16
@@ -36,7 +35,7 @@ enrichment_method			string	TRUE	enum			["cell size selection", "fluorescence-act
 enrichment__cell_type			string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/cl	CL_0000548		enrichment_method			The cell type that was sorted via an enrichment technique such as flow cytometry.		35
 enrichment__cell_type__ontology_label			string		ontology_label				enrichment__cell_type			enrichment__cell_type__ontology_label		36
 enrichment__facs_markers			string	TRUE					enrichment_method			The surface markers that were sorted on to enrich for the enriched cell type if flow cytometry was used		37
-disease	Yes	PATO_0000461	string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/mondo	MONDO_0000001					The disease state(s) of the individual donating the sample at the time of donation		38
+disease	Yes	MONDO_0000001	string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/mondo	MONDO_0000001					The disease state(s) of the individual donating the sample at the time of donation		38
 disease__ontology_label	Yes		string	TRUE	ontology_label				disease			disease__ontology_label		39
 disease__time_since_onset			number	TRUE					disease		disease__time_since_onset__unit	Amount of time since disease onset		40
 disease__time_since_onset__unit			string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	UO_0000003		disease__time_since_onset			disease__time_since_onset__unit		41
@@ -61,7 +60,7 @@ sequencing_instrument_manufacturer_model			string		ontology	https://www.ebi.ac.u
 sequencing_instrument_manufacturer_model__ontology_label			string		ontology_label				sequencing_instrument_manufacturer_model			sequencing_instrument_manufacturer_model__ontology_label		60
 paired_ends			boolean									true if the sequence library has paired end data (false for 10x)		61
 read_length			string									the read structure of the sequencing run		62
-small_molecule_perturbation			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/chebi 	CHEBI_24431					a small molecule added to a cell culture (ex. A drug) growth factor (and if it is recombinant, concentration), gene)		63
+small_molecule_perturbation			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/chebi	CHEBI_24431					a small molecule added to a cell culture (ex. A drug) growth factor (and if it is recombinant, concentration), gene)		63
 small_molecule_perturbation__ontology_label			string		ontology_label				small_molecule_perturbation			small_molecule_perturbation__ontology_label		64
 small_molecule_perturbation__concentration			number	TRUE					small_molecule_perturbation		small_molecule_perturbation__concentration__unit	Concentration of each small molecule in the final tissue culture media. Order should be consistent with small_molecule_perturbation		65
 small_molecule_perturbation__concentration__unit_label			string		unit_label				small_molecule_perturbation__concentration__unit			small_molecule_perturbation__concentration__unit_label		66
