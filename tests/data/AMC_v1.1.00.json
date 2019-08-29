@@ -207,7 +207,7 @@
         },
         "development_stage": {
             "description": "A classification of the developmental stage of the organism",
-            "ontology": "http://www.ebi.ac.uk/ols/api/api/ontologies/hsapdv",
+            "ontology": "http://www.ebi.ac.uk/ols/api/ontologies/hsapdv",
             "type": "string"
         },
         "development_stage__ontology_label": {
@@ -338,7 +338,7 @@
             "items": {
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/api/ontologies/ogg",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ogg",
             "type": "array"
         },
         "gene_perturbation__direction": {
@@ -376,7 +376,7 @@
             "items": {
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/api/ontologies/pr",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/pr",
             "type": "array"
         },
         "growth_factor_perturbation__concentration": {

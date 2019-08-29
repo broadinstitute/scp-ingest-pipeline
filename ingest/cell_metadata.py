@@ -27,7 +27,7 @@ class CellMetadata(IngestFiles):
         self.top_level_doc = self.create_documents(file_path, file_id, study_accession)
         self.data_subcollection = self.create_subdocuments()
         self.errors = defaultdict(list)
-        self.ontology = defaultdict(lambda: defaultdict(set))
+        self.ontology = defaultdict(lambda: defaultdict(list))
         self.type = defaultdict(list)
         self.cells = []
 

@@ -49,7 +49,7 @@ disease__intracellular_pathogen			string	TRUE	ontology	https://www.ebi.ac.uk/ols
 disease__intracellular_pathogen__ontology_label			string	TRUE	ontology_label				disease__intracellular_pathogen			disease__intracellular_pathogen__ontology_label		49
 spike_in_kit			string									name of spike in kit		50
 spike_in_concentration			string						spike_in_kit			spike in concentration		51
-development_stage			string		ontology	http://www.ebi.ac.uk/ols/api/api/ontologies/hsapdv						A classification of the developmental stage of the organism		52
+development_stage			string		ontology	http://www.ebi.ac.uk/ols/api/ontologies/hsapdv						A classification of the developmental stage of the organism		52
 development_stage__ontology_label			string		ontology_label				development_stage			development_stage__ontology_label		53
 end_bias			string		enum			["3 prime tag", "3 prime end bias", "5 prime tag", "5 prime end bias", "full length"]				The end bias of the library preparation protocol used		54
 library_preparation_protocol	Yes		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/efo	EFO_0001457					The single cell RNA-sequencing protocol used for Library preparation		55
@@ -66,13 +66,13 @@ small_molecule_perturbation__concentration			number	TRUE					small_molecule_pert
 small_molecule_perturbation__concentration__unit_label			string		unit_label				small_molecule_perturbation__concentration__unit			small_molecule_perturbation__concentration__unit_label		66
 small_molecule_perturbation__solvent			string	TRUE					small_molecule_perturbation			Solvent in which the small molecule was added to the cells. Ex. the base media.		67
 small_molecule_perturbation__source			string	TRUE					small_molecule_perturbation			Source from which the small molecule was purchased		68
-growth_factor_perturbation			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/api/ontologies/pr	PR_000000001			sample_type in cell line, organoid, cultured primary cells		a growth factor added to a cell culture media		69
+growth_factor_perturbation			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/pr	PR_000000001			sample_type in cell line, organoid, cultured primary cells		a growth factor added to a cell culture media		69
 growth_factor_perturbation__ontology_label			string		ontology_label				growth_factor_perturbation			growth_factor_perturbation__ontology_label		70
 growth_factor_perturbation__concentration			number	TRUE					growth_factor_perturbation		growth_factor_perturbation__concentration__unit	Concentration of of each growth factor in the final tissue culture media. Order should be consistent with growth_factor_perturbation		71
 growth_factor_perturbation__concentration__unit_label			string		unit_label				growth_factor_perturbation__concentration__unit			growth_factor_perturbation__concentration__unit_label		72
 growth_factor_perturbation__solvent			string	TRUE					growth_factor_perturbation			Solvent in which the growth factor was added to the cells. Ex. the base media.		73
 growth_factor_perturbation__source			string	TRUE					growth_factor_perturbation			Source from which the growth factor was purchased		74
-gene_perturbation			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/api/ontologies/ogg	OGG_0000000002					A perturbation to a gene done to a cell culture		75
+gene_perturbation			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/ogg	OGG_0000000002					A perturbation to a gene done to a cell culture		75
 gene_perturbation__ontology_label			string		ontology_label				gene_perturbation			gene_perturbation__ontology_label		76
 gene_perturbation__method			string	TRUE					gene_perturbation			Process by which the gene was perturbed. Ex. CRISPR knock-out		77
 gene_perturbation__direction			string		enum			["knock in", "knock out","activation","repression"]	gene_perturbation			The type of perturbation of the gene defined in gene_perturbation. Knock in and knock out are complete additions/depletions of the gene, activation and repression refer to changes in magnitude of expression.		78

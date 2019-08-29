@@ -2,15 +2,15 @@
 
 DESCRIPTION
 This CLI takes a tsv metadata convention and creates a JSON Schema representation.
-The JSON schema represents the rules that should be enforced on metadata files 
+The JSON schema represents the rules that should be enforced on metadata files
 for studies participating under the convention.
 
 EXAMPLE
 # Generate json file for Alexandria from the Alexandria metadata convention tsv
-$ serialize_convention.py project metadata_convention.tsv 
+$ serialize_convention.py project metadata_convention.tsv
 
 # if using the test data in this repo and wanted output in current working dir
-$ serialize_convention.py -p . Alexandria ../tests/data/AMC_v0.8.tsv 
+$ serialize_convention.py -p . Alexandria ../tests/data/AMC_v0.8.tsv
 
 """
 
@@ -19,6 +19,8 @@ import csv
 import os
 import json
 import re
+import requests
+
 
 def create_parser():
     """
@@ -28,20 +30,33 @@ def create_parser():
     """
     # create the argument parser
     parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     # add arguments
-    parser.add_argument('--label', '-l', type=str,
-                        help='Label to insert into the file name ' +
-                        'for the Metadata convention json file [optional]',
-                        default=None),
-    parser.add_argument('--output-path', '-p', type=str,
-                        help='Path for output file [optional]', default=None)
-    parser.add_argument('project', type=str,
-                        help='One-word project name that the metadata ' +
-                        'convention belongs to [Required]')
-    parser.add_argument('input_convention',
-                        help='Metadata convention tsv file [Required]')
+    parser.add_argument(
+        '--label',
+        '-l',
+        type=str,
+        help='Label to insert into the file name '
+        + 'for the Metadata convention json file [optional]',
+        default=None,
+    ),
+    parser.add_argument(
+        '--output-path',
+        '-p',
+        type=str,
+        help='Path for output file [optional]',
+        default=None,
+    )
+    parser.add_argument(
+        'project',
+        type=str,
+        help='One-word project name that the metadata '
+        + 'convention belongs to [Required]',
+    )
+    parser.add_argument(
+        'input_convention', help='Metadata convention tsv file [Required]'
+    )
     return parser
 
 
@@ -103,11 +118,12 @@ def build_schema_info(project):
     info = {}
     info['$schema'] = 'https://json-schema.org/draft-07/schema#'
     # $id below is a placeholder, not functional yet
-    info['$id'] = ('https://singlecell.broadinstitute.org/api/v1/metadata-schemas/'
-                   '%s.schema.json' % (project))
+    info['$id'] = (
+        'https://singlecell.broadinstitute.org/api/v1/metadata-schemas/'
+        '%s.schema.json' % (project)
+    )
     info['title'] = project + ' Metadata Convention'
-    info['description'] = ('Metadata convention for the '
-                           '%s project' % (project))
+    info['description'] = 'Metadata convention for the ' '%s project' % (project)
     return info
 
 
@@ -139,7 +155,7 @@ def write_json_schema(filename, object):
         jsonfile.write(object)
 
 
-def generate_output_name(inputname, label, path = ''):
+def generate_output_name(inputname, label, path=''):
     """
     Build output filename from inputname
     """
@@ -156,6 +172,18 @@ def generate_output_name(inputname, label, path = ''):
     else:
         outputname = labeledName
     return outputname
+
+
+def retrieve_ontology(ontology_url):
+    """Retrieve an ontology listing from EBI OLS
+    :param ontology_term: identifier of a term in an ontology in OLS (e.g. CL_0002419)
+    :return: JSON payload of ontology, or None
+    """
+    response = requests.get(ontology_url)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return None
 
 
 def serialize_convention(convention, input_convention):
@@ -181,8 +209,7 @@ def serialize_convention(convention, input_convention):
             if row['dependency']:
                 # dependencies (aka "if" relationships) are uni-directional
                 # if 'attribute', 'dependency' must also exist
-                add_dependency(
-                    row['attribute'], row['dependency'], dependencies)
+                add_dependency(row['attribute'], row['dependency'], dependencies)
             if row['dependent']:
                 # dependent is bi-directional (aka "required-if")
                 add_dependency(row['attribute'], row['dependent'], dependencies)
@@ -196,6 +223,11 @@ def serialize_convention(convention, input_convention):
 
             # handle properties unique to the ontology class of attributes
             if row['class'] == 'ontology':
+                ontology = retrieve_ontology(row['ontology'])
+                if ontology:
+                    print("Valid ontology URL", row['ontology'])
+                else:
+                    print("Invalid ontology URL", row['ontology'])
                 entry[row['class']] = row['ontology']
 
             # handle arrays of values
@@ -218,7 +250,7 @@ def serialize_convention(convention, input_convention):
     return convention
 
 
-def write_schema(dict, inputname, label, filepath = ''):
+def write_schema(dict, inputname, label, filepath=''):
     filename = generate_output_name(inputname, label, filepath)
     dump_json(dict, filename)
     write_json_schema(filename, clean_json(filename))

@@ -1,4 +1,3 @@
-#! /usr/bin/python
 """Validate input metadata TSV file against metadata convention.
 
 DESCRIPTION
@@ -9,7 +8,7 @@ participating under the convention.
 
 EXAMPLE
 # Using JSON file for Alexandria metadata convention TSV, validate input TSV
-$ validate_metadata.py AMC_v0.8.json metadata_test.tsv
+$ python3 validate_metadata.py ../../tests/data/AMC_v0.8.json ../../tests/data/metadata_valid.tsv
 
 """
 
@@ -18,8 +17,11 @@ import json
 import logging
 from collections import defaultdict
 import sys
+import requests
+import urllib.parse as encoder
 
 import jsonschema
+
 sys.path.append('..')
 from cell_metadata import CellMetadata
 
@@ -43,6 +45,13 @@ def create_parser():
     #     type=str,
     #     help='Output file name [optional]',
     #     default=None
+    # )
+    # parser.add_argument(
+    #     '--key_id',
+    #     '-k'
+    #     type=str,
+    #     help='Key metadata name for parsing; CellID for metadata, BiosampleID for sample sheets [optional]',
+    #     default='CellID'
     # )
     parser.add_argument('convention', help='Metadata convention JSON file ')
     parser.add_argument('input_metadata', help='Metadata TSV file')
@@ -89,8 +98,11 @@ def extract_convention_types(convention, metadata):
 
     :param convention: dict representation of metadata convention
     :param metadata: cell metadata object
+
+    CellMetadata.type.convention populated with lists of metadata
+    for number, integer, array and ontology
     """
-    logger.debug('Begin: extract_numeric_from_convention')
+    logger.debug('Begin: extract_convention_types')
     # setup of metadata.type['convention']['ontology'] has onotology labels
     metadata.type['convention'] = defaultdict(list)
     for k in convention['properties'].keys():
@@ -104,6 +116,7 @@ def extract_convention_types(convention, metadata):
             metadata.type['convention']['number'].append(k)
         if convention.get('properties').get(k).get('ontology'):
             metadata.type['convention']['ontology'].append(k)
+    # print('convention ontologies', metadata.type['convention']['ontology'])
     return
 
 
@@ -129,7 +142,7 @@ def list_duplicates(cells):
     seen_add = seen.add
     # list comprehension below chosen for computational efficiency
     # adds all new elements to seen and all other to seen_twice
-    # "or" allows seen_add(x) evaluation only if x is not in seen
+    # 'or' allows seen_add(x) evaluation only if x is not in seen
     seen_twice = set(x for x in cells if x in seen or seen_add(x))
     return list(seen_twice)
 
@@ -151,26 +164,38 @@ def validate_cells_unique(metadata):
     return valid
 
 
+def collect_cell_for_ontology(metadatum, data, metadata):
+    """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
+    """
+    local_errors = set()
+    logger.debug('Begin: collect_cell_for_ontology')
+    ontology_label = metadatum + '__ontology_label'
+    try:
+        metadata.ontology[metadatum][(data[metadatum], data[ontology_label])].append(
+            data['CellID']
+        )
+    except KeyError:
+        metadata.ontology[metadatum][(data[metadatum])].append(data['CellID'])
+    return local_errors
+
+
 def collect_ontology_data(data, metadata):
     """Collect unique ontology IDs for ontology validation
     """
-    # function is not yet working, fix extract_convention_types
     logger.debug('Begin: collect_ontology_data')
-    local_errors = set()
     for entry in data.keys():
+        # print('consider collecting ontology', entry)
         if entry in metadata.type['convention']['ontology']:
-            metadata.ontology[entry]['ontologyID'].add(entry)
-            metadata.ontology[entry]['CellID'].add(data['CellID'])
-            label_key = entry + '-ontology_label'
-        try:
-            metadata.ontology[entry]['label'].add(data[label_key])
-        except KeyError:
-            # prefer to capture below to errors
-            msg = 'Warning: missing key' + label_key
-            local_errors.add(msg)
-        except UnboundLocalError:
-            # ToDo - figure out best practice for this
-            local_errors.add('UnboundLocalError - needs to be addressed')
+            # skip ontologies that are arrays for now
+            if entry in metadata.type['convention']['array']:
+                pass
+                # not collecting metadata for array-based metadata
+            else:
+                collect_cell_for_ontology(entry, data, metadata)
+        else:
+            # troubleshooting print statement to visualize skipping metadata that are not of type ontology
+            # print(entry, 'not an ontology in', metadata.type['convention']['ontology'])
+            pass
     return
 
 
@@ -190,6 +215,9 @@ def process_metadata_row(metadata, convention, line):
     keys = metadata.headers
     row_info = dict(zip(keys, line))
     for k, v in row_info.items():
+        # explicitly setting empty values to None so missing values for
+        # required data are caught at validation
+        #        print('processing row metadata:', k)
         if not v:
             row_info[k] = None
         if k in metadata.type['convention']['integer']:
@@ -226,7 +254,10 @@ def process_metadata_content(metadata, convention):
     schema = validate_schema(convention)
     if schema:
         line = metadata.extract()
+        row_count = 1
         while line:
+            # print('processing row', row_count)
+            row_count += 1
             # print('line:', line)
             row = process_metadata_row(metadata, convention, line)
             # print('row:', row)
@@ -241,20 +272,6 @@ def process_metadata_content(metadata, convention):
     else:
         print('Validation failed: Invalid metadata convention')
         return
-
-
-def print_collected_ontology_data(metadata):
-    logger.debug('Begin: print_collected_ontology_data')
-    for entry in metadata.ontology.keys():
-        print(entry)
-        print(
-            'Ontology data for entry: (count =',
-            len(metadata.ontology[entry]['CellID']),
-            ')',
-        )
-        print('Uniq ontologyIDs:', metadata.ontology[entry]['ontologyID'])
-        print('Uniq labels:', metadata.ontology[entry]['label'])
-    return
 
 
 def report_errors(metadata):
@@ -280,23 +297,103 @@ def report_errors(metadata):
     return errors
 
 
+def retrieve_ontology(ontology_url):
+    """Retrieve an ontology listing from EBI OLS
+    :param ontology_term: identifier of a term in an ontology in OLS (e.g. CL_0002419)
+    :return: JSON payload of ontology, or None
+    """
+    response = requests.get(ontology_url)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return None
+
+
+def retrieve_ontology_term(convention_url, ontology_id):
+    """Retrieve an individual term from an ontology
+    :param ontology_term: term to query for in matching ontology
+    :return: JSON payload of ontology of ontology term, or None
+    """
+    OLS_BASE_URL = "https://www.ebi.ac.uk/ols/api/ontologies/"
+    convention_ontology = retrieve_ontology(convention_url)
+    ontology_shortname, term_id = ontology_id.split('_')
+    metadata_url = OLS_BASE_URL + ontology_shortname
+    metadata_ontology = retrieve_ontology(metadata_url)
+    if convention_ontology and metadata_ontology:
+        base_term_uri = metadata_ontology['config']['baseUris'][0]
+        query_iri = encode_term_iri(term_id, base_term_uri)
+        term_url = convention_ontology['_links']['terms']['href'] + '/' + query_iri
+        # print(term_url)
+        response = requests.get(term_url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
+    else:
+        print('failed to retrieve data from EBI OLS')
+        return None
+
+
+def encode_term_iri(term_id, base_uri):
+    """Double url-encode a term Internationalized Resource Identifier (IRI) for querying OLS ontologies
+
+    :param term: ontology term
+    :param base_uri: base term URI for corresponding ontology
+    :return: double url-encoded ontology term IRI
+    """
+    query_uri = base_uri + term_id
+    encoded_iri = encoder.quote_plus(encoder.quote_plus(query_uri))
+    return encoded_iri
+
+
+def validate_collected_ontology_data(metadata, convention):
+    logger.debug('Begin: validate_collected_ontology_data')
+    for entry in metadata.ontology.keys():
+        # print(entry)
+        ontology_url = convention['properties'][entry]['ontology']
+        try:
+            # find out if there is a less gross way to do this, seems brittle
+            for ontology_id, ontology_label in metadata.ontology[entry].keys():
+                matching_term = retrieve_ontology_term(ontology_url, ontology_id)
+                if matching_term:
+                    # print("Found matching for " + ontology_id)
+                    if matching_term['label'] != ontology_label:
+                        try:
+                            print(
+                                'ontology_label',
+                                ontology_label,
+                                'does not match',
+                                matching_term['label'],
+                            )
+                        except TypeError:
+                            print('No description found for', ontology_id)
+                    # else:
+                    #     print("Ontology label matches: " + matching_term['label'])
+                else:
+                    print("No match found for " + ontology_id)
+        except ValueError:
+            for ontology_id in metadata.ontology[entry].keys():
+                matching_term = retrieve_ontology_term(ontology_url, ontology_id)
+                if not matching_term:
+                    print("No match found for " + ontology_id)
+                # else:
+                #     print("Found matching for " + ontology_id)
+                print(
+                    'Warning: no ontology label supplied in metdata file for',
+                    ontology_id,
+                    '- cross-check for data entry error not possible',
+                )
+    return
+
+
 # ToDo
-"""
-ontology validation
-"""
+
 """
 generate error report
 """
 """
 WAIT: handle array data types
 
-"""
-"""
-DEFER (loom): Check loom format is valid
-  what are the criteria?
-"""
-"""
-DEFER (loom): Read loom metadata, row by row?
 """
 """
 DEFER: Things to check before pass intended data types to FireStore
@@ -321,5 +418,5 @@ if __name__ == '__main__':
     format_valid = metadata.validate_format()
     if format_valid:
         process_metadata_content(metadata, convention)
+    validate_collected_ontology_data(metadata, convention)
     report_errors(metadata)
-#    print_collected_ontology_data(metadata)
