@@ -233,6 +233,7 @@ class IngestPipeline(object):
                 self.cluster.update_points()
                 break
             self.cluster.transform(row)
+        print(self.cluster.top_level_doc)
         self.load_cluster_files()
 
     def subsample(self):
@@ -307,7 +308,11 @@ def create_parser():
         included using --barcode-file <barcode file path> and --gene-file \
         <gene file path>. See --help for more information"
 
-    parser_ingest_expression.add_argument("--file-params", type=json.loads)
+    parser_ingest_expression.add_argument(
+        "--file-params",
+        type=json.loads,
+        help="Optional parameters for expression files",
+    )
 
     parser_ingest_expression.add_argument(
         "--matrix-file-type",
@@ -331,13 +336,13 @@ def create_parser():
     parser_cell_metadata.add_argument(
         "--cell-metadata-file",
         required=True,
-        help="Absolute or relative path to " "cell metadata file.",
+        help="Absolute or relative path to cell metadata file.",
     )
     parser_cell_metadata.add_argument(
         "--ingest-cell-metadata",
         required=True,
         action="store_true",
-        help="Indicates that subsampliing " "functionality should be invoked",
+        help="Indicates that subsampliing functionality should be invoked",
     )
 
     # Parser ingesting cluster files
@@ -353,31 +358,32 @@ def create_parser():
         "--ingest-cluster",
         required=True,
         action="store_true",
-        help="Indicates that ingest of cluster file " "should be invoked",
+        help="Indicates that ingest of cluster file should be invoked",
     )
     parser_cluster.add_argument(
         "--name", required=True, help="Name of cluster from input form"
     )
-    parser_cluster.add_argument("--domain-ranges", type=json.loads)
+    parser_cluster.add_argument(
+        "--domain-ranges", type=json.loads, help="Optional paramater taken from UI"
+    )
 
     # Parser ingesting cluster files
     parser_subsample = subparsers.add_parser(
-        "ingest_subsample", help="Indicates that subsampling " "will be initialized"
+        "ingest_subsample", help="Indicates that subsampling will be initialized"
     )
     parser_subsample.add_argument(
         "--subsample",
         required=True,
         action="store_true",
-        help="Indicates that subsampliing functionality" " should be invoked",
+        help="Indicates that subsampliing functionality should be invoked",
     )
     parser_subsample.add_argument(
         "--cluster-file",
         required=True,
-        help="Absolute or relative path to " "cluster file.",
+        help="Absolute or relative path to cluster file.",
     )
     parser_subsample.add_argument(
-        "--cell-metadata-file",
-        help="Absolute or relative path to " "cell metadata file.",
+        "--cell-metadata-file", help="Absolute or relative path to cell metadata file."
     )
 
     return parser

@@ -24,6 +24,7 @@ class Clusters(IngestFiles):
         # Second line in cluster is metadata_type
         self.metadata_types = self.get_next_line(increase_line_count=False)
         self.unique_values = dict.fromkeys(self.header[1:], [])
+        print(self.unique_values)
         self.source_file_type = "cluster"
         self.has_z = "z" in self.header
         self.top_level_doc = {
@@ -44,16 +45,17 @@ class Clusters(IngestFiles):
         """ Add data from cluster files into annotation subdocs in cluster data model"""
 
         for idx, column in enumerate(row):
-            annotation = self.header[idx].casefold()
+            annotation = self.header[idx]
 
             # first index is cell name don't need to check annot type
             if idx != 0:
-                if self.metadata_types[idx].casefold() == "numeric":
+                if self.metadata_types[idx].lower() == "numeric":
                     column = round(float(column), 3)
-                elif self.metadata_types[idx].casefold() == "group":
+                elif self.metadata_types[idx].lower() == "group":
                     if column not in self.unique_values[annotation]:
                         self.unique_values[annotation].append(column)
             # perform a shallow copy
+
             annotation_value = copy.copy(self.cluster_subdocs[annotation]["value"])
             annotation_value.append(column)
             self.cluster_subdocs[annotation]["value"] = annotation_value
@@ -64,13 +66,15 @@ class Clusters(IngestFiles):
         for annot_name in self.header:
             value = annot_name.lower()
             if value == "name":
-                cluster_subdocs[value] = self.create_cluster_subdoc("text", "cells")
+                cluster_subdocs[annot_name] = self.create_cluster_subdoc(
+                    "text", "cells"
+                )
             elif value in ("x", "y", "z"):
-                cluster_subdocs[value] = self.create_cluster_subdoc(
+                cluster_subdocs[annot_name] = self.create_cluster_subdoc(
                     value, "coordinates"
                 )
             else:
-                cluster_subdocs[value] = self.create_cluster_subdoc(
+                cluster_subdocs[annot_name] = self.create_cluster_subdoc(
                     annot_name, "annotations"
                 )
         return cluster_subdocs
