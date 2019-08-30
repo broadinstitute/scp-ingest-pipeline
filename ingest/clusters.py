@@ -26,7 +26,7 @@ class Clusters(IngestFiles):
         self.unique_values = dict.fromkeys(self.header[1:], [])
         self.source_file_type = "cluster"
         self.has_z = "z" in self.header
-        # TODO: Populate the cell_annotations array when pandas in implemented
+        # TODO: Populate the cell_annotations array when pandas is implemented
         self.top_level_doc = {
             "name": name,
             "cluster_type": "3d" if self.has_z else "2d",
