@@ -14,19 +14,19 @@ EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py --study-accession SPC1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster --name cluster1 --domain-ranges '{"domain_ranges":{"x":[-1, 1], "y":[-1, 1], "z":[-1, 1]}}'
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster --name cluster1 --domain-ranges '{"domain_ranges":{"x":[-1, 1], "y":[-1, 1], "z":[-1, 1]}}'
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-accession SPC1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
 
 # Ingest dense file
-python ingest_pipeline.py  --study-accession SPC1 --file-id 123abc ingest_expression --file-params '{"taxon_name": "IDK", "taxon_common_name": "BROVCA1", "ncbi_taxid":"blank_1", "genome_assembly_accession" : "Who_knows", "genome_annotation": "bling_bling"}' --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --file-params '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.1", "genome_annotation": "Ensemble 94"}' --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py --study-accession SPC1 --file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-accession SPC1 --file-id 123abc ingest_expression --file-params '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensemble 94"}' --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --file-params '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensemble 94"}' --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
@@ -233,7 +233,6 @@ class IngestPipeline(object):
                 self.cluster.update_points()
                 break
             self.cluster.transform(row)
-        print(self.cluster.top_level_doc)
         self.load_cluster_files()
 
     def subsample(self):
