@@ -17,9 +17,7 @@ class CellMetadata(IngestFiles):
 
     def __init__(self, file_path, file_id: str, study_accession: str, *args, **kwargs):
 
-        IngestFiles.__init__(
-            self, file_path, self.ALLOWED_FILE_TYPES, open_as="dataframe"
-        )
+        IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
         self.headers = self.get_next_line(increase_line_count=False)
         self.metadata_types = self.get_next_line(increase_line_count=False)
         # unique values for group-based annotations
