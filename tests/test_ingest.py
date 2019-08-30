@@ -155,7 +155,7 @@ class IngestTestCase(unittest.TestCase):
             "--file-params",
             '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensemble 94"}',
             "--matrix-file",
-            "gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt",
+            "gs://fake-bucket/remote-matrix-file-does-not-exist.txt",
             "--matrix-file-type",
             "dense",
         ]
@@ -175,7 +175,7 @@ class IngestTestCase(unittest.TestCase):
             "--file-params",
             '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensemble 94"}',
             "--matrix-file",
-            "gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt",
+            "../tests/data/dense_matrix_19_genes_100k_cells.txt",
             "--matrix-file-type",
             "dense",
         ]
