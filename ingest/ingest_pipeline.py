@@ -134,35 +134,34 @@ class IngestPipeline(object):
         None
     """
         for expression_model in list_of_expression_models:
-            print(expression_model.top_level_doc)
-            # collection_name = expression_model.COLLECTION_NAME
-            # batch = self.db.batch()
-            # doc_ref = self.db.collection(collection_name).document()
-            # batch.set(doc_ref, expression_model.top_level_doc)
-            # batch.commit()
-            # i = 0
-            # if expression_model.has_subcollection_data():
-            #     try:
-            #         print(f"Ingesting {expression_model.name}")
-            #         subcollection_name = expression_model.SUBCOLLECTION_NAME
-            #         doc_ref_sub = doc_ref.collection(subcollection_name).document()
-            #         print(
-            #             f"Length of scores is: {len(expression_model.expression_scores)}"
-            #         )
-            #         doc_ref_sub.set(expression_model.subdocument)
-            #     except exceptions.InvalidArgument as e:
-            #         # Catches invalid argument exception, which error "Maximum
-            #         # document size" falls under
-            #         print(e)
-            #         batch = self.db.batch()
-            #         for subdoc in expression_model.chunk_gene_expression_documents(
-            #             doc_ref_sub.id, doc_ref_sub._document_path
-            #         ):
-            #             print({i})
-            #             batch.set(doc_ref_sub, subdoc)
-            #             i += 1
-            #
-            #         batch.commit()
+            collection_name = expression_model.COLLECTION_NAME
+            batch = self.db.batch()
+            doc_ref = self.db.collection(collection_name).document()
+            batch.set(doc_ref, expression_model.top_level_doc)
+            batch.commit()
+            i = 0
+            if expression_model.has_subcollection_data():
+                try:
+                    print(f"Ingesting {expression_model.name}")
+                    subcollection_name = expression_model.SUBCOLLECTION_NAME
+                    doc_ref_sub = doc_ref.collection(subcollection_name).document()
+                    print(
+                        f"Length of scores is: {len(expression_model.expression_scores)}"
+                    )
+                    doc_ref_sub.set(expression_model.subdocument)
+                except exceptions.InvalidArgument as e:
+                    # Catches invalid argument exception, which error "Maximum
+                    # document size" falls under
+                    print(e)
+                    batch = self.db.batch()
+                    for subdoc in expression_model.chunk_gene_expression_documents(
+                        doc_ref_sub.id, doc_ref_sub._document_path
+                    ):
+                        print({i})
+                        batch.set(doc_ref_sub, subdoc)
+                        i += 1
+
+                    batch.commit()
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
@@ -234,7 +233,7 @@ class IngestPipeline(object):
                 self.cluster.update_points()
                 break
             self.cluster.transform(row)
-        # self.load_cluster_files()
+        self.load_cluster_files()
 
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
@@ -417,7 +416,6 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
-    print(arguments)
     ingest = IngestPipeline(**arguments)
 
     if "matrix_file" in arguments:
