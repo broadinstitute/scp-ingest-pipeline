@@ -22,7 +22,7 @@ DOCUMENT_LIMIT_BYTES = 1_048_576
 
 class Gene:
     SUBCOLLECTION_NAME = "gene_expression"
-    COLLECTION_NAME = "Gene"
+    COLLECTION_NAME = "genes"
 
     def __init__(
         self,
