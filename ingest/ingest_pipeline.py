@@ -7,30 +7,29 @@ file types then uploads them into Firestore.
 
 PREREQUISITES
 You must have Google Cloud Firestore installed, authenticated, and
-configured. Must have Python 3.6 or higher. Indexing must be turned off for
-all collections.
+configured. Must have Python 3.6 or higher. Indexing must be turned off for sub-collections.
 
 EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster --name cluster1 --domain-ranges '{"domain_ranges":{"x":[-1, 1], "y":[-1, 1], "z":[-1, 1]}}'
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
 
 # Ingest dense file
-python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --file-params '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.1", "genome_annotation": "Ensemble 94"}' --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Subsample cluster and metadata file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --file-params '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensembl 94"}' --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-import json
+import ast
 
 from cell_metadata import CellMetadata
 from clusters import Clusters
@@ -53,29 +52,21 @@ class IngestPipeline(object):
         study_accession: str,
         matrix_file: str = None,
         matrix_file_type: str = None,
-        barcode_file: str = None,
-        gene_file: str = None,
         cell_metadata_file: str = None,
         cluster_file: str = None,
-        name: str = None,
         subsample=False,
-        domain_ranges: str = None,
         ingest_cell_metadata=False,
         ingest_cluster=False,
-        file_params: Dict = None,
+        **kwargs,
     ):
         """Initializes variables in ingest service."""
         self.file_id = file_id
         self.study_accession = study_accession
-        self.file_params = file_params
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        self.gene_file = gene_file
-        self.barcodes_file = barcode_file
         self.db = firestore.Client()
         self.cluster_file = cluster_file
-        self.domain_ranges = domain_ranges
-        self.name = name
+        self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
@@ -95,29 +86,15 @@ class IngestPipeline(object):
                 File object.
         """
         # Mtx file types not included because class declaration is different
-        file_connections = {"dense": Dense, "cell_metadata": CellMetadata}
-
-        if file_type == "mtx":
-            return Mtx(
-                file_path,
-                self.gene_file,
-                self.barcodes_file,
-                self.file_id,
-                self.study_accession,
-                self.file_params,
-            )
-        elif file_type == "cluster":
-            return Clusters(
-                file_path,
-                self.file_id,
-                self.study_accession,
-                self.name,
-                self.domain_ranges,
-            )
-        else:
-            return file_connections.get(file_type)(
-                file_path, self.file_id, self.study_accession, self.file_params
-            )
+        file_connections = {
+            "dense": Dense,
+            "cell_metadata": CellMetadata,
+            "cluster": Clusters,
+            "mtx": Mtx,
+        }
+        return file_connections.get(file_type)(
+            file_path, self.file_id, self.study_accession, **self.kwargs
+        )
 
     def close_matrix(self):
         """Closes connection to file"""
@@ -201,7 +178,7 @@ class IngestPipeline(object):
     Returns:
         None
     """
-        if self.gene_file is not None:
+        if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
         else:
@@ -308,9 +285,24 @@ def create_parser():
         <gene file path>. See --help for more information"
 
     parser_ingest_expression.add_argument(
-        "--file-params",
-        type=json.loads,
-        help="Optional parameters for expression files",
+        "--taxon-name",
+        help="Scientific name of taxon associated with file.  E.g. 'Homo sapiens'",
+    )
+    parser_ingest_expression.add_argument(
+        "--taxon-common-name",
+        help="Common name of taxon associated with file.  E.g. 'human'",
+    )
+    parser_ingest_expression.add_argument(
+        "--ncbi-taxid",
+        help="NCBI Taxonomy ID of taxon associated with file.  E.g. 9606",
+    )
+    parser_ingest_expression.add_argument(
+        "--genome-assembly-accession",
+        help="Genome assembly accession for file.  E.g. 'GCA_000001405.15'",
+    )
+    parser_ingest_expression.add_argument(
+        "--genome-annotation",
+        help="Genomic annotation for expression files.  E.g. 'Ensembl 94'",
     )
 
     parser_ingest_expression.add_argument(
@@ -363,7 +355,9 @@ def create_parser():
         "--name", required=True, help="Name of cluster from input form"
     )
     parser_cluster.add_argument(
-        "--domain-ranges", type=json.loads, help="Optional paramater taken from UI"
+        "--domain-ranges",
+        type=ast.literal_eval,
+        help="Optional paramater taken from UI",
     )
 
     # Parser ingesting cluster files
