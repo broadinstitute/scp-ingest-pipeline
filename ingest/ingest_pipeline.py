@@ -57,25 +57,23 @@ class IngestPipeline(object):
         gene_file: str = None,
         cell_metadata_file: str = None,
         cluster_file: str = None,
-        name: str = None,
         subsample=False,
         domain_ranges: str = None,
         ingest_cell_metadata=False,
         ingest_cluster=False,
-        file_params: Dict = None,
+        **kwargs,
     ):
         """Initializes variables in ingest service."""
+        print(kwargs)
         self.file_id = file_id
         self.study_accession = study_accession
-        self.file_params = file_params
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
         self.gene_file = gene_file
         self.barcodes_file = barcode_file
         self.db = firestore.Client()
         self.cluster_file = cluster_file
-        self.domain_ranges = domain_ranges
-        self.name = name
+        self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
@@ -95,7 +93,11 @@ class IngestPipeline(object):
                 File object.
         """
         # Mtx file types not included because class declaration is different
-        file_connections = {"dense": Dense, "cell_metadata": CellMetadata}
+        file_connections = {
+            "dense": Dense,
+            "cell_metadata": CellMetadata,
+            "clusters": Clusters,
+        }
 
         if file_type == "mtx":
             return Mtx(
@@ -116,7 +118,7 @@ class IngestPipeline(object):
             )
         else:
             return file_connections.get(file_type)(
-                file_path, self.file_id, self.study_accession, self.file_params
+                file_path, self.file_id, self.study_accession, **self.kwargs
             )
 
     def close_matrix(self):
@@ -211,7 +213,8 @@ class IngestPipeline(object):
                 transformed_data.append(
                     self.matrix.transform_expression_data_by_gene(row)
                 )
-        self.load_expression_data(transformed_data)
+        print(self.matrix.top_level_doc)
+        # self.load_expression_data(transformed_data)
         self.close_matrix()
 
     def ingest_cell_metadata(self):
@@ -302,9 +305,25 @@ def create_parser():
         <gene file path>. See --help for more information"
 
     parser_ingest_expression.add_argument(
-        "--file-params",
+        "--taxon-name",
+        help="Taxon (scientific) name associated with file. Ex. 'Homo Sapiens' ",
+    )
+    parser_ingest_expression.add_argument(
+        "--taxon-common-name",
+        help="Taxon common name associated with study. Ex. 'humans'",
+    )
+    parser_ingest_expression.add_argument(
+        "--ncbi-taxid", help="NCBI ID associated with file"
+    )
+    parser_ingest_expression.add_argument(
+        "--genome-assembly-accession",
         type=json.loads,
-        help="Optional parameters for expression files",
+        help="Genome assembly accession for file.",
+    )
+    parser_ingest_expression.add_argument(
+        "--genome-annotation",
+        type=json.loads,
+        help="Genomic annotation for expression files. Ex. 'Ensemble 94'",
     )
 
     parser_ingest_expression.add_argument(
