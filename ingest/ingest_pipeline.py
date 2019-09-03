@@ -296,7 +296,7 @@ def create_parser():
         "--ncbi-taxid", help="NCBI ID associated with file"
     )
     parser_ingest_expression.add_argument(
-        "--genome-assembly-accession", help="Genome assembly accession for file."
+        "--genome-assembly-accession", help="Genome assembly accession for file.  E.g. 'GCA_000001405.15'"
     )
     parser_ingest_expression.add_argument(
         "--genome-annotation",
