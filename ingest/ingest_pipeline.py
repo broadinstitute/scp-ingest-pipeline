@@ -290,7 +290,7 @@ def create_parser():
     )
     parser_ingest_expression.add_argument(
         "--taxon-common-name",
-        help="Taxon common name associated with study. Ex. 'humans'",
+        help="Common name of taxon associated with file.  E.g. 'human'",
     )
     parser_ingest_expression.add_argument(
         "--ncbi-taxid", help="NCBI ID associated with file"
