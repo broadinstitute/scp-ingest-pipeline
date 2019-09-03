@@ -29,7 +29,6 @@ python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_express
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-import json
 import ast
 
 from cell_metadata import CellMetadata
@@ -113,35 +112,34 @@ class IngestPipeline(object):
         None
     """
         for expression_model in list_of_expression_models:
-            print(expression_model.top_level_doc)
-            # collection_name = expression_model.COLLECTION_NAME
-            # batch = self.db.batch()
-            # doc_ref = self.db.collection(collection_name).document()
-            # batch.set(doc_ref, expression_model.top_level_doc)
-            # batch.commit()
-            # i = 0
-            # if expression_model.has_subcollection_data():
-            #     try:
-            #         print(f"Ingesting {expression_model.name}")
-            #         subcollection_name = expression_model.SUBCOLLECTION_NAME
-            #         doc_ref_sub = doc_ref.collection(subcollection_name).document()
-            #         print(
-            #             f"Length of scores is: {len(expression_model.expression_scores)}"
-            #         )
-            #         doc_ref_sub.set(expression_model.subdocument)
-            #     except exceptions.InvalidArgument as e:
-            #         # Catches invalid argument exception, which error "Maximum
-            #         # document size" falls under
-            #         print(e)
-            #         batch = self.db.batch()
-            #         for subdoc in expression_model.chunk_gene_expression_documents(
-            #             doc_ref_sub.id, doc_ref_sub._document_path
-            #         ):
-            #             print({i})
-            #             batch.set(doc_ref_sub, subdoc)
-            #             i += 1
-            #
-            #         batch.commit()
+            collection_name = expression_model.COLLECTION_NAME
+            batch = self.db.batch()
+            doc_ref = self.db.collection(collection_name).document()
+            batch.set(doc_ref, expression_model.top_level_doc)
+            batch.commit()
+            i = 0
+            if expression_model.has_subcollection_data():
+                try:
+                    print(f"Ingesting {expression_model.name}")
+                    subcollection_name = expression_model.SUBCOLLECTION_NAME
+                    doc_ref_sub = doc_ref.collection(subcollection_name).document()
+                    print(
+                        f"Length of scores is: {len(expression_model.expression_scores)}"
+                    )
+                    doc_ref_sub.set(expression_model.subdocument)
+                except exceptions.InvalidArgument as e:
+                    # Catches invalid argument exception, which error "Maximum
+                    # document size" falls under
+                    print(e)
+                    batch = self.db.batch()
+                    for subdoc in expression_model.chunk_gene_expression_documents(
+                        doc_ref_sub.id, doc_ref_sub._document_path
+                    ):
+                        print({i})
+                        batch.set(doc_ref_sub, subdoc)
+                        i += 1
+
+                    batch.commit()
 
     def load_cell_metadata(self, doc, subdoc):
         """Loads cell metadata files into firestore."""
@@ -293,13 +291,10 @@ def create_parser():
         "--ncbi-taxid", help="NCBI ID associated with file"
     )
     parser_ingest_expression.add_argument(
-        "--genome-assembly-accession",
-        type=json.loads,
-        help="Genome assembly accession for file.",
+        "--genome-assembly-accession", help="Genome assembly accession for file."
     )
     parser_ingest_expression.add_argument(
         "--genome-annotation",
-        type=json.loads,
         help="Genomic annotation for expression files. Ex. 'Ensemble 94'",
     )
 
