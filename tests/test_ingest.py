@@ -129,7 +129,7 @@ class IngestTestCase(unittest.TestCase):
             "--genome-assembly-accession",
             "GCA_000001405.15",
             "--genome-annotation",
-            "Ensemble 94",
+            "Ensembl 94",
             "--matrix-file",
             "gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt",
             "--matrix-file-type",
