@@ -31,9 +31,9 @@ class CellMetadata(IngestFiles):
         self.file_id = file_id
         self.errors = defaultdict(list)
         self.validate_format()
-        # self.ontology = defaultdict(lambda: defaultdict(set))
-        # self.type = defaultdict(list)
-        # self.cells = []
+        self.ontology = defaultdict(lambda: defaultdict(set))
+        self.type = defaultdict(list)
+        self.cells = []
         self.preproccess()
 
     def preproccess(self):
@@ -102,88 +102,96 @@ class CellMetadata(IngestFiles):
         if len(set(self.file.columns.labels[0])) == len(self.file.columns.labels[0]):
             valid = True
         else:
-            print(f"this is not valid")
             self.errors["format"].append(
                 "Error:  Duplicate column headers in metadata file"
             )
         return valid
 
-    #
-    # def validate_type_keyword(self):
-    #     """Check metadata second row starts with TYPE (case-insensitive).
-    #
-    #     :return: boolean   True if valid, False otherwise
-    #     """
-    #     valid = False
-    #     if self.metadata_types[0].casefold() == "TYPE".casefold():
-    #         valid = True
-    #         if self.metadata_types[0] != "TYPE":
-    #             # ToDO - capture warning below in error report
-    #             # investigate f-string formatting here
-    #             print(
-    #                 'Warning: metadata file keyword "TYPE" provided as '
-    #                 "{self.metadata_types[0]}"
-    #             )
-    #     else:
-    #         # check black autoformatting on this long line
-    #         self.errors["format"].append(
-    #             "Error:  Metadata file TYPE row malformed, missing TYPE"
-    #         )
-    #     return valid
-    #
-    # def validate_type_annotations(self):
-    #     """Check metadata second row contains only 'group' or 'numeric'.
-    #
-    #     :return: boolean   True if valid, False otherwise
-    #     """
-    #     valid = False
-    #     annot_err = False
-    #     annots = []
-    #     # skipping the TYPE keyword, iterate through the types
-    #     # collecting invalid type annotations in list annots
-    #     for t in self.metadata_types[1:]:
-    #         if t not in self.annotation_type:
-    #             # if the value is a blank space, store a higher visibility
-    #             # string for error reporting
-    #             if not t:
-    #                 annots.append("<empty value>")
-    #             else:
-    #                 annots.append(t)
-    #             annot_err = True
-    #     if annot_err:
-    #         self.errors["format"].append(
-    #             (
-    #                 'Error: TYPE declarations should be "group" or "numeric"; '
-    #                 f'Invalid type(s): {", ".join(map(str, annots))}'
-    #             )
-    #         )
-    #     else:
-    #         valid = True
-    #     return valid
-    #
-    # def validate_against_header_count(self):
-    #     """Metadata header and type counts should match.
-    #
-    #     :return: boolean   True if valid, False otherwise
-    #     """
-    #     valid = False
-    #     if not len(self.headers) == len(self.metadata_types):
-    #         self.errors["format"].append(
-    #             "Error: {len(self.metadata_types)} TYPE declarations "
-    #             f"for {len(self.headers)} column headers"
-    #         )
-    #     else:
-    #         valid = True
-    #     return valid
-    #
+    def validate_type_keyword(self):
+        """Check metadata second row starts with TYPE (case-insensitive).
+
+        :return: boolean   True if valid, False otherwise
+        """
+        valid = False
+        if self.file.columns[0][1].upper() == "TYPE":
+            valid = True
+            if self.file.columns[0][1] != "TYPE":
+                # ToDO - capture warning below in error report
+                # investigate f-string formatting here
+                warnings.warn(
+                    f'Warning: metadata file keyword "TYPE" provided as {self.file.columns[0][1]}',
+                    UserWarning,
+                )
+        else:
+            # check black autoformatting on this long line
+            self.errors["format"].append(
+                "Error:  Metadata file TYPE row malformed, missing TYPE"
+            )
+        return valid
+
+    def validate_type_annotations(self):
+        """Check metadata second row contains only 'group' or 'numeric'.
+
+        :return: boolean   True if valid, False otherwise
+        """
+        valid = False
+        annot_err = False
+        annots = []
+        # skipping the TYPE keyword, iterate through the types
+        # collecting invalid type annotations in list annots
+        for t in set(list(self.file.columns)[1:]):
+            if t[1] not in self.annotation_type:
+                # if the value is a blank space, store a higher visibility
+                # string for error reporting
+                if not t:
+                    annots.append("<empty value>")
+                else:
+                    annots.append(t)
+                annot_err = True
+        if annot_err:
+            self.errors["format"].append(
+                (
+                    'Error: TYPE declarations should be "group" or "numeric"; '
+                    f'Invalid type(s): {", ".join(map(str, annots))}'
+                )
+            )
+        else:
+            valid = True
+        return valid
+
+    def validate_against_header_count(self):
+        """Metadata header and type counts should match.
+
+        :return: boolean   True if valid, False otherwise
+        """
+        valid = False
+        if not len(self.file.columns.levels[0]) == len(self.file.columns.levels[1]):
+            self.errors["format"].append(
+                f"Error: {len(self.file.columns.levels[1])} TYPE declarations "
+                f"for {len(self.file.columns.levels[0])} column headers"
+            )
+        else:
+            valid = True
+        return valid
+
+    def validate_empty_header(self):
+        """Check for empty values in header"""
+        valid = False
+        if len(self.file.filter(like="Unnamed:").columns.values) > 0:
+            self.errors["format"].append("Error: Empty value in header.")
+        else:
+            valid = True
+        return valid
+
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        print(self.validate_header_keyword())
-        # self.validate_type_keyword()
-        # self.validate_type_annotations()
-        print(self.validate_unique_header())
-        # self.validate_against_header_count()
+        self.validate_header_keyword()
+        self.validate_type_keyword()
+        self.validate_type_annotations()
+        self.validate_unique_header()
+        self.validate_against_header_count()
+        self.validate_empty_header()
         if self.errors["format"]:
             valid = False
         else:

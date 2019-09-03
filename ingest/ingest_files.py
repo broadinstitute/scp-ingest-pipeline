@@ -17,7 +17,7 @@ class IngestFiles:
     def __init__(self, file_path, allowed_file_types, *, open_as=None):
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
-        self.is_remote_file = file_path[:5] == 'gs://'
+        self.is_remote_file = file_path[:5] == "gs://"
 
         self.verify_file_exists(file_path)
 
@@ -29,18 +29,18 @@ class IngestFiles:
     def download_from_bucket(self, file_path):
         """Downloads file from Google Cloud Storage bucket"""
         blob = self.bucket.blob(self.source)
-        destination = '/tmp/' + self.source.replace('/', '%2f')
+        destination = "/tmp/" + self.source.replace("/", "%2f")
         blob.download_to_filename(destination)
-        print(f'{file_path} downloaded to {destination}.')
+        print(f"{file_path} downloaded to {destination}.")
         return destination
 
     def set_gcs_attrs(self, file_path):
         """Sets instance attributes related to Google Cloud Storage"""
         self.storage_client = storage.Client()
-        path_segments = file_path[5:].split('/')
+        path_segments = file_path[5:].split("/")
         self.bucket_name = path_segments[0]
         self.bucket = self.storage_client.get_bucket(self.bucket_name)
-        self.source = '/'.join(path_segments[1:])
+        self.source = "/".join(path_segments[1:])
 
     def verify_file_exists(self, file_path):
         """Determines if file can be found, throws error if not"""
@@ -68,16 +68,16 @@ class IngestFiles:
             file_path = self.download_from_bucket(file_path)
 
         # Remove BOM with encoding ='utf - 8 - sig'
-        return open(file_path, encoding='utf-8-sig')
+        return open(file_path, encoding="utf-8-sig")
 
     def open_file(self, file_path, open_as=None):
         """ Opens txt, csv, or tsv formatted files"""
         open_file = self.resolve_path(file_path)
         file_connections = {
-            'text/csv': self.open_csv(open_file),
-            'text/plain': open_file,
-            'text/tab-separated-values': self.open_tsv(open_file),
-            'dataframe': self.open_pandas,
+            "text/csv": self.open_csv(open_file),
+            "text/plain": open_file,
+            "text/tab-separated-values": self.open_tsv(open_file),
+            "dataframe": self.open_pandas,
         }
         # Check file type
         file_type = self.get_file_type(file_path)[0]
@@ -89,7 +89,7 @@ class IngestFiles:
             else:
                 return (
                     file_type,
-                    file_connections.get('dataframe')(open_file, file_path),
+                    file_connections.get("dataframe")(open_file, file_path),
                     open_file,
                 )
         else:
@@ -104,16 +104,16 @@ class IngestFiles:
         """
 
         file_type_extract_fns = {
-            'text/csv': self.extract_csv_or_tsv,
-            'text/plain': self.extract_txt,
-            'text/tab-separated-values': self.extract_csv_or_tsv,
+            "text/csv": self.extract_csv_or_tsv,
+            "text/plain": self.extract_txt,
+            "text/tab-separated-values": self.extract_csv_or_tsv,
         }
         return file_type_extract_fns.get(self.file_type)()
 
     def split_line(self, line):
         """Splits lines on file format-appropriate delimiters"""
 
-        return re.findall(r'[^,\t]+', line)
+        return re.findall(r"[^,\t]+", line)
 
     def get_file_type(self, file_path):
         """Returns file type"""
@@ -123,36 +123,36 @@ class IngestFiles:
         """Opens file as a dataframe """
         opened_file.readline()
         meta_data = opened_file.readline()
-        if meta_data.find('\t') != -1:
+        if meta_data.find("\t") != -1:
             return pd.read_csv(
-                file_path, sep='\t', header=[0, 1], quoting=csv.QUOTE_NONE
+                file_path, sep="\t", header=[0, 1], quoting=csv.QUOTE_NONE
             )
-        elif meta_data.find(',') != -1:
+        elif meta_data.find(",") != -1:
             return pd.read_csv(
-                file_path, sep=',', header=[0, 1], quoting=csv.QUOTE_NONE
+                file_path, sep=",", header=[0, 1], quoting=csv.QUOTE_NONE
             )
         else:
-            raise ValueError('File must be tab or comma delimited')
+            raise ValueError("File must be tab or comma delimited")
 
     def merge_df(self, file, first_df):
         """ Does an inner join on a dataframe """
-        second_file = self.open_file(file, open_as='dataframe')[1]
+        second_file = self.open_file(file, open_as="dataframe")[1]
 
-        self.file = pd.merge(second_file, first_df, on=[('NAME', 'TYPE')])
+        self.file = pd.merge(second_file, first_df, on=[("NAME", "TYPE")])
 
     def open_csv(self, opened_file_object):
         """Opens csv file"""
         csv.register_dialect(
-            'csvDialect', delimiter=',', quoting=csv.QUOTE_ALL, skipinitialspace=True
+            "csvDialect", delimiter=",", quoting=csv.QUOTE_ALL, skipinitialspace=True
         )
-        return csv.reader(opened_file_object, dialect='csvDialect')
+        return csv.reader(opened_file_object, dialect="csvDialect")
 
     def open_tsv(self, opened_file_object):
         """Opens tsv file"""
         csv.register_dialect(
-            'tsvDialect', delimiter='\t', quoting=csv.QUOTE_ALL, skipinitialspace=True
+            "tsvDialect", delimiter="\t", quoting=csv.QUOTE_ALL, skipinitialspace=True
         )
-        return csv.reader(opened_file_object, dialect='tsvDialect')
+        return csv.reader(opened_file_object, dialect="tsvDialect")
 
     def extract_csv_or_tsv(self):
         """Extracts all rows from a csv or tsv file"""
@@ -177,7 +177,7 @@ class IngestFiles:
             self.amount_of_lines += 1
             # Create array with no new line, commas, or tab characters
             next_row_revised = self.split_line(
-                next_row.replace('\n', '').replace('"', '')
+                next_row.replace("\n", "").replace('"', "")
             )
             return next_row_revised
 
@@ -188,12 +188,12 @@ class IngestFiles:
         # Increase counter for line extracted
         if increase_line_count:
             self.amount_of_lines += 1
-        elif self.file_type in ('text/csv', 'text/tab-separated-values'):
+        elif self.file_type in ("text/csv", "text/tab-separated-values"):
             # CSV and TSV files returns next lines as array split on tabs/commas
             return next_row
-        elif self.file_type == 'text/plain':
+        elif self.file_type == "text/plain":
             # Create array with no new line, commas, or tab characters
-            next_row_revised = next_row.replace('\n', '')
+            next_row_revised = next_row.replace("\n", "")
             if split_line:
                 return self.split_line(next_row_revised)
             else:
