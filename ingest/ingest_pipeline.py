@@ -60,7 +60,6 @@ class IngestPipeline(object):
         **kwargs,
     ):
         """Initializes variables in ingest service."""
-        print(kwargs)
         self.file_id = file_id
         self.study_accession = study_accession
         self.matrix_file = matrix_file
@@ -141,20 +140,22 @@ class IngestPipeline(object):
 
                     batch.commit()
 
-    def load_cell_metadata(self, doc, subdoc):
+    def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
 
-        collection_name = self.cell_metadata.COLLECTION_NAME
-        subcollection_name = self.cell_metadata.SUBCOLLECTION_NAME
-        doc_ref = self.db.collection(collection_name).document()
-        doc_ref.set(doc)
-        try:
-            doc_ref_sub = doc_ref.collection(subcollection_name).document()
-            doc_ref_sub.set(subdoc)
-        except exceptions.InvalidArgument as e:
-            # Catches invalid argument exception, which error "Maximum
-            # document size" falls under
-            print(e)
+        collection_name = self.cell_metadata.get_collection_name()
+        subcollection_name = self.cell_metadata.get_subcollection_name()
+        for annotation in self.cell_metadata.top_level_doc.keys():
+            doc_ref = self.db.collection(collection_name).document()
+            doc_ref.set(self.cell_metadata.top_level_doc[annotation])
+            try:
+                subcollection_doc = self.cell_metadata.data_subcollection[annotation]
+                doc_ref_sub = doc_ref.collection(subcollection_name).document()
+                doc_ref_sub.set(subcollection_doc)
+            except exceptions.InvalidArgument as e:
+                # Catches invalid argument exception, which error "Maximum
+                # document size" falls under
+                print(e)
 
     def load_cluster_files(self):
         """Loads cluster files into Firestore."""
@@ -194,8 +195,12 @@ class IngestPipeline(object):
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        for metadata in self.cell_metadata.transform():
-            self.load_cell_metadata(*metadata)
+        while True:
+            row = self.cell_metadata.extract()
+            if row is None:
+                break
+            self.cell_metadata.transform(row)
+        self.load_cell_metadata()
 
     def ingest_cluster(self):
         """Ingests cluster files into Firestore."""
@@ -408,7 +413,6 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
-    print(arguments)
     ingest = IngestPipeline(**arguments)
 
     if "matrix_file" in arguments:
