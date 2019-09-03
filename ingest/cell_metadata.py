@@ -42,9 +42,9 @@ class CellMetadata(IngestFiles):
             columns=lambda col_name: col_name.lower(), level=1, inplace=True
         )
         self.file.xs("group", axis=1, level=1).astype(str)
-
+        # Find numeric columns and round to 3 decimals places
         numeric_col_df = self.file.select_dtypes(include=["int64", "float64"]).columns
-        self.file[numeric_col_df] = self.file[numeric_col_df].round(3)
+        self.file[numeric_col_df] = self.file[numeric_col_df].round(3).astype(float)
 
     def transform(self) -> None:
         """ Add data from cell metadata files into data model"""
