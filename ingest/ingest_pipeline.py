@@ -286,7 +286,7 @@ def create_parser():
 
     parser_ingest_expression.add_argument(
         "--taxon-name",
-        help="Taxon (scientific) name associated with file. Ex. 'Homo Sapiens' ",
+        help="Scientific name of taxon associated with file.  E.g. 'Homo sapiens'",
     )
     parser_ingest_expression.add_argument(
         "--taxon-common-name",
