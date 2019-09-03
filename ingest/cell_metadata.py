@@ -54,9 +54,7 @@ class CellMetadata(IngestFiles):
             column_type = column[1]
             yield (
                 {
-                    "name": col_name.lower()
-                    if col_name.lower() in ("x", "y", "z")
-                    else col_name,
+                    "name": col_name,
                     "study_accession": self.study_accession,
                     # save unique values for group type annotations
                     "unique_values": list(self.file[column].unique())
@@ -79,7 +77,7 @@ class CellMetadata(IngestFiles):
         valid = False
         if self.file.columns[0][0].upper() == "NAME":
             valid = True
-            if self.file.columns[0] != "NAME":
+            if self.file.columns[0][0] != "NAME":
                 # ToDO - capture warning below in error report
                 warnings.warn(
                     f'Warning: metadata file keyword "NAME" provided as '
@@ -165,7 +163,7 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if not len(self.file.columns.levels[0]) == len(self.file.columns.levels[1]):
+        if not len(self.file.columns.labels[0]) == len(self.file.columns.labels[1]):
             self.errors["format"].append(
                 f"Error: {len(self.file.columns.levels[1])} TYPE declarations "
                 f"for {len(self.file.columns.levels[0])} column headers"
@@ -186,12 +184,13 @@ class CellMetadata(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        self.validate_header_keyword()
-        self.validate_type_keyword()
-        self.validate_type_annotations()
-        self.validate_unique_header()
-        self.validate_against_header_count()
-        self.validate_empty_header()
+
+        print(self.validate_header_keyword())
+        print(self.validate_type_keyword())
+        print(self.validate_type_annotations())
+        print(self.validate_unique_header())
+        print(self.validate_against_header_count())
+        print(self.validate_empty_header())
         if self.errors["format"]:
             valid = False
         else:
