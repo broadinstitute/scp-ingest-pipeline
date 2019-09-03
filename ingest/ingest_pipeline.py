@@ -40,8 +40,10 @@ from google.cloud import firestore
 from mtx import Mtx
 from subsample import SubSample
 
+# from loom import
+
 # Ingest file types
-EXPRESSION_FILE_TYPES = ["dense", "mtx"]
+EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 
 
 class IngestPipeline(object):
@@ -91,6 +93,7 @@ class IngestPipeline(object):
             "cell_metadata": CellMetadata,
             "cluster": Clusters,
             "mtx": Mtx,
+            # "loom", Loom
         }
         return file_connections.get(file_type)(
             file_path, self.file_id, self.study_accession, **self.kwargs
