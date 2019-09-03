@@ -143,7 +143,7 @@ class IngestTestCase(unittest.TestCase):
         num_models = len(models)
         expected_num_models = 19
         self.assertEqual(num_models, expected_num_models)
-
+        self.assertEqual(1, 2)
         # Verify that the first gene model looks as expected
         mock_dir = "dense_matrix_19_genes_100k_cells_txt"
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
