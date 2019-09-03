@@ -293,10 +293,12 @@ def create_parser():
         help="Common name of taxon associated with file.  E.g. 'human'",
     )
     parser_ingest_expression.add_argument(
-        "--ncbi-taxid", help="NCBI Taxonomy ID of taxon associated with file.  E.g. 9606"
+        "--ncbi-taxid",
+        help="NCBI Taxonomy ID of taxon associated with file.  E.g. 9606",
     )
     parser_ingest_expression.add_argument(
-        "--genome-assembly-accession", help="Genome assembly accession for file.  E.g. 'GCA_000001405.15'"
+        "--genome-assembly-accession",
+        help="Genome assembly accession for file.  E.g. 'GCA_000001405.15'",
     )
     parser_ingest_expression.add_argument(
         "--genome-annotation",
