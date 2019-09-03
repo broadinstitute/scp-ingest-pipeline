@@ -17,17 +17,9 @@ from gene_data_model import Gene
 
 
 class Mtx:
-    def __init__(
-        self,
-        mtx_path: str,
-        file_id: str,
-        study_accession: str,
-        genes_path: str,
-        barcodes_path: str,
-        **kwargs,
-    ):
-        self.genes_file = open(genes_path)
-        self.barcodes_file = open(barcodes_path)
+    def __init__(self, mtx_path: str, file_id: str, study_accession: str, **kwargs):
+        self.genes_file = open(kwargs.pop("gene_file"))
+        self.barcodes_file = open(kwargs.pop("barcode_file"))
         self.mtx_path = mtx_path
         self.file_id = file_id
         self.study_accession = study_accession

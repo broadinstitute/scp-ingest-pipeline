@@ -15,10 +15,10 @@ class Clusters(IngestFiles):
         file_path: str,
         file_id: str,
         study_accession: str,
+        *,
         name: str,
         domain_ranges: Dict = None,
     ):
-
         IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
         self.header = self.get_next_line(increase_line_count=False)
         # Second line in cluster is metadata_type

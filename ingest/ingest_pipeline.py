@@ -7,30 +7,30 @@ file types then uploads them into Firestore.
 
 PREREQUISITES
 You must have Google Cloud Firestore installed, authenticated, and
-configured. Must have Python 3.6 or higher. Indexing must be turned off for
-all collections.
+configured. Must have Python 3.6 or higher. Indexing must be turned off for sub-collections.
 
 EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster --name cluster1 --domain-ranges '{"domain_ranges":{"x":[-1, 1], "y":[-1, 1], "z":[-1, 1]}}'
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
 
 # Ingest dense file
-python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --file-params '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.1", "genome_annotation": "Ensemble 94"}' --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Subsample cluster and metadata file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --file-params '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensembl 94"}' --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import json
+import ast
 
 from cell_metadata import CellMetadata
 from clusters import Clusters
@@ -53,12 +53,9 @@ class IngestPipeline(object):
         study_accession: str,
         matrix_file: str = None,
         matrix_file_type: str = None,
-        barcode_file: str = None,
-        gene_file: str = None,
         cell_metadata_file: str = None,
         cluster_file: str = None,
         subsample=False,
-        domain_ranges: str = None,
         ingest_cell_metadata=False,
         ingest_cluster=False,
         **kwargs,
@@ -69,8 +66,6 @@ class IngestPipeline(object):
         self.study_accession = study_accession
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        self.gene_file = gene_file
-        self.barcodes_file = barcode_file
         self.db = firestore.Client()
         self.cluster_file = cluster_file
         self.kwargs = kwargs
@@ -96,30 +91,12 @@ class IngestPipeline(object):
         file_connections = {
             "dense": Dense,
             "cell_metadata": CellMetadata,
-            "clusters": Clusters,
+            "cluster": Clusters,
+            "mtx": Mtx,
         }
-
-        if file_type == "mtx":
-            return Mtx(
-                file_path,
-                self.gene_file,
-                self.barcodes_file,
-                self.file_id,
-                self.study_accession,
-                self.file_params,
-            )
-        elif file_type == "cluster":
-            return Clusters(
-                file_path,
-                self.file_id,
-                self.study_accession,
-                self.name,
-                self.domain_ranges,
-            )
-        else:
-            return file_connections.get(file_type)(
-                file_path, self.file_id, self.study_accession, **self.kwargs
-            )
+        return file_connections.get(file_type)(
+            file_path, self.file_id, self.study_accession, **self.kwargs
+        )
 
     def close_matrix(self):
         """Closes connection to file"""
@@ -136,34 +113,35 @@ class IngestPipeline(object):
         None
     """
         for expression_model in list_of_expression_models:
-            collection_name = expression_model.COLLECTION_NAME
-            batch = self.db.batch()
-            doc_ref = self.db.collection(collection_name).document()
-            batch.set(doc_ref, expression_model.top_level_doc)
-            batch.commit()
-            i = 0
-            if expression_model.has_subcollection_data():
-                try:
-                    print(f"Ingesting {expression_model.name}")
-                    subcollection_name = expression_model.SUBCOLLECTION_NAME
-                    doc_ref_sub = doc_ref.collection(subcollection_name).document()
-                    print(
-                        f"Length of scores is: {len(expression_model.expression_scores)}"
-                    )
-                    doc_ref_sub.set(expression_model.subdocument)
-                except exceptions.InvalidArgument as e:
-                    # Catches invalid argument exception, which error "Maximum
-                    # document size" falls under
-                    print(e)
-                    batch = self.db.batch()
-                    for subdoc in expression_model.chunk_gene_expression_documents(
-                        doc_ref_sub.id, doc_ref_sub._document_path
-                    ):
-                        print({i})
-                        batch.set(doc_ref_sub, subdoc)
-                        i += 1
-
-                    batch.commit()
+            print(expression_model.top_level_doc)
+            # collection_name = expression_model.COLLECTION_NAME
+            # batch = self.db.batch()
+            # doc_ref = self.db.collection(collection_name).document()
+            # batch.set(doc_ref, expression_model.top_level_doc)
+            # batch.commit()
+            # i = 0
+            # if expression_model.has_subcollection_data():
+            #     try:
+            #         print(f"Ingesting {expression_model.name}")
+            #         subcollection_name = expression_model.SUBCOLLECTION_NAME
+            #         doc_ref_sub = doc_ref.collection(subcollection_name).document()
+            #         print(
+            #             f"Length of scores is: {len(expression_model.expression_scores)}"
+            #         )
+            #         doc_ref_sub.set(expression_model.subdocument)
+            #     except exceptions.InvalidArgument as e:
+            #         # Catches invalid argument exception, which error "Maximum
+            #         # document size" falls under
+            #         print(e)
+            #         batch = self.db.batch()
+            #         for subdoc in expression_model.chunk_gene_expression_documents(
+            #             doc_ref_sub.id, doc_ref_sub._document_path
+            #         ):
+            #             print({i})
+            #             batch.set(doc_ref_sub, subdoc)
+            #             i += 1
+            #
+            #         batch.commit()
 
     def load_cell_metadata(self, doc, subdoc):
         """Loads cell metadata files into firestore."""
@@ -201,7 +179,7 @@ class IngestPipeline(object):
     Returns:
         None
     """
-        if self.gene_file is not None:
+        if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
         else:
@@ -213,8 +191,7 @@ class IngestPipeline(object):
                 transformed_data.append(
                     self.matrix.transform_expression_data_by_gene(row)
                 )
-        print(self.matrix.top_level_doc)
-        # self.load_expression_data(transformed_data)
+        self.load_expression_data(transformed_data)
         self.close_matrix()
 
     def ingest_cell_metadata(self):
@@ -230,7 +207,8 @@ class IngestPipeline(object):
                 self.cluster.update_points()
                 break
             self.cluster.transform(row)
-        self.load_cluster_files()
+        print(self.cluster.top_level_doc)
+        # self.load_cluster_files()
 
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
@@ -376,7 +354,9 @@ def create_parser():
         "--name", required=True, help="Name of cluster from input form"
     )
     parser_cluster.add_argument(
-        "--domain-ranges", type=json.loads, help="Optional paramater taken from UI"
+        "--domain-ranges",
+        type=ast.literal_eval,
+        help="Optional paramater taken from UI",
     )
 
     # Parser ingesting cluster files
