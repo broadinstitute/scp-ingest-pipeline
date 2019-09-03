@@ -98,6 +98,9 @@ class CellMetadata(IngestFiles):
         """
         valid = False
         if len(set(self.file.columns.labels[0])) == len(self.file.columns.labels[0]):
+            print(self.file.columns)
+            print(len(set(self.file.columns.labels[0])))
+            print(len(self.file.columns.labels[0]))
             valid = True
         else:
             self.errors["format"].append(
@@ -163,6 +166,9 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
+        print(self.file.columns)
+        print(len(self.file.columns.labels[0]))
+        print(len(self.file.columns.labels[1]))
         if not len(self.file.columns.labels[0]) == len(self.file.columns.labels[1]):
             self.errors["format"].append(
                 f"Error: {len(self.file.columns.levels[1])} TYPE declarations "
@@ -190,7 +196,7 @@ class CellMetadata(IngestFiles):
         print(self.validate_type_annotations())
         print(self.validate_unique_header())
         print(self.validate_against_header_count())
-        print(self.validate_empty_header())
+        self.validate_empty_header()
         if self.errors["format"]:
             valid = False
         else:
