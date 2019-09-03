@@ -300,7 +300,7 @@ def create_parser():
     )
     parser_ingest_expression.add_argument(
         "--genome-annotation",
-        help="Genomic annotation for expression files. Ex. 'Ensemble 94'",
+        help="Genomic annotation for expression files.  E.g. 'Ensembl 94'",
     )
 
     parser_ingest_expression.add_argument(
