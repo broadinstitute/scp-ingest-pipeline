@@ -24,7 +24,9 @@ class Dense(IngestFiles):
         self.file_id = file_id
         self.study_accession = study_accession
         self.cell_names = self.get_next_line(increase_line_count=False)[1:]
-        self.matrix_params = kwargs
+        self.matrix_params = {k: v for k, v in kwargs.items() if v is not None}
+
+        print(self.matrix_params)
 
     def transform_expression_data_by_gene(self, expression_scores: List[str]) -> Gene:
         """Transforms dense matrix into firestore data model for genes.

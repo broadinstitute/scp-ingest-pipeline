@@ -207,8 +207,7 @@ class IngestPipeline(object):
                 self.cluster.update_points()
                 break
             self.cluster.transform(row)
-        print(self.cluster.top_level_doc)
-        # self.load_cluster_files()
+        self.load_cluster_files()
 
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
@@ -414,6 +413,7 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
+    print(arguments)
     ingest = IngestPipeline(**arguments)
 
     if "matrix_file" in arguments:
