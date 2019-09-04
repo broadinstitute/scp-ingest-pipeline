@@ -333,7 +333,10 @@ def retrieve_ontology_term(convention_url, ontology_id):
     """
     OLS_BASE_URL = "https://www.ebi.ac.uk/ols/api/ontologies/"
     convention_ontology = retrieve_ontology(convention_url)
-    ontology_shortname, term_id = ontology_id.split('_')
+    try:
+        ontology_shortname, term_id = ontology_id.split('_')
+    except AttributeError:
+        return None
     metadata_url = OLS_BASE_URL + ontology_shortname
     metadata_ontology = retrieve_ontology(metadata_url)
     if convention_ontology and metadata_ontology:
@@ -387,7 +390,10 @@ def validate_collected_ontology_data(metadata, convention):
                     # else:
                     #     print("Ontology label matches: " + matching_term['label'])
                 else:
-                    print("No match found for " + ontology_id)
+                    if ontology_id:
+                        print("No match found for", ontology_id)
+                    else:
+                        print('No ontology_id provided for', ontology_id)
         except ValueError:
             for ontology_id in metadata.ontology[entry].keys():
                 matching_term = retrieve_ontology_term(ontology_url, ontology_id)
