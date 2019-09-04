@@ -2,6 +2,7 @@ import sys
 import unittest
 import json
 
+sys.path.append('../ingest')
 sys.path.append('../ingest/validation')
 
 from validate_metadata import (

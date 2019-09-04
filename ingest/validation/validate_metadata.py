@@ -53,6 +53,10 @@ def create_parser():
     #     help='Key metadata name for parsing; CellID for metadata, BiosampleID for sample sheets [optional]',
     #     default='CellID'
     # )
+
+    # helper param to create json representation of metadata.error
+    # as reference output for tests
+    parser.add_argument('--errors_json', action='store_true')
     parser.add_argument('convention', help='Metadata convention JSON file ')
     parser.add_argument('input_metadata', help='Metadata TSV file')
     return parser
@@ -386,6 +390,11 @@ def validate_collected_ontology_data(metadata, convention):
     return
 
 
+def serialize_errors(metadata):
+    with open('errors.json', 'w') as jsonfile:
+        json.dump(metadata.errors, jsonfile)
+
+
 # ToDo
 
 """
@@ -420,3 +429,5 @@ if __name__ == '__main__':
         process_metadata_content(metadata, convention)
     validate_collected_ontology_data(metadata, convention)
     report_errors(metadata)
+    if args.errors_json:
+        serialize_errors(metadata)
