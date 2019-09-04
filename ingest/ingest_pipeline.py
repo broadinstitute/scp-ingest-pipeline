@@ -166,17 +166,18 @@ class IngestPipeline(object):
     def load_cell_metadata(self, doc, subdoc):
         """Loads cell metadata files into firestore."""
 
-        collection_name = self.cell_metadata.COLLECTION_NAME
-        subcollection_name = self.cell_metadata.SUBCOLLECTION_NAME
-        doc_ref = self.db.collection(collection_name).document()
-        doc_ref.set(doc)
-        try:
-            doc_ref_sub = doc_ref.collection(subcollection_name).document()
-            doc_ref_sub.set(subdoc)
-        except exceptions.InvalidArgument as e:
-            # Catches invalid argument exception, which error "Maximum
-            # document size" falls under
-            print(e)
+        print(doc)
+        # collection_name = self.cell_metadata.COLLECTION_NAME
+        # subcollection_name = self.cell_metadata.SUBCOLLECTION_NAME
+        # doc_ref = self.db.collection(collection_name).document()
+        # doc_ref.set(doc)
+        # try:
+        #     doc_ref_sub = doc_ref.collection(subcollection_name).document()
+        #     doc_ref_sub.set(subdoc)
+        # except exceptions.InvalidArgument as e:
+        #     # Catches invalid argument exception, which error "Maximum
+        #     # document size" falls under
+        #     print(e)
 
     def load_cluster_files(self):
         """Loads cluster files into Firestore."""
