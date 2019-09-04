@@ -14,22 +14,23 @@ EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster --name cluster1 --domain-ranges '{"domain_ranges":{"x":[-1, 1], "y":[-1, 1], "z":[-1, 1]}}'
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
 
 # Ingest dense file
-python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --file-params '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.1", "genome_annotation": "Ensemble 94"}' --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py ingest_expression --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --file-params '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensembl 94"}' --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+import json
 
 from cell_metadata import CellMetadata
 from clusters import Clusters
@@ -41,40 +42,49 @@ from mtx import Mtx
 from subsample import SubSample
 
 # Ingest file types
-EXPRESSION_FILE_TYPES = ['dense', 'mtx']
+EXPRESSION_FILE_TYPES = ["dense", "mtx"]
 
 
 class IngestPipeline(object):
     def __init__(
         self,
         *,
+        file_id: str,
+        study_accession: str,
         matrix_file: str = None,
         matrix_file_type: str = None,
         barcode_file: str = None,
         gene_file: str = None,
         cell_metadata_file: str = None,
         cluster_file: str = None,
+        name: str = None,
         subsample=False,
+        domain_ranges: str = None,
         ingest_cell_metadata=False,
         ingest_cluster=False,
+        file_params: Dict = None,
     ):
         """Initializes variables in ingest service."""
-
-        self.matrix_file_path = matrix_file
+        self.file_id = file_id
+        self.study_accession = study_accession
+        self.file_params = file_params
+        self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
         self.gene_file = gene_file
         self.barcodes_file = barcode_file
         self.db = firestore.Client()
         self.cluster_file = cluster_file
+        self.domain_ranges = domain_ranges
+        self.name = name
         self.cell_metadata_file = cell_metadata_file
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
         elif ingest_cell_metadata:
             self.cell_metadata = self.initialize_file_connection(
-                'cell_metadata', cell_metadata_file
+                "cell_metadata", cell_metadata_file
             )
         elif ingest_cluster:
-            self.cluster = self.initialize_file_connection('cluster', cluster_file)
+            self.cluster = self.initialize_file_connection("cluster", cluster_file)
         elif matrix_file is None:
             self.matrix = matrix_file
 
@@ -85,16 +95,29 @@ class IngestPipeline(object):
                 File object.
         """
         # Mtx file types not included because class declaration is different
-        file_connections = {
-            'dense': Dense,
-            'cell_metadata': CellMetadata,
-            'cluster': Clusters,
-        }
+        file_connections = {"dense": Dense, "cell_metadata": CellMetadata}
 
-        if file_type == 'mtx':
-            return Mtx(file_path, self.gene_file, self.barcodes_file)
+        if file_type == "mtx":
+            return Mtx(
+                file_path,
+                self.gene_file,
+                self.barcodes_file,
+                self.file_id,
+                self.study_accession,
+                self.file_params,
+            )
+        elif file_type == "cluster":
+            return Clusters(
+                file_path,
+                self.file_id,
+                self.study_accession,
+                self.name,
+                self.domain_ranges,
+            )
         else:
-            return file_connections.get(file_type)(file_path)
+            return file_connections.get(file_type)(
+                file_path, self.file_id, self.study_accession, self.file_params
+            )
 
     def close_matrix(self):
         """Closes connection to file"""
@@ -119,11 +142,11 @@ class IngestPipeline(object):
             i = 0
             if expression_model.has_subcollection_data():
                 try:
-                    print(f'Ingesting {expression_model.name}')
+                    print(f"Ingesting {expression_model.name}")
                     subcollection_name = expression_model.SUBCOLLECTION_NAME
                     doc_ref_sub = doc_ref.collection(subcollection_name).document()
                     print(
-                        f'Length of scores is: {len(expression_model.expression_scores)}'
+                        f"Length of scores is: {len(expression_model.expression_scores)}"
                     )
                     doc_ref_sub.set(expression_model.subdocument)
                 except exceptions.InvalidArgument as e:
@@ -234,11 +257,11 @@ class IngestPipeline(object):
                         subsample_threshold=sample_size,
                     )
 
-        create_cluster_subdoc('cluster')
+        create_cluster_subdoc("cluster")
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
             subsample.determine_coordinates_and_cell_names()
-            create_cluster_subdoc('study')
+            create_cluster_subdoc("study")
 
 
 def create_parser():
@@ -256,29 +279,42 @@ def create_parser():
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
+    parser.add_argument(
+        "--study-accession",
+        required=True,
+        help="Single study accession associated with ingest files",
+    )
+    parser.add_argument("--file-id", required=True, help="MongoDB identifier")
+
     subparsers = parser.add_subparsers()
 
     # Ingest expression files subparsers
     parser_ingest_expression = subparsers.add_parser(
-        'ingest_expression',
-        help='Indicates that expression' ' files are being ingested',
+        "ingest_expression",
+        help="Indicates that expression" " files are being ingested",
     )
 
     parser_ingest_expression.add_argument(
-        '--matrix-file',
+        "--matrix-file",
         required=True,
-        help='Absolute or relative path to '
-        'expression file. For 10x data this is '
-        'the .mtx file',
+        help="Absolute or relative path to "
+        "expression file. For 10x data this is "
+        "the .mtx file",
     )
 
-    matrix_file_type_txt = 'Type of expression file that is ingested. If mtx \
+    matrix_file_type_txt = "Type of expression file that is ingested. If mtx \
         files are being ingested, .genes.tsv and .barcodes.tsv files must be \
         included using --barcode-file <barcode file path> and --gene-file \
-        <gene file path>. See --help for more information'
+        <gene file path>. See --help for more information"
 
     parser_ingest_expression.add_argument(
-        '--matrix-file-type',
+        "--file-params",
+        type=json.loads,
+        help="Optional parameters for expression files",
+    )
+
+    parser_ingest_expression.add_argument(
+        "--matrix-file-type",
         choices=EXPRESSION_FILE_TYPES,
         type=str.lower,
         required=True,
@@ -287,72 +323,66 @@ def create_parser():
 
     # Gene and Barcode arguments for MTX bundle
     parser_ingest_expression.add_argument(
-        '--barcode-file', help='Path to .barcodes.tsv files'
+        "--barcode-file", help="Path to .barcodes.tsv files"
     )
-    parser_ingest_expression.add_argument('--gene-file', help='Path to .genes.tsv file')
-
-    parser_ingest_cluster = subparsers.add_parser(
-        'ingest_clusters', help='Indicates that cluster' ' files are being ingested'
-    )
-    parser_ingest_cluster.add_argument('--cluster-file', help='Path to cluster files')
-    parser_ingest_cluster.add_argument(
-        '--ingest-cluster-file',
-        required=True,
-        action='store_true',
-        help='Indicates that cluster  ' 'file should be ingested',
-    )
+    parser_ingest_expression.add_argument("--gene-file", help="Path to .genes.tsv file")
 
     # Parser ingesting cell metadata files
     parser_cell_metadata = subparsers.add_parser(
-        'ingest_cell_metadata',
-        help='Indicates that cell ' ' metadata files are being ' 'ingested',
+        "ingest_cell_metadata",
+        help="Indicates that cell metadata files are being " "ingested",
     )
     parser_cell_metadata.add_argument(
-        '--cell-metadata-file',
+        "--cell-metadata-file",
         required=True,
-        help='Absolute or relative path to ' 'cell metadata file.',
+        help="Absolute or relative path to cell metadata file.",
     )
     parser_cell_metadata.add_argument(
-        '--ingest-cell-metadata',
+        "--ingest-cell-metadata",
         required=True,
-        action='store_true',
-        help='Indicates that subsampliing ' 'functionality should be invoked',
+        action="store_true",
+        help="Indicates that subsampliing functionality should be invoked",
     )
 
     # Parser ingesting cluster files
     parser_cluster = subparsers.add_parser(
-        'ingest_cluster', help='Indicates that cluster ' 'file is being ingested'
+        "ingest_cluster", help="Indicates that cluster file is being ingested"
     )
     parser_cluster.add_argument(
-        '--cluster-file',
+        "--cluster-file",
         required=True,
-        help='Absolute or relative path to ' 'cluster file.',
+        help="Absolute or relative path to cluster file.",
     )
     parser_cluster.add_argument(
-        '--ingest-cluster',
+        "--ingest-cluster",
         required=True,
-        action='store_true',
-        help='Indicates that ingest of cluster file ' 'should be invoked',
+        action="store_true",
+        help="Indicates that ingest of cluster file should be invoked",
+    )
+    parser_cluster.add_argument(
+        "--name", required=True, help="Name of cluster from input form"
+    )
+    parser_cluster.add_argument(
+        "--domain-ranges", type=json.loads, help="Optional paramater taken from UI"
     )
 
     # Parser ingesting cluster files
     parser_subsample = subparsers.add_parser(
-        'ingest_subsample', help='Indicates that subsampling ' 'will be initialized'
+        "ingest_subsample", help="Indicates that subsampling will be initialized"
     )
     parser_subsample.add_argument(
-        '--subsample',
+        "--subsample",
         required=True,
-        action='store_true',
-        help='Indicates that subsampliing functionality' ' should be invoked',
+        action="store_true",
+        help="Indicates that subsampliing functionality should be invoked",
     )
     parser_subsample.add_argument(
-        '--cluster-file',
+        "--cluster-file",
         required=True,
-        help='Absolute or relative path to ' 'cluster file.',
+        help="Absolute or relative path to cluster file.",
     )
     parser_subsample.add_argument(
-        '--cell-metadata-file',
-        help='Absolute or relative path to ' 'cell metadata file.',
+        "--cell-metadata-file", help="Absolute or relative path to cell metadata file."
     )
 
     return parser
@@ -367,13 +397,14 @@ def validate_arguments(parsed_args):
     Returns:
         None
     """
-    if ('matrix_file' in parsed_args and parsed_args.matrix_file_type == 'mtx') and (
+
+    if ("matrix_file" in parsed_args and parsed_args.matrix_file_type == "mtx") and (
         parsed_args.gene_file is None or parsed_args.barcode_file is None
     ):
         raise ValueError(
-            ' Missing arguments: --gene-file and --barcode-file. Mtx files '
-            'must include .genes.tsv, and .barcodes.tsv files. See --help for '
-            'more information'
+            " Missing arguments: --gene-file and --barcode-file. Mtx files "
+            "must include .genes.tsv, and .barcodes.tsv files. See --help for "
+            "more information"
         )
 
 
@@ -392,16 +423,16 @@ def main() -> None:
     arguments = vars(parsed_args)
     ingest = IngestPipeline(**arguments)
 
-    if 'matrix_file' in arguments:
+    if "matrix_file" in arguments:
         ingest.ingest_expression()
-    elif 'ingest_cell_metadata' in arguments:
-        if arguments['ingest_cell_metadata']:
+    elif "ingest_cell_metadata" in arguments:
+        if arguments["ingest_cell_metadata"]:
             ingest.ingest_cell_metadata()
-    elif 'ingest_cluster' in arguments:
-        if arguments['ingest_cluster']:
+    elif "ingest_cluster" in arguments:
+        if arguments["ingest_cluster"]:
             ingest.ingest_cluster()
-    elif 'subsample' in arguments:
-        if arguments['subsample']:
+    elif "subsample" in arguments:
+        if arguments["subsample"]:
             ingest.subsample()
 
 

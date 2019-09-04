@@ -37,7 +37,7 @@ from unittest.mock import patch
 
 from gcp_mocks import mock_storage_client, mock_storage_blob, mock_firestore_client
 
-sys.path.append('../ingest')
+sys.path.append("../ingest")
 from ingest_pipeline import create_parser, validate_arguments, IngestPipeline
 
 
@@ -73,10 +73,10 @@ def get_nth_gene_models(n, models, mock_dir):
     # Uncomment to print out new baseline data
     # Process to update baselines is manual: copy and paste it into new file
     # TODO: Automate when reasonable
-    # print('actual_model')
-    # print(actual_model)
+    print("actual_model")
+    print(actual_model)
 
-    with open(f'mock_data/{mock_dir}/gene_model_{n}.txt') as f:
+    with open(f"mock_data/{mock_dir}/gene_model_{n}.txt") as f:
         # Create a dictionary from the string-literal mock
         expected_model = ast.literal_eval(f.read())
 
@@ -88,24 +88,24 @@ IngestPipeline.load_expression_data = mock_load_expression_data
 
 
 class IngestTestCase(unittest.TestCase):
-    @patch('google.cloud.storage.Blob', side_effect=mock_storage_blob)
-    @patch('google.cloud.storage.Client', side_effect=mock_storage_client)
-    @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
+    @patch("google.cloud.storage.Blob", side_effect=mock_storage_blob)
+    @patch("google.cloud.storage.Client", side_effect=mock_storage_client)
+    @patch("google.cloud.firestore.Client", side_effect=mock_firestore_client)
     def setup_ingest(
         self, args, mock_firestore_client, mock_storage_client, mock_storage_blob
     ):
-        args_list = args.split(' ')
-        parsed_args = create_parser().parse_args(args_list)
+
+        parsed_args = create_parser().parse_args(args)
         validate_arguments(parsed_args)
         arguments = vars(parsed_args)
 
         ingest = IngestPipeline(**arguments)
 
-        if 'matrix_file' in arguments:
+        if "matrix_file" in arguments:
             ingest.ingest_expression()
-        elif 'cell_metadata_file' in arguments:
+        elif "cell_metadata_file" in arguments:
             ingest.ingest_cell_metadata()
-        elif 'cluster_file' in arguments:
+        elif "cluster_file" in arguments:
             ingest.ingest_cluster()
 
         return ingest
@@ -114,11 +114,19 @@ class IngestTestCase(unittest.TestCase):
         """Ingest Pipeline should extract and transform dense matrices
         """
 
-        args = (
-            'ingest_expression '
-            '--matrix-file gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt '
-            '--matrix-file-type dense'
-        )
+        args = [
+            "--study-accession",
+            "SCP1",
+            "--file-id",
+            "1234abc",
+            "ingest_expression",
+            "--file-params",
+            '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensemble 94"}',
+            "--matrix-file",
+            "gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt",
+            "--matrix-file-type",
+            "dense",
+        ]
         ingest = self.setup_ingest(args)
 
         models = ingest.load_expression_data_args[0]
@@ -129,19 +137,28 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(num_models, expected_num_models)
 
         # Verify that the first gene model looks as expected
-        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
+        mock_dir = "dense_matrix_19_genes_100k_cells_txt"
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
+
         self.assertEqual(model, expected_model)
 
     def test_ingest_missing_file(self):
         """Ingest Pipeline should throw error for missing file
         """
 
-        args = (
-            'ingest_expression '
-            '--matrix-file gs://fake-bucket/remote-matrix-file-does-not-exist.txt '
-            '--matrix-file-type dense'
-        )
+        args = [
+            "--study-accession",
+            "SCP1",
+            "--file-id",
+            "1234abc",
+            "ingest_expression",
+            "--file-params",
+            '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensemble 94"}',
+            "--matrix-file",
+            "gs://fake-bucket/remote-matrix-file-does-not-exist.txt",
+            "--matrix-file-type",
+            "dense",
+        ]
 
         self.assertRaises(OSError, self.setup_ingest, args)
 
@@ -149,11 +166,19 @@ class IngestTestCase(unittest.TestCase):
         """Ingest Pipeline should extract and transform local dense matrices
         """
 
-        args = (
-            'ingest_expression '
-            '--matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt '
-            '--matrix-file-type dense'
-        )
+        args = [
+            "--study-accession",
+            "SCP1",
+            "--file-id",
+            "1234abc",
+            "ingest_expression",
+            "--file-params",
+            '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensemble 94"}',
+            "--matrix-file",
+            "../tests/data/dense_matrix_19_genes_100k_cells.txt",
+            "--matrix-file-type",
+            "dense",
+        ]
         ingest = self.setup_ingest(args)
 
         models = ingest.load_expression_data_args[0]
@@ -164,7 +189,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(num_models, expected_num_models)
 
         # Verify that the first gene model looks as expected
-        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
+        mock_dir = "dense_matrix_19_genes_100k_cells_txt"
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
 
         self.assertEqual(model, expected_model)
@@ -173,11 +198,19 @@ class IngestTestCase(unittest.TestCase):
         """Ingest Pipeline should throw error for missing local file
         """
 
-        args = (
-            'ingest_expression '
-            '--matrix-file /this/file/does/not_exist.txt '
-            '--matrix-file-type dense'
-        )
+        args = [
+            "--study-accession",
+            "SCP1",
+            "--file-id",
+            "1234abc",
+            "ingest_expression",
+            "--file-params",
+            '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensemble 94"}',
+            "--matrix-file",
+            "--matrix-file /this/file/does/not_exist.txt",
+            "--matrix-file-type",
+            "dense",
+        ]
 
         self.assertRaises(OSError, self.setup_ingest, args)
 
@@ -185,13 +218,23 @@ class IngestTestCase(unittest.TestCase):
         """Ingest Pipeline should extract and transform MTX matrix bundles
         """
 
-        args = (
-            'ingest_expression '
-            '--matrix-file ../tests/data/matrix.mtx '
-            '--matrix-file-type mtx '
-            '--gene-file ../tests/data/genes.tsv '
-            '--barcode-file ../tests/data/barcodes.tsv'
-        )
+        args = [
+            "--study-accession",
+            "SCP1",
+            "--file-id",
+            "1234abc",
+            "ingest_expression",
+            "--file-params",
+            '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensemble 94"}',
+            "--matrix-file",
+            "../tests/data/matrix.mtx",
+            "--matrix-file-type",
+            "mtx",
+            "--gene-file",
+            "../tests/data/genes.tsv",
+            "--barcode-file",
+            "../tests/data/barcodes.tsv",
+        ]
         ingest = self.setup_ingest(args)
 
         models = ingest.load_expression_data_args[0]
@@ -202,22 +245,32 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(num_models, expected_num_models)
 
         # Verify that the first gene model looks as expected
-        mock_dir = 'matrix_mtx'
+        mock_dir = "matrix_mtx"
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
+        print(f"\n\n\n{model}\n\n\n")
+        print(f"\n\n\n{expected_model}\n\n\n")
         self.assertEqual(model, expected_model)
 
     def test_mtx_bundle_argument_validation(self):
         """Omitting --gene-file and --barcode-file in MTX ingest should error
         """
 
-        args = (
-            'ingest_expression '
-            '--matrix-file ../tests/data/matrix.mtx '
-            '--matrix-file-type mtx'
-        )
+        args = [
+            "--study-accession",
+            "SCP1",
+            "--file-id",
+            "1234abc",
+            "ingest_expression",
+            "--file-params",
+            '{"taxon_name": "Homo sapiens", "taxon_common_name": "human", "ncbi_taxid": "9606", "genome_assembly_accession": "GCA_000001405.15", "genome_annotation": "Ensemble 94"}',
+            "--matrix-file",
+            "../tests/data/matrix.mtx",
+            "--matrix-file-type",
+            "mtx",
+        ]
 
         self.assertRaises(ValueError, self.setup_ingest, args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

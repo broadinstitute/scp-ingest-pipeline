@@ -63,7 +63,7 @@ class SubSample(IngestFiles):
 
         Returns:
             bin: Tuple[Dict[str: dataframe]], Tuple[str, str]]
-                The first tuple return contains all the bins for a given column/
+                The first tuple contains all the bins for a given column/
                 annotation. It would look like {'unique_value1': filtered dataframe where rows=unique_value1}
                 for group values and there can be up to 20 bins for numeric columns.
                 The second value in the tuple is structured exactly like the input value.
