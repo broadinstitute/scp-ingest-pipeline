@@ -57,6 +57,11 @@ def create_parser():
     # helper param to create json representation of metadata.error
     # as reference output for tests
     parser.add_argument('--errors_json', action='store_true')
+    # TODO: make required and modify defaults on the following two parameters after consulting Jon
+    parser.add_argument('--file_id', help='MongoDB identifier', default='Mongo_none')
+    parser.add_argument(
+        '--study_accession', help='SCP study accession', default='SCP_none'
+    )
     parser.add_argument('convention', help='Metadata convention JSON file ')
     parser.add_argument('input_metadata', help='Metadata TSV file')
     return parser
@@ -157,14 +162,17 @@ def validate_cells_unique(metadata):
     :return: boolean   True if valid, False otherwise
     """
     valid = False
+    # uniq_errors = defaultdict(list)
     if len(metadata.cells) == len(set(metadata.cells)):
         valid = True
     else:
+        # TODO value stored incorrectly, will need to fix
         dups = list_duplicates(metadata.cells)
-        metadata.errors['format'].append(
-            'Error:  Duplicate CellID(s) in metadata file:'
-            f' {", ".join(map(str, dups))}'
-        )
+        msg = 'Error:  Duplicate CellID(s) in metadata file'
+        # uniq_errors[msg].append(dups)
+        # metadata.errors['error']['format'] = uniq_errors
+        print(dups)
+        metadata.store_format_error('error', 'format', msg, associated_info=dups)
     return valid
 
 
@@ -270,7 +278,7 @@ def process_metadata_content(metadata, convention):
             for error in schema.iter_errors(row):
                 js_errors[error.message].append(row['CellID'])
             line = metadata.extract()
-        metadata.errors['values'] = js_errors
+        metadata.errors['error']['jsonschema'] = js_errors
         validate_cells_unique(metadata)
         return
     else:
@@ -286,18 +294,23 @@ def report_errors(metadata):
     """
     logger.debug('Begin: report_errors')
     errors = False
-    for k, v in metadata.errors.items():
-        if k == 'format' and v:
-            print('Metadata format errors:', v)
-            errors = True
-        if k == 'values' and v:
-            print('Non-ontology metadata errors:')
-            for error, cells in v.items():
-                print(error, '[ Error count:', len(cells), ']')
-                errors = True
-    if not errors:
+    warnings = False
+    for error_type in metadata.errors.keys():
+        for error_category, category_dict in metadata.errors[error_type].items():
+            if category_dict:
+                print("***", error_category, error_type, 'listing:')
+                for error_msg, cells in category_dict.items():
+                    if cells:
+                        print(error_msg, '[ Error count:', len(cells), ']')
+                    else:
+                        print(error_msg)
+                if error_type == 'error':
+                    errors = True
+                if error_type == 'warn':
+                    warnings = True
+    if not errors and not warnings:
         # deal with this print statement
-        print('No errors detected in input metadata file')
+        print('No errors or warnings detected for input metadata file')
     return errors
 
 
@@ -422,8 +435,9 @@ if __name__ == '__main__':
     with open(args.convention, 'r') as f:
         convention = json.load(f)
     filetsv = args.input_metadata
-    metadata = CellMetadata(filetsv)
+    metadata = CellMetadata(filetsv, args.file_id, args.study_accession)
     print('Validating', filetsv)
+
     format_valid = metadata.validate_format()
     if format_valid:
         process_metadata_content(metadata, convention)

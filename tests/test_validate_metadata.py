@@ -37,14 +37,14 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
             "Error: Metadata file header row malformed, missing NAME",
-            metadata.errors["format"],
+            metadata.errors['error']["format"].keys(),
             "Missing NAME keyword should fail format validation",
         )
 
         self.assertFalse(metadata.validate_type_keyword())
         self.assertIn(
             "Error:  Metadata file TYPE row malformed, missing TYPE",
-            metadata.errors["format"],
+            metadata.errors['error']["format"].keys(),
             "Missing TYPE keyword should fail format validation",
         )
 
@@ -127,8 +127,8 @@ class TestValidateMetadata(unittest.TestCase):
             "Metadata validation errors do not match reference errors",
         )
         self.assertEqual(
-            metadata.errors["format"],
-            reference_errors["format"],
+            metadata.errors['error']["format"],
+            reference_errors['error']["format"],
             "Expected duplicate cellID error does not match reference",
         )
 
