@@ -94,11 +94,12 @@ class CellMetadata(IngestFiles):
         :param msg: error message
         :param value: list of IDs associated with the error
         """
-        new_errors = defaultdict(list)
+        new_errors = {}
         if associated_info:
-            new_errors[msg].append(associated_info)
+            new_errors[msg] = associated_info
         else:
-            new_errors[msg].append('')
+            print('storing error w/o assoc', msg)
+            new_errors[msg] = ""
         self.errors[type][category] = new_errors
 
     def validate_header_keyword(self):
@@ -113,11 +114,12 @@ class CellMetadata(IngestFiles):
                 # ToDO - capture warning below in error report
                 print(
                     f'Warning: metadata file keyword NAME provided as '
-                    '{self.headers[0]}'
+                    f'{self.headers[0]}'
                 )
         else:
             msg = 'Error: Metadata file header row malformed, missing NAME'
-            self.store_format_error('error', 'format', msg)
+            print(msg)
+            self.store_format_error('error', 'format', msg, '')
         return valid
 
     def validate_unique_header(self):
@@ -129,7 +131,7 @@ class CellMetadata(IngestFiles):
         if len(self.headers[1:]) == len(set(self.headers[1:])):
             valid = True
         else:
-            msg = 'Error:  Duplicate column headers in metadata file'
+            msg = 'Error: Duplicate column headers in metadata file'
             self.store_format_error('error', 'format', msg)
         return valid
 
@@ -145,12 +147,12 @@ class CellMetadata(IngestFiles):
                 # ToDO - capture warning below in error report
                 # investigate f-string formatting here
                 print(
-                    'Warning: metadata file keyword TYPE provided as '
+                    'Warning: Metadata file keyword TYPE provided as '
                     '{self.metadata_types[0]}'
                 )
         else:
             # check black autoformatting on this long line
-            msg = 'Error:  Metadata file TYPE row malformed, missing TYPE'
+            msg = 'Error: Metadata file TYPE row malformed, missing TYPE'
             self.store_format_error('error', 'format', msg)
         return valid
 

@@ -335,7 +335,13 @@ def retrieve_ontology_term(convention_url, ontology_id):
     convention_ontology = retrieve_ontology(convention_url)
     try:
         ontology_shortname, term_id = ontology_id.split('_')
-    except AttributeError:
+    except ValueError as error:
+        print("ValueError:", error)
+        print('missing ontology shortname in', ontology_id)
+        return None
+    except AttributeError as error:
+        print('AttributeError', error)
+        print('missing ontology shortname in', ontology_id)
         return None
     metadata_url = OLS_BASE_URL + ontology_shortname
     metadata_ontology = retrieve_ontology(metadata_url)
@@ -392,7 +398,7 @@ def validate_collected_ontology_data(metadata, convention):
                 else:
                     if ontology_id:
                         ont_errors = defaultdict(list)
-                        error_msg = "No match found for " + ontology_id
+                        error_msg = f'No match found for {ontology_id}'
                         ont_errors[error_msg] = metadata.ontology[entry][
                             (ontology_id, ontology_label)
                         ]
@@ -404,7 +410,7 @@ def validate_collected_ontology_data(metadata, convention):
                 matching_term = retrieve_ontology_term(ontology_url, ontology_id)
                 if not matching_term:
                     ont_errors = defaultdict(list)
-                    error_msg = "No match found for " + ontology_id
+                    error_msg = f'No match found for {ontology_id}'
                     ont_errors[error_msg] = metadata.ontology[entry][(ontology_id)]
                     metadata.errors['error']['ontology'] = ont_errors
                 # else:
