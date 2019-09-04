@@ -391,14 +391,22 @@ def validate_collected_ontology_data(metadata, convention):
                     #     print("Ontology label matches: " + matching_term['label'])
                 else:
                     if ontology_id:
-                        print("No match found for", ontology_id)
+                        ont_errors = defaultdict(list)
+                        error_msg = "No match found for " + ontology_id
+                        ont_errors[error_msg] = metadata.ontology[entry][
+                            (ontology_id, ontology_label)
+                        ]
+                        metadata.errors['error']['ontology'] = ont_errors
                     else:
                         print('No ontology_id provided for', ontology_id)
         except ValueError:
             for ontology_id in metadata.ontology[entry].keys():
                 matching_term = retrieve_ontology_term(ontology_url, ontology_id)
                 if not matching_term:
-                    print("No match found for " + ontology_id)
+                    ont_errors = defaultdict(list)
+                    error_msg = "No match found for " + ontology_id
+                    ont_errors[error_msg] = metadata.ontology[entry][(ontology_id)]
+                    metadata.errors['error']['ontology'] = ont_errors
                 # else:
                 #     print("Found matching for " + ontology_id)
                 print(
