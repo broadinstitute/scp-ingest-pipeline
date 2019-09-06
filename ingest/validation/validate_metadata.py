@@ -80,8 +80,8 @@ def validate_schema(json):
         valid_schema = jsonschema.Draft7Validator(json)
         return valid_schema
     except jsonschema.SchemaError as e:
-        # save this output as part of error output
-        print('Input JSON is invalid as jsonschema;', e)
+        error_msg = 'Error: Invalid metadata convention'
+        metadata.store_validation_error('error', 'convention', error_msg, repr(e))
         return None
 
 
@@ -171,7 +171,6 @@ def validate_cells_unique(metadata):
         msg = 'Error:  Duplicate CellID(s) in metadata file'
         # uniq_errors[msg].append(dups)
         # metadata.errors['error']['format'] = uniq_errors
-        print(dups)
         metadata.errors['error']['format'][msg] = dups
     return valid
 
@@ -236,17 +235,26 @@ def process_metadata_row(metadata, convention, line):
             try:
                 row_info[k] = int(v)
             except ValueError as e:
-                print('Warning: Issue with coercion based on type declaration', e)
+                error_msg = f'ERROR: value provided does not match convention type delaration for {k}'
+                metadata.store_validation_error(
+                    'error', 'type', error_msg, [row_info['CellID'], repr(e)]
+                )
         elif k in metadata.type['floats']:
             try:
                 row_info[k] = float(v)
             except ValueError as e:
-                print('Warning: Issue with coercion based on type declaration', e)
+                error_msg = f'ERROR: value provided does not match convention type delaration for {k}'
+                metadata.store_validation_error(
+                    'error', 'type', error_msg, [row_info['CellID'], repr(e)]
+                )
         elif k in metadata.type['convention']['array']:
             try:
                 row_info[k] = v.split(',')
             except ValueError as e:
-                print('Warning: Issue with coercion based on type declaration', e)
+                error_msg = f'ERROR: value provided does not match convention type delaration for {k}'
+                metadata.store_validation_error(
+                    'error', 'type', error_msg, [row_info['CellID'], repr(e)]
+                )
     return row_info
 
 
@@ -278,11 +286,8 @@ def process_metadata_content(metadata, convention):
             for error in schema.iter_errors(row):
                 js_errors[error.message].append(row['CellID'])
             line = metadata.extract()
-        metadata.errors['error']['jsonschema'] = js_errors
+        metadata.errors['error']['convention'] = js_errors
         validate_cells_unique(metadata)
-        return
-    else:
-        print('Validation failed: Invalid metadata convention')
         return
 
 
@@ -298,7 +303,7 @@ def report_errors(metadata):
     for error_type in metadata.errors.keys():
         for error_category, category_dict in metadata.errors[error_type].items():
             if category_dict:
-                print("***", error_category, error_type, 'listing:')
+                print('\n***', error_category, error_type, 'listing:')
                 for error_msg, cells in category_dict.items():
                     if cells:
                         print(error_msg, '[ Error count:', len(cells), ']')
@@ -311,7 +316,8 @@ def report_errors(metadata):
     if not errors and not warnings:
         # deal with this print statement
         print('No errors or warnings detected for input metadata file')
-    return errors
+    else:
+        exit(1)
 
 
 def retrieve_ontology(ontology_url):
@@ -467,6 +473,6 @@ if __name__ == '__main__':
     if format_valid:
         process_metadata_content(metadata, convention)
     validate_collected_ontology_data(metadata, convention)
-    report_errors(metadata)
     if args.errors_json:
         serialize_errors(metadata)
+    report_errors(metadata)
