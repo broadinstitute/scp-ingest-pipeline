@@ -87,15 +87,15 @@ class CellMetadata(IngestFiles):
         """Returns sub-collection name"""
         return 'data'
 
-    def store_format_error(self, type, category, msg, associated_info=None):
-        """Store format errors in proper arrangement
+    def store_validation_error(self, type, category, msg, associated_info=None):
+        """Store validation errors in proper arrangement
         :param type: type of error (error or warn)
         :param category: error category (format, jsonschema, ontology)
         :param msg: error message
         :param value: list of IDs associated with the error
         """
         if associated_info:
-            self.errors[type][category][msg] = associated_info
+            self.errors[type][category][msg].append(associated_info)
         else:
             self.errors[type][category][msg] = None
 
@@ -115,7 +115,7 @@ class CellMetadata(IngestFiles):
                 )
         else:
             msg = 'Error: Metadata file header row malformed, missing NAME'
-            self.store_format_error('error', 'format', msg, '')
+            self.store_validation_error('error', 'format', msg, '')
         return valid
 
     def validate_unique_header(self):
@@ -128,7 +128,7 @@ class CellMetadata(IngestFiles):
             valid = True
         else:
             msg = 'Error: Duplicate column headers in metadata file'
-            self.store_format_error('error', 'format', msg)
+            self.store_validation_error('error', 'format', msg)
         return valid
 
     def validate_type_keyword(self):
@@ -149,7 +149,7 @@ class CellMetadata(IngestFiles):
         else:
             # check black autoformatting on this long line
             msg = 'Error: Metadata file TYPE row malformed, missing TYPE'
-            self.store_format_error('error', 'format', msg)
+            self.store_validation_error('error', 'format', msg)
         return valid
 
     def validate_type_annotations(self):
@@ -158,24 +158,17 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        annot_err = False
-        annots = []
         # skipping the TYPE keyword, iterate through the types
         # collecting invalid type annotations in list annots
         for t in self.metadata_types[1:]:
             if t not in self.annotation_type:
+                msg = 'Error: TYPE declarations should be group or numeric'
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
                 if not t:
-                    annots.append('<empty value>')
+                    self.store_validation_error('error', 'format', msg, '<empty value>')
                 else:
-                    annots.append(t)
-                annot_err = True
-        if annot_err:
-            msg = 'Error: TYPE declarations should be group or numeric'
-            self.store_format_error('error', 'format', msg, associated_info=annots)
-        else:
-            valid = True
+                    self.store_validation_error('error', 'format', msg, t)
         return valid
 
     def validate_against_header_count(self):
@@ -189,7 +182,7 @@ class CellMetadata(IngestFiles):
                 f'Error: {len(self.metadata_types)} TYPE declarations '
                 f'for {len(self.headers)} column headers'
             )
-            self.store_format_error('error', 'format', msg)
+            self.store_validation_error('error', 'format', msg)
         else:
             valid = True
         return valid

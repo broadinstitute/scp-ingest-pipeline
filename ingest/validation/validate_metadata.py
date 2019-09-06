@@ -172,7 +172,7 @@ def validate_cells_unique(metadata):
         # uniq_errors[msg].append(dups)
         # metadata.errors['error']['format'] = uniq_errors
         print(dups)
-        metadata.store_format_error('error', 'format', msg, associated_info=dups)
+        metadata.errors['error']['format'][msg] = dups
     return valid
 
 
@@ -385,11 +385,15 @@ def validate_collected_ontology_data(metadata, convention):
                     # print("Found matching for " + ontology_id)
                     if matching_term['label'] != ontology_label:
                         try:
-                            print(
-                                'ontology_label',
-                                ontology_label,
-                                'does not match',
-                                matching_term['label'],
+                            error_msg = (
+                                f'ontology_label \"{ontology_label}\" '
+                                f'does not match \"{matching_term["label"]}\",'
+                            )
+                            metadata.store_validation_error(
+                                'error',
+                                'ontology',
+                                error_msg,
+                                metadata.ontology[entry][(ontology_id, ontology_label)],
                             )
                         except TypeError:
                             print('No description found for', ontology_id)
@@ -397,12 +401,13 @@ def validate_collected_ontology_data(metadata, convention):
                     #     print("Ontology label matches: " + matching_term['label'])
                 else:
                     if ontology_id:
-                        ont_errors = defaultdict(list)
                         error_msg = f'No match found for {ontology_id}'
-                        ont_errors[error_msg] = metadata.ontology[entry][
-                            (ontology_id, ontology_label)
-                        ]
-                        metadata.errors['error']['ontology'] = ont_errors
+                        metadata.store_validation_error(
+                            'error',
+                            'ontology',
+                            error_msg,
+                            metadata.ontology[entry][(ontology_id, ontology_label)],
+                        )
                     else:
                         print('No ontology_id provided for', ontology_id)
         except ValueError:
@@ -415,11 +420,11 @@ def validate_collected_ontology_data(metadata, convention):
                     metadata.errors['error']['ontology'] = ont_errors
                 # else:
                 #     print("Found matching for " + ontology_id)
-                print(
-                    'Warning: no ontology label supplied in metdata file for',
-                    ontology_id,
-                    '- cross-check for data entry error not possible',
+                error_msg = (
+                    f'Warning: no ontology label supplied in metdata file for '
+                    f'\"{ontology_id}\" - no cross-check for data entry error possible'
                 )
+                metadata.store_validation_error('warn', 'ontology', error_msg)
     return
 
 
