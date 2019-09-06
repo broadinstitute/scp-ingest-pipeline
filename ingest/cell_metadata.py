@@ -26,7 +26,7 @@ class CellMetadata(IngestFiles):
         self.annotation_type = ['group', 'numeric']
         self.top_level_doc = self.create_documents(file_id, study_accession)
         self.data_subcollection = self.create_subdocuments()
-        self.errors = defaultdict(lambda: defaultdict(list))
+        self.errors = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.type = defaultdict(list)
         self.cells = []
@@ -94,13 +94,10 @@ class CellMetadata(IngestFiles):
         :param msg: error message
         :param value: list of IDs associated with the error
         """
-        new_errors = {}
         if associated_info:
-            new_errors[msg] = associated_info
+            self.errors[type][category][msg] = associated_info
         else:
-            print('storing error w/o assoc', msg)
-            new_errors[msg] = ""
-        self.errors[type][category] = new_errors
+            self.errors[type][category][msg] = None
 
     def validate_header_keyword(self):
         """Check metadata header row starts with NAME (case-insensitive).
@@ -118,7 +115,6 @@ class CellMetadata(IngestFiles):
                 )
         else:
             msg = 'Error: Metadata file header row malformed, missing NAME'
-            print(msg)
             self.store_format_error('error', 'format', msg, '')
         return valid
 
