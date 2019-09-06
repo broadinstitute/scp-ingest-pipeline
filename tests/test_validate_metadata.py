@@ -102,6 +102,7 @@ class TestValidateMetadata(unittest.TestCase):
             """
         args = "../tests/data/AMC_v0.8.json " "../tests/data/metadata_invalid.tsv"
         metadata, convention = self.setup_metadata(args)
+
         metadata_valid = metadata.validate_format()
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
