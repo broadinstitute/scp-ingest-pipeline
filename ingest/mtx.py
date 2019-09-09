@@ -17,10 +17,13 @@ from gene_data_model import Gene
 
 
 class Mtx:
-    def __init__(self, mtx_path: str, genes_path: str, barcodes_path: str):
-        self.genes_file = open(genes_path)
-        self.barcodes_file = open(barcodes_path)
+    def __init__(self, mtx_path: str, file_id: str, study_accession: str, **kwargs):
+        self.genes_file = open(kwargs.pop("gene_file"))
+        self.barcodes_file = open(kwargs.pop("barcode_file"))
         self.mtx_path = mtx_path
+        self.file_id = file_id
+        self.study_accession = study_accession
+        self.matrix_params = kwargs
 
     def extract(self):
         """Sets relevant iterables for each file of the MTX bundle
@@ -49,7 +52,7 @@ class Mtx:
         for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(
             self.matrix_file.row, self.matrix_file.col, self.matrix_file.data
         ):
-            gene_id, gene = self.genes[int(raw_gene_idx)].split('\t')
+            gene_id, gene = self.genes[int(raw_gene_idx)].split("\t")
             cell_name = self.cells[int(raw_barcode_idx)]
             exp_score = round(float(raw_exp_score), 3)
             if gene in exp_by_gene:
@@ -60,11 +63,14 @@ class Mtx:
                 # Create new key value pair with value being Gene object
                 exp_by_gene[gene] = Gene(
                     gene,
-                    'Mtx',
+                    "Mtx",
                     gene_id=gene_id,
                     cell_names=[cell_name],
                     expression_scores=[exp_score],
                     check_for_zero_values=False,
+                    study_accession=self.study_accession,
+                    file_id=self.file_id,
+                    **self.matrix_params,
                 )
         return exp_by_gene.values()
 

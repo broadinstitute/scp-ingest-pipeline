@@ -21,28 +21,28 @@ DOCUMENT_LIMIT_BYTES = 1_048_576
 
 
 class Gene:
-    SUBCOLLECTION_NAME = 'gene_expression'
-    COLLECTION_NAME = 'gene'
+    SUBCOLLECTION_NAME = "gene_expression"
+    COLLECTION_NAME = "genes"
 
     def __init__(
         self,
         name: str,
         source_file_type: str,
+        cell_names: List[str],
+        study_accession: str,
+        file_id: str,
+        expression_scores: List,
         *,
-        gene_id: str = '',
-        study_accession: str = '',
-        taxon_name: str = '',
-        taxon_common_name: str = '',
-        ncbi_taxid: str = '',
-        genome_assembly_accession: str = '',
-        genome_annotation: str = '',
-        cell_names: List[str] = [],
-        expression_scores: List = [],
+        gene_id: str = None,
+        taxon_name: str = None,
+        taxon_common_name: str = None,
+        ncbi_taxid: int = None,
+        genome_assembly_accession: str = None,
+        genome_annotation: str = None,
         check_for_zero_values: bool = True,
-        field_id: str = '',
     ) -> None:
 
-        self.name = name.replace('"', '')
+        self.name = name.replace('"', "")
         self.gene_id = gene_id
         self.source_file_type = (source_file_type,)
 
@@ -56,22 +56,22 @@ class Gene:
         # Subdocument that contains all cell names and expression scores for a
         # given gene
         self.subdocument = {
-            'cell_names': self.cell_names,
-            'expression_scores': self.expression_scores,
-            'source_file_type': source_file_type,
+            "cell_names": self.cell_names,
+            "expression_scores": self.expression_scores,
+            "source_file_type": source_file_type,
         }
         # This is the top level document for the gene data model
         self.top_level_doc = {
-            'field_id': field_id,
-            'searchable_name': "",
-            'name': self.name,
-            'gene_id': self.gene_id,
-            'study_accession': study_accession,
-            'taxon_name': taxon_name,
-            'taxon_common_name': taxon_common_name,
-            'ncbi_taxid': ncbi_taxid,
-            'genome_assembly_accession': genome_assembly_accession,
-            'genome_annotation': genome_annotation,
+            "file_id": file_id,
+            "searchable_name": name.lower(),
+            "name": self.name,
+            "gene_id": self.gene_id,
+            "study_accession": study_accession,
+            "taxon_name": taxon_name,
+            "taxon_common_name": taxon_common_name,
+            "ncbi_taxid": ncbi_taxid,
+            "genome_assembly_accession": genome_assembly_accession,
+            "genome_annotation": genome_annotation,
         }
 
     def has_subcollection_data(self):
@@ -154,9 +154,9 @@ class Gene:
                     end_index = index - 1
                 print(sum)
                 yield {
-                    'cell_names': self.cell_names[start_index:end_index],
-                    'expression_scores': self.expression_scores[start_index:end_index],
-                    'source_file_type': self.source_file_type[0],
+                    "cell_names": self.cell_names[start_index:end_index],
+                    "expression_scores": self.expression_scores[start_index:end_index],
+                    "source_file_type": self.source_file_type[0],
                 }
                 # Reset sum and add storage size at current index
                 sum = starting_sum + cell_name_storage + expression_scores_storage
