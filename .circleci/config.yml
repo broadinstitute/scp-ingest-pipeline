@@ -10,7 +10,7 @@ workflows:
   install_and_configure_cli:
     jobs:
       - gcp-cli/install_and_initialize_cli:
-          context: myContext
+          context: scp-ingest-pipeline
           executor: gcp-cli/default
 
 jobs:
