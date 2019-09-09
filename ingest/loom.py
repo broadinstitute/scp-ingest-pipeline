@@ -34,33 +34,30 @@ class Loom:
     def extract(self):
         """Pythons iterator protocol. Reads though Loom file and extracts 512 rows at time
 
+        Returns:
         ------
-            Taken from https://github.com/linnarsson-lab/loompy/blob/master/loompy/loompy.py
-            returns a generator object that yields triplets of (ix, indexes, view) where
-                view: LoomView
-                        a view corresponding to the current chunk
+            view: < generator LoomView>
+                    A generator of a view corresponding to the current chunk
         """
         for (ix, selection, view) in self.ds.scan(axis=0, batch_size=10):
-            print(f"View from Genes: {view.ra.Gene}")
             yield view
 
     def transform_expression_data_by_gene(self, view) -> Gene:
-        """Transforms Loom file into Firestore data model
-        Args:
-                view: <generator object Loom.extract>
-                        a view corresponding to the current chunk
+        """Transforms LoomView into Firestore data model
         Returns:
         ------
-                    transformed_data : List[Gene]
+            transformed_data : List[Gene]
                 A list of Gene objects
         """
+        # TODO: Find way to utilize generators and interators for memory and CPU efficiency
+        # Checkout https://www.datacamp.com/community/tutorials/python-iterator-tutorial
         gene_expression_models = []
         for gene in view.ra.Gene:
             gene_expression_models.append(
                 Gene(
                     name="gene",
                     source_file_type="loom",
-                    expression_scores=view[view == gene, :].tolist(),
+                    expression_scores=view[view.ra.Gene == gene, :][0],
                     cell_names=self.ds.ca.CellID.tolist(),
                     study_accession=self.study_accession,
                     file_id=self.file_id,

@@ -112,9 +112,8 @@ class IngestPipeline(object):
     Returns:
         None
     """
-        print("\n")
-        # for expression_model_generator in list_of_expression_models:
-        #     print(next(expression_model_generator.top_level_doc))
+        for expression_model in list_of_expression_models:
+            print(expression_model.expression_scores)
         # collection_name = expression_model.COLLECTION_NAME
         # batch = self.db.batch()
         # doc_ref = self.db.collection(collection_name).document()
