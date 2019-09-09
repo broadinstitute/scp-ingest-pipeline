@@ -36,7 +36,7 @@ class Gene:
         gene_id: str = None,
         taxon_name: str = None,
         taxon_common_name: str = None,
-        ncbi_taxid: int = None,
+        ncbi_taxid: str = None,
         genome_assembly_accession: str = None,
         genome_annotation: str = None,
         check_for_zero_values: bool = True,

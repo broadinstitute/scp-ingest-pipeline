@@ -39,8 +39,7 @@ from google.api_core import exceptions
 from google.cloud import firestore
 from mtx import Mtx
 from subsample import SubSample
-
-# from loom import
+from loom import Loom
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
@@ -93,7 +92,7 @@ class IngestPipeline(object):
             "cell_metadata": CellMetadata,
             "cluster": Clusters,
             "mtx": Mtx,
-            # "loom", Loom
+            "loom": Loom,
         }
         return file_connections.get(file_type)(
             file_path, self.file_id, self.study_accession, **self.kwargs
@@ -113,35 +112,37 @@ class IngestPipeline(object):
     Returns:
         None
     """
-        for expression_model in list_of_expression_models:
-            collection_name = expression_model.COLLECTION_NAME
-            batch = self.db.batch()
-            doc_ref = self.db.collection(collection_name).document()
-            batch.set(doc_ref, expression_model.top_level_doc)
-            batch.commit()
-            i = 0
-            if expression_model.has_subcollection_data():
-                try:
-                    print(f"Ingesting {expression_model.name}")
-                    subcollection_name = expression_model.SUBCOLLECTION_NAME
-                    doc_ref_sub = doc_ref.collection(subcollection_name).document()
-                    print(
-                        f"Length of scores is: {len(expression_model.expression_scores)}"
-                    )
-                    doc_ref_sub.set(expression_model.subdocument)
-                except exceptions.InvalidArgument as e:
-                    # Catches invalid argument exception, which error "Maximum
-                    # document size" falls under
-                    print(e)
-                    batch = self.db.batch()
-                    for subdoc in expression_model.chunk_gene_expression_documents(
-                        doc_ref_sub.id, doc_ref_sub._document_path
-                    ):
-                        print({i})
-                        batch.set(doc_ref_sub, subdoc)
-                        i += 1
-
-                    batch.commit()
+        print("\n")
+        # for expression_model_generator in list_of_expression_models:
+        #     print(next(expression_model_generator.top_level_doc))
+        # collection_name = expression_model.COLLECTION_NAME
+        # batch = self.db.batch()
+        # doc_ref = self.db.collection(collection_name).document()
+        # batch.set(doc_ref, expression_model.top_level_doc)
+        # batch.commit()
+        # i = 0
+        # if expression_model.has_subcollection_data():
+        #     try:
+        #         print(f"Ingesting {expression_model.name}")
+        #         subcollection_name = expression_model.SUBCOLLECTION_NAME
+        #         doc_ref_sub = doc_ref.collection(subcollection_name).document()
+        #         print(
+        #             f"Length of scores is: {len(expression_model.expression_scores)}"
+        #         )
+        #         doc_ref_sub.set(expression_model.subdocument)
+        #     except exceptions.InvalidArgument as e:
+        #         # Catches invalid argument exception, which error "Maximum
+        #         # document size" falls under
+        #         print(e)
+        #         batch = self.db.batch()
+        #         for subdoc in expression_model.chunk_gene_expression_documents(
+        #             doc_ref_sub.id, doc_ref_sub._document_path
+        #         ):
+        #             print({i})
+        #             batch.set(doc_ref_sub, subdoc)
+        #             i += 1
+        #
+        #         batch.commit()
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
@@ -181,20 +182,29 @@ class IngestPipeline(object):
     Returns:
         None
     """
+        transformed_data = []
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
-        else:
-            transformed_data = []
-            while True:
-                row = self.matrix.extract()
-                if row is None:
-                    break
-                transformed_data.append(
-                    self.matrix.transform_expression_data_by_gene(row)
+        elif self.matrix_file_type == "loom":
+            for expression_ds in self.matrix.extract():
+
+                transformed_data = (
+                    transformed_data
+                    + self.matrix.transform_expression_data_by_gene(expression_ds)
                 )
-        self.load_expression_data(transformed_data)
-        self.close_matrix()
+
+            # transformed_data = []
+            # # while True:
+            #
+            # expression_data = self.matrix.extract()
+            # transformed_data.append(
+            #     self.matrix.transform_expression_data_by_gene(expression_data)
+            # )
+            # print(gene_model.top_level_doc)
+            print(len(transformed_data))
+            self.load_expression_data(transformed_data)
+        # # self.close_matrix()
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
@@ -416,6 +426,7 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
+    print(arguments)
     ingest = IngestPipeline(**arguments)
 
     if "matrix_file" in arguments:
