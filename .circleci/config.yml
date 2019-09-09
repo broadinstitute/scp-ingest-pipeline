@@ -6,6 +6,11 @@ version: 2.1
 orbs:
   gcp-cli: circleci/gcp-cli@1.8.2
 jobs:
+  install_and_configure_cli:
+    jobs:
+      - gcp-cli/install_and_initialize_cli:
+          context: myContext
+          executor: gcp-cli/default
   build:
     docker:
       # specify the version you desire here
@@ -29,10 +34,6 @@ jobs:
             - v1-dependencies-{{ checksum "requirements.txt" }}
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
-
-      - gcp-cli/install_and_initialize_cli:
-          context: myContext
-          executor: gcp-cli/default
 
       - run:
           name: Install dependencies
