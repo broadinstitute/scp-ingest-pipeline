@@ -9,6 +9,7 @@ jobs:
       # specify the version you desire here
       # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
       - image: circleci/python:3.6.1
+      - image: circleci/openjdk:8
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
@@ -42,6 +43,8 @@ jobs:
       - run:
           name: Run tests
           command: |
+            gcloud beta emulators firestore start --host-port localhost:8081
+            export FIRESTORE_EMULATOR_HOST=localhost:8081
             . venv/bin/activate
             cd tests
             coverage run -m pytest
