@@ -317,21 +317,6 @@ class IngestTestCase(unittest.TestCase):
             "--matrix-file-type",
             "mtx",
         ]
-        ingest = self.setup_ingest(args)
-
-        models = ingest.load_expression_data_args[0]
-
-        # Verify that 25 gene models were passed into load method
-        num_models = len(models)
-        expected_num_models = 25
-        self.assertEqual(num_models, expected_num_models)
-
-        # Verify that the first gene model looks as expected
-        mock_dir = "matrix_mtx"
-        model, expected_model = get_nth_gene_models(0, models, mock_dir)
-        print(f"\n\n\n{model}\n\n\n")
-        print(f"\n\n\n{expected_model}\n\n\n")
-        self.assertEqual(model, expected_model)
 
         self.assertRaises(ValueError, self.setup_ingest, args)
 
@@ -361,7 +346,21 @@ class IngestTestCase(unittest.TestCase):
             "loom",
         ]
 
-        self.assertRaises(ValueError, self.setup_ingest, args)
+        ingest = self.setup_ingest(args)
+
+        models = ingest.load_expression_data_args[0]
+
+        # Verify that 25 gene models were passed into load method
+        num_models = len(models)
+        expected_num_models = 25
+        self.assertEqual(num_models, expected_num_models)
+
+        # Verify that the first gene model looks as expected
+        mock_dir = "matrix_mtx"
+        model, expected_model = get_nth_gene_models(0, models, mock_dir)
+        print(f"\n\n\n{model}\n\n\n")
+        print(f"\n\n\n{expected_model}\n\n\n")
+        self.assertEqual(model, expected_model)
 
 
 if __name__ == "__main__":
