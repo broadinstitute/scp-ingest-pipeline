@@ -96,9 +96,10 @@ class Gene:
         non_zero_cell_names = []
         non_zero_expression_scores = []
         for exp_score, cell_name in zip(expression_scores, cell_names):
+            exp_score = round(float(exp_score), 3)
             if exp_score != 0:
                 non_zero_cell_names.append(cell_name)
-                non_zero_expression_scores.append(round(float(exp_score), 3))
+                non_zero_expression_scores.append(exp_score)
         if len(non_zero_expression_scores) == 0:
             return None, None
         else:

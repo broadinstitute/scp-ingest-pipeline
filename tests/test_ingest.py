@@ -290,8 +290,6 @@ class IngestTestCase(unittest.TestCase):
         print(f"\n\n\n{expected_model}\n\n\n")
         self.assertEqual(model, expected_model)
 
-        self.assertRaises(ValueError, self.setup_ingest, args)
-
     def test_mtx_bundle_argument_validation(self):
         """Omitting --gene-file and --barcode-file in MTX ingest should error
         """
@@ -331,7 +329,7 @@ class IngestTestCase(unittest.TestCase):
             "1234abc",
             "ingest_expression",
             "--taxon-name",
-            "Homo sapiens",
+            "Homo Sapiens",
             "--taxon-common-name",
             "human",
             "--ncbi-taxid",
@@ -341,7 +339,7 @@ class IngestTestCase(unittest.TestCase):
             "--genome-annotation",
             "Ensemble 94",
             "--matrix-file",
-            "../tests/data/test_loom",
+            "../tests/data/test_loom.loom",
             "--matrix-file-type",
             "loom",
         ]
@@ -352,11 +350,11 @@ class IngestTestCase(unittest.TestCase):
 
         # Verify that 25 gene models were passed into load method
         num_models = len(models)
-        expected_num_models = 25
+        expected_num_models = 10
         self.assertEqual(num_models, expected_num_models)
 
         # Verify that the first gene model looks as expected
-        mock_dir = "matrix_mtx"
+        mock_dir = "loom"
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
         print(f"\n\n\n{model}\n\n\n")
         print(f"\n\n\n{expected_model}\n\n\n")
