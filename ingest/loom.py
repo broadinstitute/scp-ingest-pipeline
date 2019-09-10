@@ -1,17 +1,11 @@
-"""THIS IS A WORK IN PROGRESS
-Command-line interface for ingesting Loom files into Firestore
+"""Module for ingesting Loom files into Firestore
 
 DESCRIPTION
-This CLI maps genes to expression values, cell ids, gene accesions from
-a Loom file and puts them into Firestore.
+Module provides extract and transforms function for gene expression data for
+a loom File.
 
 PREREQUISITES
-You must have google could firestore installed, authenticated
- configured.
-
-EXAMPLES
-# Takes Loom file and stores it into Firestore
-$ python loom_ingest.py  200k_subsample_4k_PMBC.loom
+Must have python 3.6 or higher.
 """
 
 
