@@ -50,6 +50,8 @@ jobs:
           command: |
             env
             export FIRESTORE_EMULATOR_HOST=localhost:8081
+            echo '{"project_id": "test-firestore-circleci"}' > /tmp/test-firestore-circleci.json
+            export GOOGLE_APPLICATION_CREDENTIALS=/tmp/test-firestore-circleci.json
             . venv/bin/activate
             cd ingest
             python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
