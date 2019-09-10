@@ -43,7 +43,7 @@ class TestValidateMetadata(unittest.TestCase):
 
         self.assertFalse(metadata.validate_type_keyword())
         self.assertIn(
-            "Error:  Metadata file TYPE row malformed, missing TYPE",
+            "Error: Metadata file TYPE row malformed, missing TYPE",
             metadata.errors['error']["format"].keys(),
             "Missing TYPE keyword should fail format validation",
         )
@@ -77,7 +77,8 @@ class TestValidateMetadata(unittest.TestCase):
         args = "../tests/data/AMC_invalid.json " "../tests/data/metadata_valid.tsv"
         metadata, convention = self.setup_metadata(args)
         self.assertIsNone(
-            validate_schema(convention), "Invalid metadata schema should be detected"
+            validate_schema(convention, metadata),
+            "Invalid metadata schema should be detected",
         )
         self.teardown_metadata(metadata)
 
@@ -123,8 +124,8 @@ class TestValidateMetadata(unittest.TestCase):
         reference_errors = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
-            metadata.errors,
-            reference_errors,
+            metadata.errors['error'],
+            reference_errors['error'],
             "Metadata validation errors do not match reference errors",
         )
         self.assertEqual(

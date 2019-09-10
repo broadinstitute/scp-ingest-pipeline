@@ -67,7 +67,7 @@ def create_parser():
     return parser
 
 
-def validate_schema(json):
+def validate_schema(json, metadata):
     """Check validity of metadata convention as JSON schema.
 
     :param schemafile: metadata convention JSON file
@@ -271,7 +271,7 @@ def process_metadata_content(metadata, convention):
     # schema validation, non-ontology errors, ontology info collection
     # the latter two should be done together in the same pass thru the file
     js_errors = defaultdict(list)
-    schema = validate_schema(convention)
+    schema = validate_schema(convention, metadata)
     if schema:
         line = metadata.extract()
         row_count = 1
@@ -298,6 +298,7 @@ def report_errors(metadata):
     :return: True if errors are reported, False if no errors to report
     """
     logger.debug('Begin: report_errors')
+
     errors = False
     warnings = False
     for error_type in metadata.errors.keys():
@@ -317,7 +318,9 @@ def report_errors(metadata):
         # deal with this print statement
         print('No errors or warnings detected for input metadata file')
     else:
+        return errors
         exit(1)
+    return errors
 
 
 def retrieve_ontology(ontology_url):
@@ -475,4 +478,4 @@ if __name__ == '__main__':
     validate_collected_ontology_data(metadata, convention)
     if args.errors_json:
         serialize_errors(metadata)
-    report_errors(metadata)
+    # report_errors(metadata)
