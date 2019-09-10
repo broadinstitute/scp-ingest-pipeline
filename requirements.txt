@@ -21,4 +21,5 @@ flake8==3.7.8
 
 # Adding peer dependency to address CircleCI build issue
 # See https://circleci.com/gh/broadinstitute/scp-ingest-pipeline/176
+# This might be safe to remove after updating Circle to use Python 3.7 or 3.8
 setuptools>=34.0.0

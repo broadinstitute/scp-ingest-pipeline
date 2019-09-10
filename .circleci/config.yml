@@ -50,6 +50,7 @@ jobs:
       - run:
           name: Run tests
           command: |
+            env
             gcloud beta emulators firestore start --host-port localhost:8081
             export FIRESTORE_EMULATOR_HOST=localhost:8081
             . venv/bin/activate
