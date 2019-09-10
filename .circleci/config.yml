@@ -50,7 +50,7 @@ jobs:
           command: |
             env
             export FIRESTORE_EMULATOR_HOST=localhost:8081
-            echo '{"project_id": "test-firestore-circleci", "type": "service_account", "client_email": "toy@example.com", "token_uri": "token_uri": "https://example.com"}' > /tmp/test-firestore-circleci.json
+            echo '{"project_id": "test-firestore-circleci", "type": "service_account", "client_email": "toy@example.com", "token_uri": "https://example.com"}' > /tmp/test-firestore-circleci.json
             export GOOGLE_APPLICATION_CREDENTIALS=/tmp/test-firestore-circleci.json
             . venv/bin/activate
             cd ingest
