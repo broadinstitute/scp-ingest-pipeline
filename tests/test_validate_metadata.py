@@ -11,6 +11,8 @@ from validate_metadata import (
     process_metadata_content,
     validate_schema,
     CellMetadata,
+    serialize_errors,
+    validate_collected_ontology_data,
 )
 
 
@@ -113,7 +115,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertTrue(
             report_errors(metadata), "Valid metadata content should not elicit error"
         )
-
+        validate_collected_ontology_data(metadata, convention)
         # reference errors tests for:
         #   missing required property "sex"
         #   missing dependency for non-required property "ethinicity"
@@ -123,12 +125,15 @@ class TestValidateMetadata(unittest.TestCase):
         reference_file = open("../tests/data/metadata_invalid.json", "r")
         reference_errors = json.load(reference_file)
         reference_file.close()
-        for type in reference_errors['error'].keys():
-            self.assertDictEqual(
-                metadata.errors['error'][type],
-                reference_errors['error'][type],
-                f"Expected {type}-type error does not match reference",
-            )
+        serialize_errors(metadata)
+        current_file = open("errors.json", "r")
+        current_errors = json.load(current_file)
+        current_file.close()
+        self.assertEqual(
+            current_errors,
+            reference_errors,
+            "Metadata validation errors do not match reference errors",
+        )
 
         self.teardown_metadata(metadata)
 
