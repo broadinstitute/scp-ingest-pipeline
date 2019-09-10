@@ -3,15 +3,9 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2.1
+
 orbs:
   gcp-cli: circleci/gcp-cli@1.8.2
-
-workflows:
-  install_cli:
-    command:
-      - gcp-cli/install:
-          context: scp-ingest-pipeline
-          executor: gcp-cli/default
 
 jobs:
   build:
@@ -37,7 +31,9 @@ jobs:
             - v1-dependencies-{{ checksum "requirements.txt" }}
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
-
+      
+      - gcp-cli/install
+      
       - run:
           name: Install dependencies
           command: |
