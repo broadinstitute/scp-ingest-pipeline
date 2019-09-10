@@ -123,7 +123,7 @@ class TestValidateMetadata(unittest.TestCase):
         reference_file = open("../tests/data/metadata_invalid.json", "r")
         reference_errors = json.load(reference_file)
         reference_file.close()
-        self.assertEqual(
+        self.assertDictEqual(
             metadata.errors['error'],
             reference_errors['error'],
             "Metadata validation errors do not match reference errors",
