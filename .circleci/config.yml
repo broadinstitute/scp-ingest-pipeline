@@ -4,16 +4,16 @@
 #
 version: 2.1
 
-orbs:
-  gcp-cli: circleci/gcp-cli@1.8.2
-
 jobs:
   build:
     docker:
       # specify the version you desire here
       # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
       - image: circleci/python:3.6.1
-      - image: circleci/openjdk:8
+      - image: google/cloud-sdk:257.0.0-alpine
+        command: |
+          env
+          gcloud beta emulators firestore start --host-port localhost:8081
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
@@ -32,8 +32,6 @@ jobs:
             # fallback to using the latest cache if no exact match is found
             - v2-dependencies-
       
-      - gcp-cli/install
-      
       - run:
           name: Install dependencies
           command: |
@@ -51,7 +49,6 @@ jobs:
           name: Run tests
           command: |
             env
-            gcloud beta emulators firestore start --host-port localhost:8081
             export FIRESTORE_EMULATOR_HOST=localhost:8081
             . venv/bin/activate
             cd tests
