@@ -8,7 +8,7 @@ orbs:
 
 workflows:
   install_cli:
-    jobs:
+    command:
       - gcp-cli/install:
           context: scp-ingest-pipeline
           executor: gcp-cli/default
