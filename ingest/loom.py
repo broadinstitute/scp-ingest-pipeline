@@ -55,7 +55,7 @@ class Loom:
         for gene in view.ra.Gene:
             gene_expression_models.append(
                 Gene(
-                    name="gene",
+                    name=gene,
                     source_file_type="loom",
                     expression_scores=view[view.ra.Gene == gene, :][0],
                     cell_names=self.ds.ca.CellID.tolist(),

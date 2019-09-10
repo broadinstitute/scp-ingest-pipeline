@@ -21,6 +21,9 @@ python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_me
 # Ingest dense file
 python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
+# Ingest loom file
+python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
+
 # Subsample cluster and metadata file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
@@ -113,35 +116,35 @@ class IngestPipeline(object):
         None
     """
         for expression_model in list_of_expression_models:
-            print(expression_model.expression_scores)
-        # collection_name = expression_model.COLLECTION_NAME
-        # batch = self.db.batch()
-        # doc_ref = self.db.collection(collection_name).document()
-        # batch.set(doc_ref, expression_model.top_level_doc)
-        # batch.commit()
-        # i = 0
-        # if expression_model.has_subcollection_data():
-        #     try:
-        #         print(f"Ingesting {expression_model.name}")
-        #         subcollection_name = expression_model.SUBCOLLECTION_NAME
-        #         doc_ref_sub = doc_ref.collection(subcollection_name).document()
-        #         print(
-        #             f"Length of scores is: {len(expression_model.expression_scores)}"
-        #         )
-        #         doc_ref_sub.set(expression_model.subdocument)
-        #     except exceptions.InvalidArgument as e:
-        #         # Catches invalid argument exception, which error "Maximum
-        #         # document size" falls under
-        #         print(e)
-        #         batch = self.db.batch()
-        #         for subdoc in expression_model.chunk_gene_expression_documents(
-        #             doc_ref_sub.id, doc_ref_sub._document_path
-        #         ):
-        #             print({i})
-        #             batch.set(doc_ref_sub, subdoc)
-        #             i += 1
-        #
-        #         batch.commit()
+            print(expression_model.__dict__)
+            # collection_name = expression_model.COLLECTION_NAME
+            # batch = self.db.batch()
+            # doc_ref = self.db.collection(collection_name).document()
+            # batch.set(doc_ref, expression_model.top_level_doc)
+            # batch.commit()
+            # i = 0
+            # if expression_model.has_subcollection_data():
+            #     try:
+            #         print(f"Ingesting {expression_model.name}")
+            #         subcollection_name = expression_model.SUBCOLLECTION_NAME
+            #         doc_ref_sub = doc_ref.collection(subcollection_name).document()
+            #         print(
+            #             f"Length of scores is: {len(expression_model.expression_scores)}"
+            #         )
+            #         doc_ref_sub.set(expression_model.subdocument)
+            #     except exceptions.InvalidArgument as e:
+            #         # Catches invalid argument exception, which error "Maximum
+            #         # document size" falls under
+            #         print(e)
+            #         batch = self.db.batch()
+            #         for subdoc in expression_model.chunk_gene_expression_documents(
+            #             doc_ref_sub.id, doc_ref_sub._document_path
+            #         ):
+            #             print({i})
+            #             batch.set(doc_ref_sub, subdoc)
+            #             i += 1
+            #
+            #         batch.commit()
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
@@ -186,23 +189,21 @@ class IngestPipeline(object):
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
         elif self.matrix_file_type == "loom":
+            print("hi")
             for expression_ds in self.matrix.extract():
-
                 transformed_data = (
                     transformed_data
                     + self.matrix.transform_expression_data_by_gene(expression_ds)
                 )
-
-            # transformed_data = []
-            # # while True:
-            #
-            # expression_data = self.matrix.extract()
-            # transformed_data.append(
-            #     self.matrix.transform_expression_data_by_gene(expression_data)
-            # )
-            # print(gene_model.top_level_doc)
-            print(len(transformed_data))
-            self.load_expression_data(transformed_data)
+        else:
+            while True:
+                row = self.matrix.extract()
+                if row is None:
+                    break
+                transformed_data.append(
+                    self.matrix.transform_expression_data_by_gene(row)
+                )
+        self.load_expression_data(transformed_data)
         # # self.close_matrix()
 
     def ingest_cell_metadata(self):
