@@ -443,10 +443,6 @@ def serialize_errors(metadata):
 
 
 # ToDo
-
-"""
-generate error report
-"""
 """
 WAIT: handle array data types
 
