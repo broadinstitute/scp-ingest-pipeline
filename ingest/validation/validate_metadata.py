@@ -54,7 +54,7 @@ def create_parser():
     #     default='CellID'
     # )
 
-    # helper param to create json representation of metadata.error
+    # helper param to create JSON representation of metadata.error
     # as reference output for tests
     parser.add_argument('--errors_json', action='store_true')
     # TODO: make required and modify defaults on the following two parameters after consulting Jon
@@ -474,4 +474,4 @@ if __name__ == '__main__':
     validate_collected_ontology_data(metadata, convention)
     if args.errors_json:
         serialize_errors(metadata)
-    # report_errors(metadata)
+    report_errors(metadata)

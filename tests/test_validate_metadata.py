@@ -103,7 +103,7 @@ class TestValidateMetadata(unittest.TestCase):
             """
         args = "../tests/data/AMC_v0.8.json " "../tests/data/metadata_invalid.tsv"
         metadata, convention = self.setup_metadata(args)
-
+        self.maxDiff = None
         metadata_valid = metadata.validate_format()
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
@@ -123,16 +123,12 @@ class TestValidateMetadata(unittest.TestCase):
         reference_file = open("../tests/data/metadata_invalid.json", "r")
         reference_errors = json.load(reference_file)
         reference_file.close()
-        self.assertDictEqual(
-            metadata.errors['error'],
-            reference_errors['error'],
-            "Metadata validation errors do not match reference errors",
-        )
-        self.assertEqual(
-            metadata.errors['error']["format"],
-            reference_errors['error']["format"],
-            "Expected duplicate cellID error does not match reference",
-        )
+        for type in reference_errors['error'].keys():
+            self.assertDictEqual(
+                metadata.errors['error'][type],
+                reference_errors['error'][type],
+                f"Expected {type}-type error does not match reference",
+            )
 
         self.teardown_metadata(metadata)
 
