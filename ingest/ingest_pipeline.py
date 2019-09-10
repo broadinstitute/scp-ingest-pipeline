@@ -19,7 +19,7 @@ python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
 
 # Ingest dense file
-python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest loom file
 python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
@@ -297,21 +297,23 @@ def create_parser():
 
     parser_ingest_expression.add_argument(
         "--taxon-name",
-        help="Taxon (scientific) name associated with file. Ex. 'Homo Sapiens' ",
+        help="Scientific name of taxon associated with file.  E.g. 'Homo sapiens'",
     )
     parser_ingest_expression.add_argument(
         "--taxon-common-name",
-        help="Taxon common name associated with study. Ex. 'humans'",
+        help="Common name of taxon associated with file.  E.g. 'human'",
     )
     parser_ingest_expression.add_argument(
-        "--ncbi-taxid", help="NCBI ID associated with file"
+        "--ncbi-taxid",
+        help="NCBI Taxonomy ID of taxon associated with file.  E.g. 9606",
     )
     parser_ingest_expression.add_argument(
-        "--genome-assembly-accession", help="Genome assembly accession for file."
+        "--genome-assembly-accession",
+        help="Genome assembly accession for file.  E.g. 'GCA_000001405.15'",
     )
     parser_ingest_expression.add_argument(
         "--genome-annotation",
-        help="Genomic annotation for expression files. Ex. 'Ensemble 94'",
+        help="Genomic annotation for expression files.  E.g. 'Ensembl 94'",
     )
 
     parser_ingest_expression.add_argument(
