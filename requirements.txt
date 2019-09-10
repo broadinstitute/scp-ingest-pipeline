@@ -18,3 +18,7 @@ flake8==3.7.8
 # Don't add these until we actually support Loom and Zarr
 #loompy==2.0.15
 #zarr==2.2.0
+
+# Adding peer dependency to address CircleCI build issue
+# See https://circleci.com/gh/broadinstitute/scp-ingest-pipeline/176
+setuptools>=34.0.0
