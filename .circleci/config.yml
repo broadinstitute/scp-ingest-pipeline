@@ -32,7 +32,7 @@ jobs:
       - run:
           name: Install Firestore emulator
           command: |
-            apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator
+            sudo apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator
 
       - run:
           name: Start Firestore emulator
