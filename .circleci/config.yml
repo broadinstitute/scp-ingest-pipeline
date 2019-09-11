@@ -33,8 +33,7 @@ jobs:
           name: Install Firestore emulator and Python 3 venv
           command: |
             apt-get --yes install software-properties-common
-            add-apt-repository --yes ppa:deadsnakes/ppa 
-            apt-get --yes update
+            add-apt-repository --yes ppa:deadsnakes/ppa
             apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator python3.6
 
       - run:
