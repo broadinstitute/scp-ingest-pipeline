@@ -66,9 +66,9 @@ class IngestPipeline(object):
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
         if db is not None:
-            self.db = firestore.Client()
-        else:
             self.db = db
+        else:
+            self.db = firestore.Client()
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
