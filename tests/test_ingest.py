@@ -90,10 +90,6 @@ def get_nth_gene_models(n, models, mock_dir):
     return actual_model, expected_model
 
 
-# Mock method that loads data to Firestore
-# IngestPipeline.load_expression_data = mock_load_expression_data
-
-
 class IngestTestCase(unittest.TestCase):
     @patch("google.cloud.storage.Blob", side_effect=mock_storage_blob)
     @patch("google.cloud.storage.Client", side_effect=mock_storage_client)
