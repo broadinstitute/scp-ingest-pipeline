@@ -9,8 +9,8 @@ jobs:
     docker:
       # specify the version you desire here
       # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
-      # - image: circleci/python:3.6.1
-      - image: google/cloud-sdk:262.0.0
+      - image: circleci/python:3.6.1
+      # - image: google/cloud-sdk:262.0.0
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
@@ -30,11 +30,9 @@ jobs:
             - v2-dependencies-
 
       - run:
-          name: Install Firestore emulator and Python 3 venv
+          name: Install Firestore emulator
           command: |
-            apt-get --yes install software-properties-common
-            add-apt-repository --yes ppa:deadsnakes/ppa
-            apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator python3.6
+            apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator
 
       - run:
           name: Start Firestore emulator
