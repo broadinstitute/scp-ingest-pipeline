@@ -13,8 +13,7 @@ jobs:
       - image: google/cloud-sdk:257.0.0
         command: |
           env
-          gcloud components install beta cloud-firestore-emulator --quiet
-          gcloud beta emulators firestore start --host-port localhost:8081
+          gcloud components install beta cloud-firestore-emulator --quiet && gcloud beta emulators firestore start --host-port localhost:8081
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
