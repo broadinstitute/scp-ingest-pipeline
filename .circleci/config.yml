@@ -30,9 +30,9 @@ jobs:
             - v2-dependencies-
 
       - run:
-          name: Install Firestore emulator
+          name: Install Firestore emulator and Python 3 venv
           command: |
-            apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator
+            apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator python3-venv
 
       - run:
           name: Start Firestore emulator
