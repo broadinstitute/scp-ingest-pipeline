@@ -34,12 +34,12 @@ jobs:
           command: |
             gcloud --quiet components install beta cloud-firestore-emulator
 
-      -run:
+      - run:
           name: Start Firestore emulator
           command: |
             gcloud beta emulators firestore start --host-port localhost:8081
 
-      -run:
+      - run:
           name: Install Python dependencies
           command: |
             python3 -m venv venv
