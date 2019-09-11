@@ -37,7 +37,7 @@ jobs:
       - run:
           name: Start Firestore emulator
           command: |
-            gcloud beta emulators firestore start --host-port localhost:8081
+            gcloud beta emulators firestore start --host-port localhost:8081 &
 
       - run:
           name: Install Python dependencies
