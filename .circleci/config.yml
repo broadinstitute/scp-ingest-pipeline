@@ -40,6 +40,7 @@ jobs:
 
             # Needed to install gcloud dependencies for Debian version Jesse
             # Via https://unix.stackexchange.com/a/342469
+            sudo echo deb http://http.debian.net/debian jessie-backports main >> /etc/apt/sources.list
             sudo apt --yes install -t jessie-backports openjdk-8-jre-headless ca-certificates-java
             
               # Enable `add-apt-repository` command
