@@ -25,7 +25,7 @@ class CellMetadata(IngestFiles):
         self.headers = self.get_next_line(increase_line_count=False)
         self.metadata_types = self.get_next_line(increase_line_count=False)
         # unique values for group-based annotations
-        self.unique_values = dict.fromkeys(self.header[1:], [])
+        self.unique_values = dict.fromkeys(self.headers[1:], [])
         self.cell_names = []
         self.annotation_type = ["group", "numeric"]
         self.top_level_doc = self.create_documents(file_id, study_accession)
@@ -39,7 +39,7 @@ class CellMetadata(IngestFiles):
         """ Add data from cell metadata files into data model"""
         for idx, column in enumerate(row):
             # Get annotation name from header
-            annotation = self.header[idx]
+            annotation = self.headers[idx]
             if idx != 0:
                 # if annotation is numeric convert from string to float
                 if self.metadata_types[idx].lower() == "numeric":

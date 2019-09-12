@@ -151,6 +151,7 @@ class IngestPipeline(object):
         collection_name = self.cell_metadata.COLLECTION_NAME
         subcollection_name = self.cell_metadata.SUBCOLLECTION_NAME
         for annotation in self.cell_metadata.top_level_doc.keys():
+            print(self.cell_metadata.top_level_doc[annotation])
             doc_ref = self.db.collection(collection_name).document()
             self.cell_metadata.update_unqiue_values(annotation)
             print(
@@ -158,7 +159,7 @@ class IngestPipeline(object):
             )
             doc_ref.set(self.cell_metadata.top_level_doc[annotation])
             try:
-                print(f"Ingesting {self.cell_metadata.name}")
+                print(f"Ingesting {annotation}")
                 subcollection_doc = self.cell_metadata.data_subcollection[annotation]
                 doc_ref_sub = doc_ref.collection(subcollection_name).document()
                 doc_ref_sub.set(subcollection_doc)
@@ -438,7 +439,6 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
-    print(arguments)
     ingest = IngestPipeline(**arguments)
 
     if "matrix_file" in arguments:
