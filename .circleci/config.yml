@@ -42,6 +42,7 @@ jobs:
             # Via https://discuss.circleci.com/t/how-to-append-etc-apt-sources-list/1654 and
             # https://unix.stackexchange.com/a/342469
             sudo sh -c 'echo deb http://http.debian.net/debian jessie-backports main >> /etc/apt/sources.list'
+            sudo apt-get --yes update
             sudo apt --yes install -t jessie-backports openjdk-8-jre-headless ca-certificates-java
             
               # Enable `add-apt-repository` command
