@@ -42,10 +42,10 @@ jobs:
             sudo apt-get --yes update && sudo apt-get --yes install google-cloud-sdk
             #sudo apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator
 
-      - run:
-          name: Start Firestore emulator
-          command: |
-            gcloud beta emulators firestore start --host-port localhost:8081 &
+      # - run:
+      #     name: Start Firestore emulator
+      #     command: |
+      #       gcloud beta emulators firestore start --host-port localhost:8081 &
 
       - run:
           name: Install Python dependencies
@@ -64,6 +64,7 @@ jobs:
           name: Run tests
           command: |
             env
+            gcloud beta emulators firestore start --host-port localhost:8081 &
             export FIRESTORE_EMULATOR_HOST=localhost:8081
             . venv/bin/activate
             cd tests
