@@ -25,7 +25,7 @@ class CellMetadata(IngestFiles):
         self.headers = self.get_next_line(increase_line_count=False)
         self.metadata_types = self.get_next_line(increase_line_count=False)
         # unique values for group-based annotations
-        self.unique_values = dict.fromkeys(self.headers[1:], [])
+        self.unique_values = {key: [] for key in self.headers[1:]}
         self.cell_names = []
         self.annotation_type = ["group", "numeric"]
         self.top_level_doc = self.create_documents(file_id, study_accession)
@@ -54,9 +54,7 @@ class CellMetadata(IngestFiles):
                 self.cell_names.append(column)
 
     def update_unqiue_values(self, annot_name):
-        self.cell_metadata.top_level_doc[annot_name][
-            "unique_values"
-        ] = self.unique_values[annot_name]
+        self.top_level_doc[annot_name]["unique_values"] = self.unique_values[annot_name]
 
     def create_documents(self, file_id, study_accession):
         """Creates top level documents for Cell Metadata data structure"""
@@ -103,7 +101,7 @@ class CellMetadata(IngestFiles):
         # sum starts at 59 (because key values take up 59 bytes) plus the
         # storage size of the source file name and file type
         size_of_cell_names_field = 10 + 1  # "cell_names" is 10 characters
-        size_of_value_field = 5 + 1
+        size_of_value_field = 6 + 1
         starting_sum = (
             +len(doc_name)
             + 1
@@ -118,7 +116,9 @@ class CellMetadata(IngestFiles):
         float_storage = 8
         sum = starting_sum
         header_idx = self.headers.index(annot_name)
+        print(header_idx)
         annot_type = self.metadata_types[header_idx]
+        print(annot_type)
 
         cell_names = self.data_subcollection[annot_name]["cell_names"]
         values = self.data_subcollection[annot_name]["values"]
@@ -136,12 +136,12 @@ class CellMetadata(IngestFiles):
             # and documents
             # This and other storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
-            if (sum + 32) > DOCUMENT_LIMIT_BYTES or cell_name == cell_name[-1]:
-                if cell_name == cell_name[-1]:
+            if (sum + 32) > DOCUMENT_LIMIT_BYTES or cell_name == cell_names[-1]:
+                if cell_name == cell_names[-1]:
                     end_index = index
                 else:
                     end_index = index - 1
-                print(sum)
+                print(f"{sum} , {index}, {start_index} , {end_index}")
                 yield {
                     "cell_names": cell_names[start_index:end_index],
                     "values": values[start_index:end_index],
