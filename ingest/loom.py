@@ -1,8 +1,7 @@
 """Module for ingesting Loom files into Firestore
 
 DESCRIPTION
-Module provides extract and transforms function for gene expression data for
-a loom File.
+Module provides extract and transforms functions for a Loom File.
 
 PREREQUISITES
 Must have python 3.6 or higher.
@@ -10,6 +9,7 @@ Must have python 3.6 or higher.
 
 
 import sys
+from typing import List
 
 import loompy
 from gene_data_model import Gene
@@ -36,7 +36,7 @@ class Loom:
         for (ix, selection, view) in self.ds.scan(axis=0, batch_size=10):
             yield view
 
-    def transform_expression_data_by_gene(self, view) -> Gene:
+    def transform_expression_data_by_gene(self, view) -> List[Gene]:
         """Transforms LoomView into Firestore data model
         Returns:
         ------

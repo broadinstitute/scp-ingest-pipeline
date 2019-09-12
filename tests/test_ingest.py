@@ -329,7 +329,7 @@ class IngestTestCase(unittest.TestCase):
             "1234abc",
             "ingest_expression",
             "--taxon-name",
-            "Homo Sapiens",
+            "Homo sapiens",
             "--taxon-common-name",
             "human",
             "--ncbi-taxid",
@@ -337,7 +337,7 @@ class IngestTestCase(unittest.TestCase):
             "--genome-assembly-accession",
             "GCA_000001405.15",
             "--genome-annotation",
-            "Ensemble 94",
+            "Ensembl 94",
             "--matrix-file",
             "../tests/data/test_loom.loom",
             "--matrix-file-type",
@@ -348,7 +348,7 @@ class IngestTestCase(unittest.TestCase):
 
         models = ingest.load_expression_data_args[0]
 
-        # Verify that 25 gene models were passed into load method
+        # Verify that 10 gene models were passed into load method
         num_models = len(models)
         expected_num_models = 10
         self.assertEqual(num_models, expected_num_models)
