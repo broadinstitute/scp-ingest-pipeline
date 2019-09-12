@@ -41,8 +41,8 @@ jobs:
             # Needed to install gcloud dependencies for Debian version Jesse
             # Via https://discuss.circleci.com/t/how-to-append-etc-apt-sources-list/1654 and
             # https://unix.stackexchange.com/a/342469
-            sudo sh -c 'echo deb http://http.debian.net/debian jessie-backports main >> /etc/apt/sources.list'
-            sudo apt-get --yes update
+            sudo sh -c 'echo deb [check-valid-until=no] http://archive.debian.org/debian jessie-backports main >> /etc/apt/sources.list'
+            sudo apt-get --yes -o Acquire::Check-Valid-Until=false update
             sudo apt --yes install -t jessie-backports openjdk-8-jre-headless ca-certificates-java
             
               # Enable `add-apt-repository` command
