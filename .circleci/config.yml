@@ -32,7 +32,15 @@ jobs:
       - run:
           name: Install Firestore emulator
           command: |
-            sudo apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator
+            # Add the Cloud SDK distribution URI as a package source
+            echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+
+            # Import the Google Cloud Platform public key
+            curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+
+            # Update the package list and install the Cloud SDK
+            sudo apt-get --yes update && sudo apt-get --yes install google-cloud-sdk
+            #sudo apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator
 
       - run:
           name: Start Firestore emulator
