@@ -39,8 +39,9 @@ jobs:
             curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
 
             # Needed to install gcloud dependencies for Debian version Jesse
-            # Via https://unix.stackexchange.com/a/342469
-            sudo echo deb http://http.debian.net/debian jessie-backports main >> /etc/apt/sources.list
+            # Via https://discuss.circleci.com/t/how-to-append-etc-apt-sources-list/1654 and
+            # https://unix.stackexchange.com/a/342469
+            sudo sh -c 'echo deb http://http.debian.net/debian jessie-backports main >> /etc/apt/sources.list'
             sudo apt --yes install -t jessie-backports openjdk-8-jre-headless ca-certificates-java
             
               # Enable `add-apt-repository` command
