@@ -318,6 +318,48 @@ class IngestTestCase(unittest.TestCase):
 
         self.assertRaises(ValueError, self.setup_ingest, args)
 
+    def test_ingest_loom(self):
+        """Ingest Pipeline should extract and transform loom files
+        """
+
+        args = [
+            "--study-accession",
+            "SCP1",
+            "--file-id",
+            "1234abc",
+            "ingest_expression",
+            "--taxon-name",
+            "Homo sapiens",
+            "--taxon-common-name",
+            "human",
+            "--ncbi-taxid",
+            "9606",
+            "--genome-assembly-accession",
+            "GCA_000001405.15",
+            "--genome-annotation",
+            "Ensembl 94",
+            "--matrix-file",
+            "../tests/data/test_loom.loom",
+            "--matrix-file-type",
+            "loom",
+        ]
+
+        ingest = self.setup_ingest(args)
+
+        models = ingest.load_expression_data_args[0]
+
+        # Verify that 10 gene models were passed into load method
+        num_models = len(models)
+        expected_num_models = 10
+        self.assertEqual(num_models, expected_num_models)
+
+        # Verify that the first gene model looks as expected
+        mock_dir = "loom"
+        model, expected_model = get_nth_gene_models(0, models, mock_dir)
+        print(f"\n\n\n{model}\n\n\n")
+        print(f"\n\n\n{expected_model}\n\n\n")
+        self.assertEqual(model, expected_model)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -21,6 +21,9 @@ python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_me
 # Ingest dense file
 python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
+# Ingest loom file
+python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
+
 # Subsample cluster and metadata file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
@@ -39,9 +42,10 @@ from google.api_core import exceptions
 from google.cloud import firestore
 from mtx import Mtx
 from subsample import SubSample
+from loom import Loom
 
 # Ingest file types
-EXPRESSION_FILE_TYPES = ["dense", "mtx"]
+EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 
 
 class IngestPipeline(object):
@@ -91,6 +95,7 @@ class IngestPipeline(object):
             "cell_metadata": CellMetadata,
             "cluster": Clusters,
             "mtx": Mtx,
+            "loom": Loom,
         }
         return file_connections.get(file_type)(
             file_path, self.file_id, self.study_accession, **self.kwargs
@@ -178,11 +183,17 @@ class IngestPipeline(object):
     Returns:
         None
     """
+        transformed_data = []
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
             transformed_data = self.matrix.transform_expression_data_by_gene()
+        elif self.matrix_file_type == "loom":
+            for expression_ds in self.matrix.extract():
+                transformed_data = (
+                    transformed_data
+                    + self.matrix.transform_expression_data_by_gene(expression_ds)
+                )
         else:
-            transformed_data = []
             while True:
                 row = self.matrix.extract()
                 if row is None:
@@ -191,7 +202,7 @@ class IngestPipeline(object):
                     self.matrix.transform_expression_data_by_gene(row)
                 )
         self.load_expression_data(transformed_data)
-        self.close_matrix()
+        # # self.close_matrix()
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""

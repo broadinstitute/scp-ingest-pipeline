@@ -14,5 +14,5 @@ pytest-xdist==1.29.0
 pre-commit==1.18.1
 
 # Don't add these until we actually support Loom and Zarr
-#loompy==2.0.15
+loompy==2.0.15
 #zarr==2.2.0
