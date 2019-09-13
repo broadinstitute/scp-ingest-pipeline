@@ -54,7 +54,18 @@ class CellMetadata(IngestFiles):
                 self.cell_names.append(column)
 
     def update_unqiue_values(self, annot_name):
-        self.top_level_doc[annot_name]["unique_values"] = self.unique_values[annot_name]
+        """Updates unique values for an annotation."""
+
+        header_idx = self.headers.index(annot_name)
+        annot_type = self.metadata_types[header_idx]
+
+        # Numeric annotations do not have unique values. So return None
+        if annot_type == "numeric":
+            self.top_level_doc[annot_name]["unique_values"] = None
+        else:
+            self.top_level_doc[annot_name]["unique_values"] = self.unique_values[
+                annot_name
+            ]
 
     def create_documents(self, file_id, study_accession):
         """Creates top level documents for Cell Metadata data structure"""
@@ -87,21 +98,16 @@ class CellMetadata(IngestFiles):
         return sub_documents
 
     def chunk_subdocuments(self, doc_name, doc_path, annot_name):
-        """Partitions cell metadata documents in storage sizes that are
+        """Partitions cell metadata subdocuments into storage sizes that are
             less than 1,048,576 bytes. Storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
 
-        Args:
-            None
-
         Returns:
-            Dictionary that consist of expression scores and cell names,
-            file name and type.
+            Subdocuments that are under  1,048,576 bytes.
         """
-        # sum starts at 59 (because key values take up 59 bytes) plus the
-        # storage size of the source file name and file type
+
         size_of_cell_names_field = 10 + 1  # "cell_names" is 10 characters
-        size_of_value_field = 6 + 1
+        size_of_values_field = 6 + 1
         starting_sum = (
             +len(doc_name)
             + 1
@@ -116,9 +122,7 @@ class CellMetadata(IngestFiles):
         float_storage = 8
         sum = starting_sum
         header_idx = self.headers.index(annot_name)
-        print(header_idx)
         annot_type = self.metadata_types[header_idx]
-        print(annot_type)
 
         cell_names = self.data_subcollection[annot_name]["cell_names"]
         values = self.data_subcollection[annot_name]["values"]
@@ -127,10 +131,12 @@ class CellMetadata(IngestFiles):
 
             cell_name_storage = len(cell_name) + 1 + size_of_cell_names_field
 
+            # Need to check annotation type because string and string values have
+            # different storage values
             if annot_type == "numeric":
-                value_storage = size_of_value_field + float_storage
+                value_storage = size_of_values_field + float_storage
             else:
-                value_storage = len(value) + 1 + size_of_value_field
+                value_storage = len(value) + 1 + size_of_values_field
             sum = sum + value_storage + cell_name_storage
             # Subtract 32 based off of firestore storage guidelines for strings
             # and documents

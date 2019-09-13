@@ -91,6 +91,7 @@ class IngestTestCase(unittest.TestCase):
     @patch("google.cloud.storage.Blob", side_effect=mock_storage_blob)
     @patch("google.cloud.storage.Client", side_effect=mock_storage_client)
     @patch("google.cloud.firestore.Client", side_effect=mock_firestore_client)
+    @staticmethod
     def setup_ingest(
         self, args, mock_firestore_client, mock_storage_client, mock_storage_blob
     ):
