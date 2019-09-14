@@ -45,6 +45,8 @@ jobs:
             sudo sh -c 'echo deb [check-valid-until=no] http://archive.debian.org/debian jessie-backports main >> /etc/apt/sources.list'
             sudo sh -c 'echo deb https://packages.sury.org/php/ jessie main >> /etc/apt/sources.list'
             # sudo sh -c 'echo deb https://packages.sury.org/php/ jessie main >> /etc/apt/sources.list.d/'
+            echo "cat /etc/apt/sources.list"
+            sudo cat /etc/apt/sources.list
             sudo apt-get --yes -o Acquire::Check-Valid-Until=false update
             sudo apt --yes install -t jessie-backports openjdk-8-jre-headless ca-certificates-java
             
