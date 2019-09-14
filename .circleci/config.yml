@@ -58,7 +58,7 @@ jobs:
             cat /etc/apt/sources.list.d/*
 
             # Update the package list and install the Cloud SDK
-            sudo apt-get --yes -o Acquire::Check-Valid-Until=false update && sudo apt-get --yes install google-cloud-sdk
+            # sudo apt-get --yes -o Acquire::Check-Valid-Until=false update && sudo apt-get --yes install google-cloud-sdk
             #sudo apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator
 
       # - run:
