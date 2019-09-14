@@ -40,8 +40,11 @@ jobs:
 
             # Needed to install gcloud dependencies for Debian version Jesse
             # Via https://discuss.circleci.com/t/how-to-append-etc-apt-sources-list/1654 and
-            # https://unix.stackexchange.com/a/342469
+            # https://unix.stackexchange.com/a/342469 and
+            # https://unix.stackexchange.com/questions/443192
             sudo sh -c 'echo deb [check-valid-until=no] http://archive.debian.org/debian jessie-backports main >> /etc/apt/sources.list'
+            sudo sh -c 'echo deb https://packages.sury.org/php/ jessie main >> /etc/apt/sources.list'
+            sudo sh -c 'echo deb https://packages.sury.org/php/ jessie main >> /etc/apt/sources.list.d/'
             sudo apt-get --yes -o Acquire::Check-Valid-Until=false update
             sudo apt --yes install -t jessie-backports openjdk-8-jre-headless ca-certificates-java
             
@@ -58,8 +61,8 @@ jobs:
             cat /etc/apt/sources.list.d/*
 
             # Update the package list and install the Cloud SDK
-            # sudo apt-get --yes -o Acquire::Check-Valid-Until=false update && sudo apt-get --yes install google-cloud-sdk
-            #sudo apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator
+            sudo apt-get --yes -o Acquire::Check-Valid-Until=false update && sudo apt-get --yes install google-cloud-sdk
+            sudo apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator
 
       # - run:
       #     name: Start Firestore emulator
