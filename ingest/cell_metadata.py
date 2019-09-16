@@ -27,11 +27,12 @@ class CellMetadata(IngestFiles):
         # unique values for group-based annotations
         self.unique_values = {key: [] for key in self.headers[1:]}
         self.cell_names = []
-        self.annotation_type = ["group", "numeric"]
+        self.annotation_type = ['group', 'numeric']
         self.top_level_doc = self.create_documents(file_id, study_accession)
         self.data_subcollection = self.create_subdocuments()
-        self.errors = defaultdict(list)
-        self.ontology = defaultdict(lambda: defaultdict(set))
+        # lambda below initializes new key with nested dictionary as value and avoids KeyError
+        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        self.ontology = defaultdict(lambda: defaultdict(list))
         self.type = defaultdict(list)
         self.cells = []
 
@@ -42,9 +43,9 @@ class CellMetadata(IngestFiles):
             annotation = self.headers[idx]
             if idx != 0:
                 # if annotation is numeric convert from string to float
-                if self.metadata_types[idx].lower() == "numeric":
+                if self.metadata_types[idx].lower() == 'numeric':
                     column = round(float(column), 3)
-                elif self.metadata_types[idx].lower() == "group":
+                elif self.metadata_types[idx].lower() == 'group':
                     # Check for unique values
                     if column not in self.unique_values[annotation]:
                         self.unique_values[annotation].append(column)
@@ -92,7 +93,7 @@ class CellMetadata(IngestFiles):
         for value in self.headers[1:]:
             # Copy subdocument model so memory references are different
             copy_of_subdoc_model = copy.copy(
-                {"cell_names": self.cell_names, "values": []}
+                {'cell_names': self.cell_names, 'values': []}
             )
             sub_documents[value] = copy_of_subdoc_model
         return sub_documents
@@ -164,19 +165,17 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if self.headers[0].casefold() == "NAME".casefold():
+        if self.headers[0].casefold() == 'NAME'.casefold():
             valid = True
-            if self.headers[0] != "NAME":
-                # ToDO - capture warning below in error report
+            if self.headers[0] != 'NAME':
+                # ToDO - capture warning below in issue report
                 print(
-                    f'Warning: metadata file keyword "NAME" provided as '
-                    "{self.headers[0]}"
+                    f'Warning: metadata file keyword NAME provided as '
+                    f'{self.headers[0]}'
                 )
         else:
-            # line below and similar in next method have autoformat oddities
-            self.errors["format"].append(
-                "Error: Metadata file header row malformed, missing NAME"
-            )
+            msg = 'Error: Metadata file header row malformed, missing NAME'
+            self.store_validation_issue('error', 'format', msg, '')
         return valid
 
     def validate_unique_header(self):
@@ -188,9 +187,8 @@ class CellMetadata(IngestFiles):
         if len(self.headers[1:]) == len(set(self.headers[1:])):
             valid = True
         else:
-            self.errors["format"].append(
-                "Error:  Duplicate column headers in metadata file"
-            )
+            msg = 'Error: Duplicate column headers in metadata file'
+            self.store_validation_issue('error', 'format', msg)
         return valid
 
     def validate_type_keyword(self):
@@ -199,63 +197,51 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if self.metadata_types[0].casefold() == "TYPE".casefold():
+        if self.metadata_types[0].casefold() == 'TYPE'.casefold():
             valid = True
-            if self.metadata_types[0] != "TYPE":
-                # ToDO - capture warning below in error report
+            if self.metadata_types[0] != 'TYPE':
+                # ToDO - capture warning below in issue report
                 # investigate f-string formatting here
                 print(
-                    'Warning: metadata file keyword "TYPE" provided as '
-                    "{self.metadata_types[0]}"
+                    'Warning: Metadata file keyword TYPE provided as '
+                    '{self.metadata_types[0]}'
                 )
         else:
-            # check black autoformatting on this long line
-            self.errors["format"].append(
-                "Error:  Metadata file TYPE row malformed, missing TYPE"
-            )
+            msg = 'Error: Metadata file TYPE row malformed, missing TYPE'
+            self.store_validation_issue('error', 'format', msg)
         return valid
 
     def validate_type_annotations(self):
         """Check metadata second row contains only 'group' or 'numeric'.
 
-        :return: boolean   True if valid, False otherwise
+        :return: boolean   True if all type annotations are valid, otherwise False
         """
         valid = False
-        annot_err = False
-        annots = []
         # skipping the TYPE keyword, iterate through the types
         # collecting invalid type annotations in list annots
         for t in self.metadata_types[1:]:
             if t not in self.annotation_type:
+                msg = 'Error: TYPE declarations should be group or numeric'
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
                 if not t:
-                    annots.append("<empty value>")
+                    self.store_validation_issue('error', 'format', msg, '<empty value>')
                 else:
-                    annots.append(t)
-                annot_err = True
-        if annot_err:
-            self.errors["format"].append(
-                (
-                    'Error: TYPE declarations should be "group" or "numeric"; '
-                    f'Invalid type(s): {", ".join(map(str, annots))}'
-                )
-            )
-        else:
-            valid = True
+                    self.store_validation_issue('error', 'format', msg, t)
         return valid
 
     def validate_against_header_count(self):
         """Metadata header and type counts should match.
 
-        :return: boolean   True if valid, False otherwise
+        :return: boolean   True if header and type counts match, otherwise False
         """
         valid = False
         if not len(self.headers) == len(self.metadata_types):
-            self.errors["format"].append(
-                "Error: {len(self.metadata_types)} TYPE declarations "
-                f"for {len(self.headers)} column headers"
+            msg = (
+                f'Error: {len(self.metadata_types)} TYPE declarations '
+                f'for {len(self.headers)} column headers'
             )
+            self.store_validation_issue('error', 'format', msg)
         else:
             valid = True
         return valid
@@ -268,7 +254,7 @@ class CellMetadata(IngestFiles):
         self.validate_type_annotations()
         self.validate_unique_header()
         self.validate_against_header_count()
-        if self.errors["format"]:
+        if self.issues['error']['format']:
             valid = False
         else:
             valid = True
