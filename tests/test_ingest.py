@@ -34,7 +34,6 @@ import random
 import sys
 import unittest
 from unittest.mock import patch
-import uuid
 
 from gcp_mocks import mock_storage_client, mock_storage_blob
 
@@ -53,11 +52,6 @@ def get_random_study_accession():
     '''Randomly seeds to avoid collisions in Firestore emulator instance'''
     study_number = random.randint(1, 1_000_001)
     return f'SCP{study_number}'  # E.g. SCP1324
-
-
-def get_random_file_id():
-    '''Randomly seeds to avoid collisions in Firestore emulator instance'''
-    return str(uuid.uuid4())  # E.g. 0172fc9a-1dac-4414-b88d-6b9a6feb91ea
 
 
 class IngestTestCase(unittest.TestCase):
@@ -91,13 +85,12 @@ class IngestTestCase(unittest.TestCase):
         """
 
         study_accession = get_random_study_accession()
-        file_id = get_random_file_id()
 
         args = [
             "--study-accession",
             study_accession,
             "--file-id",
-            file_id,
+            "1234abc",
             "ingest_expression",
             "--taxon-name",
             "Homo sapiens",
@@ -133,13 +126,12 @@ class IngestTestCase(unittest.TestCase):
         """
 
         study_accession = get_random_study_accession()
-        file_id = get_random_file_id()
 
         args = [
             "--study-accession",
             study_accession,
             "--file-id",
-            file_id,
+            "1234abc",
             "ingest_expression",
             "--taxon-name",
             "Homo sapiens",
@@ -164,13 +156,12 @@ class IngestTestCase(unittest.TestCase):
         """
 
         study_accession = get_random_study_accession()
-        file_id = get_random_file_id()
 
         args = [
             "--study-accession",
             study_accession,
             "--file-id",
-            file_id,
+            "1234abc",
             "ingest_expression",
             "--taxon-name",
             "Homo sapiens",
@@ -206,13 +197,12 @@ class IngestTestCase(unittest.TestCase):
         """
 
         study_accession = get_random_study_accession()
-        file_id = get_random_file_id()
 
         args = [
             "--study-accession",
             study_accession,
             "--file-id",
-            file_id,
+            "1234abc",
             "ingest_expression",
             "--taxon-name",
             "Homo sapiens",
@@ -237,13 +227,12 @@ class IngestTestCase(unittest.TestCase):
         """
 
         study_accession = get_random_study_accession()
-        file_id = get_random_file_id()
 
         args = [
             "--study-accession",
             study_accession,
             "--file-id",
-            file_id,
+            "1234abc",
             "ingest_expression",
             "--taxon-name",
             "Homo sapiens",
