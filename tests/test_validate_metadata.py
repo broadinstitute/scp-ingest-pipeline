@@ -7,11 +7,11 @@ sys.path.append("../ingest/validation")
 
 from validate_metadata import (
     create_parser,
-    report_errors,
+    report_issues,
     process_metadata_content,
     validate_schema,
     CellMetadata,
-    serialize_errors,
+    serialize_issues,
     validate_collected_ontology_data,
 )
 
@@ -39,14 +39,14 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
             "Error: Metadata file header row malformed, missing NAME",
-            metadata.errors['error']["format"].keys(),
+            metadata.issues['error']["format"].keys(),
             "Missing NAME keyword should fail format validation",
         )
 
         self.assertFalse(metadata.validate_type_keyword())
         self.assertIn(
             "Error: Metadata file TYPE row malformed, missing TYPE",
-            metadata.errors['error']["format"].keys(),
+            metadata.issues['error']["format"].keys(),
             "Missing TYPE keyword should fail format validation",
         )
 
@@ -67,7 +67,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
 
         self.assertTrue(
-            report_errors(metadata), "Invalid metadata content should report errors"
+            report_issues(metadata), "Invalid metadata content should report issues"
         )
 
         self.teardown_metadata(metadata)
@@ -96,7 +96,7 @@ class TestValidateMetadata(unittest.TestCase):
         if metadata_valid:
             process_metadata_content(metadata, convention)
         self.assertFalse(
-            report_errors(metadata), "Valid metadata content should not elicit error"
+            report_issues(metadata), "Valid metadata content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -113,7 +113,7 @@ class TestValidateMetadata(unittest.TestCase):
         if metadata_valid:
             process_metadata_content(metadata, convention)
         self.assertTrue(
-            report_errors(metadata), "Valid metadata content should not elicit error"
+            report_issues(metadata), "Valid metadata content should not elicit error"
         )
         validate_collected_ontology_data(metadata, convention)
         # reference errors tests for:
@@ -123,16 +123,16 @@ class TestValidateMetadata(unittest.TestCase):
         #   value provided not in enumerated list for "sample_type"
         #   value provided not a number for "organism_age"
         reference_file = open("../tests/data/metadata_invalid.json", "r")
-        reference_errors = json.load(reference_file)
+        reference_issues = json.load(reference_file)
         reference_file.close()
-        serialize_errors(metadata)
-        current_file = open("errors.json", "r")
-        current_errors = json.load(current_file)
+        serialize_issues(metadata)
+        current_file = open("issues.json", "r")
+        current_issues = json.load(current_file)
         current_file.close()
         self.assertEqual(
-            current_errors,
-            reference_errors,
-            "Metadata validation errors do not match reference errors",
+            current_issues,
+            reference_issues,
+            "Metadata validation issues do not match reference issues",
         )
 
         self.teardown_metadata(metadata)

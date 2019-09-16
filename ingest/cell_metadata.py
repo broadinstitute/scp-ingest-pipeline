@@ -26,7 +26,8 @@ class CellMetadata(IngestFiles):
         self.annotation_type = ['group', 'numeric']
         self.top_level_doc = self.create_documents(file_id, study_accession)
         self.data_subcollection = self.create_subdocuments()
-        self.errors = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        # lambda below initializes new key with nested dictionary as value and avoids KeyError
+        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.type = defaultdict(list)
         self.cells = []
@@ -87,7 +88,7 @@ class CellMetadata(IngestFiles):
         """Returns sub-collection name"""
         return 'data'
 
-    def store_validation_error(self, type, category, msg, associated_info=None):
+    def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation errors in proper arrangement
         :param type: type of error (error or warn)
         :param category: error category (format, jsonschema, ontology)
@@ -95,9 +96,9 @@ class CellMetadata(IngestFiles):
         :param value: list of IDs associated with the error
         """
         if associated_info:
-            self.errors[type][category][msg].append(associated_info)
+            self.issues[type][category][msg].append(associated_info)
         else:
-            self.errors[type][category][msg] = None
+            self.issues[type][category][msg] = None
 
     def validate_header_keyword(self):
         """Check metadata header row starts with NAME (case-insensitive).
@@ -115,7 +116,7 @@ class CellMetadata(IngestFiles):
                 )
         else:
             msg = 'Error: Metadata file header row malformed, missing NAME'
-            self.store_validation_error('error', 'format', msg, '')
+            self.store_validation_issue('error', 'format', msg, '')
         return valid
 
     def validate_unique_header(self):
@@ -128,7 +129,7 @@ class CellMetadata(IngestFiles):
             valid = True
         else:
             msg = 'Error: Duplicate column headers in metadata file'
-            self.store_validation_error('error', 'format', msg)
+            self.store_validation_issue('error', 'format', msg)
         return valid
 
     def validate_type_keyword(self):
@@ -147,15 +148,14 @@ class CellMetadata(IngestFiles):
                     '{self.metadata_types[0]}'
                 )
         else:
-            # check black autoformatting on this long line
             msg = 'Error: Metadata file TYPE row malformed, missing TYPE'
-            self.store_validation_error('error', 'format', msg)
+            self.store_validation_issue('error', 'format', msg)
         return valid
 
     def validate_type_annotations(self):
         """Check metadata second row contains only 'group' or 'numeric'.
 
-        :return: boolean   True if valid, False otherwise
+        :return: boolean   True if all type annotations are valid, otherwise False
         """
         valid = False
         # skipping the TYPE keyword, iterate through the types
@@ -166,15 +166,15 @@ class CellMetadata(IngestFiles):
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
                 if not t:
-                    self.store_validation_error('error', 'format', msg, '<empty value>')
+                    self.store_validation_issue('error', 'format', msg, '<empty value>')
                 else:
-                    self.store_validation_error('error', 'format', msg, t)
+                    self.store_validation_issue('error', 'format', msg, t)
         return valid
 
     def validate_against_header_count(self):
         """Metadata header and type counts should match.
 
-        :return: boolean   True if valid, False otherwise
+        :return: boolean   True if header and type counts match, otherwise False
         """
         valid = False
         if not len(self.headers) == len(self.metadata_types):
@@ -182,7 +182,7 @@ class CellMetadata(IngestFiles):
                 f'Error: {len(self.metadata_types)} TYPE declarations '
                 f'for {len(self.headers)} column headers'
             )
-            self.store_validation_error('error', 'format', msg)
+            self.store_validation_issue('error', 'format', msg)
         else:
             valid = True
         return valid
@@ -195,7 +195,7 @@ class CellMetadata(IngestFiles):
         self.validate_type_annotations()
         self.validate_unique_header()
         self.validate_against_header_count()
-        if self.errors['error']['format']:
+        if self.issues['error']['format']:
             valid = False
         else:
             valid = True

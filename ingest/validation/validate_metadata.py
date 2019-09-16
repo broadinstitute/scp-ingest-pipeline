@@ -56,7 +56,7 @@ def create_parser():
 
     # helper param to create JSON representation of metadata.error
     # as reference output for tests
-    parser.add_argument('--errors_json', action='store_true')
+    parser.add_argument('--issues_json', action='store_true')
     # TODO: make required and modify defaults on the following two parameters after consulting Jon
     parser.add_argument('--file_id', help='MongoDB identifier', default='Mongo_none')
     parser.add_argument(
@@ -81,7 +81,7 @@ def validate_schema(json, metadata):
         return valid_schema
     except jsonschema.SchemaError as e:
         error_msg = 'Error: Invalid metadata convention'
-        metadata.store_validation_error('error', 'convention', error_msg, repr(e))
+        metadata.store_validation_issue('error', 'convention', error_msg, repr(e))
         return None
 
 
@@ -170,8 +170,8 @@ def validate_cells_unique(metadata):
         dups = list_duplicates(metadata.cells)
         msg = 'Error:  Duplicate CellID(s) in metadata file'
         # uniq_errors[msg].append(dups)
-        # metadata.errors['error']['format'] = uniq_errors
-        metadata.errors['error']['format'][msg] = dups
+        # metadata.issues['error']['format'] = uniq_errors
+        metadata.issues['error']['format'][msg] = dups
     return valid
 
 
@@ -236,7 +236,7 @@ def process_metadata_row(metadata, convention, line):
                 row_info[k] = int(v)
             except ValueError as e:
                 error_msg = f'ERROR: value provided does not match convention type delaration for {k}'
-                metadata.store_validation_error(
+                metadata.store_validation_issue(
                     'error', 'type', error_msg, [row_info['CellID'], repr(e)]
                 )
         elif k in metadata.type['floats']:
@@ -244,7 +244,7 @@ def process_metadata_row(metadata, convention, line):
                 row_info[k] = float(v)
             except ValueError as e:
                 error_msg = f'ERROR: value provided does not match convention type delaration for {k}'
-                metadata.store_validation_error(
+                metadata.store_validation_issue(
                     'error', 'type', error_msg, [row_info['CellID'], repr(e)]
                 )
         elif k in metadata.type['convention']['array']:
@@ -252,7 +252,7 @@ def process_metadata_row(metadata, convention, line):
                 row_info[k] = v.split(',')
             except ValueError as e:
                 error_msg = f'ERROR: value provided does not match convention type delaration for {k}'
-                metadata.store_validation_error(
+                metadata.store_validation_issue(
                     'error', 'type', error_msg, [row_info['CellID'], repr(e)]
                 )
     return row_info
@@ -286,23 +286,23 @@ def process_metadata_content(metadata, convention):
             for error in schema.iter_errors(row):
                 js_errors[error.message].append(row['CellID'])
             line = metadata.extract()
-        metadata.errors['error']['convention'] = js_errors
+        metadata.issues['error']['convention'] = js_errors
         validate_cells_unique(metadata)
         return
 
 
-def report_errors(metadata):
+def report_issues(metadata):
     """Report errors in error object
 
     :param metadata: cell metadata object
     :return: True if errors are reported, False if no errors to report
     """
-    logger.debug('Begin: report_errors')
+    logger.debug('Begin: report_issues')
 
     errors = False
     warnings = False
-    for error_type in metadata.errors.keys():
-        for error_category, category_dict in metadata.errors[error_type].items():
+    for error_type in metadata.issues.keys():
+        for error_category, category_dict in metadata.issues[error_type].items():
             if category_dict:
                 print('\n***', error_category, error_type, 'listing:')
                 for error_msg, cells in category_dict.items():
@@ -398,7 +398,7 @@ def validate_collected_ontology_data(metadata, convention):
                                 f'ontology_label \"{ontology_label}\" '
                                 f'does not match \"{matching_term["label"]}\",'
                             )
-                            metadata.store_validation_error(
+                            metadata.store_validation_issue(
                                 'error',
                                 'ontology',
                                 error_msg,
@@ -411,7 +411,7 @@ def validate_collected_ontology_data(metadata, convention):
                 else:
                     if ontology_id:
                         error_msg = f'No match found for {ontology_id}'
-                        metadata.store_validation_error(
+                        metadata.store_validation_issue(
                             'error',
                             'ontology',
                             error_msg,
@@ -426,20 +426,20 @@ def validate_collected_ontology_data(metadata, convention):
                     ont_errors = defaultdict(list)
                     error_msg = f'No match found for {ontology_id}'
                     ont_errors[error_msg] = metadata.ontology[entry][(ontology_id)]
-                    metadata.errors['error']['ontology'] = ont_errors
+                    metadata.issues['error']['ontology'] = ont_errors
                 # else:
                 #     print("Found matching for " + ontology_id)
                 error_msg = (
                     f'Warning: no ontology label supplied in metdata file for '
                     f'\"{ontology_id}\" - no cross-check for data entry error possible'
                 )
-                metadata.store_validation_error('warn', 'ontology', error_msg)
+                metadata.store_validation_issue('warn', 'ontology', error_msg)
     return
 
 
-def serialize_errors(metadata):
-    with open('errors.json', 'w') as jsonfile:
-        json.dump(metadata.errors, jsonfile)
+def serialize_issues(metadata):
+    with open('issues.json', 'w') as jsonfile:
+        json.dump(metadata.issues, jsonfile)
 
 
 # ToDo
@@ -472,6 +472,6 @@ if __name__ == '__main__':
     if format_valid:
         process_metadata_content(metadata, convention)
     validate_collected_ontology_data(metadata, convention)
-    if args.errors_json:
-        serialize_errors(metadata)
-    report_errors(metadata)
+    if args.issues_json:
+        serialize_issues(metadata)
+    report_issues(metadata)

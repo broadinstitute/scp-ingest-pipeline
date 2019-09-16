@@ -36,27 +36,15 @@ def create_parser():
     parser.add_argument(
         '--label',
         '-l',
-        type=str,
         help='Label to insert into the file name '
         + 'for the Metadata convention json file [optional]',
-        default=None,
     ),
-    parser.add_argument(
-        '--output-path',
-        '-p',
-        type=str,
-        help='Path for output file [optional]',
-        default=None,
-    )
+    parser.add_argument('--output-path', '-p', help='Path for output file')
     parser.add_argument(
         'project',
-        type=str,
-        help='One-word project name that the metadata '
-        + 'convention belongs to [Required]',
+        help='One-word project name that the metadata ' + 'convention belongs to',
     )
-    parser.add_argument(
-        'input_convention', help='Metadata convention tsv file [Required]'
-    )
+    parser.add_argument('input_convention', help='Metadata convention tsv file')
     return parser
 
 
@@ -119,7 +107,7 @@ def build_schema_info(project):
     info['$schema'] = 'https://json-schema.org/draft-07/schema#'
     # $id below is a placeholder, not functional yet
     info['$id'] = (
-        'https://singlecell.broadinstitute.org/api/v1/metadata-schemas/'
+        'https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schemas/'
         '%s.schema.json' % (project)
     )
     info['title'] = project + ' Metadata Convention'
