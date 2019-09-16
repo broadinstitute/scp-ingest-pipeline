@@ -16,7 +16,7 @@ black==19.3b0
 flake8==3.7.8
 
 # Don't add these until we actually support Loom and Zarr
-#loompy==2.0.15
+loompy==2.0.15
 #zarr==2.2.0
 
 # Adding peer dependency to address CircleCI build issue
