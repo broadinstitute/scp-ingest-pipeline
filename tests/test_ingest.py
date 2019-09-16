@@ -91,7 +91,6 @@ class IngestTestCase(unittest.TestCase):
     @patch("google.cloud.storage.Blob", side_effect=mock_storage_blob)
     @patch("google.cloud.storage.Client", side_effect=mock_storage_client)
     @patch("google.cloud.firestore.Client", side_effect=mock_firestore_client)
-    @staticmethod
     def setup_ingest(
         self, args, mock_firestore_client, mock_storage_client, mock_storage_blob
     ):
@@ -104,11 +103,15 @@ class IngestTestCase(unittest.TestCase):
 
         if "matrix_file" in arguments:
             ingest.ingest_expression()
-        elif "cell_metadata_file" in arguments:
-            ingest.ingest_cell_metadata()
-        elif "cluster_file" in arguments:
-            ingest.ingest_cluster()
-
+        elif "ingest_cell_metadata" in arguments:
+            if arguments["ingest_cell_metadata"]:
+                ingest.ingest_cell_metadata()
+        elif "ingest_cluster" in arguments:
+            if arguments["ingest_cluster"]:
+                ingest.ingest_cluster()
+        elif "subsample" in arguments:
+            if arguments["subsample"]:
+                ingest.subsample()
         return ingest
 
     def test_ingest_dense_matrix(self):

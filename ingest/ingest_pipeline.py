@@ -231,6 +231,7 @@ class IngestPipeline(object):
             row = self.cluster.extract()
             if row is None:
                 self.cluster.update_points()
+                self.cluster.update_cell_annotations_field()
                 break
             self.cluster.transform(row)
         self.load_cluster_files()

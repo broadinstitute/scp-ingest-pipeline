@@ -102,12 +102,12 @@ class CellMetadata(IngestFiles):
             less than 1,048,576 bytes. Storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
 
-        Returns:
-            Subdocuments that are under  1,048,576 bytes.
+        Yeilds:
+            Subdocuments that are under 1,048,576 bytes.
         """
 
         size_of_cell_names_field = 10 + 1  # "cell_names" is 10 characters
-        size_of_values_field = 6 + 1
+        size_of_values_field = 6 + 1  # "values" is 6 characters
         starting_sum = (
             +len(doc_name)
             + 1
@@ -124,14 +124,16 @@ class CellMetadata(IngestFiles):
         header_idx = self.headers.index(annot_name)
         annot_type = self.metadata_types[header_idx]
 
+        # All cells names:[] that are in subdoc
         cell_names = self.data_subcollection[annot_name]["cell_names"]
+        # All values:[] that are in subdoc
         values = self.data_subcollection[annot_name]["values"]
 
         for index, (cell_name, value) in enumerate(zip(cell_names, values)):
 
             cell_name_storage = len(cell_name) + 1 + size_of_cell_names_field
 
-            # Need to check annotation type because string and string values have
+            # Check annotation type because float and string values have
             # different storage values
             if annot_type == "numeric":
                 value_storage = size_of_values_field + float_storage
