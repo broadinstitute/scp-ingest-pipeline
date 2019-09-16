@@ -150,6 +150,7 @@ class CellMetadata(IngestFiles):
                     end_index = index
                 else:
                     end_index = index - 1
+                    # TODO: This can turn into a logging statement
                 print(f"{sum} , {index}, {start_index} , {end_index}")
                 yield {
                     "cell_names": cell_names[start_index:end_index],
