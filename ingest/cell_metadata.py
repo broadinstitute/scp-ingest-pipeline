@@ -89,11 +89,11 @@ class CellMetadata(IngestFiles):
         return 'data'
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
-        """Store validation errors in proper arrangement
-        :param type: type of error (error or warn)
-        :param category: error category (format, jsonschema, ontology)
-        :param msg: error message
-        :param value: list of IDs associated with the error
+        """Store validation issues in proper arrangement
+        :param type: type of issue (error or warn)
+        :param category: issue category (format, jsonschema, ontology)
+        :param msg: issue message
+        :param value: list of IDs associated with the issue
         """
         if associated_info:
             self.issues[type][category][msg].append(associated_info)
@@ -109,7 +109,7 @@ class CellMetadata(IngestFiles):
         if self.headers[0].casefold() == 'NAME'.casefold():
             valid = True
             if self.headers[0] != 'NAME':
-                # ToDO - capture warning below in error report
+                # ToDO - capture warning below in issue report
                 print(
                     f'Warning: metadata file keyword NAME provided as '
                     f'{self.headers[0]}'
@@ -141,7 +141,7 @@ class CellMetadata(IngestFiles):
         if self.metadata_types[0].casefold() == 'TYPE'.casefold():
             valid = True
             if self.metadata_types[0] != 'TYPE':
-                # ToDO - capture warning below in error report
+                # ToDO - capture warning below in issue report
                 # investigate f-string formatting here
                 print(
                     'Warning: Metadata file keyword TYPE provided as '
