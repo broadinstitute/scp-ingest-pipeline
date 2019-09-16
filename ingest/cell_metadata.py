@@ -49,7 +49,7 @@ class CellMetadata(IngestFiles):
                     # Check for unique values
                     if column not in self.unique_values[annotation]:
                         self.unique_values[annotation].append(column)
-                self.data_subcollection[annotation]["values"].append(column)
+                self.data_subcollection[annotation]['values'].append(column)
             else:
                 # If column isn't an annotation value, it's a cell name
                 self.cell_names.append(column)
@@ -158,6 +158,26 @@ class CellMetadata(IngestFiles):
                 # Reset sum and add storage size at current index
                 sum = starting_sum + cell_name_storage + value_storage
                 start_index = index
+
+    def get_collection_name(self):
+        """Returns collection name"""
+        return 'cell_metadata'
+
+    def get_subcollection_name(self):
+        """Returns sub-collection name"""
+        return 'data'
+
+    def store_validation_issue(self, type, category, msg, associated_info=None):
+        """Store validation issues in proper arrangement
+        :param type: type of issue (error or warn)
+        :param category: issue category (format, jsonschema, ontology)
+        :param msg: issue message
+        :param value: list of IDs associated with the issue
+        """
+        if associated_info:
+            self.issues[type][category][msg].append(associated_info)
+        else:
+            self.issues[type][category][msg] = None
 
     def validate_header_keyword(self):
         """Check metadata header row starts with NAME (case-insensitive).
