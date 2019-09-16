@@ -7,10 +7,12 @@ sys.path.append("../ingest/validation")
 
 from validate_metadata import (
     create_parser,
-    report_errors,
+    report_issues,
     process_metadata_content,
     validate_schema,
     CellMetadata,
+    serialize_issues,
+    validate_collected_ontology_data,
 )
 
 
@@ -37,14 +39,14 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
             "Error: Metadata file header row malformed, missing NAME",
-            metadata.errors["format"],
+            metadata.issues['error']["format"].keys(),
             "Missing NAME keyword should fail format validation",
         )
 
         self.assertFalse(metadata.validate_type_keyword())
         self.assertIn(
-            "Error:  Metadata file TYPE row malformed, missing TYPE",
-            metadata.errors["format"],
+            "Error: Metadata file TYPE row malformed, missing TYPE",
+            metadata.issues['error']["format"].keys(),
             "Missing TYPE keyword should fail format validation",
         )
 
@@ -65,7 +67,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
 
         self.assertTrue(
-            report_errors(metadata), "Invalid metadata content should report errors"
+            report_issues(metadata), "Invalid metadata content should report issues"
         )
 
         self.teardown_metadata(metadata)
@@ -77,7 +79,8 @@ class TestValidateMetadata(unittest.TestCase):
         args = "../tests/data/AMC_invalid.json " "../tests/data/metadata_valid.tsv"
         metadata, convention = self.setup_metadata(args)
         self.assertIsNone(
-            validate_schema(convention), "Invalid metadata schema should be detected"
+            validate_schema(convention, metadata),
+            "Invalid metadata schema should be detected",
         )
         self.teardown_metadata(metadata)
 
@@ -93,7 +96,7 @@ class TestValidateMetadata(unittest.TestCase):
         if metadata_valid:
             process_metadata_content(metadata, convention)
         self.assertFalse(
-            report_errors(metadata), "Valid metadata content should not elicit error"
+            report_issues(metadata), "Valid metadata content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -102,7 +105,7 @@ class TestValidateMetadata(unittest.TestCase):
             """
         args = "../tests/data/AMC_v0.8.json " "../tests/data/metadata_invalid.tsv"
         metadata, convention = self.setup_metadata(args)
-
+        self.maxDiff = None
         metadata_valid = metadata.validate_format()
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
@@ -110,9 +113,9 @@ class TestValidateMetadata(unittest.TestCase):
         if metadata_valid:
             process_metadata_content(metadata, convention)
         self.assertTrue(
-            report_errors(metadata), "Valid metadata content should not elicit error"
+            report_issues(metadata), "Valid metadata content should not elicit error"
         )
-
+        validate_collected_ontology_data(metadata, convention)
         # reference errors tests for:
         #   missing required property "sex"
         #   missing dependency for non-required property "ethinicity"
@@ -120,17 +123,16 @@ class TestValidateMetadata(unittest.TestCase):
         #   value provided not in enumerated list for "sample_type"
         #   value provided not a number for "organism_age"
         reference_file = open("../tests/data/metadata_invalid.json", "r")
-        reference_errors = json.load(reference_file)
+        reference_issues = json.load(reference_file)
         reference_file.close()
+        serialize_issues(metadata)
+        current_file = open("issues.json", "r")
+        current_issues = json.load(current_file)
+        current_file.close()
         self.assertEqual(
-            metadata.errors,
-            reference_errors,
-            "Metadata validation errors do not match reference errors",
-        )
-        self.assertEqual(
-            metadata.errors["format"],
-            reference_errors["format"],
-            "Expected duplicate cellID error does not match reference",
+            current_issues,
+            reference_issues,
+            "Metadata validation issues do not match reference issues",
         )
 
         self.teardown_metadata(metadata)
