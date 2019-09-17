@@ -30,6 +30,7 @@ pytest -n auto
 coverage run --branch test_ingest.py; coverage report -m --include *scp-ingest-pipeline/ingest*
 
 """
+import ast
 import random
 import sys
 import unittest
@@ -54,6 +55,36 @@ def get_random_study_accession():
     return f'SCP{study_number}'  # E.g. SCP1324
 
 
+def get_nth_gene_docs(n, docs, mock_dir):
+    """Return Nth actual and expected gene documents, using actual and mock data
+    """
+
+    # Firestore does not return results in the same order every time,
+    # so sort documents by name to enable comparing Nth query result.
+    docs = sorted(docs, key=lambda doc: doc['name'])
+
+    actual_doc = docs[n]
+
+    # Uncomment to print out new baseline data
+    # Process to update baselines is manual: copy and paste it into new file
+    # TODO: Automate when reasonable
+    # print("actual_doc")
+    # print(actual_doc)
+
+    with open(f"mock_data/{mock_dir}/gene_doc_{n}.txt") as f:
+        # Create a dictionary from the string-literal mock
+        expected_doc = ast.literal_eval(f.read())
+
+    # Expected study accession is different on every test run,
+    # to avoid collisions in Firestore emulator instance.
+    # So we remove this key from the actual and expected docs to avoid
+    # false positive test failures.
+    del actual_doc['study_accession']
+    del expected_doc['study_accession']
+
+    return actual_doc, expected_doc
+
+
 class IngestTestCase(unittest.TestCase):
     @patch("google.cloud.storage.Blob", side_effect=mock_storage_blob)
     @patch("google.cloud.storage.Client", side_effect=mock_storage_client)
@@ -66,8 +97,6 @@ class IngestTestCase(unittest.TestCase):
         credentials = _make_credentials()
         db = firestore.Client(project='test-project', credentials=credentials)
         arguments['db'] = db
-        print('arguments')
-        print(arguments)
 
         ingest = IngestPipeline(**arguments)
 
@@ -116,10 +145,15 @@ class IngestTestCase(unittest.TestCase):
             .stream()
         )
 
-        query_results = [doc.to_dict() for doc in stream]
+        docs = [doc.to_dict() for doc in stream]
 
-        num_results = len(query_results)
-        self.assertEqual(num_results, 19)
+        num_docs = len(docs)
+        self.assertEqual(num_docs, 19)
+
+        # Verify that the first gene document looks as expected
+        mock_dir = "dense_matrix_19_genes_100k_cells_txt"
+        doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
+        self.assertEqual(doc, expected_doc)
 
     def test_ingest_missing_file(self):
         """Ingest Pipeline should throw error for missing file
@@ -187,10 +221,10 @@ class IngestTestCase(unittest.TestCase):
             .stream()
         )
 
-        query_results = [doc.to_dict() for doc in stream]
+        docs = [doc.to_dict() for doc in stream]
 
-        num_results = len(query_results)
-        self.assertEqual(num_results, 19)
+        num_docs = len(docs)
+        self.assertEqual(num_docs, 19)
 
     def test_ingest_missing_local_file(self):
         """Ingest Pipeline should throw error for missing local file
@@ -262,24 +296,15 @@ class IngestTestCase(unittest.TestCase):
             .stream()
         )
 
-        query_results = [doc.to_dict() for doc in stream]
+        docs = [doc.to_dict() for doc in stream]
 
-        num_results = len(query_results)
-        self.assertEqual(num_results, 25)
+        num_docs = len(docs)
+        self.assertEqual(num_docs, 25)
 
-    #     models = ingest.load_expression_data_args[0]
-
-    #     # Verify that 25 gene models were passed into load method
-    #     num_models = len(models)
-    #     expected_num_models = 25
-    #     self.assertEqual(num_models, expected_num_models)
-
-    #     # Verify that the first gene model looks as expected
-    #     mock_dir = "matrix_mtx"
-    #     model, expected_model = get_nth_gene_models(0, models, mock_dir)
-    #     print(f"\n\n\n{model}\n\n\n")
-    #     print(f"\n\n\n{expected_model}\n\n\n")
-    #     self.assertEqual(model, expected_model)
+        # Verify that the first gene document looks as expected
+        mock_dir = "matrix_mtx"
+        doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
+        self.assertEqual(doc, expected_doc)
 
     def test_mtx_bundle_argument_validation(self):
         """Omitting --gene-file and --barcode-file in MTX ingest should error
