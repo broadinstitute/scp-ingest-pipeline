@@ -1,9 +1,9 @@
 """Integration tests for Ingest Pipeline; isolated tests for observable output
 
 These tests verify that various matrix file types can be extracted and
-transformed, as expected by code that loads transformed data into Firestore.
+transformed, as loaded into (an official emulator of) Firestore
 
-Mocks are used for test speed and isolation.
+Test doubles are used for test speed and isolation.
 
 PREREQUISITE
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
@@ -68,8 +68,8 @@ def get_nth_gene_docs(n, docs, mock_dir):
     # Uncomment to print out new baseline data
     # Process to update baselines is manual: copy and paste it into new file
     # TODO: Automate when reasonable
-    # print("actual_doc")
-    # print(actual_doc)
+    print("actual_doc")
+    print(actual_doc)
 
     with open(f"mock_data/{mock_dir}/gene_doc_{n}.txt") as f:
         # Create a dictionary from the string-literal mock
@@ -147,6 +147,7 @@ class IngestTestCase(unittest.TestCase):
 
         docs = [doc.to_dict() for doc in stream]
 
+        # Verify that 19 gene docs were written to Firestore
         num_docs = len(docs)
         self.assertEqual(num_docs, 19)
 
@@ -298,6 +299,7 @@ class IngestTestCase(unittest.TestCase):
 
         docs = [doc.to_dict() for doc in stream]
 
+        # Verify that 25 gene docs were written to Firestore
         num_docs = len(docs)
         self.assertEqual(num_docs, 25)
 
@@ -333,6 +335,54 @@ class IngestTestCase(unittest.TestCase):
         ]
 
         self.assertRaises(ValueError, self.setup_ingest, args)
+
+    def test_ingest_loom(self):
+        """Ingest Pipeline should extract and transform Loom files
+        """
+
+        study_accession = get_random_study_accession()
+
+        args = [
+            "--study-accession",
+            study_accession,
+            "--file-id",
+            "1234abc",
+            "ingest_expression",
+            "--taxon-name",
+            "Homo sapiens",
+            "--taxon-common-name",
+            "human",
+            "--ncbi-taxid",
+            "9606",
+            "--genome-assembly-accession",
+            "GCA_000001405.15",
+            "--genome-annotation",
+            "Ensembl 94",
+            "--matrix-file",
+            "../tests/data/test_loom.loom",
+            "--matrix-file-type",
+            "loom",
+        ]
+
+        ingest = self.setup_ingest(args)
+
+        genes = ingest.db.collection(u'genes')
+        stream = (
+            genes.where(u'taxon_common_name', u'==', u'human')
+            .where(u'study_accession', u'==', study_accession)
+            .stream()
+        )
+
+        docs = [doc.to_dict() for doc in stream]
+
+        # Verify that 10 gene docs were written to Firestore
+        num_docs = len(docs)
+        self.assertEqual(num_docs, 10)
+
+        # Verify that the first gene document looks as expected
+        mock_dir = "loom"
+        doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
+        self.assertEqual(doc, expected_doc)
 
 
 if __name__ == "__main__":
