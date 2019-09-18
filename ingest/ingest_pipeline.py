@@ -148,12 +148,17 @@ class IngestPipeline(object):
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
 
-        collection_name = self.cell_metadata.get_collection_name()
-        subcollection_name = self.cell_metadata.get_subcollection_name()
+        collection_name = self.cell_metadata.COLLECTION_NAME
+        subcollection_name = self.cell_metadata.SUBCOLLECTION_NAME
         for annotation in self.cell_metadata.top_level_doc.keys():
             doc_ref = self.db.collection(collection_name).document()
+            self.cell_metadata.update_unqiue_values(annotation)
             doc_ref.set(self.cell_metadata.top_level_doc[annotation])
             try:
+                print(f"Ingesting {annotation}")
+                print(
+                    f"Length of values are: {len(self.cell_metadata.data_subcollection[annotation]['values'])}"
+                )
                 subcollection_doc = self.cell_metadata.data_subcollection[annotation]
                 doc_ref_sub = doc_ref.collection(subcollection_name).document()
                 doc_ref_sub.set(subcollection_doc)
@@ -161,6 +166,13 @@ class IngestPipeline(object):
                 # Catches invalid argument exception, which error "Maximum
                 # document size" falls under
                 print(e)
+                batch = self.db.batch()
+                for subdoc in self.cell_metadata.chunk_subdocuments(
+                    doc_ref_sub.id, doc_ref_sub._document_path, annotation
+                ):
+                    batch.set(doc_ref_sub, subdoc)
+
+                batch.commit()
 
     def load_cluster_files(self):
         """Loads cluster files into Firestore."""
@@ -219,6 +231,7 @@ class IngestPipeline(object):
             row = self.cluster.extract()
             if row is None:
                 self.cluster.update_points()
+                self.cluster.update_cell_annotations_field()
                 break
             self.cluster.transform(row)
         self.load_cluster_files()
