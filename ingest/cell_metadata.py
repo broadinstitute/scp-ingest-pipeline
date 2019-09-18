@@ -105,7 +105,7 @@ class CellMetadata(IngestFiles):
             less than 1,048,576 bytes. Storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
 
-        Yeilds:
+        Yields:
             Subdocuments that are under 1,048,576 bytes.
         """
 
@@ -152,7 +152,8 @@ class CellMetadata(IngestFiles):
                     end_index = index
                 else:
                     end_index = index - 1
-                    # TODO: This can turn into a logging state
+                # TODO: This can turn into a logging statement
+                # Please do not remove this. It's needed for testing
                 print(f"{sum} , {index}, {start_index} , {end_index}")
                 yield {
                     "cell_names": cell_names[start_index:end_index],
