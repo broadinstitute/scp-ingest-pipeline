@@ -1,0 +1,1 @@
+{'study_accession': 'SCP274505', 'name': 'A2M', 'searchable_name': 'a2m', 'file_id': '1234abc', 'ncbi_taxid': '9606', 'genome_annotation': 'Ensembl 94', 'genome_assembly_accession': 'GCA_000001405.15', 'taxon_name': 'Homo sapiens', 'gene_id': None, 'taxon_common_name': 'human'}

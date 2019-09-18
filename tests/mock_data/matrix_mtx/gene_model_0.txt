@@ -1,2 +1,0 @@
-{'name': 'RPP25L', 'gene_id': 'ENSG00000164967', 'source_file_type': ('Mtx',), 'cell_names': ['AACGTTGGTTAAAGTG-1'], 'expression_scores': [1.0], 'subdocument': {'cell_names': ['AACGTTGGTTAAAGTG-1'], 'expression_scores': [1.0], 'source_file_type': 'Mtx'}, 'top_level_doc': {'file_id': '1234abc', 'searchable_name': 'rpp25l', 'name': 'RPP25L',
-'gene_id': 'ENSG00000164967', 'study_accession': 'SCP1', 'taxon_name': 'Homo sapiens', 'taxon_common_name': 'human', 'ncbi_taxid': '9606', 'genome_assembly_accession': 'GCA_000001405.15', 'genome_annotation': 'Ensembl 94'}}
