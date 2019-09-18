@@ -7,15 +7,15 @@ Test doubles are used for test speed and isolation.
 
 PREREQUISITE
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
-Also, before "EXAMPLES" commands, run `cd tests`.
+Also, before 'EXAMPLES' commands, run `cd tests`.
 
 EXAMPLES
 
 # Run all tests
 pytest
 
-# Run tests with names containing the string "dense"
-pytest -k "dense"
+# Run tests with names containing the string 'dense'
+pytest -k 'dense'
 
 # Run all tests in a manner that shows any print() statements
 python3 test_ingest.py
@@ -41,7 +41,7 @@ from gcp_mocks import mock_storage_client, mock_storage_blob
 from google.cloud import firestore
 import google.auth.credentials
 
-sys.path.append("../ingest")
+sys.path.append('../ingest')
 from ingest_pipeline import create_parser, validate_arguments, IngestPipeline
 
 
@@ -50,7 +50,7 @@ def _make_credentials():
 
 
 def get_random_study_accession():
-    '''Randomly seeds to avoid collisions in Firestore emulator instance'''
+    """Randomly seeds to avoid collisions in Firestore emulator instance"""
     study_number = random.randint(1, 1_000_001)
     return f'SCP{study_number}'  # E.g. SCP1324
 
@@ -68,10 +68,9 @@ def get_nth_gene_docs(n, docs, mock_dir):
     # Uncomment to print out new baseline data
     # Process to update baselines is manual: copy and paste it into new file
     # TODO: Automate when reasonable
-    print("actual_doc")
-    print(actual_doc)
+    print(f'actual_doc: {actual_doc}')
 
-    with open(f"mock_data/{mock_dir}/gene_doc_{n}.txt") as f:
+    with open(f'mock_data/{mock_dir}/gene_doc_{n}.txt') as f:
         # Create a dictionary from the string-literal mock
         expected_doc = ast.literal_eval(f.read())
 
@@ -86,8 +85,8 @@ def get_nth_gene_docs(n, docs, mock_dir):
 
 
 class IngestTestCase(unittest.TestCase):
-    @patch("google.cloud.storage.Blob", side_effect=mock_storage_blob)
-    @patch("google.cloud.storage.Client", side_effect=mock_storage_client)
+    @patch('google.cloud.storage.Blob', side_effect=mock_storage_blob)
+    @patch('google.cloud.storage.Client', side_effect=mock_storage_client)
     def setup_ingest(self, args, mock_storage_client, mock_storage_blob):
 
         parsed_args = create_parser().parse_args(args)
@@ -100,41 +99,41 @@ class IngestTestCase(unittest.TestCase):
 
         ingest = IngestPipeline(**arguments)
 
-        if "matrix_file" in arguments:
+        if 'matrix_file' in arguments:
             ingest.ingest_expression()
-        elif "cell_metadata_file" in arguments:
+        elif 'cell_metadata_file' in arguments:
             ingest.ingest_cell_metadata()
-        elif "cluster_file" in arguments:
+        elif 'cluster_file' in arguments:
             ingest.ingest_cluster()
 
         return ingest
 
     def test_ingest_dense_matrix(self):
-        """Ingest Pipeline should extract and transform dense matrices
+        """Ingest Pipeline should extract, transform, and load dense matrices
         """
 
         study_accession = get_random_study_accession()
 
         args = [
-            "--study-accession",
+            '--study-accession',
             study_accession,
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt",
-            "--matrix-file-type",
-            "dense",
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            'gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt',
+            '--matrix-file-type',
+            'dense',
         ]
         ingest = self.setup_ingest(args)
 
@@ -152,7 +151,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(num_docs, 19)
 
         # Verify that the first gene document looks as expected
-        mock_dir = "dense_matrix_19_genes_100k_cells_txt"
+        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
         doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
         self.assertEqual(doc, expected_doc)
 
@@ -163,55 +162,55 @@ class IngestTestCase(unittest.TestCase):
         study_accession = get_random_study_accession()
 
         args = [
-            "--study-accession",
+            '--study-accession',
             study_accession,
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "gs://fake-bucket/remote-matrix-file-does-not-exist.txt",
-            "--matrix-file-type",
-            "dense",
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            'gs://fake-bucket/remote-matrix-file-does-not-exist.txt',
+            '--matrix-file-type',
+            'dense',
         ]
 
         self.assertRaises(OSError, self.setup_ingest, args)
 
     def test_ingest_local_dense_matrix(self):
-        """Ingest Pipeline should extract and transform local dense matrices
+        """Ingest Pipeline should extract, transform, and load local dense matrices
         """
 
         study_accession = get_random_study_accession()
 
         args = [
-            "--study-accession",
+            '--study-accession',
             study_accession,
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "../tests/data/dense_matrix_19_genes_100k_cells.txt",
-            "--matrix-file-type",
-            "dense",
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/dense_matrix_19_genes_100k_cells.txt',
+            '--matrix-file-type',
+            'dense',
         ]
         ingest = self.setup_ingest(args)
 
@@ -234,59 +233,59 @@ class IngestTestCase(unittest.TestCase):
         study_accession = get_random_study_accession()
 
         args = [
-            "--study-accession",
+            '--study-accession',
             study_accession,
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "--matrix-file /this/file/does/not_exist.txt",
-            "--matrix-file-type",
-            "dense",
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '--matrix-file /this/file/does/not_exist.txt',
+            '--matrix-file-type',
+            'dense',
         ]
 
         self.assertRaises(OSError, self.setup_ingest, args)
 
     def test_ingest_mtx_matrix(self):
-        """Ingest Pipeline should extract and transform MTX matrix bundles
+        """Ingest Pipeline should extract, transform, and load MTX matrix bundles
         """
 
         study_accession = get_random_study_accession()
 
         args = [
-            "--study-accession",
+            '--study-accession',
             study_accession,
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "../tests/data/matrix.mtx",
-            "--matrix-file-type",
-            "mtx",
-            "--gene-file",
-            "../tests/data/genes.tsv",
-            "--barcode-file",
-            "../tests/data/barcodes.tsv",
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/matrix.mtx',
+            '--matrix-file-type',
+            'mtx',
+            '--gene-file',
+            '../tests/data/genes.tsv',
+            '--barcode-file',
+            '../tests/data/barcodes.tsv',
         ]
         ingest = self.setup_ingest(args)
 
@@ -304,7 +303,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(num_docs, 25)
 
         # Verify that the first gene document looks as expected
-        mock_dir = "matrix_mtx"
+        mock_dir = 'matrix_mtx'
         doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
         self.assertEqual(doc, expected_doc)
 
@@ -313,55 +312,55 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            "--study-accession",
-            "SCP1",
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "../tests/data/matrix.mtx",
-            "--matrix-file-type",
-            "mtx",
+            '--study-accession',
+            'SCP1',
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/matrix.mtx',
+            '--matrix-file-type',
+            'mtx',
         ]
 
         self.assertRaises(ValueError, self.setup_ingest, args)
 
     def test_ingest_loom(self):
-        """Ingest Pipeline should extract and transform Loom files
+        """Ingest Pipeline should extract, transform, and load Loom files
         """
 
         study_accession = get_random_study_accession()
 
         args = [
-            "--study-accession",
+            '--study-accession',
             study_accession,
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "../tests/data/test_loom.loom",
-            "--matrix-file-type",
-            "loom",
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/test_loom.loom',
+            '--matrix-file-type',
+            'loom',
         ]
 
         ingest = self.setup_ingest(args)
@@ -380,10 +379,10 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(num_docs, 10)
 
         # Verify that the first gene document looks as expected
-        mock_dir = "loom"
+        mock_dir = 'loom'
         doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
         self.assertEqual(doc, expected_doc)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
