@@ -101,11 +101,15 @@ class IngestTestCase(unittest.TestCase):
 
         if 'matrix_file' in arguments:
             ingest.ingest_expression()
-        elif 'cell_metadata_file' in arguments:
-            ingest.ingest_cell_metadata()
-        elif 'cluster_file' in arguments:
-            ingest.ingest_cluster()
-
+        elif 'ingest_cell_metadata' in arguments:
+            if arguments['ingest_cell_metadata']:
+                ingest.ingest_cell_metadata()
+        elif 'ingest_cluster' in arguments:
+            if arguments['ingest_cluster']:
+                ingest.ingest_cluster()
+        elif 'subsample' in arguments:
+            if arguments['subsample']:
+                ingest.subsample()
         return ingest
 
     def test_ingest_dense_matrix(self):
