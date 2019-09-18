@@ -103,7 +103,7 @@ class CellMetadata(IngestFiles):
             less than 1,048,576 bytes. Storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
 
-        Yeilds:
+        Yields:
             Subdocuments that are under 1,048,576 bytes.
         """
 
