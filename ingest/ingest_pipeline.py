@@ -360,6 +360,13 @@ def create_parser():
         help="Indicates that subsampliing functionality should be invoked",
     )
 
+    parser_cell_metadata.add_argument(
+        "--validate-cell-metadata",
+        "-vcm",
+        action="store_true",
+        help="Indicates that file should be validated regardless on ingest being invoked",
+    )
+
     # Parser ingesting cluster files
     parser_cluster = subparsers.add_parser(
         "ingest_cluster", help="Indicates that cluster file is being ingested"
@@ -444,7 +451,9 @@ def main() -> None:
     if "matrix_file" in arguments:
         ingest.ingest_expression()
     elif "ingest_cell_metadata" in arguments:
-        if arguments["ingest_cell_metadata"]:
+        if arguments["validate_cell_metadata"] or arguments["vcm"]:
+            ingest.validate_cell_metadata()
+        elif arguments["ingest_cell_metadata"]:
             ingest.ingest_cell_metadata()
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:

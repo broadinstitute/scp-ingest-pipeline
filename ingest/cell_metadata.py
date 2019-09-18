@@ -150,7 +150,7 @@ class CellMetadata(IngestFiles):
                     end_index = index
                 else:
                     end_index = index - 1
-                    # TODO: This can turn into a logging statement
+                    # TODO: This can turn into a logging state
                 print(f"{sum} , {index}, {start_index} , {end_index}")
                 yield {
                     "cell_names": cell_names[start_index:end_index],
@@ -270,13 +270,10 @@ class CellMetadata(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        self.validate_header_keyword()
-        self.validate_type_keyword()
-        self.validate_type_annotations()
-        self.validate_unique_header()
-        self.validate_against_header_count()
-        if self.issues['error']['format']:
-            valid = False
-        else:
-            valid = True
-        return valid
+        return (
+            self.validate_header_keyword()
+            or self.validate_type_keyword()
+            or self.validate_type_annotations()
+            or self.validate_unique_header()
+            or self.validate_against_header_count()
+        )
