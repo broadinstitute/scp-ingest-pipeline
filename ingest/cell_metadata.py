@@ -16,8 +16,8 @@ DOCUMENT_LIMIT_BYTES = 1_048_576
 
 class CellMetadata(IngestFiles):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
-    SUBCOLLECTION_NAME = "cell_metadata"
-    COLLECTION_NAME = "data"
+    COLLECTION_NAME = "cell_metadata"
+    SUBCOLLECTION_NAME = "data"
 
     def __init__(self, file_path, file_id: str, study_accession: str, *args, **kwargs):
 
@@ -160,14 +160,6 @@ class CellMetadata(IngestFiles):
                 # Reset sum and add storage size at current index
                 sum = starting_sum + cell_name_storage + value_storage
                 start_index = index
-
-    def get_collection_name(self):
-        """Returns collection name"""
-        return 'cell_metadata'
-
-    def get_subcollection_name(self):
-        """Returns sub-collection name"""
-        return 'data'
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
