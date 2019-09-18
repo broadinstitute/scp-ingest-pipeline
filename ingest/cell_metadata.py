@@ -35,6 +35,8 @@ class CellMetadata(IngestFiles):
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.type = defaultdict(list)
         self.cells = []
+        self.is_valid_file = self.validate_format()
+        print(self.is_valid_file)
 
     def transform(self, row: List[str]) -> None:
         """ Add data from cell metadata files into data model"""
@@ -168,6 +170,8 @@ class CellMetadata(IngestFiles):
         """Returns sub-collection name"""
         return 'data'
 
+    ## TODO: This should be a static method. I believe errors should be stored in
+    # one central class
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
         :param type: type of issue (error or warn)
@@ -190,9 +194,12 @@ class CellMetadata(IngestFiles):
             valid = True
             if self.headers[0] != 'NAME':
                 # ToDO - capture warning below in issue report
-                print(
+                self.store_validation_issue(
+                    'warning',
+                    'format'
                     f'Warning: metadata file keyword NAME provided as '
-                    f'{self.headers[0]}'
+                    f'{self.headers[0]}',
+                    '',
                 )
         else:
             msg = 'Error: Metadata file header row malformed, missing NAME'
@@ -223,9 +230,12 @@ class CellMetadata(IngestFiles):
             if self.metadata_types[0] != 'TYPE':
                 # ToDO - capture warning below in issue report
                 # investigate f-string formatting here
-                print(
-                    'Warning: Metadata file keyword TYPE provided as '
-                    '{self.metadata_types[0]}'
+                self.store_validation_issue(
+                    'warning',
+                    'format',
+                    f'Warning: Metadata file keyword TYPE provided as '
+                    + f'{self.metadata_types[0]}',
+                    "",
                 )
         else:
             msg = 'Error: Metadata file TYPE row malformed, missing TYPE'
@@ -237,12 +247,12 @@ class CellMetadata(IngestFiles):
 
         :return: boolean   True if all type annotations are valid, otherwise False
         """
-        valid = False
         # skipping the TYPE keyword, iterate through the types
         # collecting invalid type annotations in list annots
         for t in self.metadata_types[1:]:
             if t not in self.annotation_type:
-                msg = 'Error: TYPE declarations should be group or numeric'
+                valid = False
+                msg = f'Error: TYPE declarations should be group or numeric and currently is {t}'
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
                 if not t:
@@ -259,8 +269,8 @@ class CellMetadata(IngestFiles):
         valid = False
         if not len(self.headers) == len(self.metadata_types):
             msg = (
-                f'Error: {len(self.metadata_types)} TYPE declarations '
-                f'for {len(self.headers)} column headers'
+                f'Error:Type delarations and column headers are unequal. {len(self.metadata_types)} TYPE declarations '
+                f'for {len(self.headers)} column headers.'
             )
             self.store_validation_issue('error', 'format', msg)
         else:

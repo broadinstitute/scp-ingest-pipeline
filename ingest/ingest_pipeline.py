@@ -33,6 +33,8 @@ python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_express
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import ast
+import os
+import sys
 
 from cell_metadata import CellMetadata
 from clusters import Clusters
@@ -162,10 +164,9 @@ class IngestPipeline(object):
                 subcollection_doc = self.cell_metadata.data_subcollection[annotation]
                 doc_ref_sub = doc_ref.collection(subcollection_name).document()
                 doc_ref_sub.set(subcollection_doc)
-            except exceptions.InvalidArgument as e:
+            except exceptions.InvalidArgument:
                 # Catches invalid argument exception, which error "Maximum
                 # document size" falls under
-                print(e)
                 batch = self.db.batch()
                 for subdoc in self.cell_metadata.chunk_subdocuments(
                     doc_ref_sub.id, doc_ref_sub._document_path, annotation
@@ -173,6 +174,9 @@ class IngestPipeline(object):
                     batch.set(doc_ref_sub, subdoc)
 
                 batch.commit()
+            else:
+                return 1
+        return 0
 
     def load_cluster_files(self):
         """Loads cluster files into Firestore."""
@@ -218,12 +222,18 @@ class IngestPipeline(object):
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        while True:
-            row = self.cell_metadata.extract()
-            if row is None:
-                break
-            self.cell_metadata.transform(row)
-        self.load_cell_metadata()
+        if self.cell_metadata.is_valid_file:
+            print("valid file")
+            while True:
+                row = self.cell_metadata.extract()
+                if row is None:
+                    break
+                self.cell_metadata.transform(row)
+            load_status = self.load_cell_metadata()
+            return load_status
+        else:
+            print("invalid file")
+            return 1
 
     def ingest_cluster(self):
         """Ingests cluster files into Firestore."""
@@ -442,7 +452,7 @@ def main() -> None:
     Returns:
         None
     """
-
+    status = []
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
@@ -451,16 +461,22 @@ def main() -> None:
     if "matrix_file" in arguments:
         ingest.ingest_expression()
     elif "ingest_cell_metadata" in arguments:
-        if arguments["validate_cell_metadata"] or arguments["vcm"]:
-            ingest.validate_cell_metadata()
-        elif arguments["ingest_cell_metadata"]:
-            ingest.ingest_cell_metadata()
+        if arguments["ingest_cell_metadata"]:
+            status_cell_metadata = ingest.ingest_cell_metadata()
+            status.append(status_cell_metadata)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
             ingest.ingest_cluster()
     elif "subsample" in arguments:
         if arguments["subsample"]:
             ingest.subsample()
+
+    if all(i < 1 for i in status):
+        print('ok')
+        sys.exit(os.EX_OK)
+    else:
+        print('bad')
+        sys.exit(os.EX_DATAERR)
 
 
 if __name__ == "__main__":
