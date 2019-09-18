@@ -24,7 +24,7 @@ class Clusters(IngestFiles):
         # Second line in cluster is metadata_type
         self.metadata_types = self.get_next_line(increase_line_count=False)
         self.source_file_type = "cluster"
-        self.has_z = "z" or "Z" in self.header
+        self.has_z = True if ("z" in self.header or "Z" in self.header) else False
         self.cell_annotations = self.create_cell_annotations_field()
         # TODO: Populate the cell_annotations array when pandas is implemented
         self.top_level_doc = {

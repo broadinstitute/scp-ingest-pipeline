@@ -159,6 +159,7 @@ class IngestFiles:
         while True:
             try:
                 row = next(self.file)
+                self.amount_of_lines += 1
                 return row
             except StopIteration:
                 break
