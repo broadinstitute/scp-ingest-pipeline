@@ -68,7 +68,7 @@ def get_nth_gene_docs(n, docs, mock_dir):
     # Uncomment to print out new baseline data
     # Process to update baselines is manual: copy and paste it into new file
     # TODO: Automate when reasonable
-    print(f'actual_doc: {actual_doc}')
+    # print(f'actual_doc: {actual_doc}')
 
     with open(f'mock_data/{mock_dir}/gene_doc_{n}.txt') as f:
         # Create a dictionary from the string-literal mock
