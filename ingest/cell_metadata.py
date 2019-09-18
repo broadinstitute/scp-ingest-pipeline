@@ -36,7 +36,6 @@ class CellMetadata(IngestFiles):
         self.type = defaultdict(list)
         self.cells = []
         self.is_valid_file = self.validate_format()
-        print(self.is_valid_file)
 
     def transform(self, row: List[str]) -> None:
         """ Add data from cell metadata files into data model"""
