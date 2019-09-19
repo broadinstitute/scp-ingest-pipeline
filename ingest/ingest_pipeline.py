@@ -19,7 +19,7 @@ python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
 
 # Ingest dense file
-python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest loom file
 python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
@@ -63,6 +63,7 @@ class IngestPipeline(object):
         subsample=False,
         ingest_cell_metadata=False,
         ingest_cluster=False,
+        db=None,
         **kwargs,
     ):
         """Initializes variables in ingest service."""
@@ -70,7 +71,10 @@ class IngestPipeline(object):
         self.study_accession = study_accession
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        self.db = firestore.Client()
+        if db is not None:
+            self.db = db
+        else:
+            self.db = firestore.Client()
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
@@ -110,13 +114,13 @@ class IngestPipeline(object):
     def load_expression_data(self, list_of_expression_models: List[Gene]) -> None:
         """Loads expression data into Firestore.
 
-    Args:
-        list_of_transformed_data: List[Gene]
-           A list of object type Gene that's stored into Firestore
+        Args:
+            list_of_transformed_data: List[Gene]
+            A list of object type Gene that's stored into Firestore
 
-    Returns:
-        None
-    """
+        Returns:
+            None
+        """
         for expression_model in list_of_expression_models:
             collection_name = expression_model.COLLECTION_NAME
             batch = self.db.batch()
@@ -198,14 +202,14 @@ class IngestPipeline(object):
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
-    functions. Then loads data into Firestore.
+        functions. Then loads data into Firestore.
 
-    Args:
-        None
+        Args:
+            None
 
-    Returns:
-        None
-    """
+        Returns:
+            None
+        """
         transformed_data = []
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()

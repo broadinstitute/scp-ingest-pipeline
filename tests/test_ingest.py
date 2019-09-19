@@ -1,21 +1,21 @@
 """Integration tests for Ingest Pipeline; isolated tests for observable output
 
 These tests verify that various matrix file types can be extracted and
-transformed, as expected by code that loads transformed data into Firestore.
+transformed, as loaded into (an official emulator of) Firestore
 
-Mocks are used for test speed and isolation.
+Test doubles are used for test speed and isolation.
 
 PREREQUISITE
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
-Also, before "EXAMPLES" commands, run `cd tests`.
+Also, before 'EXAMPLES' commands, run `cd tests`.
 
 EXAMPLES
 
 # Run all tests
 pytest
 
-# Run tests with names containing the string "dense"
-pytest -k "dense"
+# Run tests with names containing the string 'dense'
+pytest -k 'dense'
 
 # Run all tests in a manner that shows any print() statements
 python3 test_ingest.py
@@ -31,339 +31,362 @@ coverage run --branch test_ingest.py; coverage report -m --include *scp-ingest-p
 
 """
 import ast
+import random
 import sys
 import unittest
 from unittest.mock import patch
 
-from gcp_mocks import mock_storage_client, mock_storage_blob, mock_firestore_client
+from gcp_mocks import mock_storage_client, mock_storage_blob
 
-sys.path.append("../ingest")
+from google.cloud import firestore
+import google.auth.credentials
+
+sys.path.append('../ingest')
 from ingest_pipeline import create_parser, validate_arguments, IngestPipeline
 
 
-def mock_load_expression_data(self, *args, **kwargs):
-    """Enables overwriting normal function with this placeholder.
-    Returning the arguments enables tests to verify that the code invokes
-    this method with expected argument values.
+def _make_credentials():
+    return unittest.mock.Mock(spec=google.auth.credentials.Credentials)
 
-    TODO:
-    Use Google's official Firestore mock,
-    https://github.com/googleapis/google-cloud-ruby/blob/master/google-cloud-firestore/EMULATOR.md#google-cloud-firestore-emulator
 
-    This will enable us to also verify (and thus cover) loading code *outputs*,
-    unlike here where we merely give a way to verify loading code *inputs*.
-    Doing so via integration tests will isolate us from implementation changes.
+def get_random_study_accession():
+    """Randomly seeds to avoid collisions in Firestore emulator instance"""
+    study_number = random.randint(1, 1_000_001)
+    return f'SCP{study_number}'  # E.g. SCP1324
+
+
+def get_nth_gene_docs(n, docs, mock_dir):
+    """Return Nth actual and expected gene documents, using actual and mock data
     """
-    self.load_expression_data_args = args
-    self.load_expression_data_kwargs = kwargs
 
+    # Firestore does not return results in the same order every time,
+    # so sort documents by name to enable comparing Nth query result.
+    docs = sorted(docs, key=lambda doc: doc['name'])
 
-def get_nth_gene_models(n, models, mock_dir):
-    """Return Nth actual and expected gene models, using actual and mock data
-    """
-    # TODO: Dense loads models as a `list`, Mtx loads models as a `dict_values`
-    # It seems both would ideally load using the same type.  Reconcile.
-    if isinstance(models, list):
-        # For Dense
-        actual_model = models[n].__dict__
-    else:
-        # For Mtx
-        actual_model = list(models)[n].__dict__
+    actual_doc = docs[n]
 
     # Uncomment to print out new baseline data
     # Process to update baselines is manual: copy and paste it into new file
     # TODO: Automate when reasonable
-    print("actual_model")
-    print(actual_model)
+    # print(f'actual_doc: {actual_doc}')
 
-    with open(f"mock_data/{mock_dir}/gene_model_{n}.txt") as f:
+    with open(f'mock_data/{mock_dir}/gene_doc_{n}.txt') as f:
         # Create a dictionary from the string-literal mock
-        expected_model = ast.literal_eval(f.read())
+        expected_doc = ast.literal_eval(f.read())
 
-    return actual_model, expected_model
+    # Expected study accession is different on every test run,
+    # to avoid collisions in Firestore emulator instance.
+    # So we remove this key from the actual and expected docs to avoid
+    # false positive test failures.
+    del actual_doc['study_accession']
+    del expected_doc['study_accession']
 
-
-# Mock method that loads data to Firestore
-IngestPipeline.load_expression_data = mock_load_expression_data
+    return actual_doc, expected_doc
 
 
 class IngestTestCase(unittest.TestCase):
-    @patch("google.cloud.storage.Blob", side_effect=mock_storage_blob)
-    @patch("google.cloud.storage.Client", side_effect=mock_storage_client)
-    @patch("google.cloud.firestore.Client", side_effect=mock_firestore_client)
-    def setup_ingest(
-        self, args, mock_firestore_client, mock_storage_client, mock_storage_blob
-    ):
+    @patch('google.cloud.storage.Blob', side_effect=mock_storage_blob)
+    @patch('google.cloud.storage.Client', side_effect=mock_storage_client)
+    def setup_ingest(self, args, mock_storage_client, mock_storage_blob):
 
         parsed_args = create_parser().parse_args(args)
         validate_arguments(parsed_args)
         arguments = vars(parsed_args)
 
+        credentials = _make_credentials()
+        db = firestore.Client(project='test-project', credentials=credentials)
+        arguments['db'] = db
+
         ingest = IngestPipeline(**arguments)
 
-        if "matrix_file" in arguments:
+        if 'matrix_file' in arguments:
             ingest.ingest_expression()
-        elif "ingest_cell_metadata" in arguments:
-            if arguments["ingest_cell_metadata"]:
+        elif 'ingest_cell_metadata' in arguments:
+            if arguments['ingest_cell_metadata']:
                 ingest.ingest_cell_metadata()
-        elif "ingest_cluster" in arguments:
-            if arguments["ingest_cluster"]:
+        elif 'ingest_cluster' in arguments:
+            if arguments['ingest_cluster']:
                 ingest.ingest_cluster()
-        elif "subsample" in arguments:
-            if arguments["subsample"]:
+        elif 'subsample' in arguments:
+            if arguments['subsample']:
                 ingest.subsample()
         return ingest
 
     def test_ingest_dense_matrix(self):
-        """Ingest Pipeline should extract and transform dense matrices
+        """Ingest Pipeline should extract, transform, and load dense matrices
         """
 
+        study_accession = get_random_study_accession()
+
         args = [
-            "--study-accession",
-            "SCP1",
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt",
-            "--matrix-file-type",
-            "dense",
+            '--study-accession',
+            study_accession,
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            'gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt',
+            '--matrix-file-type',
+            'dense',
         ]
         ingest = self.setup_ingest(args)
 
-        models = ingest.load_expression_data_args[0]
+        genes = ingest.db.collection(u'genes')
+        stream = (
+            genes.where(u'taxon_common_name', u'==', u'human')
+            .where(u'study_accession', u'==', study_accession)
+            .stream()
+        )
 
-        # Verify that 19 gene models were passed into load method
-        num_models = len(models)
-        expected_num_models = 19
-        self.assertEqual(num_models, expected_num_models)
-        # Verify that the first gene model looks as expected
-        mock_dir = "dense_matrix_19_genes_100k_cells_txt"
-        model, expected_model = get_nth_gene_models(0, models, mock_dir)
+        docs = [doc.to_dict() for doc in stream]
 
-        self.assertEqual(model, expected_model)
+        # Verify that 19 gene docs were written to Firestore
+        num_docs = len(docs)
+        self.assertEqual(num_docs, 19)
+
+        # Verify that the first gene document looks as expected
+        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
+        doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
+        self.assertEqual(doc, expected_doc)
 
     def test_ingest_missing_file(self):
         """Ingest Pipeline should throw error for missing file
         """
 
+        study_accession = get_random_study_accession()
+
         args = [
-            "--study-accession",
-            "SCP1",
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "gs://fake-bucket/remote-matrix-file-does-not-exist.txt",
-            "--matrix-file-type",
-            "dense",
+            '--study-accession',
+            study_accession,
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            'gs://fake-bucket/remote-matrix-file-does-not-exist.txt',
+            '--matrix-file-type',
+            'dense',
         ]
 
         self.assertRaises(OSError, self.setup_ingest, args)
 
     def test_ingest_local_dense_matrix(self):
-        """Ingest Pipeline should extract and transform local dense matrices
+        """Ingest Pipeline should extract, transform, and load local dense matrices
         """
 
+        study_accession = get_random_study_accession()
+
         args = [
-            "--study-accession",
-            "SCP1",
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "../tests/data/dense_matrix_19_genes_100k_cells.txt",
-            "--matrix-file-type",
-            "dense",
+            '--study-accession',
+            study_accession,
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/dense_matrix_19_genes_100k_cells.txt',
+            '--matrix-file-type',
+            'dense',
         ]
         ingest = self.setup_ingest(args)
 
-        models = ingest.load_expression_data_args[0]
+        genes = ingest.db.collection(u'genes')
+        stream = (
+            genes.where(u'taxon_common_name', u'==', u'human')
+            .where(u'study_accession', u'==', study_accession)
+            .stream()
+        )
 
-        # Verify that 19 gene models were passed into load method
-        num_models = len(models)
-        expected_num_models = 19
-        self.assertEqual(num_models, expected_num_models)
+        docs = [doc.to_dict() for doc in stream]
 
-        # Verify that the first gene model looks as expected
-        mock_dir = "dense_matrix_19_genes_100k_cells_txt"
-        model, expected_model = get_nth_gene_models(0, models, mock_dir)
-
-        self.assertEqual(model, expected_model)
+        num_docs = len(docs)
+        self.assertEqual(num_docs, 19)
 
     def test_ingest_missing_local_file(self):
         """Ingest Pipeline should throw error for missing local file
         """
 
+        study_accession = get_random_study_accession()
+
         args = [
-            "--study-accession",
-            "SCP1",
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "--matrix-file /this/file/does/not_exist.txt",
-            "--matrix-file-type",
-            "dense",
+            '--study-accession',
+            study_accession,
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '--matrix-file /this/file/does/not_exist.txt',
+            '--matrix-file-type',
+            'dense',
         ]
 
         self.assertRaises(OSError, self.setup_ingest, args)
 
     def test_ingest_mtx_matrix(self):
-        """Ingest Pipeline should extract and transform MTX matrix bundles
+        """Ingest Pipeline should extract, transform, and load MTX matrix bundles
         """
 
+        study_accession = get_random_study_accession()
+
         args = [
-            "--study-accession",
-            "SCP1",
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "../tests/data/matrix.mtx",
-            "--matrix-file-type",
-            "mtx",
-            "--gene-file",
-            "../tests/data/genes.tsv",
-            "--barcode-file",
-            "../tests/data/barcodes.tsv",
+            '--study-accession',
+            study_accession,
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/matrix.mtx',
+            '--matrix-file-type',
+            'mtx',
+            '--gene-file',
+            '../tests/data/genes.tsv',
+            '--barcode-file',
+            '../tests/data/barcodes.tsv',
         ]
         ingest = self.setup_ingest(args)
 
-        models = ingest.load_expression_data_args[0]
+        genes = ingest.db.collection(u'genes')
+        stream = (
+            genes.where(u'taxon_common_name', u'==', u'human')
+            .where(u'study_accession', u'==', study_accession)
+            .stream()
+        )
 
-        # Verify that 25 gene models were passed into load method
-        num_models = len(models)
-        expected_num_models = 25
-        self.assertEqual(num_models, expected_num_models)
+        docs = [doc.to_dict() for doc in stream]
 
-        # Verify that the first gene model looks as expected
-        mock_dir = "matrix_mtx"
-        model, expected_model = get_nth_gene_models(0, models, mock_dir)
-        print(f"\n\n\n{model}\n\n\n")
-        print(f"\n\n\n{expected_model}\n\n\n")
-        self.assertEqual(model, expected_model)
+        # Verify that 25 gene docs were written to Firestore
+        num_docs = len(docs)
+        self.assertEqual(num_docs, 25)
+
+        # Verify that the first gene document looks as expected
+        mock_dir = 'matrix_mtx'
+        doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
+        self.assertEqual(doc, expected_doc)
 
     def test_mtx_bundle_argument_validation(self):
         """Omitting --gene-file and --barcode-file in MTX ingest should error
         """
 
         args = [
-            "--study-accession",
-            "SCP1",
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "../tests/data/matrix.mtx",
-            "--matrix-file-type",
-            "mtx",
+            '--study-accession',
+            'SCP1',
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/matrix.mtx',
+            '--matrix-file-type',
+            'mtx',
         ]
 
         self.assertRaises(ValueError, self.setup_ingest, args)
 
     def test_ingest_loom(self):
-        """Ingest Pipeline should extract and transform loom files
+        """Ingest Pipeline should extract, transform, and load Loom files
         """
 
+        study_accession = get_random_study_accession()
+
         args = [
-            "--study-accession",
-            "SCP1",
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "../tests/data/test_loom.loom",
-            "--matrix-file-type",
-            "loom",
+            '--study-accession',
+            study_accession,
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/test_loom.loom',
+            '--matrix-file-type',
+            'loom',
         ]
 
         ingest = self.setup_ingest(args)
 
-        models = ingest.load_expression_data_args[0]
+        genes = ingest.db.collection(u'genes')
+        stream = (
+            genes.where(u'taxon_common_name', u'==', u'human')
+            .where(u'study_accession', u'==', study_accession)
+            .stream()
+        )
 
-        # Verify that 10 gene models were passed into load method
-        num_models = len(models)
-        expected_num_models = 10
-        self.assertEqual(num_models, expected_num_models)
+        docs = [doc.to_dict() for doc in stream]
 
-        # Verify that the first gene model looks as expected
-        mock_dir = "loom"
-        model, expected_model = get_nth_gene_models(0, models, mock_dir)
-        print(f"\n\n\n{model}\n\n\n")
-        print(f"\n\n\n{expected_model}\n\n\n")
-        self.assertEqual(model, expected_model)
+        # Verify that 10 gene docs were written to Firestore
+        num_docs = len(docs)
+        self.assertEqual(num_docs, 10)
+
+        # Verify that the first gene document looks as expected
+        mock_dir = 'loom'
+        doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
+        self.assertEqual(doc, expected_doc)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
