@@ -150,10 +150,8 @@ class IngestPipeline(object):
                         i += 1
 
                     batch.commit()
-                # Another exception has been encountered
-                else:
-                    return 1
-            return 0
+
+    # TODO: Add exception handling and return codes
 
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
@@ -197,7 +195,7 @@ class IngestPipeline(object):
             # batch = self.db.batch()
             doc_ref_sub = doc_ref.collection(subcollection_name).document()
             doc_ref_sub.set(self.cluster.cluster_subdocs[annot_name])
-        # TODO: Work on exception handling
+        # TODO: Add exception handling and return codes
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
