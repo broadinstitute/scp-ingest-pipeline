@@ -182,7 +182,7 @@ class IngestPipeline(object):
                     batch.set(doc_ref_sub, subdoc)
 
                 batch.commit()
-            # Another exception has been encountered
+            # An unexpected exception has been encountered
             else:
                 return 1
         return 0
@@ -198,7 +198,6 @@ class IngestPipeline(object):
             doc_ref_sub = doc_ref.collection(subcollection_name).document()
             doc_ref_sub.set(self.cluster.cluster_subdocs[annot_name])
         # TODO: Work on exception handling
-        return 0
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -229,12 +228,11 @@ class IngestPipeline(object):
                     self.matrix.transform_expression_data_by_gene(row)
                 )
         self.load_expression_data(transformed_data)
-        # # self.close_matrix()
+        # TODO: Work on exception handling
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         if self.cell_metadata.is_valid_file:
-            print("valid file")
             while True:
                 row = self.cell_metadata.extract()
                 if row is None:
@@ -380,13 +378,6 @@ def create_parser():
         help="Indicates that subsampliing functionality should be invoked",
     )
 
-    parser_cell_metadata.add_argument(
-        "--validate-cell-metadata",
-        "-vcm",
-        action="store_true",
-        help="Indicates that file should be validated regardless on ingest being invoked",
-    )
-
     # Parser ingesting cluster files
     parser_cluster = subparsers.add_parser(
         "ingest_cluster", help="Indicates that cluster file is being ingested"
@@ -467,7 +458,7 @@ def main() -> None:
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     ingest = IngestPipeline(**arguments)
-
+    # TODO: Add validation for gene and cluster file types
     if "matrix_file" in arguments:
         ingest.ingest_expression()
     elif "ingest_cell_metadata" in arguments:
@@ -481,7 +472,8 @@ def main() -> None:
         if arguments["subsample"]:
             ingest.subsample()
 
-    if all(i < 1 for i in status):
+    # TODO: This check will need to chanf
+    if all(i < 1 for i in status) or len(status) == 0:
         sys.exit(os.EX_OK)
     else:
         sys.exit(os.EX_DATAERR)
