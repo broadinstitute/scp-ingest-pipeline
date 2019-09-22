@@ -342,12 +342,16 @@ def retrieve_ontology_term(convention_url, ontology_id):
     """
     OLS_BASE_URL = "https://www.ebi.ac.uk/ols/api/ontologies/"
     convention_ontology = retrieve_ontology(convention_url)
+    # separate ontology shortname from term ID number
+    # valid separators are underscore and colon (used by HCA)
     try:
-        ontology_shortname, term_id = ontology_id.split('_')
+        ontology_shortname, term_id = ontology_id.split('[_:]')
+    # when ontolgyID is malformed and has no separator -> ValueError
     except ValueError as error:
         print("ValueError:", error)
         print('missing ontology shortname in', ontology_id)
         return None
+    # when ontologyID value is empty string -> AttributeError
     except AttributeError as error:
         print('AttributeError', error)
         print('missing ontology shortname in', ontology_id)
@@ -389,7 +393,6 @@ def validate_collected_ontology_data(metadata, convention):
         # print(entry)
         ontology_url = convention['properties'][entry]['ontology']
         try:
-            # separate ontology shortname from term ID number (separated by)
             for ontology_id, ontology_label in metadata.ontology[entry].keys():
                 matching_term = retrieve_ontology_term(ontology_url, ontology_id)
                 if matching_term:

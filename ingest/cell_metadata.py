@@ -182,11 +182,12 @@ class CellMetadata(IngestFiles):
         if self.headers[0].casefold() == 'NAME'.casefold():
             valid = True
             if self.headers[0] != 'NAME':
-                # ToDO - capture warning below in issue report
-                print(
+                msg = (
                     f'Warning: metadata file keyword NAME provided as '
                     f'{self.headers[0]}'
                 )
+                self.store_validation_issue('warn', 'format', msg, '')
+
         else:
             msg = 'Error: Metadata file header row malformed, missing NAME'
             self.store_validation_issue('error', 'format', msg, '')
@@ -216,10 +217,11 @@ class CellMetadata(IngestFiles):
             if self.metadata_types[0] != 'TYPE':
                 # ToDO - capture warning below in issue report
                 # investigate f-string formatting here
-                print(
+                msg = (
                     'Warning: Metadata file keyword TYPE provided as '
                     '{self.metadata_types[0]}'
                 )
+                self.store_validation_issue('warn', 'format', msg)
         else:
             msg = 'Error: Metadata file TYPE row malformed, missing TYPE'
             self.store_validation_issue('error', 'format', msg)
