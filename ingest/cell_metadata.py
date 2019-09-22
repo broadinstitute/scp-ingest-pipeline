@@ -169,7 +169,7 @@ class CellMetadata(IngestFiles):
         :param value: list of IDs associated with the issue
         """
         if associated_info:
-            self.issues[type][category][msg].append(associated_info)
+            self.issues[type][category][msg].extend(associated_info)
         else:
             self.issues[type][category][msg] = None
 
@@ -231,17 +231,22 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if all type annotations are valid, otherwise False
         """
         valid = False
+        invalid_types = []
         # skipping the TYPE keyword, iterate through the types
         # collecting invalid type annotations in list annots
         for t in self.metadata_types[1:]:
             if t not in self.annotation_type:
-                msg = 'Error: TYPE declarations should be group or numeric'
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
                 if not t:
-                    self.store_validation_issue('error', 'format', msg, '<empty value>')
+                    invalid_types.append('<empty value>')
                 else:
-                    self.store_validation_issue('error', 'format', msg, t)
+                    invalid_types.append(t)
+        if invalid_types:
+            msg = 'Error: TYPE declarations should be group or numeric'
+            self.store_validation_issue('error', 'format', msg, invalid_types)
+        else:
+            valid = True
         return valid
 
     def validate_against_header_count(self):
