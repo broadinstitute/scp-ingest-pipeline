@@ -11,7 +11,6 @@ from validate_metadata import (
     collect_jsonschema_errors,
     validate_schema,
     CellMetadata,
-    serialize_issues,
     validate_collected_ontology_data,
 )
 
@@ -121,12 +120,8 @@ class TestValidateMetadata(unittest.TestCase):
         reference_file = open("../tests/data/metadata_invalid.json", "r")
         reference_issues = json.load(reference_file)
         reference_file.close()
-        serialize_issues(metadata)
-        current_file = open("issues.json", "r")
-        current_issues = json.load(current_file)
-        current_file.close()
         self.assertEqual(
-            current_issues,
+            metadata.issues,
             reference_issues,
             "Metadata validation issues do not match reference issues",
         )
@@ -168,12 +163,8 @@ class TestValidateMetadata(unittest.TestCase):
         reference_file = open("../tests/data/ontology_invalid.json", "r")
         reference_issues = json.load(reference_file)
         reference_file.close()
-        serialize_issues(metadata)
-        current_file = open("issues.json", "r")
-        current_issues = json.load(current_file)
-        current_file.close()
         self.assertEqual(
-            current_issues,
+            metadata.issues,
             reference_issues,
             "Ontology validation issues do not match reference issues",
         )
