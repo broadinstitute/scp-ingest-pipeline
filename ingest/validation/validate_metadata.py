@@ -235,26 +235,26 @@ def process_metadata_row(metadata, convention, line):
         if k in metadata.type['convention']['integer']:
             try:
                 row_info[k] = int(v)
-            except ValueError as e:
+            except ValueError:
                 error_msg = f'ERROR: value provided does not match convention type declaration for {k}'
                 metadata.store_validation_issue(
-                    'error', 'type', error_msg, [row_info['CellID'], repr(e)]
+                    'error', 'type', error_msg, [row_info['CellID']]
                 )
         elif k in metadata.type['floats']:
             try:
                 row_info[k] = float(v)
-            except ValueError as e:
+            except ValueError:
                 error_msg = f'ERROR: value provided does not match convention type declaration for {k}'
                 metadata.store_validation_issue(
-                    'error', 'type', error_msg, [row_info['CellID'], repr(e)]
+                    'error', 'type', error_msg, [row_info['CellID']]
                 )
         elif k in metadata.type['convention']['array']:
             try:
                 row_info[k] = v.split(',')
-            except ValueError as e:
+            except ValueError:
                 error_msg = f'ERROR: value provided does not match convention type declaration for {k}'
                 metadata.store_validation_issue(
-                    'error', 'type', error_msg, [row_info['CellID'], repr(e)]
+                    'error', 'type', error_msg, [row_info['CellID']]
                 )
     return row_info
 
@@ -491,13 +491,9 @@ if __name__ == '__main__':
     filetsv = args.input_metadata
     metadata = CellMetadata(filetsv, args.file_id, args.study_accession)
     print('Validating', filetsv)
-
     format_valid = metadata.validate_format()
-    try:
-        collect_jsonschema_errors(metadata, convention)
-        validate_collected_ontology_data(metadata, convention)
-    except:
-        print('Format errors must be corrected prior to metadata validation')
+    collect_jsonschema_errors(metadata, convention)
+    validate_collected_ontology_data(metadata, convention)
     if args.issues_json:
         serialize_issues(metadata)
     report_issues(metadata)
