@@ -186,11 +186,11 @@ class CellMetadata(IngestFiles):
                     f'Warning: metadata file keyword NAME provided as '
                     f'{self.headers[0]}'
                 )
-                self.store_validation_issue('warn', 'format', msg, '')
+                self.store_validation_issue('warn', 'format', msg)
 
         else:
             msg = 'Error: Metadata file header row malformed, missing NAME'
-            self.store_validation_issue('error', 'format', msg, '')
+            self.store_validation_issue('error', 'format', msg)
         return valid
 
     def validate_unique_header(self):

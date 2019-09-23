@@ -4,7 +4,7 @@ These tests verify that metadata files are checked against metadata convention,
 ontology terms are validated against an external source, and tsv metadata files
 conform to SCP metadata file format requirements.
 
-PREREQUISITEs
+PREREQUISITES
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
 and Firestore emulator must be running, see PR26 for instructions
 (https://github.com/broadinstitute/scp-ingest-pipeline/pull/26)
@@ -52,7 +52,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Header rows of metadata file should conform to standard
         """
 
-        args = "../tests/data/AMC_v0.8.json " "../tests/data/error_headers.tsv"
+        args = "../tests/data/AMC_v0.8.json ../tests/data/error_headers.tsv"
         metadata = self.setup_metadata(args)[0]
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
@@ -94,7 +94,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Metadata convention should be valid jsonschema
             """
 
-        args = "../tests/data/AMC_invalid.json " "../tests/data/metadata_valid.tsv"
+        args = "../tests/data/AMC_invalid.json ../tests/data/metadata_valid.tsv"
         metadata, convention = self.setup_metadata(args)
         self.assertIsNone(
             validate_schema(convention, metadata),
@@ -105,7 +105,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_valid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
             """
-        args = "../tests/data/AMC_v0.8.json " "../tests/data/metadata_valid.tsv"
+        args = "../tests/data/AMC_v0.8.json ../tests/data/metadata_valid.tsv"
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
@@ -119,7 +119,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
             """
-        args = "../tests/data/AMC_v1.1.00.json " "../tests/data/metadata_invalid.tsv"
+        args = "../tests/data/AMC_v1.1.0.json ../tests/data/metadata_invalid.tsv"
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -150,7 +150,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_valid_ontology_content(self):
         """Ontology metadata should conform to convention requirements
             """
-        args = "../tests/data/AMC_v1.1.00.json " "../tests/data/ontology_valid.tsv"
+        args = "../tests/data/AMC_v1.1.0.json ../tests/data/ontology_valid.tsv"
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
@@ -165,7 +165,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_ontology_content(self):
         """Ontology metadata should conform to convention requirements
             """
-        args = "../tests/data/AMC_v1.1.00.json " "../tests/data/ontology_invalid.tsv"
+        args = "../tests/data/AMC_v1.1.0.json ../tests/data/ontology_invalid.tsv"
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         metadata.validate_format()

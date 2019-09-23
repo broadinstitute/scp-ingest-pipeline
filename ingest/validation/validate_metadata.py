@@ -232,40 +232,28 @@ def process_metadata_row(metadata, convention, line):
         #        print('processing row metadata:', k)
         if not v:
             row_info[k] = None
-        if k in metadata.type['convention']['integer']:
-            try:
+        try:
+            if k in metadata.type['convention']['integer']:
                 row_info[k] = int(v)
-            except ValueError:
-                error_msg = f'ERROR: value provided does not match convention type declaration for {k}'
-                metadata.store_validation_issue(
-                    'error', 'type', error_msg, [row_info['CellID']]
-                )
-        elif k in metadata.type['floats']:
-            try:
+            elif k in metadata.type['floats']:
                 row_info[k] = float(v)
-            except ValueError:
-                error_msg = f'ERROR: value provided does not match convention type declaration for {k}'
-                metadata.store_validation_issue(
-                    'error', 'type', error_msg, [row_info['CellID']]
-                )
-        elif k in metadata.type['convention']['array']:
-            try:
+            elif k in metadata.type['convention']['array']:
                 row_info[k] = v.split(',')
-            except ValueError:
-                error_msg = f'ERROR: value provided does not match convention type declaration for {k}'
-                metadata.store_validation_issue(
-                    'error', 'type', error_msg, [row_info['CellID']]
-                )
+        except ValueError:
+            error_msg = f'ERROR: value provided does not match convention type declaration for {k}'
+            metadata.store_validation_issue(
+                'error', 'type', error_msg, [row_info['CellID']]
+            )
     return row_info
 
 
 def collect_jsonschema_errors(metadata, convention):
-    """Evaluate TSV metadata input against metadata convention using jsonschema
+    """Evaluate TSV metadata input against metadata convention using JSON schema
 
     :param metadata: cell metadata object
     :param convention: dict representation of metadata convention
     :return: tuple of non-ontology issues dict and ontology info dict
-            or False if input convention is invalid jsonschema
+            or False if input convention is invalid JSON schema
     """
     logger.debug('Begin: collect_jsonschema_errors')
     # this function seems overloaded with its three tasks
@@ -364,14 +352,10 @@ def retrieve_ontology_term(convention_url, ontology_id):
     try:
         ontology_shortname, term_id = re.split('[_:]', ontology_id)
     # when ontolgyID is malformed and has no separator -> ValueError
-    except ValueError as error:
-        print("ValueError:", error)
-        print('Problem with provided ontologyID', ontology_id)
-        return None
-    # when ontologyID value is empty string -> AttributeError
-    except TypeError as error:
-        print('TypeError', error)
-        print('Problem with provided ontologyID', ontology_id)
+    # when ontologyID value is empty string -> TypeError
+    except (ValueError, TypeError) as error:
+        print("Exception:", error)
+        print('Problem with provided ontology ID', ontology_id)
         return None
     metadata_url = OLS_BASE_URL + ontology_shortname
     metadata_ontology = retrieve_ontology(metadata_url)
@@ -454,7 +438,7 @@ def validate_collected_ontology_data(metadata, convention):
                 # else:
                 #     print("Found matching for " + ontology_id)
                 error_msg = (
-                    f'Warning: no ontology label supplied in metdata file for '
+                    f'Warning: no ontology label supplied in metadata file for '
                     f'\"{ontology_id}\" - no cross-check for data entry error possible'
                 )
                 metadata.store_validation_issue('warn', 'ontology', error_msg)
