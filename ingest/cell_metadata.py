@@ -169,7 +169,7 @@ class CellMetadata(IngestFiles):
         :param value: list of IDs associated with the issue
         """
         if associated_info:
-            self.issues[type][category][msg].append(associated_info)
+            self.issues[type][category][msg].extend(associated_info)
         else:
             self.issues[type][category][msg] = None
 
@@ -179,17 +179,18 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if self.headers[0].casefold() == 'NAME'.casefold():
+        if self.headers[0].lower() == 'NAME'.lower():
             valid = True
             if self.headers[0] != 'NAME':
-                # ToDO - capture warning below in issue report
-                print(
+                msg = (
                     f'Warning: metadata file keyword NAME provided as '
                     f'{self.headers[0]}'
                 )
+                self.store_validation_issue('warn', 'format', msg)
+
         else:
             msg = 'Error: Metadata file header row malformed, missing NAME'
-            self.store_validation_issue('error', 'format', msg, '')
+            self.store_validation_issue('error', 'format', msg)
         return valid
 
     def validate_unique_header(self):
@@ -211,15 +212,16 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if self.metadata_types[0].casefold() == 'TYPE'.casefold():
+        if self.metadata_types[0].lower() == 'TYPE'.lower():
             valid = True
             if self.metadata_types[0] != 'TYPE':
                 # ToDO - capture warning below in issue report
                 # investigate f-string formatting here
-                print(
+                msg = (
                     'Warning: Metadata file keyword TYPE provided as '
                     '{self.metadata_types[0]}'
                 )
+                self.store_validation_issue('warn', 'format', msg)
         else:
             msg = 'Error: Metadata file TYPE row malformed, missing TYPE'
             self.store_validation_issue('error', 'format', msg)
@@ -231,17 +233,22 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if all type annotations are valid, otherwise False
         """
         valid = False
+        invalid_types = []
         # skipping the TYPE keyword, iterate through the types
         # collecting invalid type annotations in list annots
         for t in self.metadata_types[1:]:
             if t not in self.annotation_type:
-                msg = 'Error: TYPE declarations should be group or numeric'
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
                 if not t:
-                    self.store_validation_issue('error', 'format', msg, '<empty value>')
+                    invalid_types.append('<empty value>')
                 else:
-                    self.store_validation_issue('error', 'format', msg, t)
+                    invalid_types.append(t)
+        if invalid_types:
+            msg = 'Error: TYPE declarations should be group or numeric'
+            self.store_validation_issue('error', 'format', msg, invalid_types)
+        else:
+            valid = True
         return valid
 
     def validate_against_header_count(self):
