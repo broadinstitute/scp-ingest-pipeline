@@ -19,6 +19,7 @@ from collections import defaultdict
 import sys
 import requests
 import urllib.parse as encoder
+import re
 
 import jsonschema
 
@@ -218,7 +219,7 @@ def process_metadata_row(metadata, convention, line):
     :return: row of convention data
     """
     # linter complaining about complexity index, suggestions welcomed
-    logger.debug('Begin: process_metadata_input')
+    logger.debug('Begin: process_metadata_row')
     extract_numeric_headers(metadata)
     extract_convention_types(convention, metadata)
     merge_numerics(metadata)
@@ -258,15 +259,15 @@ def process_metadata_row(metadata, convention, line):
     return row_info
 
 
-def process_metadata_content(metadata, convention):
-    """Evaluate TSV metadata input non-ontology errors and ontology info
+def collect_jsonschema_errors(metadata, convention):
+    """Evaluate TSV metadata input against metadata convention using jsonschema
 
     :param metadata: cell metadata object
     :param convention: dict representation of metadata convention
-    :return: tuple of non-ontology error dict and ontology info dict
+    :return: tuple of non-ontology issues dict and ontology info dict
             or False if input convention is invalid jsonschema
     """
-    logger.debug('Begin: process_metadata_content')
+    logger.debug('Begin: collect_jsonschema_errors')
     # this function seems overloaded with its three tasks
     # schema validation, non-ontology errors, ontology info collection
     # the latter two should be done together in the same pass thru the file
@@ -292,7 +293,7 @@ def process_metadata_content(metadata, convention):
 
 
 def report_issues(metadata):
-    """Report errors in error object
+    """Report issues in CellMetadata.issues dictionary
 
     :param metadata: cell metadata object
     :return: True if errors are reported, False if no errors to report
@@ -301,7 +302,7 @@ def report_issues(metadata):
 
     errors = False
     warnings = False
-    for error_type in metadata.issues.keys():
+    for error_type in sorted(metadata.issues.keys()):
         for error_category, category_dict in metadata.issues[error_type].items():
             if category_dict:
                 print('\n***', error_category, error_type, 'list:')
@@ -317,9 +318,25 @@ def report_issues(metadata):
     if not errors and not warnings:
         # deal with this print statement
         print('No errors or warnings detected for input metadata file')
-    elif errors:
-        print('Intended non-zero exit here but this breaks our tests')
-        # exit(1)
+    return errors
+
+
+def exit_if_errors(metadata):
+    """Determine if CellMetadata.issues has errors
+
+    :param metadata: cell metadata object
+    :return: Exit with error code 1 if errors are reported, False if no errors
+    """
+    logger.debug('Begin: exit_if_errors')
+
+    errors = False
+    for error_type in metadata.issues.keys():
+        for error_category, category_dict in metadata.issues[error_type].items():
+            if category_dict:
+                if error_type == 'error':
+                    errors = True
+    if errors:
+        exit(1)
     return errors
 
 
@@ -345,16 +362,16 @@ def retrieve_ontology_term(convention_url, ontology_id):
     # separate ontology shortname from term ID number
     # valid separators are underscore and colon (used by HCA)
     try:
-        ontology_shortname, term_id = ontology_id.split('[_:]')
+        ontology_shortname, term_id = re.split('[_:]', ontology_id)
     # when ontolgyID is malformed and has no separator -> ValueError
     except ValueError as error:
         print("ValueError:", error)
-        print('missing ontology shortname in', ontology_id)
+        print('Problem with provided ontologyID', ontology_id)
         return None
     # when ontologyID value is empty string -> AttributeError
-    except AttributeError as error:
-        print('AttributeError', error)
-        print('missing ontology shortname in', ontology_id)
+    except TypeError as error:
+        print('TypeError', error)
+        print('Problem with provided ontologyID', ontology_id)
         return None
     metadata_url = OLS_BASE_URL + ontology_shortname
     metadata_ontology = retrieve_ontology(metadata_url)
@@ -369,7 +386,9 @@ def retrieve_ontology_term(convention_url, ontology_id):
         else:
             return None
     elif not metadata_ontology:
-        print(f'failed to retrieve data from EBI OLS for {ontology_shortname}')
+        print(
+            f'No result from EBI OLS for provided ontology shortname \"{ontology_shortname}\"'
+        )
     else:
         print(f'encountered issue retrieving {convention_url} or {ontology_shortname}')
         return None
@@ -475,10 +494,11 @@ if __name__ == '__main__':
 
     format_valid = metadata.validate_format()
     try:
-        process_metadata_content(metadata, convention)
+        collect_jsonschema_errors(metadata, convention)
         validate_collected_ontology_data(metadata, convention)
     except:
         print('Format errors must be corrected prior to metadata validation')
     if args.issues_json:
         serialize_issues(metadata)
     report_issues(metadata)
+    exit_if_errors(metadata)
