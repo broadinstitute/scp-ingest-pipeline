@@ -179,7 +179,7 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if self.headers[0].casefold() == 'NAME'.casefold():
+        if self.headers[0].lower() == 'NAME'.lower():
             valid = True
             if self.headers[0] != 'NAME':
                 msg = (
@@ -212,7 +212,7 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if self.metadata_types[0].casefold() == 'TYPE'.casefold():
+        if self.metadata_types[0].lower() == 'TYPE'.lower():
             valid = True
             if self.metadata_types[0] != 'TYPE':
                 # ToDO - capture warning below in issue report
