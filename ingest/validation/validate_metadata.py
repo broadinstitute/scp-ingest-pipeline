@@ -19,6 +19,7 @@ from collections import defaultdict
 import sys
 import requests
 import urllib.parse as encoder
+import re
 
 import jsonschema
 
@@ -218,7 +219,7 @@ def process_metadata_row(metadata, convention, line):
     :return: row of convention data
     """
     # linter complaining about complexity index, suggestions welcomed
-    logger.debug('Begin: process_metadata_input')
+    logger.debug('Begin: process_metadata_row')
     extract_numeric_headers(metadata)
     extract_convention_types(convention, metadata)
     merge_numerics(metadata)
@@ -231,42 +232,30 @@ def process_metadata_row(metadata, convention, line):
         #        print('processing row metadata:', k)
         if not v:
             row_info[k] = None
-        if k in metadata.type['convention']['integer']:
-            try:
+        try:
+            if k in metadata.type['convention']['integer']:
                 row_info[k] = int(v)
-            except ValueError as e:
-                error_msg = f'ERROR: value provided does not match convention type delaration for {k}'
-                metadata.store_validation_issue(
-                    'error', 'type', error_msg, [row_info['CellID'], repr(e)]
-                )
-        elif k in metadata.type['floats']:
-            try:
+            elif k in metadata.type['floats']:
                 row_info[k] = float(v)
-            except ValueError as e:
-                error_msg = f'ERROR: value provided does not match convention type delaration for {k}'
-                metadata.store_validation_issue(
-                    'error', 'type', error_msg, [row_info['CellID'], repr(e)]
-                )
-        elif k in metadata.type['convention']['array']:
-            try:
+            elif k in metadata.type['convention']['array']:
                 row_info[k] = v.split(',')
-            except ValueError as e:
-                error_msg = f'ERROR: value provided does not match convention type delaration for {k}'
-                metadata.store_validation_issue(
-                    'error', 'type', error_msg, [row_info['CellID'], repr(e)]
-                )
+        except ValueError:
+            error_msg = f'ERROR: value provided does not match convention type declaration for {k}'
+            metadata.store_validation_issue(
+                'error', 'type', error_msg, [row_info['CellID']]
+            )
     return row_info
 
 
-def process_metadata_content(metadata, convention):
-    """Evaluate TSV metadata input non-ontology errors and ontology info
+def collect_jsonschema_errors(metadata, convention):
+    """Evaluate TSV metadata input against metadata convention using JSON schema
 
     :param metadata: cell metadata object
     :param convention: dict representation of metadata convention
-    :return: tuple of non-ontology error dict and ontology info dict
-            or False if input convention is invalid jsonschema
+    :return: tuple of non-ontology issues dict and ontology info dict
+            or False if input convention is invalid JSON schema
     """
-    logger.debug('Begin: process_metadata_content')
+    logger.debug('Begin: collect_jsonschema_errors')
     # this function seems overloaded with its three tasks
     # schema validation, non-ontology errors, ontology info collection
     # the latter two should be done together in the same pass thru the file
@@ -292,7 +281,7 @@ def process_metadata_content(metadata, convention):
 
 
 def report_issues(metadata):
-    """Report errors in error object
+    """Report issues in CellMetadata.issues dictionary
 
     :param metadata: cell metadata object
     :return: True if errors are reported, False if no errors to report
@@ -301,10 +290,10 @@ def report_issues(metadata):
 
     errors = False
     warnings = False
-    for error_type in metadata.issues.keys():
+    for error_type in sorted(metadata.issues.keys()):
         for error_category, category_dict in metadata.issues[error_type].items():
             if category_dict:
-                print('\n***', error_category, error_type, 'listing:')
+                print('\n***', error_category, error_type, 'list:')
                 for error_msg, cells in category_dict.items():
                     if cells:
                         print(error_msg, '[ Error count:', len(cells), ']')
@@ -317,8 +306,24 @@ def report_issues(metadata):
     if not errors and not warnings:
         # deal with this print statement
         print('No errors or warnings detected for input metadata file')
-    else:
-        return errors
+    return errors
+
+
+def exit_if_errors(metadata):
+    """Determine if CellMetadata.issues has errors
+
+    :param metadata: cell metadata object
+    :return: Exit with error code 1 if errors are reported, False if no errors
+    """
+    logger.debug('Begin: exit_if_errors')
+
+    errors = False
+    for error_type in metadata.issues.keys():
+        for error_category, category_dict in metadata.issues[error_type].items():
+            if category_dict:
+                if error_type == 'error':
+                    errors = True
+    if errors:
         exit(1)
     return errors
 
@@ -342,15 +347,15 @@ def retrieve_ontology_term(convention_url, ontology_id):
     """
     OLS_BASE_URL = "https://www.ebi.ac.uk/ols/api/ontologies/"
     convention_ontology = retrieve_ontology(convention_url)
+    # separate ontology shortname from term ID number
+    # valid separators are underscore and colon (used by HCA)
     try:
-        ontology_shortname, term_id = ontology_id.split('_')
-    except ValueError as error:
-        print("ValueError:", error)
-        print('missing ontology shortname in', ontology_id)
-        return None
-    except AttributeError as error:
-        print('AttributeError', error)
-        print('missing ontology shortname in', ontology_id)
+        ontology_shortname, term_id = re.split('[_:]', ontology_id)
+    # when ontolgyID is malformed and has no separator -> ValueError
+    # when ontologyID value is empty string -> TypeError
+    except (ValueError, TypeError) as error:
+        print("Exception:", error)
+        print('Problem with provided ontology ID', ontology_id)
         return None
     metadata_url = OLS_BASE_URL + ontology_shortname
     metadata_ontology = retrieve_ontology(metadata_url)
@@ -364,8 +369,12 @@ def retrieve_ontology_term(convention_url, ontology_id):
             return response.json()
         else:
             return None
+    elif not metadata_ontology:
+        print(
+            f'No result from EBI OLS for provided ontology shortname \"{ontology_shortname}\"'
+        )
     else:
-        print('failed to retrieve data from EBI OLS')
+        print(f'encountered issue retrieving {convention_url} or {ontology_shortname}')
         return None
 
 
@@ -387,7 +396,6 @@ def validate_collected_ontology_data(metadata, convention):
         # print(entry)
         ontology_url = convention['properties'][entry]['ontology']
         try:
-            # find out if there is a less gross way to do this, seems brittle
             for ontology_id, ontology_label in metadata.ontology[entry].keys():
                 matching_term = retrieve_ontology_term(ontology_url, ontology_id)
                 if matching_term:
@@ -430,7 +438,7 @@ def validate_collected_ontology_data(metadata, convention):
                 # else:
                 #     print("Found matching for " + ontology_id)
                 error_msg = (
-                    f'Warning: no ontology label supplied in metdata file for '
+                    f'Warning: no ontology label supplied in metadata file for '
                     f'\"{ontology_id}\" - no cross-check for data entry error possible'
                 )
                 metadata.store_validation_issue('warn', 'ontology', error_msg)
@@ -467,11 +475,10 @@ if __name__ == '__main__':
     filetsv = args.input_metadata
     metadata = CellMetadata(filetsv, args.file_id, args.study_accession)
     print('Validating', filetsv)
-
     format_valid = metadata.validate_format()
-    if format_valid:
-        process_metadata_content(metadata, convention)
+    collect_jsonschema_errors(metadata, convention)
     validate_collected_ontology_data(metadata, convention)
     if args.issues_json:
         serialize_issues(metadata)
     report_issues(metadata)
+    exit_if_errors(metadata)
