@@ -66,19 +66,17 @@ def build_array_object(row):
     Build "items" dictionary object according to Class type
     """
     dict = {}
-    # handle time attributes as string with time format
-    if row['class'] == 'time':
-        dict['type'] = row['type']
-        dict['format'] = row['class']
-        return dict
     # handle controlled-list attributes as enum
-    elif row['class'] == 'enum':
+    if row['class'] == 'enum':
         dict['type'] = row['type']
         dict[row['class']] = row['controlled_list_entries']
-        return dict
+    elif row['class'] == 'ontology':
+        dict['type'] = row['type']
+        ontology_format = r'^[A-Za-z]+[_:][0-9]'
+        dict['pattern'] = ontology_format
     else:
         dict['type'] = row['type']
-        return dict
+    return dict
 
 
 def build_single_object(row, dict):
@@ -94,6 +92,13 @@ def build_single_object(row, dict):
     elif row['class'] == 'enum':
         dict['type'] = row['type']
         dict[row['class']] = row['controlled_list_entries']
+
+    # include syntax constraint for ontologies
+    # ontologies whose short names include underscore or colon will fail to validate
+    elif row['class'] == 'ontology':
+        ontology_format = r'^[A-Za-z]+[_:][0-9]'
+        dict['pattern'] = ontology_format
+        dict['type'] = row['type']
 
     else:
         dict['type'] = row['type']
@@ -129,8 +134,11 @@ def clean_json(filename):
     """
     with open(filename, 'r') as jsonfile:
         jsonstring = jsonfile.read()
+        # Values for enums are in an array and json.dump adds quotes around
+        # the array representation and escapes the internal quotes
+        # which both cause invalid JSON schema
         jsonstring = re.sub(r'"\[', r'[', jsonstring)
-        jsonstring = re.sub(r'\]"', r']', jsonstring)
+        jsonstring = re.sub(r'"\]"', r'"]', jsonstring)
         jsonstring = re.sub(r'\\"', r'"', jsonstring)
     return jsonstring
 
