@@ -261,8 +261,11 @@ def collect_jsonschema_errors(metadata, convention):
     # the latter two should be done together in the same pass thru the file
     js_errors = defaultdict(list)
     schema = validate_schema(convention, metadata)
+
     if schema:
+        metadata.reset_file(2)
         line = metadata.extract()
+        print(line)
         row_count = 1
         while line:
             # print('processing row', row_count)
@@ -288,8 +291,8 @@ def report_issues(metadata):
     """
     logger.debug('Begin: report_issues')
 
-    errors = False
-    warnings = False
+    has_errors = False
+    has_warnings = False
     for error_type in sorted(metadata.issues.keys()):
         for error_category, category_dict in metadata.issues[error_type].items():
             if category_dict:
@@ -300,13 +303,13 @@ def report_issues(metadata):
                     else:
                         print(error_msg)
                 if error_type == 'error':
-                    errors = True
+                    has_errors = True
                 if error_type == 'warn':
-                    warnings = True
-    if not errors and not warnings:
+                    has_warnings = True
+    if not has_errors and not has_warnings:
         # deal with this print statement
         print('No errors or warnings detected for input metadata file')
-    return errors
+    return has_errors
 
 
 def exit_if_errors(metadata):
@@ -456,7 +459,7 @@ WAIT: handle array data types
 
 """
 """
-DEFER: Things to check before pass intended data types to FireStore
+DEFER: Things to check before pass intended data types to Firestore
 ensure numeric (TYPE == numeric in TSV file; type number or integer in loom)
     stored as numeric
 ensure group (even if it is a number) stored as string

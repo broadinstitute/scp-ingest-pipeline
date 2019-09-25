@@ -139,6 +139,9 @@ class TestValidateMetadata(unittest.TestCase):
         reference_file = open("../tests/data/metadata_invalid.json", "r")
         reference_issues = json.load(reference_file)
         reference_file.close()
+        print(metadata.issues)
+        print("\n")
+        print(reference_issues)
         self.assertEqual(
             metadata.issues,
             reference_issues,
@@ -181,6 +184,8 @@ class TestValidateMetadata(unittest.TestCase):
         #     with species ontologyID of "NCBITaxon_9606"
         reference_file = open("../tests/data/ontology_invalid.json", "r")
         reference_issues = json.load(reference_file)
+        print(metadata.issues)
+        print(reference_issues)
         reference_file.close()
         self.assertEqual(
             metadata.issues,

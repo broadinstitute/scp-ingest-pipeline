@@ -15,6 +15,7 @@ from google.cloud import storage
 
 class IngestFiles:
     def __init__(self, file_path, allowed_file_types, *, open_as=None):
+        self.file_path = file_path
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
         self.is_remote_file = file_path[:5] == "gs://"
@@ -70,9 +71,20 @@ class IngestFiles:
         # Remove BOM with encoding ='utf - 8 - sig'
         return open(file_path, encoding="utf-8-sig")
 
-    def open_file(self, file_path, open_as=None):
+    def reset_file(self, start_point):
+        """Restart reader at point that equal to start_point.
+        Method is used in cases where a file may need to be read multiple times"""
+
+        self.file_type, self.file, self.file_handle = self.open_file(
+            self.file_path, start_point=start_point
+        )
+
+    def open_file(self, file_path, open_as=None, start_point: int = 0):
         """ Opens txt, csv, or tsv formatted files"""
         open_file = self.resolve_path(file_path)
+        if start_point != 0:
+            for i in range(start_point):
+                open_file.readline()
         file_connections = {
             "text/csv": self.open_csv(open_file),
             "text/plain": open_file,

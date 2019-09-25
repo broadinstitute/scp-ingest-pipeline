@@ -176,7 +176,6 @@ class CellMetadata(IngestFiles):
 
     def validate_header_keyword(self):
         """Check metadata header row starts with NAME (case-insensitive).
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -185,8 +184,7 @@ class CellMetadata(IngestFiles):
             if self.headers[0] != 'NAME':
                 msg = (
                     f'Warning: metadata file keyword NAME provided as '
-                    f'{self.headers[0]}',
-                    '',
+                    f'{self.headers[0]}'
                 )
                 self.store_validation_issue('warn', 'format', msg)
 
@@ -197,7 +195,6 @@ class CellMetadata(IngestFiles):
 
     def validate_unique_header(self):
         """Check all metadata header names are unique.
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -210,7 +207,6 @@ class CellMetadata(IngestFiles):
 
     def validate_type_keyword(self):
         """Check metadata second row starts with TYPE (case-insensitive).
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -231,7 +227,6 @@ class CellMetadata(IngestFiles):
 
     def validate_type_annotations(self):
         """Check metadata second row contains only 'group' or 'numeric'.
-
         :return: boolean   True if all type annotations are valid, otherwise False
         """
         valid = False
@@ -255,14 +250,13 @@ class CellMetadata(IngestFiles):
 
     def validate_against_header_count(self):
         """Metadata header and type counts should match.
-
         :return: boolean   True if header and type counts match, otherwise False
         """
         valid = False
         if not len(self.headers) == len(self.metadata_types):
             msg = (
-                f'Error:Type delarations and column headers are unequal. {len(self.metadata_types)} TYPE declarations '
-                f'for {len(self.headers)} column headers.'
+                f'Error: {len(self.metadata_types)} TYPE declarations '
+                f'for {len(self.headers)} column headers'
             )
             self.store_validation_issue('error', 'format', msg)
         else:

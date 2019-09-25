@@ -35,6 +35,7 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import ast
 import os
 import sys
+import json
 
 from cell_metadata import CellMetadata
 from clusters import Clusters
@@ -45,12 +46,20 @@ from google.cloud import firestore
 from mtx import Mtx
 from subsample import SubSample
 from loom import Loom
+from validation.validate_metadata import (
+    collect_jsonschema_errors,
+    validate_collected_ontology_data,
+    report_issues,
+)
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 
 
 class IngestPipeline(object):
+    # File location for metadata json convention
+    JSON_CONVENTION = 'DoNotTouch/AMC_v0.8.json'
+
     def __init__(
         self,
         *,
@@ -181,7 +190,10 @@ class IngestPipeline(object):
 
                 batch.commit()
             # An unexpected exception has been encountered
-            else:
+            except Exception as e:
+                print(e)
+                # At this point another exception has occured
+                # TODO: Implement deletion of loaded documents
                 return 1
         return 0
 
@@ -196,6 +208,15 @@ class IngestPipeline(object):
             doc_ref_sub = doc_ref.collection(subcollection_name).document()
             doc_ref_sub.set(self.cluster.cluster_subdocs[annot_name])
         # TODO: Add exception handling and return codes
+
+    def has_valid_metadata_convention(self):
+        """ Determines if cell metadata file follows metadata convention"""
+        with open(self.JSON_CONVENTION, 'r') as f:
+            convention = json.load(f)
+
+        collect_jsonschema_errors(self.cell_metadata, convention)
+        validate_collected_ontology_data(self.cell_metadata, convention)
+        return not report_issues(self.cell_metadata)
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -230,7 +251,8 @@ class IngestPipeline(object):
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        if self.cell_metadata.is_valid_file:
+        if self.cell_metadata.is_valid_file and self.has_valid_metadata_convention():
+            self.cell_metadata.reset_file(2)
             while True:
                 row = self.cell_metadata.extract()
                 if row is None:
@@ -470,10 +492,11 @@ def main() -> None:
         if arguments["subsample"]:
             ingest.subsample()
 
-    # TODO: This check will need to chanf
+    # TODO: This check will need to changed
     if all(i < 1 for i in status) or len(status) == 0:
         sys.exit(os.EX_OK)
     else:
+        print(status)
         sys.exit(os.EX_DATAERR)
 
 
