@@ -190,20 +190,12 @@ class TestValidateMetadata(unittest.TestCase):
         serialize_issues(metadata)
         current_file = open("issues.json", "r").read()
         current_issues = ast.literal_eval(current_file)
-        print(current_issues)
-        print(reference_issues)
         self.assertEqual(
             current_issues,
             reference_issues,
             "Ontology validation issues do not match reference issues",
         )
         reference_file.close()
-        #
-        # self.assertEqual(
-        #     metadata.issues,
-        #     reference_issues,
-        #     "Ontology validation issues do not match reference issues",
-        # )
 
         self.teardown_metadata(metadata)
 
