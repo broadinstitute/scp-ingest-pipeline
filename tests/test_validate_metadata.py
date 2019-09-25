@@ -19,6 +19,7 @@ python3 test_validate_metadata.py
 
 import sys
 import unittest
+import ast
 import json
 
 sys.path.append("../ingest")
@@ -31,6 +32,7 @@ from validate_metadata import (
     validate_schema,
     CellMetadata,
     validate_collected_ontology_data,
+    serialize_issues,
 )
 
 
@@ -142,6 +144,7 @@ class TestValidateMetadata(unittest.TestCase):
         print(metadata.issues)
         print("\n")
         print(reference_issues)
+        print("\n")
         self.assertEqual(
             metadata.issues,
             reference_issues,
@@ -171,7 +174,6 @@ class TestValidateMetadata(unittest.TestCase):
         args = "../tests/data/AMC_v1.1.0.json ../tests/data/ontology_invalid.tsv"
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
-        metadata.validate_format()
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
@@ -184,14 +186,24 @@ class TestValidateMetadata(unittest.TestCase):
         #     with species ontologyID of "NCBITaxon_9606"
         reference_file = open("../tests/data/ontology_invalid.json", "r")
         reference_issues = json.load(reference_file)
-        print(metadata.issues)
+
+        serialize_issues(metadata)
+        current_file = open("issues.json", "r").read()
+        current_issues = ast.literal_eval(current_file)
+        print(current_issues)
         print(reference_issues)
-        reference_file.close()
         self.assertEqual(
-            metadata.issues,
+            current_issues,
             reference_issues,
             "Ontology validation issues do not match reference issues",
         )
+        reference_file.close()
+        #
+        # self.assertEqual(
+        #     metadata.issues,
+        #     reference_issues,
+        #     "Ontology validation issues do not match reference issues",
+        # )
 
         self.teardown_metadata(metadata)
 

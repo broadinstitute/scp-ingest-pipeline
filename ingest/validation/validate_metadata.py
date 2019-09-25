@@ -265,7 +265,6 @@ def collect_jsonschema_errors(metadata, convention):
     if schema:
         metadata.reset_file(2)
         line = metadata.extract()
-        print(line)
         row_count = 1
         while line:
             # print('processing row', row_count)

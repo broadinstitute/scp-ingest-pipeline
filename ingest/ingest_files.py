@@ -72,7 +72,7 @@ class IngestFiles:
         return open(file_path, encoding="utf-8-sig")
 
     def reset_file(self, start_point):
-        """Restart reader at point that equal to start_point.
+        """Restart file reader at point that's equal to start_point.
         Method is used in cases where a file may need to be read multiple times"""
 
         self.file_type, self.file, self.file_handle = self.open_file(
