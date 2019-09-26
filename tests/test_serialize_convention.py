@@ -1,6 +1,6 @@
 """Tests for serialize_convention
 
-This test verifys that a known good input metadata convention tsv file
+This test verifies that a known good input metadata convention TSV file
 generates the expected metadata convention output
 
 PREREQUISITES
