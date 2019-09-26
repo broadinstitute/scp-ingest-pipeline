@@ -408,7 +408,7 @@ def validate_collected_ontology_data(metadata, convention):
                         try:
                             error_msg = (
                                 f'ontology_label \"{ontology_label}\" '
-                                f'does not match \"{matching_term["label"]}\"'
+                                f'does not match \"{matching_term["label"]}\",'
                             )
                             metadata.store_validation_issue(
                                 'error',
