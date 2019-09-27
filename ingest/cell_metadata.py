@@ -69,6 +69,12 @@ class CellMetadata(IngestFiles):
                 },
             )
 
+    def yield_by_row(self) -> None:
+        """ Yield row from cell metadata file"""
+        for row in self.file.itertuples():
+            dictRow = row._asdict()
+            yield dictRow
+
     def chunk_subdocuments(self, doc_name, doc_path, subdoc, annot_type):
         """Partitions cell metadata subdocuments into storage sizes that are
             less than 1,048,576 bytes. Storage size calculation figures are derived from:
