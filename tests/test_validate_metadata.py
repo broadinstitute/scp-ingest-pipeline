@@ -139,6 +139,10 @@ class TestValidateMetadata(unittest.TestCase):
         reference_file = open("../tests/data/metadata_invalid.json", "r")
         reference_issues = json.load(reference_file)
         reference_file.close()
+        print(metadata.issues)
+        print("\n")
+        print(reference_issues)
+        print("\n")
         self.assertEqual(
             metadata.issues,
             reference_issues,
@@ -168,7 +172,6 @@ class TestValidateMetadata(unittest.TestCase):
         args = "../tests/data/AMC_v1.1.0.json ../tests/data/ontology_invalid.tsv"
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
-        metadata.validate_format()
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
@@ -181,12 +184,13 @@ class TestValidateMetadata(unittest.TestCase):
         #     with species ontologyID of "NCBITaxon_9606"
         reference_file = open("../tests/data/ontology_invalid.json", "r")
         reference_issues = json.load(reference_file)
-        reference_file.close()
+
         self.assertEqual(
             metadata.issues,
             reference_issues,
             "Ontology validation issues do not match reference issues",
         )
+        reference_file.close()
 
         self.teardown_metadata(metadata)
 

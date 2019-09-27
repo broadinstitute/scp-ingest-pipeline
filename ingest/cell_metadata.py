@@ -35,6 +35,7 @@ class CellMetadata(IngestFiles):
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.type = defaultdict(list)
         self.cells = []
+        self.is_valid_file = self.validate_format()
 
     def transform(self, row: List[str]) -> None:
         """ Add data from cell metadata files into data model"""
@@ -175,7 +176,6 @@ class CellMetadata(IngestFiles):
 
     def validate_header_keyword(self):
         """Check metadata header row starts with NAME (case-insensitive).
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -195,7 +195,6 @@ class CellMetadata(IngestFiles):
 
     def validate_unique_header(self):
         """Check all metadata header names are unique.
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -208,7 +207,6 @@ class CellMetadata(IngestFiles):
 
     def validate_type_keyword(self):
         """Check metadata second row starts with TYPE (case-insensitive).
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -229,7 +227,6 @@ class CellMetadata(IngestFiles):
 
     def validate_type_annotations(self):
         """Check metadata second row contains only 'group' or 'numeric'.
-
         :return: boolean   True if all type annotations are valid, otherwise False
         """
         valid = False
@@ -253,7 +250,6 @@ class CellMetadata(IngestFiles):
 
     def validate_against_header_count(self):
         """Metadata header and type counts should match.
-
         :return: boolean   True if header and type counts match, otherwise False
         """
         valid = False
@@ -270,13 +266,10 @@ class CellMetadata(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        self.validate_header_keyword()
-        self.validate_type_keyword()
-        self.validate_type_annotations()
-        self.validate_unique_header()
-        self.validate_against_header_count()
-        if self.issues['error']['format']:
-            valid = False
-        else:
-            valid = True
-        return valid
+        return (
+            self.validate_header_keyword()
+            or self.validate_type_keyword()
+            or self.validate_type_annotations()
+            or self.validate_unique_header()
+            or self.validate_against_header_count()
+        )

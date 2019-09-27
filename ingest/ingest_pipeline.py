@@ -33,6 +33,9 @@ python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_express
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import ast
+import os
+import sys
+import json
 
 from cell_metadata import CellMetadata
 from clusters import Clusters
@@ -43,12 +46,20 @@ from google.cloud import firestore
 from mtx import Mtx
 from subsample import SubSample
 from loom import Loom
+from validation.validate_metadata import (
+    collect_jsonschema_errors,
+    validate_collected_ontology_data,
+    report_issues,
+)
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 
 
 class IngestPipeline(object):
+    # File location for metadata json convention
+    JSON_CONVENTION = 'DoNotTouch/AMC_v0.8.json'
+
     def __init__(
         self,
         *,
@@ -149,6 +160,8 @@ class IngestPipeline(object):
 
                     batch.commit()
 
+    # TODO: Add exception handling and return codes
+
     def load_cell_metadata(self):
         """Loads cell metadata files into firestore."""
 
@@ -166,10 +179,9 @@ class IngestPipeline(object):
                 subcollection_doc = self.cell_metadata.data_subcollection[annotation]
                 doc_ref_sub = doc_ref.collection(subcollection_name).document()
                 doc_ref_sub.set(subcollection_doc)
-            except exceptions.InvalidArgument as e:
+            except exceptions.InvalidArgument:
                 # Catches invalid argument exception, which error "Maximum
                 # document size" falls under
-                print(e)
                 batch = self.db.batch()
                 for subdoc in self.cell_metadata.chunk_subdocuments(
                     doc_ref_sub.id, doc_ref_sub._document_path, annotation
@@ -177,6 +189,13 @@ class IngestPipeline(object):
                     batch.set(doc_ref_sub, subdoc)
 
                 batch.commit()
+            # An unexpected exception has been encountered
+            except Exception as e:
+                print(e)
+                # At this point another exception has occured
+                # TODO: Implement deletion of loaded documents
+                return 1
+        return 0
 
     def load_cluster_files(self):
         """Loads cluster files into Firestore."""
@@ -188,6 +207,16 @@ class IngestPipeline(object):
             # batch = self.db.batch()
             doc_ref_sub = doc_ref.collection(subcollection_name).document()
             doc_ref_sub.set(self.cluster.cluster_subdocs[annot_name])
+        # TODO: Add exception handling and return codes
+
+    def has_valid_metadata_convention(self):
+        """ Determines if cell metadata file follows metadata convention"""
+        with open(self.JSON_CONVENTION, 'r') as f:
+            convention = json.load(f)
+
+        collect_jsonschema_errors(self.cell_metadata, convention)
+        validate_collected_ontology_data(self.cell_metadata, convention)
+        return not report_issues(self.cell_metadata)
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -218,16 +247,21 @@ class IngestPipeline(object):
                     self.matrix.transform_expression_data_by_gene(row)
                 )
         self.load_expression_data(transformed_data)
-        # # self.close_matrix()
+        # TODO: Work on exception handling
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        while True:
-            row = self.cell_metadata.extract()
-            if row is None:
-                break
-            self.cell_metadata.transform(row)
-        self.load_cell_metadata()
+        if self.cell_metadata.is_valid_file and self.has_valid_metadata_convention():
+            self.cell_metadata.reset_file(2)
+            while True:
+                row = self.cell_metadata.extract()
+                if row is None:
+                    break
+                self.cell_metadata.transform(row)
+            load_status = self.load_cell_metadata()
+            return load_status
+        else:
+            return 1
 
     def ingest_cluster(self):
         """Ingests cluster files into Firestore."""
@@ -439,23 +473,31 @@ def main() -> None:
     Returns:
         None
     """
-
+    status = []
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     ingest = IngestPipeline(**arguments)
-
+    # TODO: Add validation for gene and cluster file types
     if "matrix_file" in arguments:
         ingest.ingest_expression()
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
-            ingest.ingest_cell_metadata()
+            status_cell_metadata = ingest.ingest_cell_metadata()
+            status.append(status_cell_metadata)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
             ingest.ingest_cluster()
     elif "subsample" in arguments:
         if arguments["subsample"]:
             ingest.subsample()
+
+    # TODO: This check will need to changed
+    if all(i < 1 for i in status) or len(status) == 0:
+        sys.exit(os.EX_OK)
+    else:
+        print(status)
+        sys.exit(os.EX_DATAERR)
 
 
 if __name__ == "__main__":
