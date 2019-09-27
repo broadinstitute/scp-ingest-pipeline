@@ -19,7 +19,6 @@ python3 test_validate_metadata.py
 
 import sys
 import unittest
-import ast
 import json
 
 sys.path.append("../ingest")
@@ -32,7 +31,6 @@ from validate_metadata import (
     validate_schema,
     CellMetadata,
     validate_collected_ontology_data,
-    serialize_issues,
 )
 
 
@@ -187,11 +185,8 @@ class TestValidateMetadata(unittest.TestCase):
         reference_file = open("../tests/data/ontology_invalid.json", "r")
         reference_issues = json.load(reference_file)
 
-        serialize_issues(metadata)
-        current_file = open("issues.json", "r").read()
-        current_issues = ast.literal_eval(current_file)
         self.assertEqual(
-            current_issues,
+            metadata.issues,
             reference_issues,
             "Ontology validation issues do not match reference issues",
         )
