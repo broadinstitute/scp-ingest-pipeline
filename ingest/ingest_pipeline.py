@@ -16,7 +16,7 @@ EXAMPLES
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
 
 # Ingest dense file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
@@ -33,6 +33,9 @@ python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_express
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import ast
+import os
+import sys
+import json
 
 from cell_metadata import CellMetadata
 from clusters import Clusters
@@ -43,12 +46,20 @@ from google.cloud import firestore
 from mtx import Mtx
 from subsample import SubSample
 from loom import Loom
+from validation.validate_metadata import (
+    collect_jsonschema_errors,
+    validate_collected_ontology_data,
+    report_issues,
+)
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 
 
 class IngestPipeline(object):
+    # File location for metadata json convention
+    JSON_CONVENTION = 'DoNotTouch/AMC_v0.8.json'
+
     def __init__(
         self,
         *,
@@ -149,7 +160,7 @@ class IngestPipeline(object):
 
                     batch.commit()
 
-    def load_cell_metadata(self, doc, subdoc):
+    def load_cell_metadata(self, annot_type, doc, subdoc):
         """Loads cell metadata files into firestore."""
         collection_name = self.cell_metadata.COLLECTION_NAME
         subcollection_name = self.cell_metadata.SUBCOLLECTION_NAME
@@ -164,11 +175,17 @@ class IngestPipeline(object):
             print(e)
             batch = self.db.batch()
             for subdoc_chunk in self.cell_metadata.chunk_subdocuments(
-                doc_ref_sub.id, doc_ref_sub._document_path, subdoc
+                doc_ref_sub.id, doc_ref_sub._document_path, subdoc, annot_type
             ):
                 batch.set(doc_ref_sub, subdoc_chunk)
 
             batch.commit()
+        except Exception as e:
+            print(e)
+            # At this point another exception has occured
+            # TODO: Implement deletion of loaded documents
+            return 1
+        return 0
 
     def load_cluster_files(self):
         """Loads cluster files into Firestore."""
@@ -180,6 +197,16 @@ class IngestPipeline(object):
             # batch = self.db.batch()
             doc_ref_sub = doc_ref.collection(subcollection_name).document()
             doc_ref_sub.set(self.cluster.cluster_subdocs[annot_name])
+        # TODO: Add exception handling and return codes
+
+    def has_valid_metadata_convention(self):
+        """ Determines if cell metadata file follows metadata convention"""
+        with open(self.JSON_CONVENTION, 'r') as f:
+            convention = json.load(f)
+
+        collect_jsonschema_errors(self.cell_metadata, convention)
+        validate_collected_ontology_data(self.cell_metadata, convention)
+        return not report_issues(self.cell_metadata)
 
     def ingest_expression(self) -> None:
         """Ingests expression files. Calls file type's extract and transform
@@ -210,12 +237,20 @@ class IngestPipeline(object):
                     self.matrix.transform_expression_data_by_gene(row)
                 )
         self.load_expression_data(transformed_data)
-        # # self.close_matrix()
+        # TODO: Work on exception handling
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        for metadata in self.cell_metadata.transform():
-            self.load_cell_metadata(*metadata)
+        # TODO: Add self.has_valid_metadata_convention() to if statement
+        if self.cell_metadata.is_valid_file:
+            self.cell_metadata.reset_file(2, open_as="dataframe")
+            for metadata in self.cell_metadata.transform():
+                load_status = self.load_cell_metadata(*metadata)
+                if load_status != 0:
+                    return load_status
+            return 0
+        else:
+            return 1
 
     def ingest_cluster(self):
         """Ingests cluster files into Firestore."""
@@ -427,23 +462,31 @@ def main() -> None:
     Returns:
         None
     """
-
+    status = []
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     ingest = IngestPipeline(**arguments)
-
+    # TODO: Add validation for gene and cluster file types
     if "matrix_file" in arguments:
         ingest.ingest_expression()
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
-            ingest.ingest_cell_metadata()
+            status_cell_metadata = ingest.ingest_cell_metadata()
+            status.append(status_cell_metadata)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
             ingest.ingest_cluster()
     elif "subsample" in arguments:
         if arguments["subsample"]:
             ingest.subsample()
+
+    # TODO: This check will need to changed
+    if all(i < 1 for i in status) or len(status) == 0:
+        sys.exit(os.EX_OK)
+    else:
+        print(status)
+        sys.exit(os.EX_DATAERR)
 
 
 if __name__ == "__main__":

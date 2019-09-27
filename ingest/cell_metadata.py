@@ -20,15 +20,15 @@ class CellMetadata(IngestFiles):
 
     def __init__(self, file_path, file_id: str, study_accession: str, *args, **kwargs):
 
-        IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
-        self.unique_values = []
+        IngestFiles.__init__(
+            self, file_path, self.ALLOWED_FILE_TYPES, open_as="dataframe"
+        )
+        self.is_valid_file = self.validate_format()
+        self.preproccess()
         self.cell_names = []
-        self.annotation_type = ["group", "numeric"]
         self.study_accession = study_accession
         self.file_id = file_id
         self.annotation_type = ['group', 'numeric']
-        self.top_level_doc = self.create_documents(file_id, study_accession)
-        self.data_subcollection = self.create_subdocuments()
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
@@ -144,7 +144,6 @@ class CellMetadata(IngestFiles):
 
     def validate_header_keyword(self):
         """Check metadata header row starts with NAME (case-insensitive).
-
         :return: boolean   True if valid, False otherwise
         """
 
@@ -163,13 +162,12 @@ class CellMetadata(IngestFiles):
                 )
                 self.store_validation_issue('warn', 'format', msg)
         else:
-            msg = 'Error: Metadata file header row malformed, missing NAME'
+            msg = 'Error: Metadata file header row malformed, missing NAME. (Case Sensitive)'
             self.store_validation_issue('error', 'format', msg)
         return valid
 
     def validate_unique_header(self):
         """Check all metadata header names are unique.
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -182,7 +180,6 @@ class CellMetadata(IngestFiles):
 
     def validate_type_keyword(self):
         """Check metadata second row starts with TYPE (case-insensitive).
-
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -203,7 +200,6 @@ class CellMetadata(IngestFiles):
 
     def validate_type_annotations(self):
         """Check metadata second row contains only 'group' or 'numeric'.
-
         :return: boolean   True if all type annotations are valid, otherwise False
         """
         valid = False
@@ -227,7 +223,6 @@ class CellMetadata(IngestFiles):
 
     def validate_against_header_count(self):
         """Metadata header and type counts should match.
-
         :return: boolean   True if header and type counts match, otherwise False
         """
         valid = False
@@ -246,13 +241,10 @@ class CellMetadata(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        self.validate_header_keyword()
-        self.validate_type_keyword()
-        self.validate_type_annotations()
-        self.validate_unique_header()
-        self.validate_against_header_count()
-        if self.issues['error']['format']:
-            valid = False
-        else:
-            valid = True
-        return valid
+        return (
+            self.validate_header_keyword()
+            or self.validate_type_keyword()
+            or self.validate_type_annotations()
+            or self.validate_unique_header()
+            or self.validate_against_header_count()
+        )
