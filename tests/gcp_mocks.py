@@ -6,7 +6,6 @@ https://github.com/googleapis/google-cloud-python/issues/4840.
 Until those are available, custom mocks like these are the best available
 alternative to enable integration tests to run quickly.
 """
-
 import os
 from shutil import copyfile
 
@@ -53,11 +52,3 @@ def mock_storage_blob(*args, **kwargs):
             copyfile(self.name, filename)
 
     return MockStorageBlob(*args, **kwargs)
-
-
-def mock_firestore_client():
-    """Mocks firestore.Client() by returning nothing upon initializing client
-
-    See notes in mock_load_expression_data for context.
-    """
-    return

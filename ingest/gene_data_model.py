@@ -36,7 +36,7 @@ class Gene:
         gene_id: str = None,
         taxon_name: str = None,
         taxon_common_name: str = None,
-        ncbi_taxid: str = None,
+        ncbi_taxid: int = None,
         genome_assembly_accession: str = None,
         genome_annotation: str = None,
         check_for_zero_values: bool = True,
@@ -95,12 +95,11 @@ class Gene:
         """
         non_zero_cell_names = []
         non_zero_expression_scores = []
-        for idx, value in enumerate(expression_scores):
-            expression_score = round(float(value), 3)
-            if expression_score > 0:
-
-                non_zero_cell_names.append(cell_names[idx])
-                non_zero_expression_scores.append(expression_score)
+        for exp_score, cell_name in zip(expression_scores, cell_names):
+            exp_score = round(float(exp_score), 3)
+            if exp_score != 0:
+                non_zero_cell_names.append(cell_name)
+                non_zero_expression_scores.append(exp_score)
         if len(non_zero_expression_scores) == 0:
             return None, None
         else:

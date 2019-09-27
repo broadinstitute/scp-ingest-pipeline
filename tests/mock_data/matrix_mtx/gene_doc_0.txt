@@ -1,0 +1,1 @@
+{'genome_assembly_accession': 'GCA_000001405.15', 'taxon_name': 'Homo sapiens', 'gene_id': 'ENSG00000143761', 'taxon_common_name': 'human', 'study_accession': 'SCP651346', 'name': 'ARF1', 'searchable_name': 'arf1', 'file_id': '1234abc', 'ncbi_taxid': '9606', 'genome_annotation': 'Ensembl 94'}
