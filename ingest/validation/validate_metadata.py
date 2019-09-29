@@ -166,15 +166,12 @@ def validate_cells_unique(metadata):
     :return: boolean   True if valid, False otherwise
     """
     valid = False
-    # uniq_errors = defaultdict(list)
+    print(f'metadata.cells: {metadata.cells}')
     if len(metadata.cells) == len(set(metadata.cells)):
         valid = True
     else:
-        # TODO value stored incorrectly, will need to fix
         dups = list_duplicates(metadata.cells)
         msg = 'Error:  Duplicate CellID(s) in metadata file'
-        # uniq_errors[msg].append(dups)
-        # metadata.issues['error']['format'] = uniq_errors
         metadata.issues['error']['format'][msg] = dups
     return valid
 
