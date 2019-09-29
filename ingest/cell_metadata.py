@@ -71,9 +71,9 @@ class CellMetadata(IngestFiles):
 
     def yield_by_row(self) -> None:
         """ Yield row from cell metadata file"""
-        for row in self.file.itertuples():
+        for row in self.file.itertuples(index=False):
             dictRow = row._asdict()
-            yield dictRow
+            yield dictRow.values()
 
     def chunk_subdocuments(self, doc_name, doc_path, subdoc, annot_type):
         """Partitions cell metadata subdocuments into storage sizes that are
