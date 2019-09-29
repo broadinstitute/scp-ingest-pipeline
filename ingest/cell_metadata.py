@@ -23,14 +23,14 @@ class CellMetadata(IngestFiles):
         IngestFiles.__init__(
             self, file_path, self.ALLOWED_FILE_TYPES, open_as="dataframe"
         )
+        # lambda below initializes new key with nested dictionary as value and avoids KeyError
+        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        self.annotation_type = ['group', 'numeric']
         self.is_valid_file = self.validate_format()
         self.preproccess()
         self.cell_names = []
         self.study_accession = study_accession
         self.file_id = file_id
-        self.annotation_type = ['group', 'numeric']
-        # lambda below initializes new key with nested dictionary as value and avoids KeyError
-        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.type = defaultdict(list)
         self.cells = []
@@ -227,23 +227,6 @@ class CellMetadata(IngestFiles):
             valid = True
         return valid
 
-    def validate_against_header_count(self):
-        """Metadata header and type counts should match.
-        :return: boolean   True if header and type counts match, otherwise False
-        """
-        valid = False
-        len_headers = len(self.file.columns.labels[0])
-        len_annot_type = len(self.file.columns.labels[1])
-        if not len_headers == len_annot_type:
-            msg = (
-                f'Error: {len_annot_type} TYPE declarations '
-                f'for {len_headers} column headers'
-            )
-            self.store_validation_issue('error', 'format', msg)
-        else:
-            valid = True
-        return valid
-
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
@@ -252,5 +235,4 @@ class CellMetadata(IngestFiles):
             or self.validate_type_keyword()
             or self.validate_type_annotations()
             or self.validate_unique_header()
-            or self.validate_against_header_count()
         )

@@ -97,7 +97,11 @@ def extract_numeric_headers(metadata):
     list of numeric-type metadata headers at metadata.type['numeric_headers']
     """
     logger.debug('Begin: extract_numeric_headers')
-    numeric_col_df = metadata.file.select_dtypes(include=["number"]).columns
+    numeric_col_df = (
+        metadata.file.select_dtypes(include=["number"])
+        .columns.get_level_values(0)
+        .tolist()
+    )
     metadata.type['numeric_headers'].append(numeric_col_df)
     return
 
