@@ -166,7 +166,6 @@ def validate_cells_unique(metadata):
     :return: boolean   True if valid, False otherwise
     """
     valid = False
-    print(f'metadata.cells: {metadata.cells}')
     if len(metadata.cells) == len(set(metadata.cells)):
         valid = True
     else:
