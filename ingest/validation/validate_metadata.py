@@ -24,7 +24,12 @@ import re
 import jsonschema
 
 sys.path.append('..')
-from cell_metadata import CellMetadata
+try:
+    # Used when importing internally and in tests
+    from cell_metadata import CellMetadata
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from ..cell_metadata import CellMetadata
 
 # ToDo set up parameters to adjust log levels
 #  logging.basicConfig(level=logging.INFO, filename='app.log', filemode='w',

@@ -9,7 +9,12 @@ import copy
 from collections import defaultdict
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
-from ingest_files import IngestFiles
+try:
+    # Used when importing internally and in tests
+    from ingest_files import IngestFiles
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .ingest_files import IngestFiles
 
 DOCUMENT_LIMIT_BYTES = 1_048_576
 
