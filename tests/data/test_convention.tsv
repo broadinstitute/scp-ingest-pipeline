@@ -1,0 +1,17 @@
+attribute	required	default	type	array	class	ontology	ontology_root	controlled_list_entries	dependency	dependency_condition	dependent	attribute_description		20190822 index
+species	Yes		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/ncbitaxon	NCBITaxon_2759					The scientific binomial name for the species of the organism.		2
+species__ontology_label	Yes		string		ontology_label				species			species__ontology_label		3
+vaccination			string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/vo	VO_0000001					Any known vaccines administered to the donor organism. NOT a full vaccine history		10
+vaccination__ontology_label			string	TRUE	ontology_label				vaccination			vaccination__ontology_label		11
+vaccination__route			string	TRUE	enum			"[""intradermal"", ""intranasal"", ""intravenous"", ""aerosol"", ""intramuscular"", ""mucosal"", ""oral""]"	vaccination			Intradermal, Intranasal, Intravenous, Aerosol		12
+sex	Yes	unknown	string		enum			"[""male"", ""female"", ""mixed"", ""unknown""]"				Biological sex		18
+organism_age			number								organism_age__unit	Age of the organism at time of sample collection.		23
+organism_age__unit			string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	UO_0000003		organism_age			organism_age__unit		24
+organism_age__unit_label			string		unit_label				organism_age__unit			organism_age__unit_label		25
+disease	Yes	MONDO_0000001	string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/mondo	MONDO_0000001					The disease state(s) of the individual donating the sample at the time of donation		38
+disease__ontology_label	Yes		string	TRUE	ontology_label				disease			disease__ontology_label		39
+disease__treated			boolean	TRUE					disease			If the donor was treated at the time the sample was collected		43
+disease__treatment			string	TRUE					disease__treated			A description of the treatment given to this donor		44
+CellID	Yes		string											80
+cell_type			string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/cl	CL_0000548					Cell type name determined via unsupervised clustering and marker genes		81
+cell_type__ontology_label			string		ontology_label				cell_type			cell_type__ontology_label		82
