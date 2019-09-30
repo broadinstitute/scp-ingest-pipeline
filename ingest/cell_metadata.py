@@ -59,6 +59,45 @@ class CellMetadata(IngestFiles):
         document: Document
         subdoc: SubDocument
 
+    def preproccess(self):
+        # Lowercase second level. Example: NUMeric -> numeric
+        self.file.rename(
+            columns=lambda col_name: col_name.lower(), level=1, inplace=True
+        )
+        group_columns = self.file.xs(
+            "group", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        self.file[group_columns] = self.file[group_columns].astype(str)
+        # Find numeric columns and round to 3 decimals places
+        numeric_columns = self.file.xs(
+            "numeric", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
+
+    def transform(self) -> None:
+        """ Add data from cell metadata files into data model"""
+        # first column is cell names, therefore skip
+        for column in self.file.columns[1:]:
+            col_name = column[0]
+            column_type = column[1]
+            yield self.DataModel(
+                column_type,
+                {
+                    "name": col_name,
+                    "study_accession": self.study_accession,
+                    # save unique values for group type annotations
+                    "unique_values": list(self.file[column].unique())
+                    if column_type == "group"
+                    else None,
+                    "annotation_type": column_type,
+                    "file_id": self.file_id,
+                },
+                {
+                    "cell_names": list(self.file.iloc[:, 0]),
+                    "values": list(self.file[column]),
+                },
+            )
+
     def chunk_subdocuments(
         self, doc_name: str, doc_path: str, model: DataModel
     ) -> Dict:
@@ -121,45 +160,6 @@ class CellMetadata(IngestFiles):
                 # Reset sum and add storage size at current index
                 sum = starting_sum + cell_name_storage + value_storage
                 start_index = index
-
-    def preproccess(self):
-        # Lowercase second level. Example: NUMeric -> numeric
-        self.file.rename(
-            columns=lambda col_name: col_name.lower(), level=1, inplace=True
-        )
-        group_columns = self.file.xs(
-            "group", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        self.file[group_columns] = self.file[group_columns].astype(str)
-        # Find numeric columns and round to 3 decimals places
-        numeric_columns = self.file.xs(
-            "numeric", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
-
-    def transform(self) -> None:
-        """ Add data from cell metadata files into data model"""
-        # first column is cell names, therefore skip
-        for column in self.file.columns[1:]:
-            col_name = column[0]
-            column_type = column[1]
-            yield self.DataModel(
-                column_type,
-                {
-                    "name": col_name,
-                    "study_accession": self.study_accession,
-                    # save unique values for group type annotations
-                    "unique_values": list(self.file[column].unique())
-                    if column_type == "group"
-                    else None,
-                    "annotation_type": column_type,
-                    "file_id": self.file_id,
-                },
-                {
-                    "cell_names": list(self.file.iloc[:, 0]),
-                    "values": list(self.file[column]),
-                },
-            )
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
