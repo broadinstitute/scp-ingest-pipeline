@@ -53,11 +53,3 @@ def mock_storage_blob(*args, **kwargs):
             copyfile(self.name, filename)
 
     return MockStorageBlob(*args, **kwargs)
-
-
-def mock_firestore_client():
-    """Mocks firestore.Client() by returning nothing upon initializing client
-
-    See notes in mock_load_expression_data for context.
-    """
-    return
