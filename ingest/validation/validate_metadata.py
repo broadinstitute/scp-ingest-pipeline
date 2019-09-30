@@ -399,10 +399,14 @@ def validate_collected_ontology_data(metadata, convention):
         ontology_url = convention['properties'][entry]['ontology']
         try:
             for ontology_id, ontology_label in metadata.ontology[entry].keys():
+                # print(f'checking {ontology_id} and {ontology_label}')
                 matching_term = retrieve_ontology_term(ontology_url, ontology_id)
                 if matching_term:
                     # print("Found matching for " + ontology_id)
                     if matching_term['label'] != ontology_label:
+                        # print(
+                        #     f'checking if {ontology_label} matches: {matching_term["label"]}'
+                        # )
                         try:
                             error_msg = (
                                 f'ontology_label \"{ontology_label}\" '
@@ -415,7 +419,13 @@ def validate_collected_ontology_data(metadata, convention):
                                 metadata.ontology[entry][(ontology_id, ontology_label)],
                             )
                         except TypeError:
-                            print('No description found for', ontology_id)
+                            error_msg = f'No description found for {ontology_id} in ontology lookup'
+                            metadata.store_validation_issue(
+                                'error',
+                                'ontology',
+                                error_msg,
+                                metadata.ontology[entry][(ontology_id, ontology_label)],
+                            )
                     # else:
                     #     print("Ontology label matches: " + matching_term['label'])
                 else:
@@ -428,15 +438,28 @@ def validate_collected_ontology_data(metadata, convention):
                             metadata.ontology[entry][(ontology_id, ontology_label)],
                         )
                     else:
-                        print('No ontology_id provided for', ontology_id)
+                        error_msg = f'No ontology_id provided for {ontology_label}'
+                        print(error_msg)
+                        # FIX issue with adding this error to issues, causes
+                        # "RuntimeError: dictionary changed size during iteration"
+                        # referencing "for ontology_id, ontology_label in metadata.ontology[entry].keys():"
+                        # metadata.store_validation_issue(
+                        #     'error',
+                        #     'ontology',
+                        #     error_msg,
+                        #     metadata.ontology[entry][(ontology_label)],
+                        # )
         except ValueError:
             for ontology_id in metadata.ontology[entry].keys():
                 matching_term = retrieve_ontology_term(ontology_url, ontology_id)
                 if not matching_term:
-                    ont_errors = defaultdict(list)
                     error_msg = f'No match found for {ontology_id}'
-                    ont_errors[error_msg] = metadata.ontology[entry][(ontology_id)]
-                    metadata.issues['error']['ontology'] = ont_errors
+                    metadata.store_validation_issue(
+                        'error',
+                        'ontology',
+                        error_msg,
+                        metadata.ontology[entry][(ontology_id)],
+                    )
                 # else:
                 #     print("Found matching for " + ontology_id)
                 error_msg = (
