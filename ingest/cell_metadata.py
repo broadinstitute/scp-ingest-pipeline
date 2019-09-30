@@ -7,24 +7,40 @@ Must have python 3.6 or higher.
 """
 from collections import defaultdict
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+from dataclasses import dataclass
+from mypy_extensions import TypedDict
 
 from ingest_files import IngestFiles
 
 DOCUMENT_LIMIT_BYTES = 1_048_576
 
 
+@dataclass
+class Document(TypedDict):
+    name: str
+    study_accession: str
+    unique_values: List
+    annotation_type: str
+    file_id: str
+
+
+@dataclass
+class SubDocument(TypedDict):
+    def __init__(self, values: List, cell_names: List):
+        self.values = values
+        self.cell_names = cell_names
+
+
 class CellMetadata(IngestFiles):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
-    COLLECTION_NAME = "cell_metadata"
-    SUBCOLLECTION_NAME = "data"
 
     def __init__(self, file_path, file_id: str, study_accession: str, *args, **kwargs):
 
         IngestFiles.__init__(
             self, file_path, self.ALLOWED_FILE_TYPES, open_as="dataframe"
         )
-        self.is_valid_file = self.validate_format()
         self.preproccess()
+        self.is_valid_file = self.validate_format()
         self.cell_names = []
         self.study_accession = study_accession
         self.file_id = file_id
@@ -35,41 +51,17 @@ class CellMetadata(IngestFiles):
         self.type = defaultdict(list)
         self.cells = []
 
-    def preproccess(self):
-        # Lowercase second level. Example: NUMeric -> numeric
-        self.file.rename(
-            columns=lambda col_name: col_name.lower(), level=1, inplace=True
-        )
-        self.file.xs("group", axis=1, level=1).astype(str)
-        # Find numeric columns and round to 3 decimals places
-        numeric_col_df = self.file.select_dtypes(include=["int64", "float64"]).columns
-        self.file[numeric_col_df] = self.file[numeric_col_df].round(3).astype(float)
+    @dataclass
+    class DataModel:
+        COLLECTION_NAME = "cell_metadata"
+        SUBCOLLECTION_NAME = "data"
+        annot_type: str
+        document: Document
+        subdoc: SubDocument
 
-    def transform(self) -> None:
-        """ Add data from cell metadata files into data model"""
-        # first column is cell names, therefore skip
-        for column in self.file.columns[1:]:
-            col_name = column[0]
-            column_type = column[1]
-            yield (
-                column_type,
-                {
-                    "name": col_name,
-                    "study_accession": self.study_accession,
-                    # save unique values for group type annotations
-                    "unique_values": list(self.file[column].unique())
-                    if column_type == "group"
-                    else None,
-                    "annotation_type": column_type,
-                    "file_id": self.file_id,
-                },
-                {
-                    "cell_names": list(self.file.iloc[:, 0]),
-                    "values": list(self.file[column]),
-                },
-            )
-
-    def chunk_subdocuments(self, doc_name, doc_path, subdoc, annot_type):
+    def chunk_subdocuments(
+        self, doc_name: str, doc_path: str, model: DataModel
+    ) -> Dict:
         """Partitions cell metadata subdocuments into storage sizes that are
             less than 1,048,576 bytes. Storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
@@ -85,19 +77,19 @@ class CellMetadata(IngestFiles):
             + 1
             + len(doc_path)
             + 1
-            + len(self.SUBCOLLECTION_NAME)
+            + len(model.SUBCOLLECTION_NAME)
             + 1
-            + len(self.COLLECTION_NAME)
+            + len(model.COLLECTION_NAME)
             + 1
         )
         start_index = 0
         float_storage = 8
         sum = starting_sum
-
+        annot_type = model.annot_type
         # All cells names:[] that are in subdoc
-        cell_names = subdoc["cell_names"]
+        cell_names = model.subdoc["cell_names"]
         # All values:[] that are in subdoc
-        values = subdoc["values"]
+        values = model.subdoc["values"]
 
         for index, (cell_name, value) in enumerate(zip(cell_names, values)):
 
@@ -129,6 +121,45 @@ class CellMetadata(IngestFiles):
                 # Reset sum and add storage size at current index
                 sum = starting_sum + cell_name_storage + value_storage
                 start_index = index
+
+    def preproccess(self):
+        # Lowercase second level. Example: NUMeric -> numeric
+        self.file.rename(
+            columns=lambda col_name: col_name.lower(), level=1, inplace=True
+        )
+        group_columns = self.file.xs(
+            "group", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        self.file[group_columns] = self.file[group_columns].astype(str)
+        # Find numeric columns and round to 3 decimals places
+        numeric_columns = self.file.xs(
+            "numeric", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
+
+    def transform(self) -> None:
+        """ Add data from cell metadata files into data model"""
+        # first column is cell names, therefore skip
+        for column in self.file.columns[1:]:
+            col_name = column[0]
+            column_type = column[1]
+            yield self.DataModel(
+                column_type,
+                {
+                    "name": col_name,
+                    "study_accession": self.study_accession,
+                    # save unique values for group type annotations
+                    "unique_values": list(self.file[column].unique())
+                    if column_type == "group"
+                    else None,
+                    "annotation_type": column_type,
+                    "file_id": self.file_id,
+                },
+                {
+                    "cell_names": list(self.file.iloc[:, 0]),
+                    "values": list(self.file[column]),
+                },
+            )
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement

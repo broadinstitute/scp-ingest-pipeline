@@ -12,20 +12,15 @@ class TestCellMetadata(unittest.TestCase):
         self.cell_metadata = CellMetadata(
             '../tests/data/test_chunking_cell_metadata.csv', 'SCP1', '1234abc'
         )
-        # Read and transform file to data model
-        while True:
-            row = self.cell_metadata.extract()
-            if row is None:
-                break
-            self.cell_metadata.transform(row)
+
         # Captures print statements from chunk_subdocuments
         captured_output = io.StringIO()
         sys.stdout = captured_output
-        for subdoc in self.cell_metadata.chunk_subdocuments(
-            'doc_name', 'fake/path/cell_metadata', 'ClusterID'
-        ):
-            pass
-
+        for cellmetadatadatamodel in self.cell_metadata.transform():
+            for subdoc in self.cell_metadata.chunk_subdocuments(
+                'doc_name', 'fake/path/cell_metadata', cellmetadatadatamodel
+            ):
+                pass
         sys.stdout = sys.__stdout__
         # String represents outputs from chunk_subdocuments method
         #  number of bytes, end_index, starting index, number of bytes, end_index, starting index

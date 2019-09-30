@@ -245,9 +245,10 @@ class IngestPipeline(object):
         if self.cell_metadata.is_valid_file:
             self.cell_metadata.reset_file(2, open_as="dataframe")
             for metadata in self.cell_metadata.transform():
-                load_status = self.load_cell_metadata(*metadata)
-                if load_status != 0:
-                    return load_status
+                pass
+                # load_status = self.load_cell_metadata(*metadata)
+                # if load_status != 0:
+                #     return load_status
             return 0
         else:
             return 1
