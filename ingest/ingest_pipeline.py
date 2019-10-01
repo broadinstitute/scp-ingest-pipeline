@@ -160,22 +160,22 @@ class IngestPipeline(object):
 
                     batch.commit()
 
-    def load_cell_metadata(self, annot_type, doc, subdoc):
+    def load_cell_metadata(self, cellMetadataModel):
         """Loads cell metadata files into firestore."""
-        collection_name = self.cell_metadata.COLLECTION_NAME
-        subcollection_name = self.cell_metadata.SUBCOLLECTION_NAME
+        collection_name = cellMetadataModel.COLLECTION_NAME
+        subcollection_name = cellMetadataModel.SUBCOLLECTION_NAME
         doc_ref = self.db.collection(collection_name).document()
-        doc_ref.set(doc)
+        doc_ref.set(cellMetadataModel.document)
         try:
             doc_ref_sub = doc_ref.collection(subcollection_name).document()
-            doc_ref_sub.set(subdoc)
+            doc_ref_sub.set(cellMetadataModel.subdocument)
         except exceptions.InvalidArgument as e:
             # Catches invalid argument exception, which error "Maximum
             # document size" falls under
             print(e)
             batch = self.db.batch()
             for subdoc_chunk in self.cell_metadata.chunk_subdocuments(
-                doc_ref_sub.id, doc_ref_sub._document_path, subdoc, annot_type
+                doc_ref_sub.id, doc_ref_sub._document_path, cellMetadataModel
             ):
                 batch.set(doc_ref_sub, subdoc_chunk)
 
@@ -242,14 +242,13 @@ class IngestPipeline(object):
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         # TODO: Add self.has_valid_metadata_convention() to if statement
-        if self.cell_metadata.is_valid_file:
-            print("I'm valid")
+        if self.cell_metadata.is_valid_file and self.has_valid_metadata_convention():
             self.cell_metadata.reset_file(2, open_as="dataframe")
+            self.cell_metadata.preproccess()
             for metadata in self.cell_metadata.transform():
-                pass
-                # load_status = self.load_cell_metadata(*metadata)
-                # if load_status != 0:
-                #     return load_status
+                load_status = self.load_cell_metadata(metadata)
+                if load_status != 0:
+                    return load_status
             return 0
         else:
             return 1

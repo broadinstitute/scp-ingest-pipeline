@@ -14,7 +14,7 @@ from ingest_files import IngestFiles
 
 DOCUMENT_LIMIT_BYTES = 1_048_576
 
-
+# Welcome comments about whether this should live here or in the class
 @dataclass
 class Document(TypedDict):
     name: str
@@ -24,6 +24,7 @@ class Document(TypedDict):
     file_id: str
 
 
+# Welcome comments about whether this should live here or in the class
 @dataclass
 class SubDocument(TypedDict):
     def __init__(self, values: List, cell_names: List):
@@ -50,8 +51,6 @@ class CellMetadata(IngestFiles):
         self.type = defaultdict(list)
         self.cells = []
         self.is_valid_file = self.validate_format()
-        if self.is_valid_file:
-            self.preproccess()
 
     @dataclass
     class DataModel:
@@ -75,7 +74,7 @@ class CellMetadata(IngestFiles):
             "group", axis=1, level=1, drop_level=False
         ).columns.tolist()
         self.file[group_columns] = self.file[group_columns].astype(str)
-        # Find numeric columns and round to 3 decimals places
+        # Find numeric columns and round to 3 decimals places and are floats
         numeric_columns = self.file.xs(
             "numeric", axis=1, level=1, drop_level=False
         ).columns.tolist()
@@ -295,11 +294,6 @@ class CellMetadata(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        # print(self.validate_header_keyword())
-        # print(self.validate_type_keyword())
-        # print(self.validate_type_annotations())
-        # print(self.validate_unique_header())
-        # print(self.validate_against_header_count())
         return (
             self.validate_header_keyword()
             and self.validate_type_keyword()
