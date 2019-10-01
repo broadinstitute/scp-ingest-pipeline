@@ -243,6 +243,7 @@ class IngestPipeline(object):
         """Ingests cell metadata files into Firestore."""
         # TODO: Add self.has_valid_metadata_convention() to if statement
         if self.cell_metadata.is_valid_file:
+            print("I'm valid")
             self.cell_metadata.reset_file(2, open_as="dataframe")
             for metadata in self.cell_metadata.transform():
                 pass

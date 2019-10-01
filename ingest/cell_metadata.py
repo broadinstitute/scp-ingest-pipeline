@@ -39,8 +39,8 @@ class CellMetadata(IngestFiles):
         IngestFiles.__init__(
             self, file_path, self.ALLOWED_FILE_TYPES, open_as="dataframe"
         )
-        self.preproccess()
-        self.is_valid_file = self.validate_format()
+        self.headers = self.file.columns.get_level_values(0)
+        self.annot_types = self.file.columns.get_level_values(1)
         self.cell_names = []
         self.study_accession = study_accession
         self.file_id = file_id
@@ -50,6 +50,9 @@ class CellMetadata(IngestFiles):
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.type = defaultdict(list)
         self.cells = []
+        self.is_valid_file = self.validate_format()
+        if self.is_valid_file:
+            self.preproccess()
 
     @dataclass
     class DataModel:
@@ -64,6 +67,11 @@ class CellMetadata(IngestFiles):
         self.file.rename(
             columns=lambda col_name: col_name.lower(), level=1, inplace=True
         )
+        name = self.file.columns.levels[0][0]
+        type = self.file.columns.levels[1][0]
+        # Uppercase NAME and TYPE
+        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
+        # Make sure group annotations are treated as strings
         group_columns = self.file.xs(
             "group", axis=1, level=1, drop_level=False
         ).columns.tolist()
@@ -183,13 +191,13 @@ class CellMetadata(IngestFiles):
         """
 
         valid = False
-        if self.file.columns[0][0].upper() == "NAME":
+        if self.headers[0].upper() == "NAME":
             valid = True
-            if self.file.columns[0][0] != "NAME":
+            if self.headers[0] != "NAME":
                 # ToDO - capture warning below in error report
                 msg = (
                     f'Warning: metadata file keyword "NAME" provided as '
-                    f"{self.file.columns[0][0]}"
+                    f"{self.headers[0]}"
                 )
                 self.store_validation_issue('warn', 'format', msg)
         else:
@@ -202,11 +210,13 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if len(set(self.file.columns.labels[0])) == len(self.file.columns.labels[0]):
+        unique_headers = set(self.headers)
+        if len(unique_headers) == len(self.headers):
             valid = True
-        else:
-            msg = 'Error: Duplicate column headers in metadata file'
+        if any("Unnamed" in s for s in list(unique_headers)):
+            msg = "Error: Headers cannot contain empty values"
             self.store_validation_issue('error', 'format', msg)
+            valid = False
         return valid
 
     def validate_type_keyword(self):
@@ -214,9 +224,9 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if self.file.columns[0][1].upper() == "TYPE":
+        if self.annot_types[0].upper() == "TYPE":
             valid = True
-            if self.file.columns[0][1] != "TYPE":
+            if self.annot_types[0] != "TYPE":
                 # ToDO - capture warning below in issue report
                 # investigate f-string formatting here
                 msg = (
@@ -237,11 +247,12 @@ class CellMetadata(IngestFiles):
         invalid_types = []
         # skipping the TYPE keyword, iterate through the types
         # collecting invalid type annotations in list annots
-        for t in set(list(self.file.columns)[1:]):
-            if t[1] not in self.annotation_type:
+        for t in self.annot_types[1:]:
+            print(t)
+            if t.lower() not in ('group', 'numeric'):
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
-                if not t:
+                if 'unnamed' in t:
                     invalid_types.append('<empty value>')
                 else:
                     invalid_types.append(t)
@@ -257,8 +268,19 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if header and type counts match, otherwise False
         """
         valid = False
-        len_headers = len(self.file.columns.labels[0])
-        len_annot_type = len(self.file.columns.labels[1])
+        print(self.headers)
+        len_headers = len(
+            [header for header in self.headers if 'Unnamed' not in header]
+        )
+        print(len_headers)
+        len_annot_type = len(
+            [
+                annot_type
+                for annot_type in self.annot_types
+                if 'Unnamed' not in annot_type
+            ]
+        )
+        print(len_annot_type)
         if not len_headers == len_annot_type:
             msg = (
                 f'Error: {len_annot_type} TYPE declarations '
@@ -272,10 +294,15 @@ class CellMetadata(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        return (
-            self.validate_header_keyword()
-            or self.validate_type_keyword()
-            or self.validate_type_annotations()
-            or self.validate_unique_header()
-            or self.validate_against_header_count()
-        )
+        print(self.validate_header_keyword())
+        print(self.validate_type_keyword())
+        print(self.validate_type_annotations())
+        print(self.validate_unique_header())
+        print(self.validate_against_header_count())
+        # return (
+        #     self.validate_header_keyword()
+        #     and self.validate_type_keyword()
+        #     and self.validate_type_annotations()
+        #     and self.validate_unique_header()
+        #     and self.validate_against_header_count()
+        # )
