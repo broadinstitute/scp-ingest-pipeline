@@ -56,7 +56,7 @@ class TestValidateMetadata(unittest.TestCase):
         metadata = self.setup_metadata(args)[0]
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
-            "Error: Metadata file header row malformed, missing NAME. (Case Sensitive)",
+            "Error: Metadata file header row malformed, missing NAME",
             metadata.issues['error']["format"].keys(),
             "Missing NAME keyword should fail format validation",
         )
