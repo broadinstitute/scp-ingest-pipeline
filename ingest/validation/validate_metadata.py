@@ -21,6 +21,8 @@ import requests
 import urllib.parse as encoder
 import re
 
+import colorama
+from colorama import Fore
 import jsonschema
 
 sys.path.append('..')
@@ -36,6 +38,9 @@ except ImportError:
 #   format='%(name)s - %(levelname)s - %(message)s')
 logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Ensures normal color for print() output, unless explicitly changed
+colorama.init(autoreset=True)
 
 
 def create_parser():
@@ -297,19 +302,22 @@ def report_issues(metadata):
 
     has_errors = False
     has_warnings = False
-    for error_type in sorted(metadata.issues.keys()):
-        for error_category, category_dict in metadata.issues[error_type].items():
+    for issue_type in sorted(metadata.issues.keys()):
+        for issue_category, category_dict in metadata.issues[issue_type].items():
             if category_dict:
-                print('\n***', error_category, error_type, 'list:')
-                for error_msg, cells in category_dict.items():
-                    if cells:
-                        print(error_msg, '[ Error count:', len(cells), ']')
-                    else:
-                        print(error_msg)
-                if error_type == 'error':
+                print('\n***', issue_category, issue_type, 'list:')
+                if issue_type == 'error':
+                    color = Fore.RED
                     has_errors = True
-                if error_type == 'warn':
+                elif issue_type == 'warn':
+                    color = Fore.YELLOW
                     has_warnings = True
+                for issue_text, cells in category_dict.items():
+                    issue_msg = color + issue_text
+                    if cells:
+                        print(f'{issue_msg} [ Error count: {len(cells)} ]')
+                    else:
+                        print(issue_msg)
     if not has_errors and not has_warnings:
         # deal with this print statement
         print('No errors or warnings detected for input metadata file')
