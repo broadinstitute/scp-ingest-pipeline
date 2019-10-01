@@ -1,3 +1,5 @@
+tests/issues.json
+
 # Ignore Python runtime assets
 env/
 __pycache__/
