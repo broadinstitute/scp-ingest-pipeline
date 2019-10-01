@@ -53,6 +53,7 @@ class CellMetadata(IngestFiles):
         self.is_valid_file = self.validate_format()
         if self.is_valid_file:
             self.preproccess()
+        print(self.file)
 
     @dataclass
     class DataModel:
@@ -67,8 +68,8 @@ class CellMetadata(IngestFiles):
         self.file.rename(
             columns=lambda col_name: col_name.lower(), level=1, inplace=True
         )
-        name = self.file.columns.levels[0][0]
-        type = self.file.columns.levels[1][0]
+        name = list(self.headers)[0]
+        type = list(self.annot_types)[0].lower()
         # Uppercase NAME and TYPE
         self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
         # Make sure group annotations are treated as strings
@@ -248,7 +249,6 @@ class CellMetadata(IngestFiles):
         # skipping the TYPE keyword, iterate through the types
         # collecting invalid type annotations in list annots
         for t in self.annot_types[1:]:
-            print(t)
             if t.lower() not in ('group', 'numeric'):
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
@@ -291,11 +291,6 @@ class CellMetadata(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        # print(self.validate_header_keyword())
-        # print(self.validate_type_keyword())
-        # print(self.validate_type_annotations())
-        # print(self.validate_unique_header())
-        # print(self.validate_against_header_count())
         return (
             self.validate_header_keyword()
             and self.validate_type_keyword()
