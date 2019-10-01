@@ -168,7 +168,6 @@ class IngestPipeline(object):
         doc_ref.set(cellMetadataModel.document)
         try:
             doc_ref_sub = doc_ref.collection(subcollection_name).document()
-            print()
             doc_ref_sub.set(cellMetadataModel.subdoc)
         except exceptions.InvalidArgument as e:
             # Catches invalid argument exception, which error "Maximum
@@ -274,7 +273,6 @@ class IngestPipeline(object):
 
         def create_cluster_subdoc(scope):
             for subdoc in subsample.subsample():
-                print(subdoc)
                 annot_name = subdoc[1][0]
                 annot_type = subdoc[1][1]
                 sample_size = subdoc[2]
