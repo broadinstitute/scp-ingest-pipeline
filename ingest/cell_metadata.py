@@ -268,11 +268,9 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if header and type counts match, otherwise False
         """
         valid = False
-        print(self.headers)
         len_headers = len(
             [header for header in self.headers if 'Unnamed' not in header]
         )
-        print(len_headers)
         len_annot_type = len(
             [
                 annot_type
@@ -280,7 +278,6 @@ class CellMetadata(IngestFiles):
                 if 'Unnamed' not in annot_type
             ]
         )
-        print(len_annot_type)
         if not len_headers == len_annot_type:
             msg = (
                 f'Error: {len_annot_type} TYPE declarations '
@@ -294,15 +291,15 @@ class CellMetadata(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        print(self.validate_header_keyword())
-        print(self.validate_type_keyword())
-        print(self.validate_type_annotations())
-        print(self.validate_unique_header())
-        print(self.validate_against_header_count())
-        # return (
-        #     self.validate_header_keyword()
-        #     and self.validate_type_keyword()
-        #     and self.validate_type_annotations()
-        #     and self.validate_unique_header()
-        #     and self.validate_against_header_count()
-        # )
+        # print(self.validate_header_keyword())
+        # print(self.validate_type_keyword())
+        # print(self.validate_type_annotations())
+        # print(self.validate_unique_header())
+        # print(self.validate_against_header_count())
+        return (
+            self.validate_header_keyword()
+            and self.validate_type_keyword()
+            and self.validate_type_annotations()
+            and self.validate_unique_header()
+            and self.validate_against_header_count()
+        )
