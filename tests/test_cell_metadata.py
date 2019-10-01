@@ -22,9 +22,10 @@ class TestCellMetadata(unittest.TestCase):
             ):
                 pass
         sys.stdout = sys.__stdout__
+        # print(captured_output.getvalue())
         # String represents outputs from chunk_subdocuments method
         #  number of bytes, end_index, starting index, number of bytes, end_index, starting index
-        expected = "1048562 , 17740, 0 , 17739\n347983 , 23593, 17740 , 23593\n"
+        expected = '1048562, 17740, 0, 17739\n347983, 23593, 17740, 23593\n1048567, 16130, 0, 16129\n485212, 23593, 16130, 23593\n'
 
         self.assertEqual(expected, captured_output.getvalue())
 

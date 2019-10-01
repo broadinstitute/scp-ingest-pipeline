@@ -97,9 +97,12 @@ def extract_numeric_headers(metadata):
     list of numeric-type metadata headers at metadata.type['numeric_headers']
     """
     logger.debug('Begin: extract_numeric_headers')
-    for index, mtype in enumerate(metadata.metadata_types):
-        if mtype == 'numeric':
-            metadata.type['numeric_headers'].append(metadata.headers[index])
+    numeric_col_df = (
+        metadata.file.select_dtypes(include=["number"])
+        .columns.get_level_values(0)
+        .tolist()
+    )
+    metadata.type['numeric_headers'].append(numeric_col_df)
     return
 
 
@@ -163,15 +166,11 @@ def validate_cells_unique(metadata):
     :return: boolean   True if valid, False otherwise
     """
     valid = False
-    # uniq_errors = defaultdict(list)
     if len(metadata.cells) == len(set(metadata.cells)):
         valid = True
     else:
-        # TODO value stored incorrectly, will need to fix
         dups = list_duplicates(metadata.cells)
         msg = 'Error:  Duplicate CellID(s) in metadata file'
-        # uniq_errors[msg].append(dups)
-        # metadata.issues['error']['format'] = uniq_errors
         metadata.issues['error']['format'][msg] = dups
     return valid
 
@@ -223,8 +222,9 @@ def process_metadata_row(metadata, convention, line):
     extract_numeric_headers(metadata)
     extract_convention_types(convention, metadata)
     merge_numerics(metadata)
-    metadata.headers[0] = 'CellID'
-    keys = metadata.headers
+    # extract first row of metadata file from pandas array as python list
+    keys = metadata.file.columns.get_level_values(0).tolist()
+    keys[0] = 'CellID'
     row_info = dict(zip(keys, line))
     for k, v in row_info.items():
         # explicitly setting empty values to None so missing values for
@@ -263,8 +263,8 @@ def collect_jsonschema_errors(metadata, convention):
     schema = validate_schema(convention, metadata)
 
     if schema:
-        metadata.reset_file(2)
-        line = metadata.extract()
+        rows = metadata.yield_by_row()
+        line = next(rows)
         row_count = 1
         while line:
             # print('processing row', row_count)
@@ -276,7 +276,10 @@ def collect_jsonschema_errors(metadata, convention):
             collect_ontology_data(row, metadata)
             for error in schema.iter_errors(row):
                 js_errors[error.message].append(row['CellID'])
-            line = metadata.extract()
+            try:
+                line = next(rows)
+            except StopIteration:
+                break
         metadata.issues['error']['convention'] = js_errors
         validate_cells_unique(metadata)
         return
@@ -475,9 +478,11 @@ if __name__ == '__main__':
     with open(args.convention, 'r') as f:
         convention = json.load(f)
     filetsv = args.input_metadata
-    metadata = CellMetadata(filetsv, args.file_id, args.study_accession)
+    metadata = CellMetadata(
+        filetsv, args.file_id, args.study_accession, open_as="dataframe"
+    )
     print('Validating', filetsv)
-    format_valid = metadata.validate_format()
+    metadata.validate_format()
     collect_jsonschema_errors(metadata, convention)
     validate_collected_ontology_data(metadata, convention)
     if args.issues_json:

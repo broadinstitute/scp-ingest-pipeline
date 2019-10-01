@@ -44,7 +44,6 @@ class CellMetadata(IngestFiles):
         self.cell_names = []
         self.study_accession = study_accession
         self.file_id = file_id
-        self.annotation_type = ['group', 'numeric']
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
@@ -53,7 +52,6 @@ class CellMetadata(IngestFiles):
         self.is_valid_file = self.validate_format()
         if self.is_valid_file:
             self.preproccess()
-        print(self.file)
 
     @dataclass
     class DataModel:
@@ -106,6 +104,12 @@ class CellMetadata(IngestFiles):
                     "values": list(self.file[column]),
                 },
             )
+
+    def yield_by_row(self) -> None:
+        """ Yield row from cell metadata file"""
+        for row in self.file.itertuples(index=False):
+            dictRow = row._asdict()
+            yield dictRow.values()
 
     def chunk_subdocuments(
         self, doc_name: str, doc_path: str, model: DataModel
@@ -161,7 +165,7 @@ class CellMetadata(IngestFiles):
                     end_index = index - 1
                 # TODO: This can turn into a logging statement
                 # Please do not remove this. It's needed for testing
-                print(f"{sum} , {index}, {start_index} , {end_index}")
+                print(f"{sum}, {index}, {start_index}, {end_index}")
                 yield {
                     "cell_names": cell_names[start_index:end_index],
                     "values": values[start_index:end_index],
@@ -291,6 +295,11 @@ class CellMetadata(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
+        # print(self.validate_header_keyword())
+        # print(self.validate_type_keyword())
+        # print(self.validate_type_annotations())
+        # print(self.validate_unique_header())
+        # print(self.validate_against_header_count())
         return (
             self.validate_header_keyword()
             and self.validate_type_keyword()
