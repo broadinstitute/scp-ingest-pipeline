@@ -15,6 +15,7 @@ setup(
         'jsonschema',
         'pandas',
         'pandocfilters',
+        'colorama',
     ],
     packages=find_packages(),
 )
