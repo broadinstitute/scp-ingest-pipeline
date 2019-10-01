@@ -6,6 +6,7 @@ https://github.com/googleapis/google-cloud-python/issues/4840.
 Until those are available, custom mocks like these are the best available
 alternative to enable integration tests to run quickly.
 """
+
 import os
 from shutil import copyfile
 
