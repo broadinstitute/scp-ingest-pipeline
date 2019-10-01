@@ -168,7 +168,8 @@ class IngestPipeline(object):
         doc_ref.set(cellMetadataModel.document)
         try:
             doc_ref_sub = doc_ref.collection(subcollection_name).document()
-            doc_ref_sub.set(cellMetadataModel.subdocument)
+            print()
+            doc_ref_sub.set(cellMetadataModel.subdoc)
         except exceptions.InvalidArgument as e:
             # Catches invalid argument exception, which error "Maximum
             # document size" falls under
@@ -245,8 +246,8 @@ class IngestPipeline(object):
         if self.cell_metadata.is_valid_file and self.has_valid_metadata_convention():
             self.cell_metadata.reset_file(2, open_as="dataframe")
             self.cell_metadata.preproccess()
-            for metadata in self.cell_metadata.transform():
-                load_status = self.load_cell_metadata(metadata)
+            for metadataModel in self.cell_metadata.transform():
+                load_status = self.load_cell_metadata(metadataModel)
                 if load_status != 0:
                     return load_status
             return 0
