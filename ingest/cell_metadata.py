@@ -65,25 +65,36 @@ class CellMetadata(IngestFiles):
         document: Document
         subdoc: SubDocument
 
-    def preproccess(self):
-        # Lowercase second level. Example: NUMeric -> numeric
-        self.file.rename(
-            columns=lambda col_name: col_name.lower(), level=1, inplace=True
-        )
-        name = list(self.headers)[0]
-        type = list(self.annot_types)[0].lower()
-        # Uppercase NAME and TYPE
-        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
-        # Make sure group annotations are treated as strings
-        group_columns = self.file.xs(
-            "group", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        self.file[group_columns] = self.file[group_columns].astype(str)
-        # Find numeric columns and round to 3 decimals places and are floats
-        numeric_columns = self.file.xs(
-            "numeric", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
+    # TODO: This function could be used for cluster, metadata, and subsample classes and
+    # should be abstrated out
+    # def preproccess(df):
+    #     """Ensures that:
+    #         - Numeric columns are rounded to 3 decimals points
+    #         - Group annotations are strings
+    #         - 'NAME' in first header row is capitalized
+    #         - 'TYPE' in second header row is capitalized
+    #     """
+    #     headers = df.columns.get_level_values(0)
+    #     annot_types = df.columns.get_level_values(1)
+    #     # Lowercase second level. Example: NUMeric -> numeric
+    #     df.rename(columns=lambda col_name: col_name.lower(), level=1, inplace=True)
+    #     name = list(headers)[0]
+    #     type = list(annot_types)[0].lower()
+    #     # Uppercase NAME and TYPE
+    #     df.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
+    #     # Make sure group annotations are treated as strings
+    #     group_columns = df.xs(
+    #         "group", axis=1, level=1, drop_level=False
+    #     ).columns.tolist()
+    #     df[group_columns] = df[group_columns].astype(str)
+    #     # Find numeric columns and round to 3 decimals places and are floats
+    #     numeric_columns = df.xs(
+    #         "numeric", axis=1, level=1, drop_level=False
+    #     ).columns.tolist()
+    #     df[numeric_columns] = df[numeric_columns].round(3).astype(float)
+    #     # TODO At this point there are 2 copies of the df. This doesn't seem
+    #     # memory efficient. This should be revisted
+    #     return df
 
     def transform(self) -> None:
         """ Add data from cell metadata files into data model"""
@@ -99,7 +110,7 @@ class CellMetadata(IngestFiles):
                     # save unique values for group type annotations
                     "unique_values": list(self.file[column].unique())
                     if column_type == "group"
-                    else None,
+                    else [],
                     "annotation_type": column_type,
                     "file_id": self.file_id,
                 },

@@ -51,6 +51,7 @@ from validation.validate_metadata import (
     validate_collected_ontology_data,
     report_issues,
 )
+from ingest_files import preproccess
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
@@ -181,9 +182,8 @@ class IngestPipeline(object):
 
             batch.commit()
         except Exception as e:
+            # TODO: Log this error
             print(e)
-            # At this point another exception has occured
-            # TODO: Implement deletion of loaded documents
             return 1
         return 0
 
@@ -244,7 +244,7 @@ class IngestPipeline(object):
         # TODO: Add self.has_valid_metadata_convention() to if statement
         if self.cell_metadata.is_valid_file and self.has_valid_metadata_convention():
             self.cell_metadata.reset_file(2, open_as="dataframe")
-            self.cell_metadata.preproccess()
+            self.cell_metadata.file = preproccess(self.cell_metadata.file)
             for metadataModel in self.cell_metadata.transform():
                 load_status = self.load_cell_metadata(metadataModel)
                 if load_status != 0:
@@ -288,7 +288,6 @@ class IngestPipeline(object):
         create_cluster_subdoc("cluster")
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
-            subsample.determine_coordinates_and_cell_names()
             create_cluster_subdoc("study")
 
 
@@ -485,7 +484,6 @@ def main() -> None:
     if all(i < 1 for i in status) or len(status) == 0:
         sys.exit(os.EX_OK)
     else:
-        print(status)
         sys.exit(os.EX_DATAERR)
 
 

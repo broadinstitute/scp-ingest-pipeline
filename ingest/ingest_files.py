@@ -146,11 +146,9 @@ class IngestFiles:
         else:
             raise ValueError("File must be tab or comma delimited")
 
-    def merge_df(self, file, first_df):
+    def merge_df(self, first_df, second_df):
         """ Does an inner join on a dataframe """
-        second_file = self.open_file(file, open_as="dataframe")[1]
-
-        self.file = pd.merge(second_file, first_df, on=[("NAME", "TYPE")])
+        self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
 
     def open_csv(self, opened_file_object):
         """Opens csv file"""
@@ -211,3 +209,31 @@ class IngestFiles:
                 return self.split_line(next_row_revised)
             else:
                 return next_row_revised
+
+    def preproccess(self):
+        """Ensures that:
+            - Numeric columns are rounded to 3 decimals points
+            - Group annotations are strings
+            - 'NAME' in first header row is capitalized
+            - 'TYPE' in second header row is capitalized
+        """
+        headers = self.file.columns.get_level_values(0)
+        annot_types = self.file.columns.get_level_values(1)
+        # Lowercase second level. Example: NUMeric -> numeric
+        self.file.rename(
+            columns=lambda col_name: col_name.lower(), level=1, inplace=True
+        )
+        name = list(headers)[0]
+        type = list(annot_types)[0].lower()
+        # Uppercase NAME and TYPE
+        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
+        # Make sure group annotations are treated as strings
+        group_columns = self.file.xs(
+            "group", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        self.file[group_columns] = self.file[group_columns].astype(str)
+        # Find numeric columns and round to 3 decimals places and are floats
+        numeric_columns = self.file.xs(
+            "numeric", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
