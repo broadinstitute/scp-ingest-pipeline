@@ -80,7 +80,7 @@ class CellMetadata(IngestFiles):
         ).columns.tolist()
         self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
 
-    def transform(self):
+    def transform(self) -> Model:
         """ Add data from cell metadata files into data model"""
         # first column is cell names, therefore skip
         for column in self.file.columns[1:]:
