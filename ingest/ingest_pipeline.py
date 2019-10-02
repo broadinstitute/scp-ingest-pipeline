@@ -13,7 +13,7 @@ EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
@@ -201,12 +201,13 @@ class IngestPipeline(object):
     def load_subsample(self, doc):
         """Loads subsampled data into Firestore"""
 
-        doc_ref = (
+        docs = (
             self.db.collection(u'clusters')
             .where(u'study_accession', u'==', self.study_accession)
             .where(u'file_id', u'==', self.file_id)
         ).stream()
-        print(doc_ref.__next__().to_dict())
+        doc_ref = next(docs).id
+        print(doc_ref)
 
     def has_valid_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
