@@ -16,9 +16,9 @@ class TestCellMetadata(unittest.TestCase):
         # Captures print statements from chunk_subdocuments
         captured_output = io.StringIO()
         sys.stdout = captured_output
-        for cellmetadatadatamodel in self.cell_metadata.transform():
+        for cellmetadata_model in self.cell_metadata.transform():
             for subdoc in self.cell_metadata.chunk_subdocuments(
-                'doc_name', 'fake/path/cell_metadata', cellmetadatadatamodel
+                'doc_name', 'fake/path/cell_metadata', cellmetadata_model
             ):
                 pass
         sys.stdout = sys.__stdout__

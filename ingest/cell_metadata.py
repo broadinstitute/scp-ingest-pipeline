@@ -53,11 +53,11 @@ class CellMetadata(IngestFiles):
         self.is_valid_file = self.validate_format()
 
     @dataclass
-    class DataModel:
+    class Model:
         COLLECTION_NAME = "cell_metadata"
         SUBCOLLECTION_NAME = "data"
         annot_type: str
-        document: Document
+        doc: Document
         subdoc: SubDocument
 
     def preproccess(self):
@@ -74,19 +74,19 @@ class CellMetadata(IngestFiles):
             "group", axis=1, level=1, drop_level=False
         ).columns.tolist()
         self.file[group_columns] = self.file[group_columns].astype(str)
-        # Find numeric columns and round to 3 decimals places and are floats
+        # Find numeric columns,  round to 3 decimals places, and cast to floats
         numeric_columns = self.file.xs(
             "numeric", axis=1, level=1, drop_level=False
         ).columns.tolist()
         self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
 
-    def transform(self) -> None:
+    def transform(self):
         """ Add data from cell metadata files into data model"""
         # first column is cell names, therefore skip
         for column in self.file.columns[1:]:
             col_name = column[0]
             column_type = column[1]
-            yield self.DataModel(
+            yield self.Model(
                 column_type,
                 {
                     "name": col_name,
@@ -110,9 +110,7 @@ class CellMetadata(IngestFiles):
             dictRow = row._asdict()
             yield dictRow.values()
 
-    def chunk_subdocuments(
-        self, doc_name: str, doc_path: str, model: DataModel
-    ) -> Dict:
+    def chunk_subdocuments(self, doc_name: str, doc_path: str, model: Model) -> Dict:
         """Partitions cell metadata subdocuments into storage sizes that are
             less than 1,048,576 bytes. Storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size

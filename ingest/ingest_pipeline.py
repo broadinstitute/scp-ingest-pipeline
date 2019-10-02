@@ -160,24 +160,26 @@ class IngestPipeline(object):
 
                     batch.commit()
 
-    def load_cell_metadata(self, cellMetadataModel):
+    def load_cell_metadata(self, cell_metadata_model):
         """Loads cell metadata files into firestore."""
-        collection_name = cellMetadataModel.COLLECTION_NAME
-        subcollection_name = cellMetadataModel.SUBCOLLECTION_NAME
+        collection_name = cell_metadata_model.COLLECTION_NAME
+        subcollection_name = cell_metadata_model.SUBCOLLECTION_NAME
+        # Firestore document reference
         doc_ref = self.db.collection(collection_name).document()
-        doc_ref.set(cellMetadataModel.document)
+        doc_ref.set(cell_metadata_model.doc)
         try:
-            doc_ref_sub = doc_ref.collection(subcollection_name).document()
-            doc_ref_sub.set(cellMetadataModel.subdoc)
+            # Firestore subdocument reference
+            sub_doc_ref = doc_ref.collection(subcollection_name).document()
+            sub_doc_ref.set(cell_metadata_model.subdoc)
         except exceptions.InvalidArgument as e:
             # Catches invalid argument exception, which error "Maximum
             # document size" falls under
             print(e)
             batch = self.db.batch()
             for subdoc_chunk in self.cell_metadata.chunk_subdocuments(
-                doc_ref_sub.id, doc_ref_sub._document_path, cellMetadataModel
+                sub_doc_ref.id, sub_doc_ref._document_path, cell_metadata_model
             ):
-                batch.set(doc_ref_sub, subdoc_chunk)
+                batch.set(sub_doc_ref, subdoc_chunk)
 
             batch.commit()
         except Exception as e:
