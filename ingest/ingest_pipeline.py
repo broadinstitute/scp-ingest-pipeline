@@ -58,7 +58,7 @@ EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 
 class IngestPipeline(object):
     # File location for metadata json convention
-    JSON_CONVENTION = 'DoNotTouch/AMC_v0.8.json'
+    JSON_CONVENTION = 'DoNotTouch/AMC_v1.1.1.json'
 
     def __init__(
         self,

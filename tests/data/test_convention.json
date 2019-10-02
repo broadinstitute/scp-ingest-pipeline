@@ -1,0 +1,146 @@
+{
+    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schemas/test.schema.json",
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "dependencies": {
+        "cell_type__ontology_label": [
+            "cell_type"
+        ],
+        "disease__ontology_label": [
+            "disease"
+        ],
+        "disease__treated": [
+            "disease"
+        ],
+        "disease__treatment": [
+            "disease__treated"
+        ],
+        "organism_age": [
+            "organism_age__unit"
+        ],
+        "organism_age__unit": [
+            "organism_age"
+        ],
+        "organism_age__unit_label": [
+            "organism_age__unit"
+        ],
+        "species__ontology_label": [
+            "species"
+        ],
+        "vaccination__ontology_label": [
+            "vaccination"
+        ],
+        "vaccination__route": [
+            "vaccination"
+        ]
+    },
+    "description": "Metadata convention for the test project",
+    "properties": {
+        "CellID": {
+            "type": "string"
+        },
+        "cell_type": {
+            "description": "Cell type name determined via unsupervised clustering and marker genes",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/cl",
+            "pattern": "^[A-Za-z]+[_:][0-9]",
+            "type": "string"
+        },
+        "cell_type__ontology_label": {
+            "description": "cell_type__ontology_label",
+            "type": "string"
+        },
+        "disease": {
+            "default": "MONDO_0000001",
+            "description": "The disease state(s) of the individual donating the sample at the time of donation",
+            "items": {
+                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "type": "string"
+            },
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/mondo",
+            "type": "array"
+        },
+        "disease__ontology_label": {
+            "description": "disease__ontology_label",
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "disease__treated": {
+            "description": "If the donor was treated at the time the sample was collected",
+            "items": {
+                "type": "boolean"
+            },
+            "type": "array"
+        },
+        "disease__treatment": {
+            "description": "A description of the treatment given to this donor",
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "organism_age": {
+            "description": "Age of the organism at time of sample collection.",
+            "type": "number"
+        },
+        "organism_age__unit": {
+            "description": "organism_age__unit",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
+            "pattern": "^[A-Za-z]+[_:][0-9]",
+            "type": "string"
+        },
+        "organism_age__unit_label": {
+            "description": "organism_age__unit_label",
+            "type": "string"
+        },
+        "sex": {
+            "default": "unknown",
+            "description": "Biological sex",
+            "enum": ["male", "female", "mixed", "unknown"],
+            "type": "string"
+        },
+        "species": {
+            "description": "The scientific binomial name for the species of the organism.",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ncbitaxon",
+            "pattern": "^[A-Za-z]+[_:][0-9]",
+            "type": "string"
+        },
+        "species__ontology_label": {
+            "description": "species__ontology_label",
+            "type": "string"
+        },
+        "vaccination": {
+            "description": "Any known vaccines administered to the donor organism. NOT a full vaccine history",
+            "items": {
+                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "type": "string"
+            },
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/vo",
+            "type": "array"
+        },
+        "vaccination__ontology_label": {
+            "description": "vaccination__ontology_label",
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "vaccination__route": {
+            "description": "Intradermal, Intranasal, Intravenous, Aerosol",
+            "items": {
+                "enum": ["intradermal", "intranasal", "intravenous", "aerosol", "intramuscular", "mucosal", "oral"],
+                "type": "string"
+            },
+            "type": "array"
+        }
+    },
+    "required": [
+        "species",
+        "species__ontology_label",
+        "sex",
+        "disease",
+        "disease__ontology_label",
+        "CellID"
+    ],
+    "title": "test Metadata Convention"
+}

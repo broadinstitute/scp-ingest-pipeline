@@ -8,6 +8,8 @@ pandas==0.23.4
 pandocfilters==1.4.2
 mypy-extensions==0.4.1
 dataclasses==0.6
+loompy==2.0.15
+colorama==0.4.1
 
 # Dev dependencies
 pytest==5.0.1
@@ -17,11 +19,5 @@ pre-commit==1.18.1
 black==19.3b0
 flake8==3.7.8
 
-# Don't add these until we actually support Loom and Zarr
-loompy==2.0.15
+# Don't add this until we actually support Zarr
 #zarr==2.2.0
-
-# Adding peer dependency to address CircleCI build issue
-# See https://circleci.com/gh/broadinstitute/scp-ingest-pipeline/176
-# This might be safe to remove after updating Circle to use Python 3.7 or 3.8
-setuptools>=34.0.0
