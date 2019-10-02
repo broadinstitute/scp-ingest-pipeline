@@ -51,7 +51,6 @@ from validation.validate_metadata import (
     validate_collected_ontology_data,
     report_issues,
 )
-from ingest_files import preproccess
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
@@ -199,6 +198,16 @@ class IngestPipeline(object):
             doc_ref_sub.set(self.cluster.cluster_subdocs[annot_name])
         # TODO: Add exception handling and return codes
 
+    def load_subsample(self, doc):
+        """Loads subsampled data into Firestore"""
+
+        doc_ref = (
+            self.db.collection(u'clusters')
+            .where(u'study_accession', u'==', self.study_accession)
+            .where(u'file_id', u'==', self.file_id)
+        ).stream()
+        print(doc_ref.__next__().to_dict())
+
     def has_valid_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
         with open(self.JSON_CONVENTION, 'r') as f:
@@ -244,7 +253,9 @@ class IngestPipeline(object):
         # TODO: Add self.has_valid_metadata_convention() to if statement
         if self.cell_metadata.is_valid_file and self.has_valid_metadata_convention():
             self.cell_metadata.reset_file(2, open_as="dataframe")
-            self.cell_metadata.file = preproccess(self.cell_metadata.file)
+            self.cell_metadata.file = self.cell_metadata.preproccess(
+                self.cell_metadata.file
+            )
             for metadataModel in self.cell_metadata.transform():
                 load_status = self.load_cell_metadata(metadataModel)
                 if load_status != 0:
@@ -277,15 +288,17 @@ class IngestPipeline(object):
                 annot_type = subdoc[1][1]
                 sample_size = subdoc[2]
                 for key_value in subdoc[0].items():
-                    Clusters.create_cluster_subdoc(
+                    yield Clusters.create_cluster_subdoc(
                         key_value[0],
                         annot_type,
-                        value=key_value[1],
+                        values=key_value[1],
                         subsample_annotation=f"{annot_name}--{annot_type}--{scope}",
                         subsample_threshold=sample_size,
                     )
 
-        create_cluster_subdoc("cluster")
+        for doc in create_cluster_subdoc("cluster"):
+            self.load_subsample(doc)
+
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
             create_cluster_subdoc("study")
