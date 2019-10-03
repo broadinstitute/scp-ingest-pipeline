@@ -258,7 +258,7 @@ class CellMetadata(IngestFiles):
             if t.lower() not in ('group', 'numeric'):
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
-                if 'unnamed' in t:
+                if 'Unnamed' in t:
                     invalid_types.append('<empty value>')
                 else:
                     invalid_types.append(t)
