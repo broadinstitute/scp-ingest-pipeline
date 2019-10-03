@@ -58,51 +58,40 @@ class CellMetadata(IngestFiles):
         self.is_valid_file = self.validate_format()
 
     @dataclass
-    class DataModel:
+    class Model:
         COLLECTION_NAME = "cell_metadata"
         SUBCOLLECTION_NAME = "data"
         annot_type: str
-        document: Document
+        doc: Document
         subdoc: SubDocument
 
-    # TODO: This function could be used for cluster, metadata, and subsample classes and
-    # should be abstrated out
-    # def preproccess(df):
-    #     """Ensures that:
-    #         - Numeric columns are rounded to 3 decimals points
-    #         - Group annotations are strings
-    #         - 'NAME' in first header row is capitalized
-    #         - 'TYPE' in second header row is capitalized
-    #     """
-    #     headers = df.columns.get_level_values(0)
-    #     annot_types = df.columns.get_level_values(1)
-    #     # Lowercase second level. Example: NUMeric -> numeric
-    #     df.rename(columns=lambda col_name: col_name.lower(), level=1, inplace=True)
-    #     name = list(headers)[0]
-    #     type = list(annot_types)[0].lower()
-    #     # Uppercase NAME and TYPE
-    #     df.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
-    #     # Make sure group annotations are treated as strings
-    #     group_columns = df.xs(
-    #         "group", axis=1, level=1, drop_level=False
-    #     ).columns.tolist()
-    #     df[group_columns] = df[group_columns].astype(str)
-    #     # Find numeric columns and round to 3 decimals places and are floats
-    #     numeric_columns = df.xs(
-    #         "numeric", axis=1, level=1, drop_level=False
-    #     ).columns.tolist()
-    #     df[numeric_columns] = df[numeric_columns].round(3).astype(float)
-    #     # TODO At this point there are 2 copies of the df. This doesn't seem
-    #     # memory efficient. This should be revisted
-    #     return df
+    def preproccess(self):
+        # Lowercase second level. Example: NUMeric -> numeric
+        self.file.rename(
+            columns=lambda col_name: col_name.lower(), level=1, inplace=True
+        )
+        name = list(self.headers)[0]
+        type = list(self.annot_types)[0].lower()
+        # Uppercase NAME and TYPE
+        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
+        # Make sure group annotations are treated as strings
+        group_columns = self.file.xs(
+            "group", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        self.file[group_columns] = self.file[group_columns].astype(str)
+        # Find numeric columns,  round to 3 decimals places, and cast to floats
+        numeric_columns = self.file.xs(
+            "numeric", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
 
-    def transform(self) -> None:
+    def transform(self):
         """ Add data from cell metadata files into data model"""
         # first column is cell names, therefore skip
         for column in self.file.columns[1:]:
             col_name = column[0]
             column_type = column[1]
-            yield self.DataModel(
+            yield self.Model(
                 column_type,
                 {
                     "name": col_name,
@@ -123,12 +112,10 @@ class CellMetadata(IngestFiles):
     def yield_by_row(self) -> None:
         """ Yield row from cell metadata file"""
         for row in self.file.itertuples(index=False):
-            dictRow = row._asdict()
-            yield dictRow.values()
+            dict_row = row._asdict()
+            yield dict_row.values()
 
-    def chunk_subdocuments(
-        self, doc_name: str, doc_path: str, model: DataModel
-    ) -> Dict:
+    def chunk_subdocuments(self, doc_name: str, doc_path: str, model: Model) -> Dict:
         """Partitions cell metadata subdocuments into storage sizes that are
             less than 1,048,576 bytes. Storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
@@ -271,7 +258,7 @@ class CellMetadata(IngestFiles):
             if t.lower() not in ('group', 'numeric'):
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
-                if 'unnamed' in t:
+                if 'Unnamed' in t:
                     invalid_types.append('<empty value>')
                 else:
                     invalid_types.append(t)
