@@ -15,29 +15,23 @@ class SubSample(IngestFiles):
             self, cluster_file, self.ALLOWED_FILE_TYPES, open_as='dataframe'
         )
         self.determine_coordinates_and_cell_names()
-        self.cell_metadata_file = cell_metadata_file
-        self.correct_annot_types()
-
-    def correct_annot_types(self):
-        """Ensures that numeric columns are rounded to 3 decimals points and
-        group annotations are strings
-        """
-        # TODO: implement a case insenitivite solution
-        numeric_columns = self.file.xs(
-            "numeric", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        self.file[numeric_columns] = self.file[numeric_columns].round(3)
-        group_columns = self.file.xs(
-            "group", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        self.file[group_columns] = self.file[group_columns].astype(str)
+        self.cell_metadata_df = (
+            IngestFiles(
+                cell_metadata_file, self.ALLOWED_FILE_TYPES, open_as='dataframe'
+            )
+            if cell_metadata_file is not None
+            else None
+        )
+        self.preproccess()
 
     def prepare_cell_metadata(self):
         """ Does an inner join on cell and cluster file """
-        if self.cell_metadata_file is not None:
+        if self.cell_metadata_df is not None:
+            self.cell_metadata_df.preproccess()
             self.merge_df(
-                self.cell_metadata_file, self.file[self.coordinates_and_cell_names]
+                self.file[self.coordinates_and_cell_names], self.cell_metadata_df.file
             )
+            self.determine_coordinates_and_cell_names()
 
     def determine_coordinates_and_cell_names(self):
         """Finds column names for coordinates, annotations, and cell names"""

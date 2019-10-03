@@ -26,6 +26,7 @@ class Clusters(IngestFiles):
         self.source_file_type = "cluster"
         self.has_z = True if ("z" in self.header or "Z" in self.header) else False
         self.cell_annotations = self.create_cell_annotations_field()
+        self.cluster_subdocs = {}
         # TODO: Populate the cell_annotations array when pandas is implemented
         self.top_level_doc = {
             "name": name,
@@ -36,7 +37,9 @@ class Clusters(IngestFiles):
             "points": self.amount_of_lines,
             "file_id": file_id,
         }
-        self.cluster_subdocs = self.return_cluster_subdocs(self.header)
+        for annot_name in self.header:
+            model = Clusters.return_cluster_subdocs(annot_name)
+            self.cluster_subdocs.update(model)
 
     def update_points(self):
         self.top_level_doc["points"] = self.amount_of_lines
@@ -82,30 +85,48 @@ class Clusters(IngestFiles):
             annotation_value.append(column)
             self.cluster_subdocs[annotation]["values"] = annotation_value
 
-    def return_cluster_subdocs(self, headers):
+    @staticmethod
+    def return_cluster_subdocs(
+        annot_name, *, values=[], subsample_annotation=None, subsample_threshold=None
+    ):
         """Creates cluster_subdocs"""
         cluster_subdocs = {}
-        for annot_name in self.header:
-            value = annot_name.lower()
-            if value == "name":
-                cluster_subdocs[annot_name] = self.create_cluster_subdoc(
-                    "text", "cells"
-                )
-            elif value in ("x", "y", "z"):
-                cluster_subdocs[annot_name] = self.create_cluster_subdoc(
-                    value, "coordinates"
-                )
-            else:
-                cluster_subdocs[annot_name] = self.create_cluster_subdoc(
-                    annot_name, "annotations"
-                )
-        return cluster_subdocs
+        value = annot_name.lower()
+        if value == "name":
+            cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
+                "text",
+                "cells",
+                values=values,
+                subsample_annotation=subsample_annotation,
+                subsample_threshold=subsample_threshold,
+            )
+        elif value in ("x", "y", "z"):
+            cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
+                value,
+                "coordinates",
+                values=values,
+                subsample_annotation=subsample_annotation,
+                subsample_threshold=subsample_threshold,
+            )
+        else:
+            cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
+                annot_name,
+                "annotations",
+                values=values,
+                subsample_annotation=subsample_annotation,
+                subsample_threshold=subsample_threshold,
+            )
+
+        if subsample_threshold is not None:
+            return cluster_subdocs[annot_name]
+
+        else:
+            return cluster_subdocs
 
     @staticmethod
     def create_cluster_subdoc(
         annot_name,
-        header_value_type,
-        *,
+        annot_type,
         values=[],
         subsample_annotation=None,
         subsample_threshold=None,
@@ -116,7 +137,7 @@ class Clusters(IngestFiles):
             "name": annot_name,
             "array_index": 0,
             "values": values,
-            "array_type": header_value_type,
+            "array_type": annot_type,
             "subsample_annotation": subsample_annotation,
             "subsample_threshold": subsample_threshold,
         }

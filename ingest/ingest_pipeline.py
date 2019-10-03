@@ -13,7 +13,7 @@ EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
@@ -186,9 +186,8 @@ class IngestPipeline(object):
 
             batch.commit()
         except Exception as e:
+            # TODO: Log this error
             print(e)
-            # At this point another exception has occured
-            # TODO: Implement deletion of loaded documents
             return 1
         return 0
 
@@ -203,6 +202,33 @@ class IngestPipeline(object):
             doc_ref_sub = doc_ref.collection(subcollection_name).document()
             doc_ref_sub.set(self.cluster.cluster_subdocs[annot_name])
         # TODO: Add exception handling and return codes
+
+    def load_subsample(self, doc):
+        """Loads subsampled data into Firestore"""
+        try:
+            docs = (
+                self.db.collection(u'clusters')
+                .where(u'study_accession', u'==', self.study_accession)
+                .where(u'file_id', u'==', self.file_id)
+            ).stream()
+            doc_id = next(docs).id
+            subdoc_ref = (
+                self.db.collection(u'clusters')
+                .document(doc_id)
+                .collection('data')
+                .document()
+            )
+
+            subdoc_ref.set(doc)
+        except exceptions.InvalidArgument as e:
+            # Catches invalid argument exception, which error "Maximum
+            # document size" falls under
+            print(e)
+        except Exception as e:
+            # TODO: Log this error
+            print(e)
+            return 1
+        return 0
 
     def has_valid_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
@@ -285,23 +311,29 @@ class IngestPipeline(object):
 
         def create_cluster_subdoc(scope):
             for subdoc in subsample.subsample():
-                annot_name = subdoc[1][0]
+                annot_name = subdoc[1][0].lower()
                 annot_type = subdoc[1][1]
                 sample_size = subdoc[2]
                 for key_value in subdoc[0].items():
-                    Clusters.create_cluster_subdoc(
+                    yield Clusters.return_cluster_subdocs(
                         key_value[0],
-                        annot_type,
-                        value=key_value[1],
+                        values=key_value[1],
                         subsample_annotation=f"{annot_name}--{annot_type}--{scope}",
                         subsample_threshold=sample_size,
                     )
 
-        create_cluster_subdoc("cluster")
+        for doc in create_cluster_subdoc("cluster"):
+            load_status = self.load_subsample(doc)
+            if load_status != 0:
+                return load_status
+
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
-            subsample.determine_coordinates_and_cell_names()
-            create_cluster_subdoc("study")
+            for doc in create_cluster_subdoc("study"):
+                load_status = self.load_subsample(doc)
+                if load_status != 0:
+                    return load_status
+        return 0
 
 
 def create_parser():
@@ -496,13 +528,13 @@ def main() -> None:
             ingest.ingest_cluster()
     elif "subsample" in arguments:
         if arguments["subsample"]:
-            ingest.subsample()
+            status_subsample = ingest.subsample()
+            status.append(status_subsample)
 
     # TODO: This check will need to changed
     if all(i < 1 for i in status) or len(status) == 0:
         sys.exit(os.EX_OK)
     else:
-        print(status)
         sys.exit(os.EX_DATAERR)
 
 

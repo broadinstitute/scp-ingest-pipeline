@@ -107,7 +107,7 @@ class CellMetadata(IngestFiles):
                     # save unique values for group type annotations
                     "unique_values": list(self.file[column].unique())
                     if column_type == "group"
-                    else None,
+                    else [],
                     "annotation_type": column_type,
                     "file_id": self.file_id,
                 },
