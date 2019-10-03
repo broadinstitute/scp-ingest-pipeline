@@ -206,8 +206,15 @@ class IngestPipeline(object):
             .where(u'study_accession', u'==', self.study_accession)
             .where(u'file_id', u'==', self.file_id)
         ).stream()
-        doc_ref = next(docs).id
-        print(doc_ref)
+        doc_id = next(docs).id
+        subdoc_ref = (
+            self.db.collection(u'clusters')
+            .document(doc_id)
+            .collection('data')
+            .document()
+        )
+
+        subdoc_ref.set(doc)
 
     def has_valid_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""

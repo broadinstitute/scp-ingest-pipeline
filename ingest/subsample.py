@@ -104,7 +104,6 @@ class SubSample(IngestFiles):
             for sample_size in self.SUBSAMPLE_THRESHOLDS
             if sample_size < len(self.file.index)
         ]
-        print(self.file.index)
         for bins in map(self.bin, self.columns):
             # (name of current column)
             annotation_name = bins[1]
