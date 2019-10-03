@@ -22,11 +22,19 @@ DOCUMENT_LIMIT_BYTES = 1_048_576
 # Welcome comments about whether this should live here or in the class
 @dataclass
 class Document(TypedDict):
-    name: str
-    study_accession: str
-    unique_values: List
-    annotation_type: str
-    file_id: str
+    def __init__(
+        self,
+        name: str,
+        study_accession: str,
+        unique_values: List,
+        annotation_type: str,
+        file_id: str,
+    ):
+        self.name = name
+        self.study_accession = study_accession
+        self.unique_values = unique_values
+        self.annotation_type = annotation_type
+        self.file_id = file_id
 
 
 # Welcome comments about whether this should live here or in the class

@@ -18,6 +18,9 @@ python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster
 # Ingest Cell Metadata file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
 
+# Ingest Cell Metadata file against convention
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata --validate-convention
+
 # Ingest dense file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
@@ -58,7 +61,7 @@ EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 
 class IngestPipeline(object):
     # File location for metadata json convention
-    JSON_CONVENTION = 'DoNotTouch/AMC_v1.1.1.json'
+    JSON_CONVENTION = 'DoNotTouch/AMC_v0.8.json'
 
     def __init__(
         self,
@@ -270,7 +273,14 @@ class IngestPipeline(object):
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         # TODO: Add self.has_valid_metadata_convention() to if statement
-        if self.cell_metadata.is_valid_file and self.has_valid_metadata_convention():
+        if self.cell_metadata.is_valid_file:
+            # Check to see file needs to be check against metadata convention
+            if self.kwargs['validate_convention'] is not None:
+                if self.kwargs['validate_convention']:
+                    if self.has_valid_metadata_convention():
+                        pass
+                    else:
+                        return 1
             self.cell_metadata.reset_file(2, open_as="dataframe")
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
@@ -418,7 +428,12 @@ def create_parser():
         "--ingest-cell-metadata",
         required=True,
         action="store_true",
-        help="Indicates that subsampliing functionality should be invoked",
+        help="Indicates that ingest of cell metadata should be invoked",
+    )
+    parser_cell_metadata.add_argument(
+        "--validate-convention",
+        action="store_true",
+        help="Indicates that metadata file should be validated against convention",
     )
 
     # Parser ingesting cluster files
