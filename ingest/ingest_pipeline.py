@@ -16,7 +16,10 @@ EXAMPLES
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/10k_cells_29k_genes.cluster.txt --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/10k_cells_29k_genes.metadata.tsv --ingest-cell-metadata
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
+
+# Ingest Cell Metadata file against convention
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata --validate-convention
 
 # Ingest dense file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
@@ -160,41 +163,33 @@ class IngestPipeline(object):
 
                     batch.commit()
 
-    # TODO: Add exception handling and return codes
-
-    def load_cell_metadata(self):
+    def load_cell_metadata(self, cell_metadata_model):
         """Loads cell metadata files into firestore."""
+        collection_name = cell_metadata_model.COLLECTION_NAME
+        subcollection_name = cell_metadata_model.SUBCOLLECTION_NAME
+        # Firestore document reference
+        doc_ref = self.db.collection(collection_name).document()
+        doc_ref.set(cell_metadata_model.doc)
+        try:
+            # Firestore subdocument reference
+            sub_doc_ref = doc_ref.collection(subcollection_name).document()
+            sub_doc_ref.set(cell_metadata_model.subdoc)
+        except exceptions.InvalidArgument as e:
+            # Catches invalid argument exception, which error "Maximum
+            # document size" falls under
+            print(e)
+            batch = self.db.batch()
+            for subdoc_chunk in self.cell_metadata.chunk_subdocuments(
+                sub_doc_ref.id, sub_doc_ref._document_path, cell_metadata_model
+            ):
+                batch.set(sub_doc_ref, subdoc_chunk)
 
-        collection_name = self.cell_metadata.COLLECTION_NAME
-        subcollection_name = self.cell_metadata.SUBCOLLECTION_NAME
-        for annotation in self.cell_metadata.top_level_doc.keys():
-            doc_ref = self.db.collection(collection_name).document()
-            self.cell_metadata.update_unqiue_values(annotation)
-            doc_ref.set(self.cell_metadata.top_level_doc[annotation])
-            try:
-                print(f"Ingesting {annotation}")
-                print(
-                    f"Length of values are: {len(self.cell_metadata.data_subcollection[annotation]['values'])}"
-                )
-                subcollection_doc = self.cell_metadata.data_subcollection[annotation]
-                doc_ref_sub = doc_ref.collection(subcollection_name).document()
-                doc_ref_sub.set(subcollection_doc)
-            except exceptions.InvalidArgument:
-                # Catches invalid argument exception, which error "Maximum
-                # document size" falls under
-                batch = self.db.batch()
-                for subdoc in self.cell_metadata.chunk_subdocuments(
-                    doc_ref_sub.id, doc_ref_sub._document_path, annotation
-                ):
-                    batch.set(doc_ref_sub, subdoc)
-
-                batch.commit()
-            # An unexpected exception has been encountered
-            except Exception as e:
-                print(e)
-                # At this point another exception has occured
-                # TODO: Implement deletion of loaded documents
-                return 1
+            batch.commit()
+        except Exception as e:
+            print(e)
+            # At this point another exception has occured
+            # TODO: Implement deletion of loaded documents
+            return 1
         return 0
 
     def load_cluster_files(self):
@@ -251,15 +246,22 @@ class IngestPipeline(object):
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        if self.cell_metadata.is_valid_file and self.has_valid_metadata_convention():
-            self.cell_metadata.reset_file(2)
-            while True:
-                row = self.cell_metadata.extract()
-                if row is None:
-                    break
-                self.cell_metadata.transform(row)
-            load_status = self.load_cell_metadata()
-            return load_status
+        # TODO: Add self.has_valid_metadata_convention() to if statement
+        if self.cell_metadata.is_valid_file:
+            # Check to see file needs to be check against metadata convention
+            if self.kwargs['validate_convention'] is not None:
+                if self.kwargs['validate_convention']:
+                    if self.has_valid_metadata_convention():
+                        pass
+                    else:
+                        return 1
+            self.cell_metadata.reset_file(2, open_as="dataframe")
+            self.cell_metadata.preproccess()
+            for metadataModel in self.cell_metadata.transform():
+                load_status = self.load_cell_metadata(metadataModel)
+                if load_status != 0:
+                    return load_status
+            return 0
         else:
             return 1
 
@@ -283,7 +285,6 @@ class IngestPipeline(object):
 
         def create_cluster_subdoc(scope):
             for subdoc in subsample.subsample():
-                print(subdoc)
                 annot_name = subdoc[1][0]
                 annot_type = subdoc[1][1]
                 sample_size = subdoc[2]
@@ -395,7 +396,12 @@ def create_parser():
         "--ingest-cell-metadata",
         required=True,
         action="store_true",
-        help="Indicates that subsampliing functionality should be invoked",
+        help="Indicates that ingest of cell metadata should be invoked",
+    )
+    parser_cell_metadata.add_argument(
+        "--validate-convention",
+        action="store_true",
+        help="Indicates that metadata file should be validated against convention",
     )
 
     # Parser ingesting cluster files

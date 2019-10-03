@@ -5,9 +5,10 @@ Text, CSV, and TSV files are supported.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-import copy
 from collections import defaultdict
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+from dataclasses import dataclass
+from mypy_extensions import TypedDict
 
 try:
     # Used when importing internally and in tests
@@ -18,23 +19,45 @@ except ImportError:
 
 DOCUMENT_LIMIT_BYTES = 1_048_576
 
+# Welcome comments about whether this should live here or in the class
+@dataclass
+class Document(TypedDict):
+    def __init__(
+        self,
+        name: str,
+        study_accession: str,
+        unique_values: List,
+        annotation_type: str,
+        file_id: str,
+    ):
+        self.name = name
+        self.study_accession = study_accession
+        self.unique_values = unique_values
+        self.annotation_type = annotation_type
+        self.file_id = file_id
+
+
+# Welcome comments about whether this should live here or in the class
+@dataclass
+class SubDocument(TypedDict):
+    def __init__(self, values: List, cell_names: List):
+        self.values = values
+        self.cell_names = cell_names
+
 
 class CellMetadata(IngestFiles):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
-    COLLECTION_NAME = "cell_metadata"
-    SUBCOLLECTION_NAME = "data"
 
     def __init__(self, file_path, file_id: str, study_accession: str, *args, **kwargs):
 
-        IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
-        self.headers = self.get_next_line(increase_line_count=False)
-        self.metadata_types = self.get_next_line(increase_line_count=False)
-        # unique values for group-based annotations
-        self.unique_values = {key: [] for key in self.headers[1:]}
+        IngestFiles.__init__(
+            self, file_path, self.ALLOWED_FILE_TYPES, open_as="dataframe"
+        )
+        self.headers = self.file.columns.get_level_values(0)
+        self.annot_types = self.file.columns.get_level_values(1)
         self.cell_names = []
-        self.annotation_type = ['group', 'numeric']
-        self.top_level_doc = self.create_documents(file_id, study_accession)
-        self.data_subcollection = self.create_subdocuments()
+        self.study_accession = study_accession
+        self.file_id = file_id
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
@@ -42,69 +65,65 @@ class CellMetadata(IngestFiles):
         self.cells = []
         self.is_valid_file = self.validate_format()
 
-    def transform(self, row: List[str]) -> None:
+    @dataclass
+    class Model:
+        COLLECTION_NAME = "cell_metadata"
+        SUBCOLLECTION_NAME = "data"
+        annot_type: str
+        doc: Document
+        subdoc: SubDocument
+
+    def preproccess(self):
+        # Lowercase second level. Example: NUMeric -> numeric
+        self.file.rename(
+            columns=lambda col_name: col_name.lower(), level=1, inplace=True
+        )
+        name = list(self.headers)[0]
+        type = list(self.annot_types)[0].lower()
+        # Uppercase NAME and TYPE
+        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
+        # Make sure group annotations are treated as strings
+        group_columns = self.file.xs(
+            "group", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        self.file[group_columns] = self.file[group_columns].astype(str)
+        # Find numeric columns,  round to 3 decimals places, and cast to floats
+        numeric_columns = self.file.xs(
+            "numeric", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
+
+    def transform(self):
         """ Add data from cell metadata files into data model"""
-        for idx, column in enumerate(row):
-            # Get annotation name from header
-            annotation = self.headers[idx]
-            if idx != 0:
-                # if annotation is numeric convert from string to float
-                if self.metadata_types[idx].lower() == 'numeric':
-                    column = round(float(column), 3)
-                elif self.metadata_types[idx].lower() == 'group':
-                    # Check for unique values
-                    if column not in self.unique_values[annotation]:
-                        self.unique_values[annotation].append(column)
-                self.data_subcollection[annotation]['values'].append(column)
-            else:
-                # If column isn't an annotation value, it's a cell name
-                self.cell_names.append(column)
-
-    def update_unqiue_values(self, annot_name):
-        """Updates unique values for an annotation."""
-
-        header_idx = self.headers.index(annot_name)
-        annot_type = self.metadata_types[header_idx]
-
-        # Numeric annotations do not have unique values. So return None
-        if annot_type == "numeric":
-            self.top_level_doc[annot_name]["unique_values"] = None
-        else:
-            self.top_level_doc[annot_name]["unique_values"] = self.unique_values[
-                annot_name
-            ]
-
-    def create_documents(self, file_id, study_accession):
-        """Creates top level documents for Cell Metadata data structure"""
-        documents = {}
-
-        # Each annotation value has a top level document
-        for idx, value in enumerate(self.headers[1:]):
-            # Copy document model so memory references are different
-            copy_of_doc_model = copy.copy(
+        # first column is cell names, therefore skip
+        for column in self.file.columns[1:]:
+            col_name = column[0]
+            column_type = column[1]
+            yield self.Model(
+                column_type,
                 {
-                    "name": value,
-                    "study_accession": study_accession,
-                    "unique_values": self.unique_values[value],
-                    "annotation_type": self.metadata_types[idx + 1],
-                    "file_id": file_id,
-                }
+                    "name": col_name,
+                    "study_accession": self.study_accession,
+                    # save unique values for group type annotations
+                    "unique_values": list(self.file[column].unique())
+                    if column_type == "group"
+                    else None,
+                    "annotation_type": column_type,
+                    "file_id": self.file_id,
+                },
+                {
+                    "cell_names": list(self.file.iloc[:, 0]),
+                    "values": list(self.file[column]),
+                },
             )
-            documents[value] = copy_of_doc_model
-        return documents
 
-    def create_subdocuments(self):
-        """Creates subdocuments for each annotation """
-        sub_documents = {}
-        for value in self.headers[1:]:
-            # Copy subdocument model so memory references are different
-            copy_of_subdoc_model = copy.copy(
-                {'cell_names': self.cell_names, 'values': []}
-            )
-            sub_documents[value] = copy_of_subdoc_model
-        return sub_documents
+    def yield_by_row(self) -> None:
+        """ Yield row from cell metadata file"""
+        for row in self.file.itertuples(index=False):
+            dict_row = row._asdict()
+            yield dict_row.values()
 
-    def chunk_subdocuments(self, doc_name, doc_path, annot_name):
+    def chunk_subdocuments(self, doc_name: str, doc_path: str, model: Model) -> Dict:
         """Partitions cell metadata subdocuments into storage sizes that are
             less than 1,048,576 bytes. Storage size calculation figures are derived from:
             # https://cloud.google.com/firestore/docs/storage-size
@@ -120,21 +139,19 @@ class CellMetadata(IngestFiles):
             + 1
             + len(doc_path)
             + 1
-            + len(self.SUBCOLLECTION_NAME)
+            + len(model.SUBCOLLECTION_NAME)
             + 1
-            + len(self.COLLECTION_NAME)
+            + len(model.COLLECTION_NAME)
             + 1
         )
         start_index = 0
         float_storage = 8
         sum = starting_sum
-        header_idx = self.headers.index(annot_name)
-        annot_type = self.metadata_types[header_idx]
-
+        annot_type = model.annot_type
         # All cells names:[] that are in subdoc
-        cell_names = self.data_subcollection[annot_name]["cell_names"]
+        cell_names = model.subdoc["cell_names"]
         # All values:[] that are in subdoc
-        values = self.data_subcollection[annot_name]["values"]
+        values = model.subdoc["values"]
 
         for index, (cell_name, value) in enumerate(zip(cell_names, values)):
 
@@ -158,7 +175,7 @@ class CellMetadata(IngestFiles):
                     end_index = index - 1
                 # TODO: This can turn into a logging statement
                 # Please do not remove this. It's needed for testing
-                print(f"{sum} , {index}, {start_index} , {end_index}")
+                print(f"{sum}, {index}, {start_index}, {end_index}")
                 yield {
                     "cell_names": cell_names[start_index:end_index],
                     "values": values[start_index:end_index],
@@ -183,18 +200,23 @@ class CellMetadata(IngestFiles):
         """Check metadata header row starts with NAME (case-insensitive).
         :return: boolean   True if valid, False otherwise
         """
+
+        """Check all metadata header names are unique.
+        :return: boolean   True if valid, False otherwise
+        """
+
         valid = False
-        if self.headers[0].lower() == 'NAME'.lower():
+        if self.headers[0].upper() == "NAME":
             valid = True
-            if self.headers[0] != 'NAME':
+            if self.headers[0] != "NAME":
+                # ToDO - capture warning below in error report
                 msg = (
-                    f'Warning: metadata file keyword NAME provided as '
-                    f'{self.headers[0]}'
+                    f'Warning: metadata file keyword "NAME" provided as '
+                    f"{self.headers[0]}"
                 )
                 self.store_validation_issue('warn', 'format', msg)
-
         else:
-            msg = 'Error: Metadata file header row malformed, missing NAME'
+            msg = 'Error: Metadata file header row malformed, missing NAME. (Case Sensitive)'
             self.store_validation_issue('error', 'format', msg)
         return valid
 
@@ -203,11 +225,13 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if len(self.headers[1:]) == len(set(self.headers[1:])):
+        unique_headers = set(self.headers)
+        if len(unique_headers) == len(self.headers):
             valid = True
-        else:
-            msg = 'Error: Duplicate column headers in metadata file'
+        if any("Unnamed" in s for s in list(unique_headers)):
+            msg = "Error: Headers cannot contain empty values"
             self.store_validation_issue('error', 'format', msg)
+            valid = False
         return valid
 
     def validate_type_keyword(self):
@@ -215,9 +239,9 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if self.metadata_types[0].lower() == 'TYPE'.lower():
+        if self.annot_types[0].upper() == "TYPE":
             valid = True
-            if self.metadata_types[0] != 'TYPE':
+            if self.annot_types[0] != "TYPE":
                 # ToDO - capture warning below in issue report
                 # investigate f-string formatting here
                 msg = (
@@ -238,11 +262,11 @@ class CellMetadata(IngestFiles):
         invalid_types = []
         # skipping the TYPE keyword, iterate through the types
         # collecting invalid type annotations in list annots
-        for t in self.metadata_types[1:]:
-            if t not in self.annotation_type:
+        for t in self.annot_types[1:]:
+            if t.lower() not in ('group', 'numeric'):
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
-                if not t:
+                if 'Unnamed' in t:
                     invalid_types.append('<empty value>')
                 else:
                     invalid_types.append(t)
@@ -258,10 +282,20 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if header and type counts match, otherwise False
         """
         valid = False
-        if not len(self.headers) == len(self.metadata_types):
+        len_headers = len(
+            [header for header in self.headers if 'Unnamed' not in header]
+        )
+        len_annot_type = len(
+            [
+                annot_type
+                for annot_type in self.annot_types
+                if 'Unnamed' not in annot_type
+            ]
+        )
+        if not len_headers == len_annot_type:
             msg = (
-                f'Error: {len(self.metadata_types)} TYPE declarations '
-                f'for {len(self.headers)} column headers'
+                f'Error: {len_annot_type} TYPE declarations '
+                f'for {len_headers} column headers'
             )
             self.store_validation_issue('error', 'format', msg)
         else:
@@ -273,8 +307,8 @@ class CellMetadata(IngestFiles):
         """
         return (
             self.validate_header_keyword()
-            or self.validate_type_keyword()
-            or self.validate_type_annotations()
-            or self.validate_unique_header()
-            or self.validate_against_header_count()
+            and self.validate_type_keyword()
+            and self.validate_type_annotations()
+            and self.validate_unique_header()
+            and self.validate_against_header_count()
         )

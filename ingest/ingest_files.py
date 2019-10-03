@@ -71,12 +71,12 @@ class IngestFiles:
         # Remove BOM with encoding ='utf - 8 - sig'
         return open(file_path, encoding="utf-8-sig")
 
-    def reset_file(self, start_point):
+    def reset_file(self, start_point, open_as=None):
         """Restart file reader at point that's equal to start_point.
         Method is used in cases where a file may need to be read multiple times"""
 
         self.file_type, self.file, self.file_handle = self.open_file(
-            self.file_path, start_point=start_point
+            self.file_path, start_point=start_point, open_as=open_as
         )
 
     def open_file(self, file_path, open_as=None, start_point: int = 0):

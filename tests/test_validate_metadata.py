@@ -41,7 +41,7 @@ class TestValidateMetadata(unittest.TestCase):
         with open(args.convention, "r") as f:
             convention = json.load(f)
         filetsv = args.input_metadata
-        metadata = CellMetadata(filetsv, "1234abc", "SCP1")
+        metadata = CellMetadata(filetsv, "1234abc", "SCP1", open_as="dataframe")
         metadata.validate_format()
         return (metadata, convention)
 
@@ -56,7 +56,7 @@ class TestValidateMetadata(unittest.TestCase):
         metadata = self.setup_metadata(args)[0]
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
-            "Error: Metadata file header row malformed, missing NAME",
+            "Error: Metadata file header row malformed, missing NAME. (Case Sensitive)",
             metadata.issues['error']["format"].keys(),
             "Missing NAME keyword should fail format validation",
         )
@@ -76,12 +76,6 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertFalse(
             metadata.validate_unique_header(),
             "Duplicate headers should fail format validation",
-        )
-
-        self.assertFalse(
-            metadata.validate_against_header_count(),
-            "Mismatch between header and type annotation count "
-            "should fail format validation",
         )
 
         self.assertTrue(

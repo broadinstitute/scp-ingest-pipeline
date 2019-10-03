@@ -12,24 +12,19 @@ class TestCellMetadata(unittest.TestCase):
         self.cell_metadata = CellMetadata(
             '../tests/data/test_chunking_cell_metadata.csv', 'SCP1', '1234abc'
         )
-        # Read and transform file to data model
-        while True:
-            row = self.cell_metadata.extract()
-            if row is None:
-                break
-            self.cell_metadata.transform(row)
+        self.cell_metadata.preproccess()
         # Captures print statements from chunk_subdocuments
         captured_output = io.StringIO()
         sys.stdout = captured_output
-        for subdoc in self.cell_metadata.chunk_subdocuments(
-            'doc_name', 'fake/path/cell_metadata', 'ClusterID'
-        ):
-            pass
-
+        for cellmetadata_model in self.cell_metadata.transform():
+            for subdoc in self.cell_metadata.chunk_subdocuments(
+                'doc_name', 'fake/path/cell_metadata', cellmetadata_model
+            ):
+                pass
         sys.stdout = sys.__stdout__
         # String represents outputs from chunk_subdocuments method
         #  number of bytes, end_index, starting index, number of bytes, end_index, starting index
-        expected = "1048562 , 17740, 0 , 17739\n347983 , 23593, 17740 , 23593\n"
+        expected = '1048562, 17740, 0, 17739\n347983, 23593, 17740, 23593\n1048567, 16130, 0, 16129\n485212, 23593, 16130, 23593\n'
 
         self.assertEqual(expected, captured_output.getvalue())
 
