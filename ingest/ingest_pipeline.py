@@ -200,7 +200,6 @@ class IngestPipeline(object):
 
     def load_subsample(self, doc):
         """Loads subsampled data into Firestore"""
-
         docs = (
             self.db.collection(u'clusters')
             .where(u'study_accession', u'==', self.study_accession)
@@ -292,13 +291,12 @@ class IngestPipeline(object):
 
         def create_cluster_subdoc(scope):
             for subdoc in subsample.subsample():
-                annot_name = subdoc[1][0]
+                annot_name = subdoc[1][0].lower()
                 annot_type = subdoc[1][1]
                 sample_size = subdoc[2]
                 for key_value in subdoc[0].items():
-                    yield Clusters.create_cluster_subdoc(
+                    yield Clusters.return_cluster_subdocs(
                         key_value[0],
-                        annot_type,
                         values=key_value[1],
                         subsample_annotation=f"{annot_name}--{annot_type}--{scope}",
                         subsample_threshold=sample_size,
@@ -309,7 +307,8 @@ class IngestPipeline(object):
 
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
-            create_cluster_subdoc("study")
+            for doc in create_cluster_subdoc("study"):
+                self.load_subsample(doc)
 
 
 def create_parser():
