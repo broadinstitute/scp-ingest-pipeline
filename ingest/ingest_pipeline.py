@@ -270,9 +270,7 @@ class IngestPipeline(object):
         # TODO: Add self.has_valid_metadata_convention() to if statement
         if self.cell_metadata.is_valid_file and self.has_valid_metadata_convention():
             self.cell_metadata.reset_file(2, open_as="dataframe")
-            self.cell_metadata.file = self.cell_metadata.preproccess(
-                self.cell_metadata.file
-            )
+            self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
                 load_status = self.load_cell_metadata(metadataModel)
                 if load_status != 0:
