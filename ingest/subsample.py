@@ -24,20 +24,6 @@ class SubSample(IngestFiles):
         )
         self.preproccess()
 
-    # def correct_annot_types(self):
-    #     """Ensures that numeric columns are rounded to 3 decimals points and
-    #     group annotations are strings
-    #     """
-    #     # TODO: implement a case insenitivite solution
-    #     numeric_columns = self.file.xs(
-    #         "numeric", axis=1, level=1, drop_level=False
-    #     ).columns.tolist()
-    #     self.file[numeric_columns] = self.file[numeric_columns].round(3)
-    #     group_columns = self.file.xs(
-    #         "group", axis=1, level=1, drop_level=False
-    #     ).columns.tolist()
-    #     self.file[group_columns] = self.file[group_columns].astype(str)
-
     def prepare_cell_metadata(self):
         """ Does an inner join on cell and cluster file """
         if self.cell_metadata_df is not None:

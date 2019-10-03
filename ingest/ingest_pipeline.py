@@ -200,20 +200,30 @@ class IngestPipeline(object):
 
     def load_subsample(self, doc):
         """Loads subsampled data into Firestore"""
-        docs = (
-            self.db.collection(u'clusters')
-            .where(u'study_accession', u'==', self.study_accession)
-            .where(u'file_id', u'==', self.file_id)
-        ).stream()
-        doc_id = next(docs).id
-        subdoc_ref = (
-            self.db.collection(u'clusters')
-            .document(doc_id)
-            .collection('data')
-            .document()
-        )
+        try:
+            docs = (
+                self.db.collection(u'clusters')
+                .where(u'study_accession', u'==', self.study_accession)
+                .where(u'file_id', u'==', self.file_id)
+            ).stream()
+            doc_id = next(docs).id
+            subdoc_ref = (
+                self.db.collection(u'clusters')
+                .document(doc_id)
+                .collection('data')
+                .document()
+            )
 
-        subdoc_ref.set(doc)
+            subdoc_ref.set(doc)
+        except exceptions.InvalidArgument as e:
+            # Catches invalid argument exception, which error "Maximum
+            # document size" falls under
+            print(e)
+        except Exception as e:
+            # TODO: Log this error
+            print(e)
+            return 1
+        return 0
 
     def has_valid_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
@@ -303,12 +313,17 @@ class IngestPipeline(object):
                     )
 
         for doc in create_cluster_subdoc("cluster"):
-            self.load_subsample(doc)
+            load_status = self.load_subsample(doc)
+            if load_status != 0:
+                return load_status
 
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
             for doc in create_cluster_subdoc("study"):
-                self.load_subsample(doc)
+                load_status = self.load_subsample(doc)
+                if load_status != 0:
+                    return load_status
+        return 0
 
 
 def create_parser():
@@ -498,7 +513,8 @@ def main() -> None:
             ingest.ingest_cluster()
     elif "subsample" in arguments:
         if arguments["subsample"]:
-            ingest.subsample()
+            status_subsample = ingest.subsample()
+            status.append(status_subsample)
 
     # TODO: This check will need to changed
     if all(i < 1 for i in status) or len(status) == 0:
