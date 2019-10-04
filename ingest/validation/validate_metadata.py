@@ -285,6 +285,10 @@ def collect_jsonschema_errors(metadata, convention):
             metadata.cells.append(row['CellID'])
             collect_ontology_data(row, metadata)
             for error in schema.iter_errors(row):
+                try:
+                    error.message = error.path[0] + ": " + error.message
+                except IndexError:
+                    pass
                 js_errors[error.message].append(row['CellID'])
             try:
                 line = next(rows)
