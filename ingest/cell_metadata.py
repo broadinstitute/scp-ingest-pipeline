@@ -305,10 +305,12 @@ class CellMetadata(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        return (
-            self.validate_header_keyword()
-            and self.validate_type_keyword()
-            and self.validate_type_annotations()
-            and self.validate_unique_header()
-            and self.validate_against_header_count()
+        return all(
+            [
+                self.validate_header_keyword(),
+                self.validate_type_keyword(),
+                self.validate_type_annotations(),
+                self.validate_unique_header(),
+                self.validate_against_header_count(),
+            ]
         )

@@ -522,7 +522,6 @@ if __name__ == '__main__':
         filetsv, args.file_id, args.study_accession, open_as="dataframe"
     )
     print('Validating', filetsv)
-    metadata.validate_format()
     collect_jsonschema_errors(metadata, convention)
     validate_collected_ontology_data(metadata, convention)
     if args.issues_json:
