@@ -144,7 +144,10 @@ def extract_convention_types(convention, metadata):
 
 
 def merge_numerics(metadata):
-    """Add numeric headers from metadata file to appropriate metadata.fype
+    """Add numeric headers from metadata file to appropriate metadata.type
+    merges list of number-types from metadata convention and non-convention
+    numerics from metadata annotation into CellMetadata.type['floats']
+    to be checked for row-by-row type coercion in process_metadata_row
     """
     logger.debug('Begin: merge_numerics')
     metadata.type['floats'] = metadata.type['convention']['number'][:]
@@ -185,26 +188,29 @@ def validate_cells_unique(metadata):
     return valid
 
 
-def collect_cell_for_ontology(metadatum, data, metadata):
+def collect_cell_for_ontology(metadatum, row_data, metadata):
     """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
     """
     local_errors = set()
     logger.debug('Begin: collect_cell_for_ontology')
-    ontology_label = metadatum + '__ontology_label'
+    if metadatum.endswith('__unit'):
+        ontology_label = metadatum + '_label'
+    else:
+        ontology_label = metadatum + '__ontology_label'
     try:
-        metadata.ontology[metadatum][(data[metadatum], data[ontology_label])].append(
-            data['CellID']
-        )
+        metadata.ontology[metadatum][
+            (row_data[metadatum], row_data[ontology_label])
+        ].append(row_data['CellID'])
     except KeyError:
-        metadata.ontology[metadatum][(data[metadatum])].append(data['CellID'])
+        metadata.ontology[metadatum][(row_data[metadatum])].append(row_data['CellID'])
     return local_errors
 
 
-def collect_ontology_data(data, metadata):
+def collect_ontology_data(row_data, metadata):
     """Collect unique ontology IDs for ontology validation
     """
     logger.debug('Begin: collect_ontology_data')
-    for entry in data.keys():
+    for entry in row_data.keys():
         # print('consider collecting ontology', entry)
         if entry in metadata.type['convention']['ontology']:
             # skip ontologies that are arrays for now
@@ -212,7 +218,7 @@ def collect_ontology_data(data, metadata):
                 pass
                 # not collecting metadata for array-based metadata
             else:
-                collect_cell_for_ontology(entry, data, metadata)
+                collect_cell_for_ontology(entry, row_data, metadata)
         else:
             # troubleshooting print statement to visualize skipping metadata that are not of type ontology
             # print(entry, 'not an ontology in', metadata.type['convention']['ontology'])
