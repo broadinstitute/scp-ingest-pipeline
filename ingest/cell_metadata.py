@@ -228,6 +228,10 @@ class CellMetadata(IngestFiles):
         unique_headers = set(self.headers)
         if len(unique_headers) == len(self.headers):
             valid = True
+        else:
+            msg = "Error: Duplicate metadata names detected"
+            self.store_validation_issue('error', 'format', msg)
+            valid = False
         if any("Unnamed" in s for s in list(unique_headers)):
             msg = "Error: Headers cannot contain empty values"
             self.store_validation_issue('error', 'format', msg)
