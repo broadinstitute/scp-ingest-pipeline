@@ -21,8 +21,8 @@ import sys
 import unittest
 import json
 
-sys.path.append("../ingest")
-sys.path.append("../ingest/validation")
+sys.path.append('../ingest')
+sys.path.append('../ingest/validation')
 
 from validate_metadata import (
     create_parser,
@@ -37,12 +37,12 @@ from validate_metadata import (
 
 class TestValidateMetadata(unittest.TestCase):
     def setup_metadata(self, args):
-        args_list = args.split(" ")
+        args_list = args.split(' ')
         args = create_parser().parse_args(args_list)
-        with open(args.convention, "r") as f:
+        with open(args.convention, 'r') as f:
             convention = json.load(f)
         filetsv = args.input_metadata
-        metadata = CellMetadata(filetsv, "1234abc", "SCP1", open_as="dataframe")
+        metadata = CellMetadata(filetsv, '1234abc', 'SCP1', open_as='dataframe')
         metadata.validate_format()
         return (metadata, convention)
 
@@ -53,34 +53,34 @@ class TestValidateMetadata(unittest.TestCase):
         """Header rows of metadata file should conform to standard
         """
 
-        args = "../tests/data/AMC_v1.1.1.json ../tests/data/error_headers_v1.1.1.tsv"
+        args = '../tests/data/AMC_v1.1.1.json ../tests/data/error_headers_v1.1.1.tsv'
         metadata = self.setup_metadata(args)[0]
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
-            "Malformed metadata file header row, missing NAME. (Case Sensitive)",
-            metadata.issues['error']["format"].keys(),
-            "Missing NAME keyword should fail format validation",
+            'Malformed metadata file header row, missing NAME. (Case Sensitive)',
+            metadata.issues['error']['format'].keys(),
+            'Missing NAME keyword should fail format validation',
         )
 
         self.assertFalse(metadata.validate_type_keyword())
         self.assertIn(
-            "Malformed metadata TYPE row, missing TYPE. (Case Sensitive)",
-            metadata.issues['error']["format"].keys(),
-            "Missing TYPE keyword should fail format validation",
+            'Malformed metadata TYPE row, missing TYPE. (Case Sensitive)',
+            metadata.issues['error']['format'].keys(),
+            'Missing TYPE keyword should fail format validation',
         )
 
         self.assertFalse(
             metadata.validate_type_annotations(),
-            "Invalid type annotations should fail format validation",
+            'Invalid type annotations should fail format validation',
         )
 
         self.assertFalse(
             metadata.validate_unique_header(),
-            "Duplicate headers should fail format validation",
+            'Duplicate headers should fail format validation',
         )
 
         self.assertTrue(
-            report_issues(metadata), "Invalid metadata content should report issues"
+            report_issues(metadata), 'Invalid metadata content should report issues'
         )
 
         self.teardown_metadata(metadata)
@@ -89,21 +89,21 @@ class TestValidateMetadata(unittest.TestCase):
         """Metadata convention should be valid jsonschema
             """
 
-        args = "../tests/data/AMC_invalid.json ../tests/data/valid_v1.1.1.tsv"
+        args = '../tests/data/AMC_invalid.json ../tests/data/valid_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertIsNone(
             validate_schema(convention, metadata),
-            "Invalid metadata schema should be detected",
+            'Invalid metadata schema should be detected',
         )
         self.teardown_metadata(metadata)
 
     def test_valid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
             """
-        args = "../tests/data/AMC_v1.1.1.json ../tests/data/valid_v1.1.1.tsv"
+        args = '../tests/data/AMC_v1.1.1.json ../tests/data/valid_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
-            metadata.validate_format(), "Valid metadata headers should not elicit error"
+            metadata.validate_format(), 'Valid metadata headers should not elicit error'
         )
         collect_jsonschema_errors(metadata, convention)
         self.assertFalse(
@@ -114,34 +114,34 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
             """
-        args = "../tests/data/AMC_v1.1.1.json ../tests/data/metadata_invalid_v1.1.1.tsv"
+        args = '../tests/data/AMC_v1.1.1.json ../tests/data/metadata_invalid_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
-            metadata.validate_format(), "Valid metadata headers should not elicit error"
+            metadata.validate_format(), 'Valid metadata headers should not elicit error'
         )
         collect_jsonschema_errors(metadata, convention)
         self.assertTrue(
-            report_issues(metadata), "Valid metadata content should not elicit error"
+            report_issues(metadata), 'Valid metadata content should not elicit error'
         )
         validate_collected_ontology_data(metadata, convention)
         # reference errors tests for:
-        #   missing required property "sex"
-        #   missing dependency for non-required property "ethinicity"
-        #   missing value for non-required property "is_living"
-        #   value provided not in enumerated list for "sample_type"
-        #   value provided not a number for "organism_age"
-        reference_file = open("../tests/data/issues_metadata_v1.1.1.json", "r")
+        #   missing required property 'sex'
+        #   missing dependency for non-required property 'ethinicity'
+        #   missing value for non-required property 'is_living'
+        #   value provided not in enumerated list for 'sample_type'
+        #   value provided not a number for 'organism_age'
+        reference_file = open('../tests/data/issues_metadata_v1.1.1.json', 'r')
         reference_issues = json.load(reference_file)
         reference_file.close()
         print(metadata.issues)
-        print("\n")
+        print('\n')
         print(reference_issues)
-        print("\n")
+        print('\n')
         self.assertEqual(
             metadata.issues,
             reference_issues,
-            "Metadata validation issues do not match reference issues",
+            'Metadata validation issues do not match reference issues',
         )
 
         self.teardown_metadata(metadata)
@@ -149,25 +149,25 @@ class TestValidateMetadata(unittest.TestCase):
     def test_valid_ontology_content(self):
         """Ontology metadata should conform to convention requirements
             """
-        args = "../tests/data/AMC_v1.1.1.json ../tests/data/valid_v1.1.1.tsv"
+        args = '../tests/data/AMC_v1.1.1.json ../tests/data/valid_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
-            metadata.validate_format(), "Valid metadata headers should not elicit error"
+            metadata.validate_format(), 'Valid metadata headers should not elicit error'
         )
         validate_input_metadata(metadata, convention)
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), 'Valid ontology content should not elicit error'
         )
         self.teardown_metadata(metadata)
 
     def test_invalid_ontology_content(self):
         """Ontology metadata should conform to convention requirements
             """
-        args = "../tests/data/AMC_v1.1.1.json ../tests/data/ontology_invalid_v1.1.1.tsv"
+        args = '../tests/data/AMC_v1.1.1.json ../tests/data/ontology_invalid_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
-            metadata.validate_format(), "Valid metadata headers should not elicit error"
+            metadata.validate_format(), 'Valid metadata headers should not elicit error'
         )
         validate_input_metadata(metadata, convention)
         # reference errors tests for:
@@ -177,22 +177,22 @@ class TestValidateMetadata(unittest.TestCase):
         #   improper syntax (lack of _ or :) for EFO0008919
         #       (convention and ontology errors)
         #   invalid ontology shortname CELL for cell_type
-        #   invalid ontology label "homo sapien" for species__ontology_label
-        #     with species ontologyID of "NCBITaxon_9606"
-        #   invalid ontologyID of "NCBITaxon_9606" for geographical_region
+        #   invalid ontology label 'homo sapien' for species__ontology_label
+        #     with species ontologyID of 'NCBITaxon_9606'
+        #   invalid ontologyID of 'NCBITaxon_9606' for geographical_region
         #   invalid ontologyID UBERON_1000331 for organ__ontology_label
-        reference_file = open("../tests/data/issues_ontology_v1.1.1.json", "r")
+        reference_file = open('../tests/data/issues_ontology_v1.1.1.json', 'r')
         reference_issues = json.load(reference_file)
 
         self.assertEqual(
             metadata.issues,
             reference_issues,
-            "Ontology validation issues do not match reference issues",
+            'Ontology validation issues do not match reference issues',
         )
         reference_file.close()
 
         self.teardown_metadata(metadata)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

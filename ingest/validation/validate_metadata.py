@@ -68,7 +68,7 @@ def create_parser():
     # helper param to create JSON representation of metadata.error
     # as reference output for tests
     parser.add_argument('--issues_json', action='store_true')
-    # TODO: make required and modify defaults on the following two parameters after consulting Jon
+    # validate_metadata.py CLI only for dev, bogus defaults won't propagate
     parser.add_argument('--file_id', help='MongoDB identifier', default='Mongo_none')
     parser.add_argument(
         '--study_accession', help='SCP study accession', default='SCP_none'
@@ -99,7 +99,7 @@ def validate_schema(json, metadata):
 def extract_numeric_headers(metadata):
     """Find metadata headers of type numeric.
 
-    ASSUMES metadata.validate_format() == True
+    ASSUMES properly formatted input file
     If the file headers are improperly formatted, extract_numeric_headers
     may not be able to correctly identify the headers intended to be numeric
 
@@ -108,7 +108,7 @@ def extract_numeric_headers(metadata):
     """
     logger.debug('Begin: extract_numeric_headers')
     numeric_col_df = (
-        metadata.file.select_dtypes(include=["number"])
+        metadata.file.select_dtypes(include=['number'])
         .columns.get_level_values(0)
         .tolist()
     )
@@ -257,7 +257,7 @@ def process_metadata_row(metadata, convention, line):
 
 
 def collect_jsonschema_errors(metadata, convention):
-    """Evaluate TSV metadata input against metadata convention using JSON schema
+    """Evaluate metadata input against metadata convention using JSON schema
 
     :param metadata: cell metadata object
     :param convention: dict representation of metadata convention
@@ -280,7 +280,7 @@ def collect_jsonschema_errors(metadata, convention):
             collect_ontology_data(row, metadata)
             for error in schema.iter_errors(row):
                 try:
-                    error.message = error.path[0] + ": " + error.message
+                    error.message = error.path[0] + ': ' + error.message
                 except IndexError:
                     pass
                 js_errors[error.message].append(row['CellID'])
@@ -360,7 +360,7 @@ def retrieve_ontology_term(convention_url, ontology_id):
     :param ontology_term: term to query for in matching ontology
     :return: JSON payload of ontology of ontology term, or None
     """
-    OLS_BASE_URL = "https://www.ebi.ac.uk/ols/api/ontologies/"
+    OLS_BASE_URL = 'https://www.ebi.ac.uk/ols/api/ontologies/'
     convention_ontology = retrieve_ontology(convention_url)
     # separate ontology shortname from term ID number
     # valid separators are underscore and colon (used by HCA)
@@ -403,6 +403,11 @@ def encode_term_iri(term_id, base_uri):
 
 
 def validate_collected_ontology_data(metadata, convention):
+    """Evaluate collected ontology_id, ontology_label info in
+    CellMetadata.ontology dictionary by querying EBI OLS for
+    validity of ontology_id and cross-check that input ontology_label
+    matches ontology_label from EBI OLS lookup
+    """
     logger.debug('Begin: validate_collected_ontology_data')
     for entry in metadata.ontology.keys():
         ontology_url = convention['properties'][entry]['ontology']
@@ -474,11 +479,15 @@ def validate_collected_ontology_data(metadata, convention):
 
 
 def serialize_issues(metadata):
+    """Write collected issues to json file
+    """
     with open('issues.json', 'w') as jsonfile:
         json.dump(metadata.issues, jsonfile)
 
 
 def validate_input_metadata(metadata, convention):
+    """Wrapper function to run validation functions
+    """
     collect_jsonschema_errors(metadata, convention)
     validate_collected_ontology_data(metadata, convention)
 
@@ -507,7 +516,7 @@ if __name__ == '__main__':
         convention = json.load(f)
     filetsv = args.input_metadata
     metadata = CellMetadata(
-        filetsv, args.file_id, args.study_accession, open_as="dataframe"
+        filetsv, args.file_id, args.study_accession, open_as='dataframe'
     )
     print('Validating', filetsv)
     validate_input_metadata(metadata, convention)
