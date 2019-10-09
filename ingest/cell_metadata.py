@@ -209,19 +209,15 @@ class CellMetadata(IngestFiles):
         if self.headers[0].upper() == "NAME":
             valid = True
             if self.headers[0] != "NAME":
-                # ToDO - capture warning below in error report
-                msg = (
-                    f'Warning: metadata file keyword "NAME" provided as '
-                    f"{self.headers[0]}"
-                )
+                msg = f'Metadata file keyword "NAME" provided as ' f"{self.headers[0]}"
                 self.store_validation_issue('warn', 'format', msg)
         else:
-            msg = 'Error: Metadata file header row malformed, missing NAME. (Case Sensitive)'
+            msg = 'Malformed metadata file header row, missing NAME. (Case Sensitive)'
             self.store_validation_issue('error', 'format', msg)
         return valid
 
     def validate_unique_header(self):
-        """Check all metadata header names are unique.
+        """Check all metadata header names are unique and not empty.
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -229,11 +225,18 @@ class CellMetadata(IngestFiles):
         if len(unique_headers) == len(self.headers):
             valid = True
         else:
-            msg = "Error: Duplicate metadata names detected"
+            seen_headers = set()
+            duplicate_headers = set()
+            for x in self.headers:
+                if x in seen_headers or seen_headers.add(x):
+                    duplicate_headers.add(x)
+            msg = (
+                f'Duplicated metadata header names are not allowed: {duplicate_headers}'
+            )
             self.store_validation_issue('error', 'format', msg)
             valid = False
         if any("Unnamed" in s for s in list(unique_headers)):
-            msg = "Error: Headers cannot contain empty values"
+            msg = "Headers cannot contain empty values"
             self.store_validation_issue('error', 'format', msg)
             valid = False
         return valid
@@ -246,15 +249,10 @@ class CellMetadata(IngestFiles):
         if self.annot_types[0].upper() == "TYPE":
             valid = True
             if self.annot_types[0] != "TYPE":
-                # ToDO - capture warning below in issue report
-                # investigate f-string formatting here
-                msg = (
-                    'Warning: Metadata file keyword TYPE provided as '
-                    '{self.metadata_types[0]}'
-                )
+                msg = f'Metadata file keyword "TYPE" provided as {self.annot_types[0]}'
                 self.store_validation_issue('warn', 'format', msg)
         else:
-            msg = 'Error: Metadata file TYPE row malformed, missing TYPE'
+            msg = 'Malformed metadata TYPE row, missing TYPE. (Case Sensitive)'
             self.store_validation_issue('error', 'format', msg)
         return valid
 
@@ -275,7 +273,7 @@ class CellMetadata(IngestFiles):
                 else:
                     invalid_types.append(t)
         if invalid_types:
-            msg = 'Error: TYPE declarations should be group or numeric'
+            msg = 'TYPE row annotations should be "group" or "numeric"'
             self.store_validation_issue('error', 'format', msg, invalid_types)
         else:
             valid = True
@@ -298,7 +296,7 @@ class CellMetadata(IngestFiles):
         )
         if not len_headers == len_annot_type:
             msg = (
-                f'Error: {len_annot_type} TYPE declarations '
+                f'Header mismatch: {len_annot_type} TYPE declarations '
                 f'for {len_headers} column headers'
             )
             self.store_validation_issue('error', 'format', msg)
