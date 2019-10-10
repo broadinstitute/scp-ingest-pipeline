@@ -182,7 +182,7 @@ def validate_cells_unique(metadata):
         valid = True
     else:
         dups = list_duplicates(metadata.cells)
-        error_msg = 'Error:  Duplicate CellID(s) in metadata file'
+        error_msg = 'Duplicate CellID(s) in metadata file'
         metadata.store_validation_issue('error', 'format', error_msg, dups)
     return valid
 
