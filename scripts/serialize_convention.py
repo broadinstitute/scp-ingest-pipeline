@@ -10,7 +10,7 @@ EXAMPLE
 $ serialize_convention.py project metadata_convention.tsv
 
 # if using the test data in this repo and wanted output in current working dir
-$ serialize_convention.py -p . Alexandria ../tests/data/AMC_v0.8.tsv
+$ python serialize_convention.py -p . Alexandria ../tests/data/AMC_v0.8.tsv
 
 """
 
