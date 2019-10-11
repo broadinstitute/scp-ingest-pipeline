@@ -187,22 +187,32 @@ def validate_cells_unique(metadata):
     return valid
 
 
-def collect_cell_for_ontology(metadatum, row_data, metadata):
+def collect_cell_for_ontology(metadatum, row_data, metadata, array=False):
     """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
     """
-    local_errors = set()
     logger.debug('Begin: collect_cell_for_ontology')
     if metadatum.endswith('__unit'):
         ontology_label = metadatum + '_label'
     else:
         ontology_label = metadatum + '__ontology_label'
-    try:
-        metadata.ontology[metadatum][
-            (row_data[metadatum], row_data[ontology_label])
-        ].append(row_data['CellID'])
-    except KeyError:
-        metadata.ontology[metadatum][(row_data[metadatum])].append(row_data['CellID'])
-    return local_errors
+    if array:
+        try:
+            ontology_dict = dict(zip(row_data[metadatum], row_data[ontology_label]))
+            for id, label in ontology_dict.items():
+                metadata.ontology[metadatum][(id, label)].append(row_data['CellID'])
+        except TypeError:
+            for id in row_data[metadatum]:
+                metadata.ontology[metadatum][(id)].append(row_data['CellID'])
+    else:
+        try:
+            metadata.ontology[metadatum][
+                (row_data[metadatum], row_data[ontology_label])
+            ].append(row_data['CellID'])
+        except KeyError:
+            metadata.ontology[metadatum][(row_data[metadatum])].append(
+                row_data['CellID']
+            )
+    return
 
 
 def collect_ontology_data(row_data, metadata):
@@ -211,10 +221,8 @@ def collect_ontology_data(row_data, metadata):
     logger.debug('Begin: collect_ontology_data')
     for entry in row_data.keys():
         if entry in metadata.type['convention']['ontology']:
-            # skip ontologies that are arrays for now
             if entry in metadata.type['convention']['array']:
-                pass
-                # not collecting metadata for array-based metadata
+                collect_cell_for_ontology(entry, row_data, metadata, array=True)
             else:
                 collect_cell_for_ontology(entry, row_data, metadata)
     return
@@ -247,7 +255,10 @@ def process_metadata_row(metadata, convention, line):
             elif k in metadata.type['floats']:
                 row_info[k] = float(v)
             elif k in metadata.type['convention']['array']:
-                row_info[k] = v.split(',')
+                try:
+                    row_info[k] = v.split(',')
+                except (ValueError, AttributeError):
+                    row_info[k] = [v]
         except ValueError:
             error_msg = f'{k}: "{v}" does not match expected type'
             metadata.store_validation_issue(
@@ -459,7 +470,7 @@ def validate_collected_ontology_data(metadata, convention):
                             metadata.ontology[entry][(ontology_label)],
                         )
         # handle case where no ontology_label provided
-        except ValueError:
+        except (TypeError, ValueError):
             for ontology_id in metadata.ontology[entry].keys():
                 matching_term = retrieve_ontology_term(ontology_url, ontology_id)
                 if not matching_term:
