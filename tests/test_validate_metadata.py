@@ -53,7 +53,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Header rows of metadata file should conform to standard
         """
 
-        args = '../tests/data/AMC_v1.1.1.json ../tests/data/error_headers_v1.1.1.tsv'
+        args = '../tests/data/AMC_v1.1.2.json ../tests/data/error_headers_v1.1.1.tsv'
         metadata = self.setup_metadata(args)[0]
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
@@ -100,7 +100,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_valid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
             """
-        args = '../tests/data/AMC_v1.1.1.json ../tests/data/valid_v1.1.1.tsv'
+        args = '../tests/data/AMC_v1.1.2.json ../tests/data/valid_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -114,7 +114,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
             """
-        args = '../tests/data/AMC_v1.1.1.json ../tests/data/metadata_invalid_v1.1.1.tsv'
+        args = '../tests/data/AMC_v1.1.2.json ../tests/data/metadata_invalid_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -149,7 +149,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_valid_ontology_content(self):
         """Ontology metadata should conform to convention requirements
             """
-        args = '../tests/data/AMC_v1.1.1.json ../tests/data/valid_v1.1.1.tsv'
+        args = '../tests/data/AMC_v1.1.2.json ../tests/data/valid_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -163,7 +163,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_ontology_content(self):
         """Ontology metadata should conform to convention requirements
             """
-        args = '../tests/data/AMC_v1.1.1.json ../tests/data/ontology_invalid_v1.1.1.tsv'
+        args = '../tests/data/AMC_v1.1.2.json ../tests/data/ontology_invalid_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
