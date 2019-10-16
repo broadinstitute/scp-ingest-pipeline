@@ -7,7 +7,7 @@ PREREQUISITES
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
 
 # Run test
-python3 test_serialize_convention.py
+python3 test_serialize_convention.py -p . Alexandria ../tests/data/AMC_v1.1.2.tsv
 
 """
 

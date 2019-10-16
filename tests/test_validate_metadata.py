@@ -9,9 +9,6 @@ Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
 and Firestore emulator must be running, see PR26 for instructions
 (https://github.com/broadinstitute/scp-ingest-pipeline/pull/26)
 
-Note: When CI environment moves to Python 3.7, tests may break due to minor
-differences in how the reference issues are serialized
-
 # Run all tests in a manner that shows report_issues output
 python3 test_validate_metadata.py
 

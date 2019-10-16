@@ -142,6 +142,40 @@ def extract_convention_types(convention, metadata):
     return
 
 
+def is_array_metadata(convention, metadatum):
+    """Check if metadata is array type from metadata convention
+
+    :param convention: dict representation of metadata convention
+    :param metadatum: name of metadatum
+
+    :return:
+    """
+    logger.debug('Begin: is_array_metadata')
+
+    type_lookup = convention['properties'][metadatum]['type']
+    if type_lookup == 'array':
+        return True
+    else:
+        return False
+
+
+def lookup_metadata_type(convention, metadatum):
+    """Look up metadata type from metadata convention
+
+    :param convention: dict representation of metadata convention
+    :param metadatum: name of metadatum
+
+    :return:
+    """
+    logger.debug('Begin: lookup_metadata_type')
+
+    if is_array_metadata(convention, metadatum):
+        type_lookup = convention['properties'][metadatum]['items']['type']
+    else:
+        type_lookup = convention['properties'][metadatum]['type']
+    return type_lookup
+
+
 def merge_numerics(metadata):
     """Add numeric headers from metadata file to appropriate metadata.type
     merges list of number-types from metadata convention and non-convention
@@ -249,6 +283,9 @@ def process_metadata_row(metadata, convention, line):
         # required data are caught at validation
         if not v:
             row_info[k] = None
+        if is_array_metadata(convention, k):
+            print(f"{k} is an array metadata")
+        print(f"{k} is of type {lookup_metadata_type(convention, k)}")
         try:
             if k in metadata.type['convention']['integer']:
                 row_info[k] = int(v)
@@ -259,6 +296,7 @@ def process_metadata_row(metadata, convention, line):
                     row_info[k] = v.split(',')
                 except (ValueError, AttributeError):
                     row_info[k] = [v]
+
         except ValueError:
             error_msg = f'{k}: "{v}" does not match expected type'
             metadata.store_validation_issue(
