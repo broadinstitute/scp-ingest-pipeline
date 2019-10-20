@@ -61,7 +61,6 @@ class CellMetadata(IngestFiles):
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
-        self.type = defaultdict(list)
         self.cells = []
         self.is_valid_file = self.validate_format()
 

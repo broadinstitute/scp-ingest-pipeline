@@ -65,10 +65,10 @@ def create_parser():
     #     default='CellID'
     # )
 
-    # helper param to create JSON representation of metadata.error
-    # as reference output for tests
+    # helper param to create JSON representation of metadata.issues
+    # to generate reference output for tests
     parser.add_argument('--issues_json', action='store_true')
-    # validate_metadata.py CLI only for dev, bogus defaults won't propagate
+    # validate_metadata.py CLI only for dev, bogus defaults below shouldn't propagate
     parser.add_argument('--file_id', help='MongoDB identifier', default='Mongo_none')
     parser.add_argument(
         '--study_accession', help='SCP study accession', default='SCP_none'
@@ -96,52 +96,6 @@ def validate_schema(json, metadata):
         return None
 
 
-def extract_numeric_headers(metadata):
-    """Find metadata headers of type numeric.
-
-    ASSUMES properly formatted input file
-    If the file headers are improperly formatted, extract_numeric_headers
-    may not be able to correctly identify the headers intended to be numeric
-
-    :param metadata: cell metadata object
-    list of numeric-type metadata headers at metadata.type['numeric_headers']
-    """
-    logger.debug('Begin: extract_numeric_headers')
-    numeric_col_df = (
-        metadata.file.select_dtypes(include=['number'])
-        .columns.get_level_values(0)
-        .tolist()
-    )
-    metadata.type['numeric_headers'].append(numeric_col_df)
-    return
-
-
-def extract_convention_types(convention, metadata):
-    """Populates metadata.type with property type from metadata convention
-
-    :param convention: dict representation of metadata convention
-    :param metadata: cell metadata object
-
-    CellMetadata.type.convention populated with lists of metadata
-    for number, integer, array and ontology
-    """
-    logger.debug('Begin: extract_convention_types')
-    # setup of metadata.type['convention']['ontology'] has onotology labels
-    metadata.type['convention'] = defaultdict(list)
-    for k in convention['properties'].keys():
-        if convention['properties'][k]['type'] == 'number':
-            metadata.type['convention']['number'].append(k)
-        elif convention['properties'][k]['type'] == 'integer':
-            metadata.type['convention']['integer'].append(k)
-        elif convention['properties'][k]['type'] == 'array':
-            metadata.type['convention']['array'].append(k)
-        elif convention.get('properties').get(k).get('format') == 'time':
-            metadata.type['convention']['number'].append(k)
-        if convention.get('properties').get(k).get('ontology'):
-            metadata.type['convention']['ontology'].append(k)
-    return
-
-
 def is_array_metadata(convention, metadatum):
     """Check if metadata is array type from metadata convention
 
@@ -151,11 +105,31 @@ def is_array_metadata(convention, metadatum):
     :return:
     """
     logger.debug('Begin: is_array_metadata')
+    try:
+        type_lookup = convention['properties'][metadatum]['type']
+        if type_lookup == 'array':
+            return True
+        else:
+            return False
+    except KeyError:
+        return False
 
-    type_lookup = convention['properties'][metadatum]['type']
-    if type_lookup == 'array':
-        return True
-    else:
+
+def is_ontology_metadata(convention, metadatum):
+    """Check if metadata is ontology from metadata convention
+
+    :param convention: dict representation of metadata convention
+    :param metadatum: name of metadatum
+
+    :return:
+    """
+    logger.debug('Begin: is_ontology_metadata')
+    try:
+        if convention['properties'][metadatum]['ontology']:
+            return True
+        else:
+            return False
+    except KeyError:
         return False
 
 
@@ -168,28 +142,14 @@ def lookup_metadata_type(convention, metadatum):
     :return:
     """
     logger.debug('Begin: lookup_metadata_type')
-
-    if is_array_metadata(convention, metadatum):
-        type_lookup = convention['properties'][metadatum]['items']['type']
-    else:
-        type_lookup = convention['properties'][metadatum]['type']
-    return type_lookup
-
-
-def merge_numerics(metadata):
-    """Add numeric headers from metadata file to appropriate metadata.type
-    merges list of number-types from metadata convention and non-convention
-    numerics from metadata annotation into CellMetadata.type['floats']
-    to be checked for row-by-row type coercion in process_metadata_row
-    """
-    logger.debug('Begin: merge_numerics')
-    metadata.type['floats'] = metadata.type['convention']['number'][:]
-    for n in metadata.type['numeric_headers']:
-        n_not_number = n not in metadata.type['convention']['number']
-        n_not_integer = n not in metadata.type['convention']['integer']
-        if n_not_number and n_not_integer:
-            metadata.type['floats'].append(n)
-    return
+    try:
+        if is_array_metadata(convention, metadatum):
+            type_lookup = convention['properties'][metadatum]['items']['type']
+        else:
+            type_lookup = convention['properties'][metadatum]['type']
+        return type_lookup
+    except KeyError:
+        return None
 
 
 def list_duplicates(cells):
@@ -249,17 +209,77 @@ def collect_cell_for_ontology(metadatum, row_data, metadata, array=False):
     return
 
 
-def collect_ontology_data(row_data, metadata):
+def collect_ontology_data(row_data, metadata, convention):
     """Collect unique ontology IDs for ontology validation
     """
     logger.debug('Begin: collect_ontology_data')
     for entry in row_data.keys():
-        if entry in metadata.type['convention']['ontology']:
-            if entry in metadata.type['convention']['array']:
+        if is_ontology_metadata(convention, entry):
+            if is_array_metadata(convention, entry):
                 collect_cell_for_ontology(entry, row_data, metadata, array=True)
             else:
                 collect_cell_for_ontology(entry, row_data, metadata)
     return
+
+
+def cast_boolean_type(value):
+    if value.lower == 'true':
+        return True
+    elif value.lower == 'false':
+        return False
+    else:
+        return value
+
+
+def cast_integer_type(value):
+    return int(value)
+
+
+def cast_float_type(value):
+    return float(value)
+
+
+def return_without_cast(value):
+    return value
+
+
+def cast_metadata_type(metadatum, value, row_info, convention, metadata):
+    metadata_types = {
+        'number': cast_float_type,
+        'boolean': cast_boolean_type,
+        'integer': cast_integer_type,
+        'string': return_without_cast,
+    }
+    if is_array_metadata(convention, metadatum):
+        cast_values = []
+        try:
+            # splitting on pipe character for array data, valid for Sarah's
+            # programmatically generated SCP TSV metadata files. When ingesting
+            # files that support array-based metadata navtively (eg. loom,
+            # anndata etc) splitting on pipe may become problematic
+            for element in value.split('|'):
+                cast_element = metadata_types.get(
+                    lookup_metadata_type(convention, metadatum)
+                )(element)
+                cast_values.append(cast_element)
+            row_info[metadatum] = cast_values
+        except ValueError:
+            error_msg = f'{metadatum}: "{value}" does not match expected type'
+            metadata.store_validation_issue(
+                'error', 'type', error_msg, [row_info['CellID']]
+            )
+    else:
+        try:
+            cast_value = metadata_types.get(
+                lookup_metadata_type(convention, metadatum)
+            )(value)
+            row_info[metadatum] = cast_value
+        except ValueError:
+            error_msg = f'{metadatum}: "{value}" does not match expected type'
+            metadata.store_validation_issue(
+                'error', 'type', error_msg, [row_info['CellID']]
+            )
+    return row_info
 
 
 def process_metadata_row(metadata, convention, line):
@@ -269,39 +289,13 @@ def process_metadata_row(metadata, convention, line):
     :param convention: dict representation of metadata convention
     :return: row of convention data
     """
-    # linter complaining about complexity index, suggestions welcomed
     logger.debug('Begin: process_metadata_row')
-    extract_numeric_headers(metadata)
-    extract_convention_types(convention, metadata)
-    merge_numerics(metadata)
     # extract first row of metadata file from pandas array as python list
     keys = metadata.file.columns.get_level_values(0).tolist()
     keys[0] = 'CellID'
     row_info = dict(zip(keys, line))
     for k, v in row_info.items():
-        # explicitly setting empty values to None so missing values for
-        # required data are caught at validation
-        if not v:
-            row_info[k] = None
-        if is_array_metadata(convention, k):
-            print(f"{k} is an array metadata")
-        print(f"{k} is of type {lookup_metadata_type(convention, k)}")
-        try:
-            if k in metadata.type['convention']['integer']:
-                row_info[k] = int(v)
-            elif k in metadata.type['floats']:
-                row_info[k] = float(v)
-            elif k in metadata.type['convention']['array']:
-                try:
-                    row_info[k] = v.split(',')
-                except (ValueError, AttributeError):
-                    row_info[k] = [v]
-
-        except ValueError:
-            error_msg = f'{k}: "{v}" does not match expected type'
-            metadata.store_validation_issue(
-                'error', 'type', error_msg, [row_info['CellID']]
-            )
+        row_info = cast_metadata_type(k, v, row_info, convention, metadata)
     return row_info
 
 
@@ -326,7 +320,7 @@ def collect_jsonschema_errors(metadata, convention):
         while line:
             row = process_metadata_row(metadata, convention, line)
             metadata.cells.append(row['CellID'])
-            collect_ontology_data(row, metadata)
+            collect_ontology_data(row, metadata, convention)
             for error in schema.iter_errors(row):
                 try:
                     error.message = error.path[0] + ': ' + error.message
@@ -540,23 +534,6 @@ def validate_input_metadata(metadata, convention):
     collect_jsonschema_errors(metadata, convention)
     validate_collected_ontology_data(metadata, convention)
 
-
-# ToDo
-"""
-WAIT: handle array data types
-
-"""
-"""
-DEFER: Things to check before pass intended data types to Firestore
-ensure numeric (TYPE == numeric in TSV file; type number or integer in loom)
-    stored as numeric
-ensure group (even if it is a number) stored as string
-NaN stored as null?
-error on empty cells
-"""
-"""
-
-"""
 
 if __name__ == '__main__':
     args = create_parser().parse_args()
