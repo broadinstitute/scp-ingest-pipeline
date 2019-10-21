@@ -223,9 +223,9 @@ def collect_ontology_data(row_data, metadata, convention):
 
 
 def cast_boolean_type(value):
-    if value.lower == 'true':
+    if value.lower() == 'true':
         return True
-    elif value.lower == 'false':
+    elif value.lower() == 'false':
         return False
     else:
         return value
@@ -264,10 +264,17 @@ def cast_metadata_type(metadatum, value, row_info, convention, metadata):
                 cast_values.append(cast_element)
             row_info[metadatum] = cast_values
         except ValueError:
-            error_msg = f'{metadatum}: "{value}" does not match expected type'
+            error_msg = (
+                f'{metadatum}: "{element}" in "{value}" does not match expected type'
+            )
             metadata.store_validation_issue(
                 'error', 'type', error_msg, [row_info['CellID']]
             )
+        # This exception should only trigger if a single-value boolean array
+        # metadata is being cast - the value needs to be passed as an array,
+        # it is already boolean via Pandas' inference processes
+        except AttributeError:
+            row_info[metadatum] = [value]
     else:
         try:
             cast_value = metadata_types.get(
@@ -291,9 +298,9 @@ def process_metadata_row(metadata, convention, line):
     """
     logger.debug('Begin: process_metadata_row')
     # extract first row of metadata file from pandas array as python list
-    keys = metadata.file.columns.get_level_values(0).tolist()
-    keys[0] = 'CellID'
-    row_info = dict(zip(keys, line))
+    metadata_names = metadata.file.columns.get_level_values(0).tolist()
+    metadata_names[0] = 'CellID'
+    row_info = dict(zip(metadata_names, line))
     for k, v in row_info.items():
         row_info = cast_metadata_type(k, v, row_info, convention, metadata)
     return row_info
@@ -521,6 +528,22 @@ def validate_collected_ontology_data(metadata, convention):
     return
 
 
+def confirm_uniform_units(metadata, convention):
+    """Check that any unit metadata are uniform within study
+    Note: refactoring may be needed if metadata files are chunked
+    """
+    metadata_names = metadata.file.columns.get_level_values(0).tolist()
+    for name in metadata_names:
+        if name.endswith('__unit'):
+            if metadata.file[name].nunique(dropna=False).values[0] != 1:
+                error_msg = (
+                    f'{name}: values for each unit metadata required to be uniform'
+                )
+                metadata.store_validation_issue('error', 'convention', error_msg)
+            else:
+                print(f'{name} is uniform')
+
+
 def serialize_issues(metadata):
     """Write collected issues to json file
     """
@@ -533,6 +556,7 @@ def validate_input_metadata(metadata, convention):
     """
     collect_jsonschema_errors(metadata, convention)
     validate_collected_ontology_data(metadata, convention)
+    confirm_uniform_units(metadata, convention)
 
 
 if __name__ == '__main__':
