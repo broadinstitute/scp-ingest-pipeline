@@ -289,6 +289,44 @@ def cast_metadata_type(metadatum, value, row_info, convention, metadata):
     return row_info
 
 
+def compare_type_annots_to_convention(metadata, convention):
+    """Check metadata type annotation consistent with metadata convention type
+
+    :param metadata: cell metadata object
+    :param convention: dict representation of metadata convention
+    """
+    metadata_names = metadata.file.columns.get_level_values(0).tolist()
+    type_annots = metadata.file.columns.get_level_values(1).tolist()
+    metadata_names[0] = 'CellID'
+    type_annots[0] = 'group'
+    metadata_annots = dict(zip(metadata_names, type_annots))
+    annot_equivalents = {
+        'numeric': ['number', 'integer'],
+        'group': ['boolean', 'string'],
+    }
+    for metadatum, annot in metadata_annots.items():
+        convention_type = lookup_metadata_type(convention, metadatum)
+        try:
+            if convention_type and convention_type not in annot_equivalents.get(annot):
+                for k, v in annot_equivalents.items():
+                    if convention_type in v:
+                        expected = k
+                error_msg = (
+                    f'{metadatum}: "{annot}" annotation in metadata file conflicts with metadata convention. '
+                    f'Convention expects "{expected}" values.'
+                )
+                metadata.store_validation_issue('error', 'type', error_msg)
+        except TypeError:
+            for k, v in annot_equivalents.items():
+                if convention_type in v:
+                    expected = k
+            error_msg = (
+                f'{metadatum}: "{annot}" annotation in metadata file disagrees with metadata convention. '
+                f'Convention expects "{expected}" annotation.'
+            )
+            metadata.store_validation_issue('error', 'type', error_msg)
+
+
 def process_metadata_row(metadata, convention, line):
     """Read TSV metadata input file row by row
 
@@ -322,6 +360,7 @@ def collect_jsonschema_errors(metadata, convention):
     schema = validate_schema(convention, metadata)
 
     if schema:
+        compare_type_annots_to_convention(metadata, convention)
         rows = metadata.yield_by_row()
         line = next(rows)
         while line:
@@ -540,15 +579,13 @@ def confirm_uniform_units(metadata, convention):
                     f'{name}: values for each unit metadata required to be uniform'
                 )
                 metadata.store_validation_issue('error', 'convention', error_msg)
-            else:
-                print(f'{name} is uniform')
 
 
 def serialize_issues(metadata):
     """Write collected issues to json file
     """
     with open('issues.json', 'w') as jsonfile:
-        json.dump(metadata.issues, jsonfile)
+        json.dump(metadata.issues, jsonfile, indent=2)
 
 
 def validate_input_metadata(metadata, convention):
