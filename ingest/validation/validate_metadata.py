@@ -220,6 +220,8 @@ def collect_ontology_data(row_data, metadata, convention):
 
 
 def cast_boolean_type(value):
+    """Cast metadata value as boolean, if castable
+    """
     if value.lower() == 'true':
         return True
     elif value.lower() == 'false':
@@ -229,18 +231,27 @@ def cast_boolean_type(value):
 
 
 def cast_integer_type(value):
+    """Cast metadata value as integer
+    """
     return int(value)
 
 
 def cast_float_type(value):
+    """Cast metadata value as float
+    """
     return float(value)
 
 
 def return_without_cast(value):
+    """no need to cast Pandas objects
+    """
     return value
 
 
 def cast_metadata_type(metadatum, value, row_info, convention, metadata):
+    """for metadatum, lookup expected type by metadata convention
+        and cast value as appropriate type for validation
+    """
     metadata_types = {
         'number': cast_float_type,
         'boolean': cast_boolean_type,
@@ -284,7 +295,7 @@ def cast_metadata_type(metadatum, value, row_info, convention, metadata):
             metadata.store_validation_issue(
                 'error', 'type', error_msg, [row_info['CellID']]
             )
-        # particular metadatum is not in convention, value doesn't need validation
+        # particular metadatum is not in convention, value not needed for validation
         except TypeError:
             row_info[metadatum] = ''
     return row_info
