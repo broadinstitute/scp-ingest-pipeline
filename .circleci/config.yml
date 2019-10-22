@@ -61,9 +61,7 @@ jobs:
             export FIRESTORE_EMULATOR_HOST=localhost:8081
             . venv/bin/activate
             cd tests
-            coverage run -m pytest
-            coverage report --include *scp-ingest-pipeline/ingest*
-            coverage html --include *scp-ingest-pipeline/ingest*
+            pytest --cov=../ingest/
 
       - store_artifacts:
           path: tests/htmlcov
