@@ -125,10 +125,7 @@ def is_ontology_metadata(convention, metadatum):
     """
     logger.debug('Begin: is_ontology_metadata')
     try:
-        if convention['properties'][metadatum]['ontology']:
-            return True
-        else:
-            return False
+        return bool(convention['properties'][metadatum]['ontology'])
     except KeyError:
         return False
 
@@ -265,7 +262,8 @@ def cast_metadata_type(metadatum, value, row_info, convention, metadata):
             row_info[metadatum] = cast_values
         except ValueError:
             error_msg = (
-                f'{metadatum}: "{element}" in "{value}" does not match expected type'
+                f'{metadatum}: "{element}" in "{value}" does not match '
+                f'expected "{lookup_metadata_type(convention, metadatum)}" type'
             )
             metadata.store_validation_issue(
                 'error', 'type', error_msg, [row_info['CellID']]
@@ -286,6 +284,9 @@ def cast_metadata_type(metadatum, value, row_info, convention, metadata):
             metadata.store_validation_issue(
                 'error', 'type', error_msg, [row_info['CellID']]
             )
+        # particular metadatum is not in convention, value doesn't need validation
+        except TypeError:
+            row_info[metadatum] = ''
     return row_info
 
 
