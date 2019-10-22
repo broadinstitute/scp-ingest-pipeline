@@ -2,6 +2,7 @@
 File Ingest Pipeline for Single Cell Portal
 
 [![Build status](https://img.shields.io/circleci/build/github/broadinstitute/scp-ingest-pipeline.svg)](https://circleci.com/gh/broadinstitute/scp-ingest-pipeline)
+[![Code coverage](https://codecov.io/gh/broadinstitute/scp-ingest-pipeline/branch/master/graph/badge.svg)](https://codecov.io/gh/broadinstitute/scp-ingest-pipeline)
 
 The SCP Ingest Pipeline is an ETL pipeline for single-cell RNA-seq data.  
 
