@@ -540,7 +540,7 @@ def validate_collected_ontology_data(metadata, convention):
                 else:
                     # empty cells for ontology_id and ontology_label now nan when using pandas for ingest
                     if ontology_id:
-                        error_msg = f'{entry}: No match found for {ontology_id}'
+                        error_msg = f'{entry}: No match found in EBI OLS for provided ontology ID: {ontology_id}'
                         metadata.store_validation_issue(
                             'error',
                             'ontology',
@@ -564,7 +564,7 @@ def validate_collected_ontology_data(metadata, convention):
             for ontology_id in metadata.ontology[entry].keys():
                 matching_term = retrieve_ontology_term(ontology_url, ontology_id)
                 if not matching_term:
-                    error_msg = f'{entry}: No match found for {ontology_id}'
+                    error_msg = f'{entry}: No match found in EBI OLS for provided ontology ID: {ontology_id}'
                     metadata.store_validation_issue(
                         'error',
                         'ontology',
@@ -600,10 +600,25 @@ def serialize_issues(metadata):
         json.dump(metadata.issues, jsonfile, indent=2)
 
 
+def review_metadata_names(metadata):
+    """check metadata names for disallowed characters
+    """
+    metadata_names = metadata.file.columns.get_level_values(0).tolist()
+    for name in metadata_names:
+        allowed_char = re.compile('^[A-Za-z0-9_]+$')
+        if not allowed_char.match(name):
+            error_msg = (
+                f'{name}: only alphanumeric characters and underscore '
+                f'allowed in metadata name'
+            )
+            metadata.store_validation_issue('error', 'metadata_name', error_msg)
+
+
 def validate_input_metadata(metadata, convention):
     """Wrapper function to run validation functions
     """
     collect_jsonschema_errors(metadata, convention)
+    review_metadata_names(metadata)
     validate_collected_ontology_data(metadata, convention)
     confirm_uniform_units(metadata, convention)
 
