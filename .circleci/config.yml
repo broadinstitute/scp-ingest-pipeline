@@ -67,3 +67,4 @@ jobs:
             pytest --cov-report=xml --cov=../ingest/
 
       - codecov/upload:
+          file: tests/coverage.xml
