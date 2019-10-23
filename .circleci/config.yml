@@ -64,6 +64,6 @@ jobs:
             export FIRESTORE_EMULATOR_HOST=localhost:8081
             . venv/bin/activate
             cd tests
-            pytest --cov=../ingest/
+            pytest --cov-report=xml --cov=../ingest/
 
       - codecov/upload:
