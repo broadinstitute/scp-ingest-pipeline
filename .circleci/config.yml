@@ -4,6 +4,9 @@
 #
 version: 2.1
 
+orbs:
+  codecov: codecov/codecov@1.0.5
+
 jobs:
   build:
     docker:
@@ -63,5 +66,5 @@ jobs:
             cd tests
             pytest --cov=../ingest/
 
-      - store_artifacts:
-          path: tests/htmlcov
+      - codecov/upload:
+          file: {{ coverage_report_filepath }}
