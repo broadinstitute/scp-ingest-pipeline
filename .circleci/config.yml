@@ -67,4 +67,4 @@ jobs:
             pytest --cov=../ingest/
 
       - codecov/upload:
-          file: {{ coverage_report_filepath }}
+          file: tests/.coverage
