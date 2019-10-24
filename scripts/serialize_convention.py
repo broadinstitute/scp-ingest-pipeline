@@ -7,7 +7,7 @@ for studies participating under the convention.
 
 EXAMPLE
 # Generate json file for Alexandria from the Alexandria metadata convention tsv
-$ serialize_convention.py project metadata_convention.tsv
+$ python serialize_convention.py project metadata_convention.tsv
 
 # if using the test data in this repo and wanted output in current working dir
 $ python serialize_convention.py -p . Alexandria ../tests/data/AMC_v0.8.tsv

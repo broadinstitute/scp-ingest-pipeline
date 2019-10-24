@@ -269,6 +269,13 @@ class CellMetadata(IngestFiles):
                 # string for error reporting
                 if 'Unnamed' in t:
                     invalid_types.append('<empty value>')
+                # Duplicated metadata header name causes type annotation issue.
+                # Side effect of Pandas adding a suffix to uniquefy the header.
+                # These invalid annotations should not be included in invalid
+                # type annotation count. This exception may cause miscount of
+                # type annot errors if user-supplied annotation has period.
+                elif '.' in t:
+                    pass
                 else:
                     invalid_types.append(t)
         if invalid_types:

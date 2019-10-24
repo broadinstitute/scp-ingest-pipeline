@@ -96,7 +96,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_valid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
-            """
+        """
         # Note: this input metadata file does not have array-based metadata
         # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
         args = '../tests/data/AMC_v1.1.2.json ../tests/data/valid_v1.1.1.tsv'
@@ -112,7 +112,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_invalid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
-            """
+        """
         args = '../tests/data/AMC_v1.1.2.json ../tests/data/invalid_metadata_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
@@ -142,7 +142,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_valid_ontology_content(self):
         """Ontology metadata should conform to convention requirements
-            """
+        """
         # Note: this input metadata file does not have array-based metadata
         # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
         args = '../tests/data/AMC_v1.1.2.json ../tests/data/valid_v1.1.1.tsv'
@@ -158,7 +158,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_invalid_ontology_content(self):
         """Ontology metadata should conform to convention requirements
-            """
+        """
         # Note: this input metadata file does not have array-based metadata
         # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
         args = '../tests/data/AMC_v1.1.2.json ../tests/data/invalid_ontology_v1.1.1.tsv'
@@ -192,7 +192,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_valid_array_content(self):
         """array-based metadata should conform to convention requirements
-            """
+        """
         args = '../tests/data/AMC_v1.1.3.json ../tests/data/valid_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
@@ -216,7 +216,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_invalid_array_content(self):
         """array-based metadata should conform to convention requirements
-            """
+        """
         args = '../tests/data/AMC_v1.1.3.json ../tests/data/invalid_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(

@@ -302,7 +302,7 @@ def cast_metadata_type(metadatum, value, row_info, convention, metadata):
 
 
 def compare_type_annots_to_convention(metadata, convention):
-    """Check metadata type annotation consistent with metadata convention type
+    """Check if metadata type annotation is consistent with metadata convention type
 
     :param metadata: cell metadata object
     :param convention: dict representation of metadata convention
@@ -332,11 +332,24 @@ def compare_type_annots_to_convention(metadata, convention):
             for k, v in annot_equivalents.items():
                 if convention_type in v:
                     expected = k
-            error_msg = (
-                f'{metadatum}: "{annot}" annotation in metadata file disagrees with metadata convention. '
-                f'Convention expects "{expected}" annotation.'
-            )
-            metadata.store_validation_issue('error', 'type', error_msg)
+            if '.' in annot:
+                # duplicated metadata header name identified in validate_unique_header
+                # detection of invalid type annotation is side effect of Pandas
+                pass
+            elif 'Unnamed' in annot:
+                # missing type annotation also detected in validate_against_header_count
+                # invalid type annotation is side effect of Pandas
+                error_msg = (
+                    f'{metadatum}: missing TYPE annotation in metadata file. '
+                    f'Convention expects "{expected}" annotation.'
+                )
+                metadata.store_validation_issue('error', 'format', error_msg)
+            else:
+                error_msg = (
+                    f'{metadatum}: invalid "{annot}" annotation in metadata file. '
+                    f'Convention expects "{expected}" annotation.'
+                )
+                metadata.store_validation_issue('error', 'type', error_msg)
 
 
 def process_metadata_row(metadata, convention, line):
@@ -601,7 +614,7 @@ def serialize_issues(metadata):
 
 
 def review_metadata_names(metadata):
-    """check metadata names for disallowed characters
+    """Check metadata names for disallowed characters
     """
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     for name in metadata_names:
