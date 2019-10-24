@@ -66,7 +66,6 @@ class SubSample(IngestFiles):
         if 'group' in annotation:
             # get unique values in column
             unique_values = self.file[annotation].unique()
-            print(unique_values)
 
             for col_val in unique_values:
                 # get subset of data where row is equal to the unique value
@@ -102,20 +101,17 @@ class SubSample(IngestFiles):
                 # Dict of values for the x, y, and z coordinates
                 points = {k: [] for k in self.coordinates_and_cell_names}
                 num_per_group = int(sample_size / group_size)
-                print(num_per_group)
                 cells_left = sample_size
                 # bin = ("unique value in column" : dataframe)
                 for bin in self.return_sorted_bin(anotation_dict, annotation_name):
 
                     amount_of_rows = len(bin[1].index)
-                    print(f"Amount of rows is {amount_of_rows}")
                     # If the amount of sampled values is larger
                     # than the whole array, take the whole array
                     if num_per_group > amount_of_rows:
                         amount_picked_rows = amount_of_rows
                     else:
                         amount_picked_rows = num_per_group
-                    print(f"Amount picked is {amount_picked_rows}")
                     shuffled_df = (
                         bin[1]
                         .reindex(np.random.permutation(bin[1].index))
