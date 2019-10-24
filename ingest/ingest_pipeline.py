@@ -323,16 +323,18 @@ class IngestPipeline(object):
                     )
 
         for doc in create_cluster_subdoc("cluster"):
-            load_status = self.load_subsample(doc)
-            if load_status != 0:
-                return load_status
+            # load_status = self.load_subsample(doc)
+            # if load_status != 0:
+            #     return load_status
+            pass
 
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
             for doc in create_cluster_subdoc("study"):
-                load_status = self.load_subsample(doc)
-                if load_status != 0:
-                    return load_status
+                # load_status = self.load_subsample(doc)
+                # if load_status != 0:
+                #     return load_status
+                pass
         return 0
 
 
