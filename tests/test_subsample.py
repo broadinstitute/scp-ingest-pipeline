@@ -28,7 +28,7 @@ from subsample import SubSample
 
 class TestSubsample(unittest.TestCase):
     AMOUNT_OF_NUMERIC_BINS = 20
-    CLUSTER_PATH = '/Users/eaugusti/Projects/scp-ingest-pipeline/tests/data/test_1k_cluster_Data.csv'
+    CLUSTER_PATH = '../tests/data/test_1k_cluster_Data.csv'
 
     def setUp(self):
         self.subsample_obj = SubSample(self.CLUSTER_PATH)
