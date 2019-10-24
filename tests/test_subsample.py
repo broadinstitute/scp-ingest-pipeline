@@ -13,7 +13,7 @@ Note: When CI environment moves to Python 3.7, tests may break due to minor
 differences in how the reference issues are serialized
 
 # Run all tests in a manner that shows report_issues output
-python3 test_subsample.py
+python3 test_subsample.py -s
 
 """
 
