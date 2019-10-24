@@ -65,10 +65,10 @@ def create_parser():
     #     default='CellID'
     # )
 
-    # helper param to create JSON representation of metadata.error
-    # as reference output for tests
+    # helper param to create JSON representation of metadata.issues
+    # to generate reference output for tests
     parser.add_argument('--issues_json', action='store_true')
-    # validate_metadata.py CLI only for dev, bogus defaults won't propagate
+    # validate_metadata.py CLI only for dev, bogus defaults below shouldn't propagate
     parser.add_argument('--file_id', help='MongoDB identifier', default='Mongo_none')
     parser.add_argument(
         '--study_accession', help='SCP study accession', default='SCP_none'
@@ -96,66 +96,57 @@ def validate_schema(json, metadata):
         return None
 
 
-def extract_numeric_headers(metadata):
-    """Find metadata headers of type numeric.
-
-    ASSUMES properly formatted input file
-    If the file headers are improperly formatted, extract_numeric_headers
-    may not be able to correctly identify the headers intended to be numeric
-
-    :param metadata: cell metadata object
-    list of numeric-type metadata headers at metadata.type['numeric_headers']
-    """
-    logger.debug('Begin: extract_numeric_headers')
-    numeric_col_df = (
-        metadata.file.select_dtypes(include=['number'])
-        .columns.get_level_values(0)
-        .tolist()
-    )
-    metadata.type['numeric_headers'].append(numeric_col_df)
-    return
-
-
-def extract_convention_types(convention, metadata):
-    """Populates metadata.type with property type from metadata convention
+def is_array_metadata(convention, metadatum):
+    """Check if metadata is array type from metadata convention
 
     :param convention: dict representation of metadata convention
-    :param metadata: cell metadata object
+    :param metadatum: name of metadatum
 
-    CellMetadata.type.convention populated with lists of metadata
-    for number, integer, array and ontology
+    :return:
     """
-    logger.debug('Begin: extract_convention_types')
-    # setup of metadata.type['convention']['ontology'] has onotology labels
-    metadata.type['convention'] = defaultdict(list)
-    for k in convention['properties'].keys():
-        if convention['properties'][k]['type'] == 'number':
-            metadata.type['convention']['number'].append(k)
-        elif convention['properties'][k]['type'] == 'integer':
-            metadata.type['convention']['integer'].append(k)
-        elif convention['properties'][k]['type'] == 'array':
-            metadata.type['convention']['array'].append(k)
-        elif convention.get('properties').get(k).get('format') == 'time':
-            metadata.type['convention']['number'].append(k)
-        if convention.get('properties').get(k).get('ontology'):
-            metadata.type['convention']['ontology'].append(k)
-    return
+    logger.debug('Begin: is_array_metadata')
+    try:
+        type_lookup = convention['properties'][metadatum]['type']
+        if type_lookup == 'array':
+            return True
+        else:
+            return False
+    except KeyError:
+        return False
 
 
-def merge_numerics(metadata):
-    """Add numeric headers from metadata file to appropriate metadata.type
-    merges list of number-types from metadata convention and non-convention
-    numerics from metadata annotation into CellMetadata.type['floats']
-    to be checked for row-by-row type coercion in process_metadata_row
+def is_ontology_metadata(convention, metadatum):
+    """Check if metadata is ontology from metadata convention
+
+    :param convention: dict representation of metadata convention
+    :param metadatum: name of metadatum
+
+    :return:
     """
-    logger.debug('Begin: merge_numerics')
-    metadata.type['floats'] = metadata.type['convention']['number'][:]
-    for n in metadata.type['numeric_headers']:
-        n_not_number = n not in metadata.type['convention']['number']
-        n_not_integer = n not in metadata.type['convention']['integer']
-        if n_not_number and n_not_integer:
-            metadata.type['floats'].append(n)
-    return
+    logger.debug('Begin: is_ontology_metadata')
+    try:
+        return bool(convention['properties'][metadatum]['ontology'])
+    except KeyError:
+        return False
+
+
+def lookup_metadata_type(convention, metadatum):
+    """Look up metadata type from metadata convention
+
+    :param convention: dict representation of metadata convention
+    :param metadatum: name of metadatum
+
+    :return:
+    """
+    logger.debug('Begin: lookup_metadata_type')
+    try:
+        if is_array_metadata(convention, metadatum):
+            type_lookup = convention['properties'][metadatum]['items']['type']
+        else:
+            type_lookup = convention['properties'][metadatum]['type']
+        return type_lookup
+    except KeyError:
+        return None
 
 
 def list_duplicates(cells):
@@ -187,37 +178,178 @@ def validate_cells_unique(metadata):
     return valid
 
 
-def collect_cell_for_ontology(metadatum, row_data, metadata):
+def collect_cell_for_ontology(metadatum, row_data, metadata, array=False):
     """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
     """
-    local_errors = set()
     logger.debug('Begin: collect_cell_for_ontology')
     if metadatum.endswith('__unit'):
         ontology_label = metadatum + '_label'
     else:
         ontology_label = metadatum + '__ontology_label'
-    try:
-        metadata.ontology[metadatum][
-            (row_data[metadatum], row_data[ontology_label])
-        ].append(row_data['CellID'])
-    except KeyError:
-        metadata.ontology[metadatum][(row_data[metadatum])].append(row_data['CellID'])
-    return local_errors
+    if array:
+        try:
+            ontology_dict = dict(zip(row_data[metadatum], row_data[ontology_label]))
+            for id, label in ontology_dict.items():
+                metadata.ontology[metadatum][(id, label)].append(row_data['CellID'])
+        except TypeError:
+            for id in row_data[metadatum]:
+                metadata.ontology[metadatum][(id)].append(row_data['CellID'])
+    else:
+        try:
+            metadata.ontology[metadatum][
+                (row_data[metadatum], row_data[ontology_label])
+            ].append(row_data['CellID'])
+        except KeyError:
+            metadata.ontology[metadatum][(row_data[metadatum])].append(
+                row_data['CellID']
+            )
+    return
 
 
-def collect_ontology_data(row_data, metadata):
+def collect_ontology_data(row_data, metadata, convention):
     """Collect unique ontology IDs for ontology validation
     """
     logger.debug('Begin: collect_ontology_data')
     for entry in row_data.keys():
-        if entry in metadata.type['convention']['ontology']:
-            # skip ontologies that are arrays for now
-            if entry in metadata.type['convention']['array']:
-                pass
-                # not collecting metadata for array-based metadata
+        if is_ontology_metadata(convention, entry):
+            if is_array_metadata(convention, entry):
+                collect_cell_for_ontology(entry, row_data, metadata, array=True)
             else:
                 collect_cell_for_ontology(entry, row_data, metadata)
     return
+
+
+def cast_boolean_type(value):
+    """Cast metadata value as boolean, if castable
+    """
+    if value.lower() == 'true':
+        return True
+    elif value.lower() == 'false':
+        return False
+    else:
+        return value
+
+
+def cast_integer_type(value):
+    """Cast metadata value as integer
+    """
+    return int(value)
+
+
+def cast_float_type(value):
+    """Cast metadata value as float
+    """
+    return float(value)
+
+
+def return_without_cast(value):
+    """no need to cast Pandas objects
+    """
+    return value
+
+
+def cast_metadata_type(metadatum, value, row_info, convention, metadata):
+    """for metadatum, lookup expected type by metadata convention
+        and cast value as appropriate type for validation
+    """
+    metadata_types = {
+        'number': cast_float_type,
+        'boolean': cast_boolean_type,
+        'integer': cast_integer_type,
+        'string': return_without_cast,
+    }
+    if is_array_metadata(convention, metadatum):
+        cast_values = []
+        try:
+            # splitting on pipe character for array data, valid for Sarah's
+            # programmatically generated SCP TSV metadata files. When ingesting
+            # files that support array-based metadata navtively (eg. loom,
+            # anndata etc) splitting on pipe may become problematic
+            for element in value.split('|'):
+                cast_element = metadata_types.get(
+                    lookup_metadata_type(convention, metadatum)
+                )(element)
+                cast_values.append(cast_element)
+            row_info[metadatum] = cast_values
+        except ValueError:
+            error_msg = (
+                f'{metadatum}: "{element}" in "{value}" does not match '
+                f'expected "{lookup_metadata_type(convention, metadatum)}" type'
+            )
+            metadata.store_validation_issue(
+                'error', 'type', error_msg, [row_info['CellID']]
+            )
+        # This exception should only trigger if a single-value boolean array
+        # metadata is being cast - the value needs to be passed as an array,
+        # it is already boolean via Pandas' inference processes
+        except AttributeError:
+            row_info[metadatum] = [value]
+    else:
+        try:
+            cast_value = metadata_types.get(
+                lookup_metadata_type(convention, metadatum)
+            )(value)
+            row_info[metadatum] = cast_value
+        except ValueError:
+            error_msg = f'{metadatum}: "{value}" does not match expected type'
+            metadata.store_validation_issue(
+                'error', 'type', error_msg, [row_info['CellID']]
+            )
+        # particular metadatum is not in convention, value not needed for validation
+        except TypeError:
+            row_info[metadatum] = ''
+    return row_info
+
+
+def compare_type_annots_to_convention(metadata, convention):
+    """Check if metadata type annotation is consistent with metadata convention type
+
+    :param metadata: cell metadata object
+    :param convention: dict representation of metadata convention
+    """
+    metadata_names = metadata.file.columns.get_level_values(0).tolist()
+    type_annots = metadata.file.columns.get_level_values(1).tolist()
+    metadata_names[0] = 'CellID'
+    type_annots[0] = 'group'
+    metadata_annots = dict(zip(metadata_names, type_annots))
+    annot_equivalents = {
+        'numeric': ['number', 'integer'],
+        'group': ['boolean', 'string'],
+    }
+    for metadatum, annot in metadata_annots.items():
+        convention_type = lookup_metadata_type(convention, metadatum)
+        try:
+            if convention_type and convention_type not in annot_equivalents.get(annot):
+                for k, v in annot_equivalents.items():
+                    if convention_type in v:
+                        expected = k
+                error_msg = (
+                    f'{metadatum}: "{annot}" annotation in metadata file conflicts with metadata convention. '
+                    f'Convention expects "{expected}" values.'
+                )
+                metadata.store_validation_issue('error', 'type', error_msg)
+        except TypeError:
+            for k, v in annot_equivalents.items():
+                if convention_type in v:
+                    expected = k
+            if '.' in annot:
+                # duplicated metadata header name identified in validate_unique_header
+                # detection of invalid type annotation is side effect of Pandas
+                pass
+            elif 'Unnamed' in annot:
+                # missing type annotation also detected in validate_against_header_count
+                # invalid type annotation is side effect of Pandas
+                error_msg = (
+                    f'{metadatum}: missing TYPE annotation in metadata file. '
+                    f'Convention expects "{expected}" annotation.'
+                )
+                metadata.store_validation_issue('error', 'format', error_msg)
+            else:
+                error_msg = (
+                    f'{metadatum}: invalid "{annot}" annotation in metadata file. '
+                    f'Convention expects "{expected}" annotation.'
+                )
+                metadata.store_validation_issue('error', 'type', error_msg)
 
 
 def process_metadata_row(metadata, convention, line):
@@ -227,32 +359,13 @@ def process_metadata_row(metadata, convention, line):
     :param convention: dict representation of metadata convention
     :return: row of convention data
     """
-    # linter complaining about complexity index, suggestions welcomed
     logger.debug('Begin: process_metadata_row')
-    extract_numeric_headers(metadata)
-    extract_convention_types(convention, metadata)
-    merge_numerics(metadata)
     # extract first row of metadata file from pandas array as python list
-    keys = metadata.file.columns.get_level_values(0).tolist()
-    keys[0] = 'CellID'
-    row_info = dict(zip(keys, line))
+    metadata_names = metadata.file.columns.get_level_values(0).tolist()
+    metadata_names[0] = 'CellID'
+    row_info = dict(zip(metadata_names, line))
     for k, v in row_info.items():
-        # explicitly setting empty values to None so missing values for
-        # required data are caught at validation
-        if not v:
-            row_info[k] = None
-        try:
-            if k in metadata.type['convention']['integer']:
-                row_info[k] = int(v)
-            elif k in metadata.type['floats']:
-                row_info[k] = float(v)
-            elif k in metadata.type['convention']['array']:
-                row_info[k] = v.split(',')
-        except ValueError:
-            error_msg = f'{k}: "{v}" does not match expected type'
-            metadata.store_validation_issue(
-                'error', 'type', error_msg, [row_info['CellID']]
-            )
+        row_info = cast_metadata_type(k, v, row_info, convention, metadata)
     return row_info
 
 
@@ -272,12 +385,13 @@ def collect_jsonschema_errors(metadata, convention):
     schema = validate_schema(convention, metadata)
 
     if schema:
+        compare_type_annots_to_convention(metadata, convention)
         rows = metadata.yield_by_row()
         line = next(rows)
         while line:
             row = process_metadata_row(metadata, convention, line)
             metadata.cells.append(row['CellID'])
-            collect_ontology_data(row, metadata)
+            collect_ontology_data(row, metadata, convention)
             for error in schema.iter_errors(row):
                 try:
                     error.message = error.path[0] + ': ' + error.message
@@ -439,7 +553,7 @@ def validate_collected_ontology_data(metadata, convention):
                 else:
                     # empty cells for ontology_id and ontology_label now nan when using pandas for ingest
                     if ontology_id:
-                        error_msg = f'{entry}: No match found for {ontology_id}'
+                        error_msg = f'{entry}: No match found in EBI OLS for provided ontology ID: {ontology_id}'
                         metadata.store_validation_issue(
                             'error',
                             'ontology',
@@ -459,11 +573,11 @@ def validate_collected_ontology_data(metadata, convention):
                             metadata.ontology[entry][(ontology_label)],
                         )
         # handle case where no ontology_label provided
-        except ValueError:
+        except (TypeError, ValueError):
             for ontology_id in metadata.ontology[entry].keys():
                 matching_term = retrieve_ontology_term(ontology_url, ontology_id)
                 if not matching_term:
-                    error_msg = f'{entry}: No match found for {ontology_id}'
+                    error_msg = f'{entry}: No match found in EBI OLS for provided ontology ID: {ontology_id}'
                     metadata.store_validation_issue(
                         'error',
                         'ontology',
@@ -478,36 +592,49 @@ def validate_collected_ontology_data(metadata, convention):
     return
 
 
+def confirm_uniform_units(metadata, convention):
+    """Check that any unit metadata are uniform within study
+    Note: refactoring may be needed if metadata files are chunked
+    """
+    metadata_names = metadata.file.columns.get_level_values(0).tolist()
+    for name in metadata_names:
+        if name.endswith('__unit'):
+            if metadata.file[name].nunique(dropna=False).values[0] != 1:
+                error_msg = (
+                    f'{name}: values for each unit metadata required to be uniform'
+                )
+                metadata.store_validation_issue('error', 'convention', error_msg)
+
+
 def serialize_issues(metadata):
     """Write collected issues to json file
     """
     with open('issues.json', 'w') as jsonfile:
-        json.dump(metadata.issues, jsonfile)
+        json.dump(metadata.issues, jsonfile, indent=2)
+
+
+def review_metadata_names(metadata):
+    """Check metadata names for disallowed characters
+    """
+    metadata_names = metadata.file.columns.get_level_values(0).tolist()
+    for name in metadata_names:
+        allowed_char = re.compile('^[A-Za-z0-9_]+$')
+        if not allowed_char.match(name):
+            error_msg = (
+                f'{name}: only alphanumeric characters and underscore '
+                f'allowed in metadata name'
+            )
+            metadata.store_validation_issue('error', 'metadata_name', error_msg)
 
 
 def validate_input_metadata(metadata, convention):
     """Wrapper function to run validation functions
     """
     collect_jsonschema_errors(metadata, convention)
+    review_metadata_names(metadata)
     validate_collected_ontology_data(metadata, convention)
+    confirm_uniform_units(metadata, convention)
 
-
-# ToDo
-"""
-WAIT: handle array data types
-
-"""
-"""
-DEFER: Things to check before pass intended data types to Firestore
-ensure numeric (TYPE == numeric in TSV file; type number or integer in loom)
-    stored as numeric
-ensure group (even if it is a number) stored as string
-NaN stored as null?
-error on empty cells
-"""
-"""
-
-"""
 
 if __name__ == '__main__':
     args = create_parser().parse_args()

@@ -16,6 +16,8 @@ setup(
         'pandas',
         'pandocfilters',
         'colorama',
+        'dataclasses',
+        'mypy_extensions',
     ],
     packages=find_packages(),
 )
