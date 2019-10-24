@@ -46,12 +46,12 @@ class SubDocument(TypedDict):
 
 
 class CellMetadata(IngestFiles):
-    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
+    ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
 
     def __init__(self, file_path, file_id: str, study_accession: str, *args, **kwargs):
 
         IngestFiles.__init__(
-            self, file_path, self.ALLOWED_FILE_TYPES, open_as="dataframe"
+            self, file_path, self.ALLOWED_FILE_TYPES, open_as='dataframe'
         )
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)
@@ -67,8 +67,8 @@ class CellMetadata(IngestFiles):
 
     @dataclass
     class Model:
-        COLLECTION_NAME = "cell_metadata"
-        SUBCOLLECTION_NAME = "data"
+        COLLECTION_NAME = 'cell_metadata'
+        SUBCOLLECTION_NAME = 'data'
         annot_type: str
         doc: Document
         subdoc: SubDocument
@@ -84,12 +84,12 @@ class CellMetadata(IngestFiles):
         self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
         # Make sure group annotations are treated as strings
         group_columns = self.file.xs(
-            "group", axis=1, level=1, drop_level=False
+            'group', axis=1, level=1, drop_level=False
         ).columns.tolist()
         self.file[group_columns] = self.file[group_columns].astype(str)
         # Find numeric columns,  round to 3 decimals places, and cast to floats
         numeric_columns = self.file.xs(
-            "numeric", axis=1, level=1, drop_level=False
+            'numeric', axis=1, level=1, drop_level=False
         ).columns.tolist()
         self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
 
@@ -102,18 +102,18 @@ class CellMetadata(IngestFiles):
             yield self.Model(
                 column_type,
                 {
-                    "name": col_name,
-                    "study_accession": self.study_accession,
+                    'name': col_name,
+                    'study_accession': self.study_accession,
                     # save unique values for group type annotations
-                    "unique_values": list(self.file[column].unique())
-                    if column_type == "group"
+                    'unique_values': list(self.file[column].unique())
+                    if column_type == 'group'
                     else [],
-                    "annotation_type": column_type,
-                    "file_id": self.file_id,
+                    'annotation_type': column_type,
+                    'file_id': self.file_id,
                 },
                 {
-                    "cell_names": list(self.file.iloc[:, 0]),
-                    "values": list(self.file[column]),
+                    'cell_names': list(self.file.iloc[:, 0]),
+                    'values': list(self.file[column]),
                 },
             )
 
@@ -132,8 +132,8 @@ class CellMetadata(IngestFiles):
             Subdocuments that are under 1,048,576 bytes.
         """
 
-        size_of_cell_names_field = 10 + 1  # "cell_names" is 10 characters
-        size_of_values_field = 6 + 1  # "values" is 6 characters
+        size_of_cell_names_field = 10 + 1  # 'cell_names' is 10 characters
+        size_of_values_field = 6 + 1  # 'values' is 6 characters
         starting_sum = (
             +len(doc_name)
             + 1
@@ -149,9 +149,9 @@ class CellMetadata(IngestFiles):
         sum = starting_sum
         annot_type = model.annot_type
         # All cells names:[] that are in subdoc
-        cell_names = model.subdoc["cell_names"]
+        cell_names = model.subdoc['cell_names']
         # All values:[] that are in subdoc
-        values = model.subdoc["values"]
+        values = model.subdoc['values']
 
         for index, (cell_name, value) in enumerate(zip(cell_names, values)):
 
@@ -159,7 +159,7 @@ class CellMetadata(IngestFiles):
 
             # Check annotation type because float and string values have
             # different storage values
-            if annot_type == "numeric":
+            if annot_type == 'numeric':
                 value_storage = size_of_values_field + float_storage
             else:
                 value_storage = len(value) + 1 + size_of_values_field
@@ -175,10 +175,10 @@ class CellMetadata(IngestFiles):
                     end_index = index - 1
                 # TODO: This can turn into a logging statement
                 # Please do not remove this. It's needed for testing
-                print(f"{sum}, {index}, {start_index}, {end_index}")
+                print(f'{sum}, {index}, {start_index}, {end_index}')
                 yield {
-                    "cell_names": cell_names[start_index:end_index],
-                    "values": values[start_index:end_index],
+                    'cell_names': cell_names[start_index:end_index],
+                    'values': values[start_index:end_index],
                 }
                 # Reset sum and add storage size at current index
                 sum = starting_sum + cell_name_storage + value_storage
@@ -206,30 +206,37 @@ class CellMetadata(IngestFiles):
         """
 
         valid = False
-        if self.headers[0].upper() == "NAME":
+        if self.headers[0].upper() == 'NAME':
             valid = True
-            if self.headers[0] != "NAME":
-                # ToDO - capture warning below in error report
-                msg = (
-                    f'Warning: metadata file keyword "NAME" provided as '
-                    f"{self.headers[0]}"
-                )
+            if self.headers[0] != 'NAME':
+                msg = f'Metadata file keyword "NAME" provided as ' f"{self.headers[0]}"
                 self.store_validation_issue('warn', 'format', msg)
         else:
-            msg = 'Error: Metadata file header row malformed, missing NAME. (Case Sensitive)'
+            msg = 'Malformed metadata file header row, missing NAME. (Case Sensitive)'
             self.store_validation_issue('error', 'format', msg)
         return valid
 
     def validate_unique_header(self):
-        """Check all metadata header names are unique.
+        """Check all metadata header names are unique and not empty.
         :return: boolean   True if valid, False otherwise
         """
         valid = False
         unique_headers = set(self.headers)
         if len(unique_headers) == len(self.headers):
             valid = True
-        if any("Unnamed" in s for s in list(unique_headers)):
-            msg = "Error: Headers cannot contain empty values"
+        else:
+            seen_headers = set()
+            duplicate_headers = set()
+            for x in self.headers:
+                if x in seen_headers or seen_headers.add(x):
+                    duplicate_headers.add(x)
+            msg = (
+                f'Duplicated metadata header names are not allowed: {duplicate_headers}'
+            )
+            self.store_validation_issue('error', 'format', msg)
+            valid = False
+        if any('Unnamed' in s for s in list(unique_headers)):
+            msg = 'Headers cannot contain empty values'
             self.store_validation_issue('error', 'format', msg)
             valid = False
         return valid
@@ -239,18 +246,13 @@ class CellMetadata(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if self.annot_types[0].upper() == "TYPE":
+        if self.annot_types[0].upper() == 'TYPE':
             valid = True
-            if self.annot_types[0] != "TYPE":
-                # ToDO - capture warning below in issue report
-                # investigate f-string formatting here
-                msg = (
-                    'Warning: Metadata file keyword TYPE provided as '
-                    '{self.metadata_types[0]}'
-                )
+            if self.annot_types[0] != 'TYPE':
+                msg = f'Metadata file keyword "TYPE" provided as {self.annot_types[0]}'
                 self.store_validation_issue('warn', 'format', msg)
         else:
-            msg = 'Error: Metadata file TYPE row malformed, missing TYPE'
+            msg = 'Malformed metadata TYPE row, missing TYPE. (Case Sensitive)'
             self.store_validation_issue('error', 'format', msg)
         return valid
 
@@ -271,7 +273,7 @@ class CellMetadata(IngestFiles):
                 else:
                     invalid_types.append(t)
         if invalid_types:
-            msg = 'Error: TYPE declarations should be group or numeric'
+            msg = 'TYPE row annotations should be "group" or "numeric"'
             self.store_validation_issue('error', 'format', msg, invalid_types)
         else:
             valid = True
@@ -294,7 +296,7 @@ class CellMetadata(IngestFiles):
         )
         if not len_headers == len_annot_type:
             msg = (
-                f'Error: {len_annot_type} TYPE declarations '
+                f'Header mismatch: {len_annot_type} TYPE declarations '
                 f'for {len_headers} column headers'
             )
             self.store_validation_issue('error', 'format', msg)
@@ -305,10 +307,12 @@ class CellMetadata(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        return (
-            self.validate_header_keyword()
-            and self.validate_type_keyword()
-            and self.validate_type_annotations()
-            and self.validate_unique_header()
-            and self.validate_against_header_count()
+        return all(
+            [
+                self.validate_header_keyword(),
+                self.validate_type_keyword(),
+                self.validate_type_annotations(),
+                self.validate_unique_header(),
+                self.validate_against_header_count(),
+            ]
         )
