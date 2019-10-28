@@ -195,7 +195,7 @@ class Clusters(Annotations):
 
         cluster_attr = get_cluster_attr(name)
         data_array_attr = locals()
-
+        print(cluster_attr)
         # Remove 'name' from data pass into function
         del data_array_attr['name']
         # Merge BASE_DICT, cluster_attr & data_array_attr and return DataArray model
