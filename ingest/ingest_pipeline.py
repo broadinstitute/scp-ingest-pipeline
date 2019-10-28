@@ -297,15 +297,9 @@ class IngestPipeline(object):
     def ingest_cluster(self):
         """Ingests cluster files."""
 
-        # while True:
-        #     row = self.cluster.extract()
-        #     if row is None:
-        #         self.cluster.update_points()
-        #         self.cluster.update_cell_annotations_field()
-        #         break
-        #     self.cluster.transform(row)
         for model in self.cluster.transform():
             print(model)
+
         # self.load_cluster_files()
 
     def subsample(self):

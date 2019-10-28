@@ -84,97 +84,82 @@ class Clusters(Annotations):
 
     def transform(self):
         """ Add data from cluster files into annotation subdocs in cluster data model"""
-
-        # for idx, column in enumerate(row):
-        #     annotation = self.header[idx]
-        #
-        #     # first index is cell name don't need to check annot type
-        #     if idx != 0:
-        #         if self.metadata_types[idx].lower() == "numeric":
-        #             column = round(float(column), 3)
-        #         elif self.metadata_types[idx].lower() == "group":
-        #             if column not in self.cell_annotations[annotation]["values"]:
-        #                 # Update cell_annotations field
-        #                 self.cell_annotations[annotation]["values"].append(column)
-        #     # perform a shallow copy
-        #
-        #     annotation_value = copy.copy(self.cluster_subdocs[annotation]["values"])
-        #     annotation_value.append(column)
-        #     self.cluster_subdocs[annotation]["values"] = annotation_value
         for annot_header in self.file.columns:
             annot_name = annot_header[0]
             yield Clusters.set_data_array(
                 annot_name,
                 self.name,
-                self.file[annot_header].values,
+                list(self.file[annot_header]),
                 self.study_file_id,
                 self.study_id,
                 None,
             )
 
-    # @staticmethod
-    # def return_cluster_subdocs(
-    #     annot_name, *, values=[], subsample_annotation=None, subsample_threshold=None
-    # ):
-    #     """Creates cluster_subdocs"""
-    #     cluster_subdocs = {}
-    #     value = annot_name.lower()
-    #     if value == "name":
-    #         cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
-    #             "text",
-    #             "cells",
-    #             values=values,
-    #             subsample_annotation=subsample_annotation,
-    #             subsample_threshold=subsample_threshold,
-    #         )
-    #     elif value in ("x", "y", "z"):
-    #         cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
-    #             value,
-    #             "coordinates",
-    #             values=values,
-    #             subsample_annotation=subsample_annotation,
-    #             subsample_threshold=subsample_threshold,
-    #         )
-    #     else:
-    #         cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
-    #             annot_name,
-    #             "annotations",
-    #             values=values,
-    #             subsample_annotation=subsample_annotation,
-    #             subsample_threshold=subsample_threshold,
-    #         )
-    #
-    #     if subsample_threshold is not None:
-    #         return cluster_subdocs[annot_name]
-    #
-    #     else:
-    #         return cluster_subdocs
-    #
-    # @staticmethod
-    # def create_cluster_subdoc(
-    #     annot_name,
-    #     annot_type,
-    #     values=[],
-    #     subsample_annotation=None,
-    #     subsample_threshold=None,
-    # ):
-    #     """Returns cluster subdoc"""
-    #
-    #     return {
-    #         "name": annot_name,
-    #         "array_index": 0,
-    #         "values": values,
-    #         "array_type": annot_type,
-    #         "subsample_annotation": subsample_annotation,
-    #         "subsample_threshold": subsample_threshold,
-    #     }
-    #
-    # def can_subsample(self):
-    #     # TODO: Add more subsample validations
-    #     if self.has_z:
-    #         return len(self.header) > 4
-    #     else:
-    #         return len(self.header) > 3
+    # set_data_array() replaces this method
+    @staticmethod
+    def return_cluster_subdocs(
+        annot_name, *, values=[], subsample_annotation=None, subsample_threshold=None
+    ):
+        """Creates cluster_subdocs"""
+        cluster_subdocs = {}
+        value = annot_name.lower()
+        if value == "name":
+            cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
+                "text",
+                "cells",
+                values=values,
+                subsample_annotation=subsample_annotation,
+                subsample_threshold=subsample_threshold,
+            )
+        elif value in ("x", "y", "z"):
+            cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
+                value,
+                "coordinates",
+                values=values,
+                subsample_annotation=subsample_annotation,
+                subsample_threshold=subsample_threshold,
+            )
+        else:
+            cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
+                annot_name,
+                "annotations",
+                values=values,
+                subsample_annotation=subsample_annotation,
+                subsample_threshold=subsample_threshold,
+            )
+
+        if subsample_threshold is not None:
+            return cluster_subdocs[annot_name]
+
+        else:
+            return cluster_subdocs
+
+    # set_data_array() replaces this method
+    @staticmethod
+    def create_cluster_subdoc(
+        annot_name,
+        annot_type,
+        values=[],
+        subsample_annotation=None,
+        subsample_threshold=None,
+    ):
+        """Returns cluster subdoc"""
+
+        return {
+            "name": annot_name,
+            "array_index": 0,
+            "values": values,
+            "array_type": annot_type,
+            "subsample_annotation": subsample_annotation,
+            "subsample_threshold": subsample_threshold,
+        }
+
+    def can_subsample(self):
+        # TODO: Add more subsample validations
+        if self.has_z:
+            return len(self.header) > 4
+        else:
+            return len(self.header) > 3
 
     @staticmethod
     def set_data_array(

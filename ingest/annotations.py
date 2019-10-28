@@ -1,5 +1,14 @@
-import abc
+"""Class for annotation files (such as cluster and metadata files)
 
+DESCRIPTION
+Class defines common functions needed for annotation type files
+
+PREREQUISITES
+Must have python 3.6 or higher.
+
+"""
+
+import abc
 
 from ingest_files import IngestFiles
 
@@ -60,4 +69,5 @@ class Annotations(IngestFiles):
         numeric_columns = self.file.xs(
             "numeric", axis=1, level=1, drop_level=False
         ).columns.tolist()
+        # TODO perform replace
         self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
