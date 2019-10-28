@@ -8,9 +8,46 @@ import csv
 import mimetypes
 import os
 import re
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+from dataclasses import dataclass
+from mypy_extensions import TypedDict
 
 import pandas as pd
 from google.cloud import storage
+
+
+@dataclass
+class DataArray(TypedDict):
+    MAX_ENTREIS = 100_000
+
+    def __init__(
+        self,
+        name: str,
+        cluster_name: str,
+        array_type: str,
+        array_index: int,
+        values: List,
+        subsample_threshold: int,
+        subsample_annotation: str,
+        linear_data_type: str,
+        linear_data_id: str,
+        study_id: str,
+        study_file_id: str,
+    ):
+        self.name = name
+        self.cluster_name = cluster_name
+        self.array_type = array_type
+        self.array_index = array_index
+        self.values = values
+        self.subsample_threshold = subsample_threshold
+        self.subsample_annotation = subsample_annotation
+        self.linear_data_type = linear_data_type
+        self.linear_data_id = linear_data_id
+        self.study_id = study_id
+        self.study_file_id = study_file_id
+
+        # get_dataArray(self):
+        #     if len(self.values) > self.MAX_ENTREIS:
 
 
 class IngestFiles:
@@ -210,6 +247,20 @@ class IngestFiles:
                 return self.split_line(next_row_revised)
             else:
                 return next_row_revised
+
+    def determine_coordinates_and_cell_names(self):
+        """Finds column names for coordinates, annotations, and cell names"""
+        self.coordinates_and_cell_names = [
+            annot[0]
+            for annot in self.file.columns
+            if annot[0].lower() in ('z', 'y', 'x', 'name')
+        ]
+        # annotation column names
+        self.columns = [
+            annot
+            for annot in self.file.columns
+            if annot[0].lower() not in ('z', 'y', 'x', 'name')
+        ]
 
     def preproccess(self):
         """Ensures that:

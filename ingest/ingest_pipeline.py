@@ -68,8 +68,8 @@ class IngestPipeline(object):
     def __init__(
         self,
         *,
-        file_id: str,
-        study_accession: str,
+        study_id: str,
+        study_file_id: str,
         matrix_file: str = None,
         matrix_file_type: str = None,
         cell_metadata_file: str = None,
@@ -81,8 +81,8 @@ class IngestPipeline(object):
         **kwargs,
     ):
         """Initializes variables in ingest service."""
-        self.file_id = file_id
-        self.study_accession = study_accession
+        self.study_id = study_id
+        self.study_file_id = study_file_id
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
         if db is not None:
@@ -118,7 +118,7 @@ class IngestPipeline(object):
             "loom": Loom,
         }
         return file_connections.get(file_type)(
-            file_path, self.file_id, self.study_accession, **self.kwargs
+            file_path, self.study_id, self.study_file_id, **self.kwargs
         )
 
     def close_matrix(self):
@@ -295,15 +295,18 @@ class IngestPipeline(object):
             return 1
 
     def ingest_cluster(self):
-        """Ingests cluster files into Firestore."""
-        while True:
-            row = self.cluster.extract()
-            if row is None:
-                self.cluster.update_points()
-                self.cluster.update_cell_annotations_field()
-                break
-            self.cluster.transform(row)
-        self.load_cluster_files()
+        """Ingests cluster files."""
+
+        # while True:
+        #     row = self.cluster.extract()
+        #     if row is None:
+        #         self.cluster.update_points()
+        #         self.cluster.update_cell_annotations_field()
+        #         break
+        #     self.cluster.transform(row)
+        for model in self.cluster.transform():
+            print(model)
+        # self.load_cluster_files()
 
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
@@ -355,11 +358,11 @@ def create_parser():
     )
 
     parser.add_argument(
-        "--study-accession",
+        "--study-file-id",
         required=True,
         help="Single study accession associated with ingest files",
     )
-    parser.add_argument("--file-id", required=True, help="MongoDB identifier")
+    parser.add_argument("--study-id", required=True, help="MongoDB identifier")
 
     subparsers = parser.add_subparsers()
 
