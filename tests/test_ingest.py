@@ -119,9 +119,9 @@ class IngestTestCase(unittest.TestCase):
         study_accession = get_random_study_accession()
 
         args = [
-            '--study-accession',
+            '--study-id',
             study_accession,
-            '--file-id',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -166,9 +166,9 @@ class IngestTestCase(unittest.TestCase):
         study_accession = get_random_study_accession()
 
         args = [
-            '--study-accession',
+            '--study-id',
             study_accession,
-            '--file-id',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -196,9 +196,9 @@ class IngestTestCase(unittest.TestCase):
         study_accession = get_random_study_accession()
 
         args = [
-            '--study-accession',
+            '--study-id',
             study_accession,
-            '--file-id',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -237,9 +237,9 @@ class IngestTestCase(unittest.TestCase):
         study_accession = get_random_study_accession()
 
         args = [
-            '--study-accession',
+            '--study-id',
             study_accession,
-            '--file-id',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -267,9 +267,9 @@ class IngestTestCase(unittest.TestCase):
         study_accession = get_random_study_accession()
 
         args = [
-            '--study-accession',
+            '--study-id',
             study_accession,
-            '--file-id',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -316,9 +316,9 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            '--study-accession',
+            '--study-id',
             'SCP1',
-            '--file-id',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -346,9 +346,9 @@ class IngestTestCase(unittest.TestCase):
         study_accession = get_random_study_accession()
 
         args = [
-            '--study-accession',
+            '--study-id',
             study_accession,
-            '--file-id',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
