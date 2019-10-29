@@ -1,6 +1,6 @@
 """Test ingest_files.py
 
-These tests verifies:
+These tests verify:
     - Group type annotations that have numeric-like values are being treated as strings
     - Numeric columns are rounded to 3 decimals points
     - Filtering cell names (given from cluster file) in metadata correctly
