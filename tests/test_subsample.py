@@ -1,13 +1,11 @@
 """Tests subsampling
 
-These tests verifies:
+These tests verify:
     - Binning correctly
     - Subsampling correctly
 
 PREREQUISITES
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
-and Firestore emulator must be running, see PR26 for instructions
-(https://github.com/broadinstitute/scp-ingest-pipeline/pull/26)
 
 Note: When CI environment moves to Python 3.7, tests may break due to minor
 differences in how the reference issues are serialized
@@ -28,7 +26,7 @@ from subsample import SubSample
 
 class TestSubsample(unittest.TestCase):
     AMOUNT_OF_NUMERIC_BINS = 20
-    CLUSTER_PATH = '../tests/data/test_1k_cluster_Data.csv'
+    CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
 
     def setUp(self):
         self.subsample_obj = SubSample(self.CLUSTER_PATH)

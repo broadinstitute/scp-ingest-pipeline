@@ -1,14 +1,12 @@
 """Test ingest_files.py
 
-These tests verifies:
+These tests verify:
     - Group type annotations that have numeric-like values are being treated as strings
     - Numeric columns are rounded to 3 decimals points
     - Filtering cell names (given from cluster file) in metadata correctly
 
 PREREQUISITES
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
-and Firestore emulator must be running, see PR26 for instructions
-(https://github.com/broadinstitute/scp-ingest-pipeline/pull/26)
 
 Note: When CI environment moves to Python 3.7, tests may break due to minor
 differences in how the reference issues are serialized
@@ -31,7 +29,7 @@ from subsample import IngestFiles
 
 class TestSubsample(unittest.TestCase):
     AMOUNT_OF_NUMERIC_BINS = 20
-    CLUSTER_PATH = '../tests/data/test_1k_cluster_Data.csv'
+    CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
     CELL_METADATA_PATH = '../tests/data/subsample_metadata_test.csv'
 
     EXPONENT = -3
