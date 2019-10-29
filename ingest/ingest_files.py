@@ -248,6 +248,7 @@ class IngestFiles:
             else:
                 return next_row_revised
 
+    # This function will be deleted and in replaced in annotations.py
     def determine_coordinates_and_cell_names(self):
         """Finds column names for coordinates, annotations, and cell names"""
         self.coordinates_and_cell_names = [
@@ -261,3 +262,33 @@ class IngestFiles:
             for annot in self.file.columns
             if annot[0].lower() not in ('z', 'y', 'x', 'name')
         ]
+
+    # This function will be deleted and in replaced in annotations.py
+    def preproccess(self):
+        """Ensures that:
+            - Numeric columns are rounded to 3 decimals points
+            - Group annotations are strings
+            - 'NAME' in first header row is capitalized
+            - 'TYPE' in second header row is capitalized
+        """
+        headers = self.file.columns.get_level_values(0)
+        annot_types = self.file.columns.get_level_values(1)
+        # Lowercase second level. Example: NUMeric -> numeric
+        self.file.rename(
+            columns=lambda col_name: col_name.lower(), level=1, inplace=True
+        )
+        name = list(headers)[0]
+        type = list(annot_types)[0].lower()
+        # Uppercase NAME and TYPE
+        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
+        # Make sure group annotations are treated as strings
+        group_columns = self.file.xs(
+            "group", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        self.file[group_columns] = self.file[group_columns].astype(str)
+        # Find numeric columns and round to 3 decimals places and are floats
+        numeric_columns = self.file.xs(
+            "numeric", axis=1, level=1, drop_level=False
+        ).columns.tolist()
+        # TODO perform replace
+        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)

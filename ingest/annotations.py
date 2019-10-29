@@ -25,6 +25,7 @@ class Annotations(IngestFiles):
     def transform(self):
         """Returns data model"""
 
+    # This will end up being a class method
     @abc.abstractmethod
     def set_dataArray(self):
         """Sets DataArray"""
