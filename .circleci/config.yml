@@ -4,6 +4,9 @@
 #
 version: 2.1
 
+orbs:
+  codecov: codecov/codecov@1.0.5
+
 jobs:
   build:
     docker:
@@ -61,9 +64,7 @@ jobs:
             export FIRESTORE_EMULATOR_HOST=localhost:8081
             . venv/bin/activate
             cd tests
-            coverage run -m pytest
-            coverage report --include *scp-ingest-pipeline/ingest*
-            coverage html --include *scp-ingest-pipeline/ingest*
+            pytest --cov-report=xml --cov=../ingest/
 
-      - store_artifacts:
-          path: tests/htmlcov
+      - codecov/upload:
+          file: tests/coverage.xml

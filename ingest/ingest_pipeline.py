@@ -19,7 +19,8 @@ python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata --validate-convention
+!! Please note that you must have permission to the SCP bucket
+python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
 
 # Ingest dense file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
@@ -47,13 +48,10 @@ from gene_data_model import Gene
 from google.api_core import exceptions
 from google.cloud import firestore
 from mtx import Mtx
+from ingest_files import IngestFiles
 from subsample import SubSample
 from loom import Loom
-from validation.validate_metadata import (
-    collect_jsonschema_errors,
-    validate_collected_ontology_data,
-    report_issues,
-)
+from validation.validate_metadata import validate_input_metadata, report_issues
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
@@ -61,7 +59,7 @@ EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 
 class IngestPipeline(object):
     # File location for metadata json convention
-    JSON_CONVENTION = 'DoNotTouch/AMC_v0.8.json'
+    JSON_CONVENTION = 'gs://fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2/metadata_conventions/AMC_v1.1.3/AMC_v1.1.3.json'
 
     def __init__(
         self,
@@ -233,10 +231,11 @@ class IngestPipeline(object):
     def has_valid_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
         with open(self.JSON_CONVENTION, 'r') as f:
-            convention = json.load(f)
+            json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+            convention = json.load(json_file.file)
+            validate_input_metadata(self.cell_metadata, convention)
 
-        collect_jsonschema_errors(self.cell_metadata, convention)
-        validate_collected_ontology_data(self.cell_metadata, convention)
+        f.close()
         return not report_issues(self.cell_metadata)
 
     def ingest_expression(self) -> None:
@@ -278,6 +277,7 @@ class IngestPipeline(object):
             if self.kwargs['validate_convention'] is not None:
                 if self.kwargs['validate_convention']:
                     if self.has_valid_metadata_convention():
+                        print("it works!")
                         pass
                     else:
                         return 1

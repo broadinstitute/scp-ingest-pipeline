@@ -1,0 +1,53 @@
+{
+  "error": {
+    "type": {
+      "sample_type: \"numeric\" annotation in metadata file conflicts with metadata convention. Convention expects \"group\" values.": null,
+      "organism_age: \"group\" annotation in metadata file conflicts with metadata convention. Convention expects \"numeric\" values.": null,
+      "disease__time_since_onset: \"three\" in \"36|three|1\" does not match expected \"number\" type": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "disease__time_since_onset: \"zero\" in \"zero\" does not match expected \"number\" type": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
+    },
+    "convention": {
+      "disease__treated: 'F' is not of type 'boolean'": [
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ],
+      "ethnicity__ontology_label: nan is not of type 'string'": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "disease__treated: 'T' is not of type 'boolean'": [
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ],
+      "disease__time_since_onset: '36|three|1' is not of type 'array'": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "disease__time_since_onset: 'zero' is not of type 'array'": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "ethnicity: nan is not of type 'string'": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "disease__time_since_onset__unit: values for each unit metadata required to be uniform": null
+    },
+    "metadata_name": {
+      "donor : only alphanumeric characters and underscore allowed in metadata name": null
+    },
+    "ontology": {
+      "ethnicity: input ontology_label \"nan\" does not match EBI OLS lookup \"European\",": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "ethnicity: No match found in EBI OLS for provided ontology ID: nan": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
+    }
+  },
+  "warn": {
+    "ontology": {
+      "disease__time_since_onset__unit: no ontology label supplied in metadata file for \"UO_0000035\" - no cross-check for data entry error possible": null,
+      "disease__time_since_onset__unit: no ontology label supplied in metadata file for \"UO_0000033\" - no cross-check for data entry error possible": null
+    }
+  }
+}
