@@ -21,8 +21,6 @@ except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
 
-DOCUMENT_LIMIT_BYTES = 1_048_576
-
 
 class CellMetadata(Annotations):
     ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
@@ -59,9 +57,8 @@ class CellMetadata(Annotations):
         study_id: str
 
     def transform(self):
-        """ Transform data from cell metadata files into data model"""
-        # first column is cell names, therefore skip
-        for annot_header in self.file.columns[1:]:
+        """ Builds cell metadata files into  cell_metadata model"""
+        for annot_header in self.file.columns:
             annot_name = annot_header[0]
             annot_type = annot_header[1]
             yield self.Model(

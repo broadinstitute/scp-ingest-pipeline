@@ -275,19 +275,20 @@ class IngestPipeline(object):
             if self.kwargs['validate_convention'] is not None:
                 if self.kwargs['validate_convention']:
                     if self.has_valid_metadata_convention():
-                        print("it works!")
                         pass
                     else:
                         return 1
             self.cell_metadata.reset_file(2, open_as="dataframe")
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
-                load_status = self.load_cell_metadata(metadataModel)
-                if load_status != 0:
-                    return load_status
-            return 0
-        else:
-            return 1
+                print(metadataModel)
+                # TODO: Uncomment when ingest functionality implemented
+                # load_status = self.load_cell_metadata(metadataModel)
+        #         if load_status != 0:
+        #             return load_status
+        #     return 0
+        # else:
+        #     return 1
 
     def ingest_cluster(self):
         """Ingests cluster files."""
