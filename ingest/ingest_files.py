@@ -46,6 +46,7 @@ class DataArray(TypedDict):
         self.study_id = study_id
         self.study_file_id = study_file_id
 
+        # TODO: Add logic for when len(self.values) > self.MAX_ENTREIS
         # get_dataArray(self):
         #     if len(self.values) > self.MAX_ENTREIS:
 

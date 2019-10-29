@@ -78,8 +78,8 @@ def get_nth_gene_docs(n, docs, mock_dir):
     # to avoid collisions in Firestore emulator instance.
     # So we remove this key from the actual and expected docs to avoid
     # false positive test failures.
-    del actual_doc['study_accession']
-    del expected_doc['study_accession']
+    del actual_doc['study_id']
+    del expected_doc['study_id']
 
     return actual_doc, expected_doc
 
@@ -144,7 +144,7 @@ class IngestTestCase(unittest.TestCase):
         genes = ingest.db.collection(u'genes')
         stream = (
             genes.where(u'taxon_common_name', u'==', u'human')
-            .where(u'study_accession', u'==', study_accession)
+            .where(u'study_id', u'==', study_accession)
             .stream()
         )
 
@@ -221,7 +221,7 @@ class IngestTestCase(unittest.TestCase):
         genes = ingest.db.collection(u'genes')
         stream = (
             genes.where(u'taxon_common_name', u'==', u'human')
-            .where(u'study_accession', u'==', study_accession)
+            .where(u'study_id', u'==', study_accession)
             .stream()
         )
 
@@ -296,7 +296,7 @@ class IngestTestCase(unittest.TestCase):
         genes = ingest.db.collection(u'genes')
         stream = (
             genes.where(u'taxon_common_name', u'==', u'human')
-            .where(u'study_accession', u'==', study_accession)
+            .where(u'study_id', u'==', study_accession)
             .stream()
         )
 
@@ -372,7 +372,7 @@ class IngestTestCase(unittest.TestCase):
         genes = ingest.db.collection(u'genes')
         stream = (
             genes.where(u'taxon_common_name', u'==', u'human')
-            .where(u'study_accession', u'==', study_accession)
+            .where(u'study_id', u'==', study_accession)
             .stream()
         )
 

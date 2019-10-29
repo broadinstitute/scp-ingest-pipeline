@@ -13,7 +13,7 @@ EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
+python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
@@ -299,9 +299,6 @@ class IngestPipeline(object):
 
         for model in self.cluster.transform():
             print(model)
-            # pass
-
-        # self.load_cluster_files()
 
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
