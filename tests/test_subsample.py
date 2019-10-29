@@ -1,6 +1,6 @@
 """Tests subsampling
 
-These tests verifies:
+These tests verify:
     - Binning correctly
     - Subsampling correctly
 
