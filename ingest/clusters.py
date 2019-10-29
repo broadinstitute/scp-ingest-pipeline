@@ -173,6 +173,7 @@ class Clusters(Annotations):
         subsample_annotation: str = None,
         subsample_threshold: int = None,
     ):
+        data_array_attr = locals()
         BASE_DICT = {'linear_data_type': Clusters.LINEAR_DATA_TYPE}
 
         def get_cluster_attr(annot_name):
@@ -187,17 +188,21 @@ class Clusters(Annotations):
             }
 
             if annot_name.lower() == "name":
-                return cluster_group_types['name']
+                result = cluster_group_types.get('name')
+                return result
             elif annot_name.lower() in ("x", "y", "z"):
-                return cluster_group_types['coordinates']
+                result = cluster_group_types.get('coordinates')
+                return result
             else:
-                return cluster_group_types['annot']
+                result = cluster_group_types.get('annot')
+                return result
 
         cluster_attr = get_cluster_attr(name)
-        data_array_attr = locals()
-        print(cluster_attr)
         # Remove 'name' from data pass into function
         del data_array_attr['name']
+        # print(data_array_attr)
+
+        # merged_array = {**data_array_attr, **cluster_attr, **BASE_DICT}
         # Merge BASE_DICT, cluster_attr & data_array_attr and return DataArray model
         return DataArray({**data_array_attr, **cluster_attr, **BASE_DICT})
 

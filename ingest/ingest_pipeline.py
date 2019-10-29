@@ -298,8 +298,8 @@ class IngestPipeline(object):
         """Ingests cluster files."""
 
         for model in self.cluster.transform():
-            # print(model)
-            pass
+            print(model)
+            # pass
 
         # self.load_cluster_files()
 
