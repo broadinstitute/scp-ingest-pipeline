@@ -49,11 +49,7 @@ from google.cloud import firestore
 from mtx import Mtx
 from subsample import SubSample
 from loom import Loom
-from validation.validate_metadata import (
-    collect_jsonschema_errors,
-    validate_collected_ontology_data,
-    report_issues,
-)
+from validation.validate_metadata import validate_input_metadata, report_issues
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
@@ -234,9 +230,7 @@ class IngestPipeline(object):
         """ Determines if cell metadata file follows metadata convention"""
         with open(self.JSON_CONVENTION, 'r') as f:
             convention = json.load(f)
-
-        collect_jsonschema_errors(self.cell_metadata, convention)
-        validate_collected_ontology_data(self.cell_metadata, convention)
+            validate_input_metadata(self.cell_metadata, convention)
         return not report_issues(self.cell_metadata)
 
     def ingest_expression(self) -> None:
