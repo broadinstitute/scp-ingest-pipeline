@@ -31,7 +31,7 @@ from subsample import IngestFiles
 
 class TestSubsample(unittest.TestCase):
     AMOUNT_OF_NUMERIC_BINS = 20
-    CLUSTER_PATH = '../tests/data/test_1k_cluster_Data.csv'
+    CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
     CELL_METADATA_PATH = '../tests/data/subsample_metadata_test.csv'
 
     EXPONENT = -3
