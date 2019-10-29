@@ -198,11 +198,9 @@ class Clusters(Annotations):
                 return result
 
         cluster_attr = get_cluster_attr(name)
-        # Remove 'name' from data pass into function
+        # Remove 'name' from function aruguments
         del data_array_attr['name']
-        # print(data_array_attr)
 
-        # merged_array = {**data_array_attr, **cluster_attr, **BASE_DICT}
         # Merge BASE_DICT, cluster_attr & data_array_attr and return DataArray model
         return DataArray({**data_array_attr, **cluster_attr, **BASE_DICT})
 

@@ -25,14 +25,14 @@ class DataArray(TypedDict):
         name: str,
         cluster_name: str,
         array_type: str,
-        array_index: int,
         values: List,
-        subsample_threshold: int,
-        subsample_annotation: str,
         linear_data_type: str,
         linear_data_id: str,
         study_id: str,
         study_file_id: str,
+        array_index: int = 0,
+        subsample_threshold: int = None,
+        subsample_annotation: str = None,
     ):
         self.name = name
         self.cluster_name = cluster_name
