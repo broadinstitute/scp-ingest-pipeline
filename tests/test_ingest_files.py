@@ -7,8 +7,6 @@ These tests verify:
 
 PREREQUISITES
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
-and Firestore emulator must be running, see PR26 for instructions
-(https://github.com/broadinstitute/scp-ingest-pipeline/pull/26)
 
 Note: When CI environment moves to Python 3.7, tests may break due to minor
 differences in how the reference issues are serialized
