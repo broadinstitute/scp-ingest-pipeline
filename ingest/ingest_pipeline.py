@@ -16,23 +16,23 @@ EXAMPLES
 python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
+python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have permission to the SCP bucket
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
+python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
 
 # Ingest dense file
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest loom file
-python ingest_pipeline.py  --study-id SCP1 --study-file-id 123abc 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
+python ingest_pipeline.py  --study-id SCP1 --study-file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
+python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
@@ -52,6 +52,7 @@ from mtx import Mtx
 # from ingest_files import IngestFiles
 from subsample import SubSample
 from loom import Loom
+from ingest_files import IngestFiles
 from validation.validate_metadata import validate_input_metadata, report_issues
 
 # Ingest file types
@@ -60,7 +61,7 @@ EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 
 class IngestPipeline(object):
     # File location for metadata json convention
-    JSON_CONVENTION = 'gs://fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2/metadata_conventions/AMC_v1.1.1.json'
+    JSON_CONVENTION = 'gs://fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2/metadata_conventions/AMC_v1.1.3/AMC_v1.1.3.json'
 
     def __init__(
         self,
@@ -232,8 +233,11 @@ class IngestPipeline(object):
     def has_valid_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
         with open(self.JSON_CONVENTION, 'r') as f:
-            convention = json.load(f)
+            json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+            convention = json.load(json_file.file)
             validate_input_metadata(self.cell_metadata, convention)
+
+        f.close()
         return not report_issues(self.cell_metadata)
 
     def ingest_expression(self) -> None:
