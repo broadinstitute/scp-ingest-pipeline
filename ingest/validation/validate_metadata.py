@@ -68,14 +68,14 @@ def create_parser():
 
     # helper param to create JSON representation of metadata.issues
     # to generate reference output for tests
-    parser.add_argument('--issues_json', action='store_true')
+    parser.add_argument('--issues-json', action='store_true')
     # helper param to create JSON representation of convention metadata
     # to generate json for bigquery testing
-    parser.add_argument('--bq_json', action='store_true')
+    parser.add_argument('--bq-json', action='store_true')
     # validate_metadata.py CLI only for dev, bogus defaults below shouldn't propagate
-    parser.add_argument('--file_id', help='MongoDB identifier', default='Mongo_none')
+    parser.add_argument('--file-id', help='MongoDB identifier', default='Mongo_none')
     parser.add_argument(
-        '--study_accession', help='SCP study accession', default='SCP_none'
+        '--study-accession', help='SCP study accession', default='SCP_none'
     )
     parser.add_argument('convention', help='Metadata convention JSON file ')
     parser.add_argument('input_metadata', help='Metadata TSV file')
@@ -233,8 +233,10 @@ def compare_type_annots_to_convention(metadata, convention):
     type_annots = metadata.file.columns.get_level_values(1).tolist()
     # if input was TSV metadata file, SCP format requires 'NAME' for the first
     # column which is expected to be CellID, primarily based on loom convention
-    if metadata_names[0].upper() == 'NAME':
-        metadata_names[0] = 'CellID'
+    # would do conditional (eg. if metadata_names[0].upper() == 'NAME':)
+    # but subsequent code expects 'CellID' even if header check fails and first
+    # word in header is not some form of 'NAME' and script breaks
+    metadata_names[0] = 'CellID'
     type_annots[0] = 'group'
     metadata_annots = dict(zip(metadata_names, type_annots))
     annot_equivalents = {
@@ -373,8 +375,10 @@ def process_metadata_row(metadata, convention, line):
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     # if input was TSV metadata file, SCP format requires 'NAME' for the first
     # column which is expected to be CellID, primarily based on loom convention
-    if metadata_names[0].upper() == 'NAME':
-        metadata_names[0] = 'CellID'
+    # would do conditional (eg. if metadata_names[0].upper() == 'NAME':)
+    # but subsequent code expects 'CellID' even if header check fails and first
+    # word in header is not some form of 'NAME' and script breaks
+    metadata_names[0] = 'CellID'
     row_info = dict(zip(metadata_names, line))
     processed_row = {}
     for k, v in row_info.items():
