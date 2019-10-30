@@ -58,29 +58,34 @@ class CellMetadata(Annotations):
 
     def transform(self):
         """ Builds cell metadata files into  cell_metadata model"""
-        for annot_header in self.file.columns:
+        for annot_header in self.file.columns[:]:
             annot_name = annot_header[0]
             annot_type = annot_header[1]
-            yield self.Model(
-                {
-                    'name': annot_name,
-                    'annotation_type': annot_type,
-                    # unique values from "group" type annotations else []
-                    'values': list(self.file[annot_header].unique())
-                    if annot_type == 'group'
-                    else [],
-                    'study_file_id': self.study_file_id,
-                    'study_id': self.study_id,
-                }
+            yield (
+                annot_header,
+                self.Model(
+                    {
+                        'name': annot_name,
+                        'annotation_type': annot_type,
+                        # unique values from "group" type annotations else []
+                        'values': list(self.file[annot_header].unique())
+                        if annot_type == 'group'
+                        else [],
+                        'study_file_id': self.study_file_id,
+                        'study_id': self.study_id,
+                    }
+                ),
             )
 
     def set_data_array(self, annot_header: str, linear_data_id: str):
         data_array_attrs = locals()
+        del data_array_attrs['annot_header']
+        del data_array_attrs['self']
         annot_name = annot_header[0]
         head, tail = ntpath.split(self.file_path)
         base_data_array_model = {
             'cluster_name': tail or ntpath.basename(head),
-            'value': list(self.file[annot_name]),
+            'value': list(self.file[annot_header]),
             'study_file_id': self.study_file_id,
             'study_id': self.study_id,
         }
@@ -97,12 +102,12 @@ class CellMetadata(Annotations):
         else:
             base_data_array_model.update(
                 {
-                    'name': 'annot_name',
+                    'name': annot_name,
                     'array_type': 'annotations',
                     'linear_data_type': 'CellMetadatum',
                 }
             )
-        return DataArray({**locals(), **base_data_array_model})
+        return DataArray({**data_array_attrs, **base_data_array_model})
 
     def yield_by_row(self) -> None:
         """ Yield row from cell metadata file"""

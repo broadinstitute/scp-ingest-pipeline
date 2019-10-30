@@ -285,7 +285,8 @@ class IngestPipeline(object):
             self.cell_metadata.reset_file(2, open_as="dataframe")
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
-                print(metadataModel)
+                # TODO: 'Linear_id' will need to change to MongoDB ObjectId
+                print(self.cell_metadata.set_data_array(metadataModel[0], 'Linear_id'))
                 # TODO: Uncomment when ingest functionality implemented
                 # load_status = self.load_cell_metadata(metadataModel)
         #         if load_status != 0:
