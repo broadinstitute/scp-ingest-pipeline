@@ -88,6 +88,7 @@ class IngestFiles:
         file_connections = {
             "text/csv": self.open_csv(open_file),
             "text/plain": open_file,
+            "application/json": open_file,
             "text/tab-separated-values": self.open_tsv(open_file),
             "dataframe": self.open_pandas,
         }
