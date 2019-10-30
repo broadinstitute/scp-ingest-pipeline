@@ -86,7 +86,7 @@ def get_nth_gene_models(n, models, mock_dir):
 class IngestTestCase(unittest.TestCase):
     @patch('google.cloud.storage.Blob', side_effect=mock_storage_blob)
     @patch('google.cloud.storage.Client', side_effect=mock_storage_client)
-    @patch("google.cloud.firestore.Client", side_effect=mock_firestore_client)
+    @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
     def setup_ingest(
         self, args, mock_storage_client, mock_storage_blob, mock_firestore_client
     ):
@@ -145,7 +145,7 @@ class IngestTestCase(unittest.TestCase):
         expected_num_models = 19
         self.assertEqual(num_models, expected_num_models)
         # Verify that the first gene model looks as expected
-        mock_dir = "dense_matrix_19_genes_100k_cells_txt"
+        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
 
         self.assertEqual(model, expected_model)
@@ -183,25 +183,25 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            "--study-accession",
-            "SCP1",
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "../tests/data/dense_matrix_19_genes_100k_cells.txt",
-            "--matrix-file-type",
-            "dense",
+            '--study-accession',
+            'SCP1',
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/dense_matrix_19_genes_100k_cells.txt',
+            '--matrix-file-type',
+            'dense',
         ]
         ingest = self.setup_ingest(args)
 
@@ -213,7 +213,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(num_models, expected_num_models)
 
         # Verify that the first gene model looks as expected
-        mock_dir = "dense_matrix_19_genes_100k_cells_txt"
+        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
 
         self.assertEqual(model, expected_model)
@@ -251,29 +251,29 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            "--study-accession",
-            "SCP1",
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensembl 94",
-            "--matrix-file",
-            "../tests/data/matrix.mtx",
-            "--matrix-file-type",
-            "mtx",
-            "--gene-file",
-            "../tests/data/genes.tsv",
-            "--barcode-file",
-            "../tests/data/barcodes.tsv",
+            '--study-accession',
+            'SCP1',
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/matrix.mtx',
+            '--matrix-file-type',
+            'mtx',
+            '--gene-file',
+            '../tests/data/genes.tsv',
+            '--barcode-file',
+            '../tests/data/barcodes.tsv',
         ]
         ingest = self.setup_ingest(args)
 
@@ -285,10 +285,8 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(num_models, expected_num_models)
 
         # Verify that the first gene model looks as expected
-        mock_dir = "matrix_mtx"
+        mock_dir = 'matrix_mtx'
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
-        print(f"\n\n\n{model}\n\n\n")
-        print(f"\n\n\n{expected_model}\n\n\n")
         self.assertEqual(model, expected_model)
 
     def test_mtx_bundle_argument_validation(self):
@@ -324,25 +322,25 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            "--study-accession",
-            "SCP1",
-            "--file-id",
-            "1234abc",
-            "ingest_expression",
-            "--taxon-name",
-            "Homo Sapiens",
-            "--taxon-common-name",
-            "human",
-            "--ncbi-taxid",
-            "9606",
-            "--genome-assembly-accession",
-            "GCA_000001405.15",
-            "--genome-annotation",
-            "Ensemble 94",
-            "--matrix-file",
-            "../tests/data/test_loom.loom",
-            "--matrix-file-type",
-            "loom",
+            '--study-accession',
+            'SCP1',
+            '--file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo Sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensemble 94',
+            '--matrix-file',
+            '../tests/data/test_loom.loom',
+            '--matrix-file-type',
+            'loom',
         ]
 
         ingest = self.setup_ingest(args)
@@ -355,10 +353,8 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(num_models, expected_num_models)
 
         # Verify that the first gene model looks as expected
-        mock_dir = "loom"
+        mock_dir = 'loom'
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
-        print(f"\n\n\n{model}\n\n\n")
-        print(f"\n\n\n{expected_model}\n\n\n")
         self.assertEqual(model, expected_model)
 
 
