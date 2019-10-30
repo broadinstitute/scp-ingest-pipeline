@@ -231,7 +231,10 @@ def compare_type_annots_to_convention(metadata, convention):
     """
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     type_annots = metadata.file.columns.get_level_values(1).tolist()
-    metadata_names[0] = 'CellID'
+    # if input was TSV metadata file, SCP format requires 'NAME' for the first
+    # column which is expected to be CellID, primarily based on loom convention
+    if metadata_names[0].upper() == 'NAME':
+        metadata_names[0] = 'CellID'
     type_annots[0] = 'group'
     metadata_annots = dict(zip(metadata_names, type_annots))
     annot_equivalents = {
@@ -368,7 +371,10 @@ def process_metadata_row(metadata, convention, line):
     logger.debug('Begin: process_metadata_row')
     # extract first row of metadata from pandas array as python list
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
-    metadata_names[0] = 'CellID'
+    # if input was TSV metadata file, SCP format requires 'NAME' for the first
+    # column which is expected to be CellID, primarily based on loom convention
+    if metadata_names[0].upper() == 'NAME':
+        metadata_names[0] = 'CellID'
     row_info = dict(zip(metadata_names, line))
     processed_row = {}
     for k, v in row_info.items():
