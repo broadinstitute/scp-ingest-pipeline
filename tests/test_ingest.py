@@ -33,7 +33,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from gcp_mocks import mock_storage_client, mock_storage_blob
+from gcp_mocks import mock_storage_client, mock_storage_blob, mock_firestore_client
 
 sys.path.append('../ingest')
 from ingest_pipeline import create_parser, validate_arguments, IngestPipeline
@@ -86,7 +86,10 @@ def get_nth_gene_models(n, models, mock_dir):
 class IngestTestCase(unittest.TestCase):
     @patch('google.cloud.storage.Blob', side_effect=mock_storage_blob)
     @patch('google.cloud.storage.Client', side_effect=mock_storage_client)
-    def setup_ingest(self, args, mock_storage_client, mock_storage_blob):
+    @patch("google.cloud.firestore.Client", side_effect=mock_firestore_client)
+    def setup_ingest(
+        self, args, mock_storage_client, mock_storage_blob, mock_firestore_client
+    ):
 
         self.maxDiff = None
 
