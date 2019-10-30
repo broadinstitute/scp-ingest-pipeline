@@ -84,10 +84,7 @@ def create_parser():
 
 def validate_schema(json, metadata):
     """Check validity of metadata convention as JSON schema.
-
-    :param schemafile: metadata convention JSON file
-    :return: if valid, jsonschema validator object using input convention
-                or returns None
+    if valid, return jsonschema validator object else return None
     """
 
     try:
@@ -102,11 +99,6 @@ def validate_schema(json, metadata):
 
 def is_array_metadata(convention, metadatum):
     """Check if metadata is array type from metadata convention
-
-    :param convention: dict representation of metadata convention
-    :param metadatum: name of metadatum
-
-    :return:
     """
     logger.debug('Begin: is_array_metadata')
     try:
@@ -121,11 +113,6 @@ def is_array_metadata(convention, metadatum):
 
 def is_ontology_metadata(convention, metadatum):
     """Check if metadata is ontology from metadata convention
-
-    :param convention: dict representation of metadata convention
-    :param metadatum: name of metadatum
-
-    :return:
     """
     logger.debug('Begin: is_ontology_metadata')
     try:
@@ -136,11 +123,6 @@ def is_ontology_metadata(convention, metadatum):
 
 def lookup_metadata_type(convention, metadatum):
     """Look up metadata type from metadata convention
-
-    :param convention: dict representation of metadata convention
-    :param metadatum: name of metadatum
-
-    :return:
     """
     logger.debug('Begin: lookup_metadata_type')
     try:
@@ -169,8 +151,6 @@ def list_duplicates(cells):
 
 def validate_cells_unique(metadata):
     """Check all CellID are unique.
-
-    :return: boolean   True if valid, False otherwise
     """
     valid = False
     if len(metadata.cells) == len(set(metadata.cells)):
@@ -225,9 +205,6 @@ def collect_ontology_data(row_data, metadata, convention):
 
 def compare_type_annots_to_convention(metadata, convention):
     """Check if metadata type annotation is consistent with metadata convention type
-
-    :param metadata: cell metadata object
-    :param convention: dict representation of metadata convention
     """
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     type_annots = metadata.file.columns.get_level_values(1).tolist()
@@ -365,10 +342,7 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
 
 def process_metadata_row(metadata, convention, line):
     """Process metadata row by row
-
-    :param metadata: cell metadata object
-    :param convention: dict representation of metadata convention
-    :return: row of convention data
+    returns processed row of convention data as dict
     """
     logger.debug('Begin: process_metadata_row')
     # extract first row of metadata from pandas array as python list
@@ -390,11 +364,7 @@ def process_metadata_row(metadata, convention, line):
 
 def collect_jsonschema_errors(metadata, convention, bq_json=None):
     """Evaluate metadata input against metadata convention using JSON schema
-
-    :param metadata: cell metadata object
-    :param convention: dict representation of metadata convention
-    :return: tuple of non-ontology issues dict and ontology info dict
-            or False if input convention is invalid JSON schema
+    returns False if input convention is invalid JSON schema
     """
     logger.debug('Begin: collect_jsonschema_errors')
     # this function seems overloaded with its three tasks
@@ -430,9 +400,7 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
 
 def report_issues(metadata):
     """Report issues in CellMetadata.issues dictionary
-
-    :param metadata: cell metadata object
-    :return: True if errors are reported, False if no errors to report
+    returns True if errors are reported, False if no errors to report
     """
     logger.debug('Begin: report_issues')
 
@@ -461,9 +429,7 @@ def report_issues(metadata):
 
 def exit_if_errors(metadata):
     """Determine if CellMetadata.issues has errors
-
-    :param metadata: cell metadata object
-    :return: Exit with error code 1 if errors are reported, False if no errors
+    Exit with error code 1 if errors are reported, return False if no errors
     """
     logger.debug('Begin: exit_if_errors')
 
@@ -480,8 +446,7 @@ def exit_if_errors(metadata):
 
 def retrieve_ontology(ontology_url):
     """Retrieve an ontology listing from EBI OLS
-    :param ontology_term: identifier of a term in an ontology in OLS (e.g. CL_0002419)
-    :return: JSON payload of ontology, or None
+    returns JSON payload of ontology, or None if unsuccessful
     """
     response = requests.get(ontology_url)
     if response.status_code == 200:
@@ -492,8 +457,7 @@ def retrieve_ontology(ontology_url):
 
 def retrieve_ontology_term(convention_url, ontology_id):
     """Retrieve an individual term from an ontology
-    :param ontology_term: term to query for in matching ontology
-    :return: JSON payload of ontology of ontology term, or None
+    returns JSON payload of ontology, or None if unsuccessful
     """
     OLS_BASE_URL = 'https://www.ebi.ac.uk/ols/api/ontologies/'
     convention_ontology = retrieve_ontology(convention_url)
@@ -527,10 +491,7 @@ def retrieve_ontology_term(convention_url, ontology_id):
 
 def encode_term_iri(term_id, base_uri):
     """Double url-encode a term Internationalized Resource Identifier (IRI) for querying OLS ontologies
-
-    :param term: ontology term
-    :param base_uri: base term URI for corresponding ontology
-    :return: double url-encoded ontology term IRI
+    returns double url-encoded ontology term IRI
     """
     query_uri = base_uri + term_id
     encoded_iri = encoder.quote_plus(encoder.quote_plus(query_uri))
