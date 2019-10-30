@@ -37,8 +37,9 @@ python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_expressi
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import ast
-import os
-import sys
+
+# import os
+# import sys
 import json
 
 from cell_metadata import CellMetadata
@@ -531,10 +532,10 @@ def main() -> None:
             status.append(status_subsample)
 
     # TODO: This check will need to changed
-    if all(i < 1 for i in status) or len(status) == 0:
-        sys.exit(os.EX_OK)
-    else:
-        sys.exit(os.EX_DATAERR)
+    # if all(i < 1 for i in status) or len(status) == 0:
+    #     sys.exit(os.EX_OK)
+    # else:
+    #     sys.exit(os.EX_DATAERR)
 
 
 if __name__ == "__main__":
