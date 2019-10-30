@@ -1,7 +1,7 @@
 """Integration tests for Ingest Pipeline; isolated tests for observable output
 
 These tests verify that various matrix file types can be extracted and
-transformed, as loaded into (an official emulator of) Firestore
+transformed, as expected by code that loads transformed data into Firestore.
 
 Test doubles are used for test speed and isolation.
 
@@ -15,19 +15,17 @@ EXAMPLES
 pytest
 
 # Run tests with names containing the string 'dense'
-pytest -k 'dense'
+pytest -ks 'dense'
 
 # Run all tests in a manner that shows any print() statements
-python3 test_ingest.py
+pytest -s
 
 # Run all tests, using multiple CPUs
 # Details: https://pypi.org/project/pytest-xdist/
-pytest -n auto
+pytest -ns auto
 
 # Run all tests, show code coverage metrics
-# For explanation of coverage report, see:
-# https://coverage.readthedocs.io/en/v4.5.x/branch.html
-coverage run --branch test_ingest.py; coverage report -m --include *scp-ingest-pipeline/ingest*
+pytest --cov=../ingest/
 
 """
 import ast
