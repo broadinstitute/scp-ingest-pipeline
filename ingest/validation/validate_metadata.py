@@ -621,7 +621,7 @@ def serialize_bq(bq_dict):
     """Write metadata collected for validation to json file
     BigQuery requires newline delimited json objects
     """
-    data = json.dumps(bq_dict, indent=2)
+    data = json.dumps(bq_dict)
     with open('bq.json', 'a') as jsonfile:
         jsonfile.write(data + '\n')
 
@@ -668,7 +668,7 @@ if __name__ == '__main__':
     print('Validating', filetsv)
     if args.bq_json:
         if os.path.exists('bq.json'):
-            print('bq.json already exist, please delete file and try again')
+            print('bq.json already exists, please delete file and try again')
             exit(1)
     validate_input_metadata(metadata, convention, args.bq_json)
     if args.issues_json:
