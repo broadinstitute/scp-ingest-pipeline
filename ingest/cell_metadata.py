@@ -51,10 +51,10 @@ class CellMetadata(Annotations):
         # value from column header
         name: str
         annotation_type: str
-        # unique values from "group" type annotations
-        values: List
         study_file_id: str
         study_id: str
+        # unique values from "group" type annotations
+        values: List
 
     def transform(self):
         """ Builds cell metadata files into  cell_metadata model"""
@@ -64,13 +64,13 @@ class CellMetadata(Annotations):
             yield self.Model(
                 {
                     'name': annot_name,
-                    'study_id': self.study_id,
+                    'annotation_type': annot_type,
                     # unique values from "group" type annotations else []
                     'values': list(self.file[annot_header].unique())
                     if annot_type == 'group'
                     else [],
-                    'annotation_type': annot_type,
                     'study_file_id': self.study_file_id,
+                    'study_id': self.study_id,
                 }
             )
 
