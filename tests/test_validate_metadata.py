@@ -84,7 +84,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_convention_content(self):
         """Metadata convention should be valid jsonschema
-            """
+        """
 
         args = '../tests/data/AMC_invalid.json ../tests/data/valid_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
