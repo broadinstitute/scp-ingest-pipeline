@@ -6,7 +6,7 @@ This CLI takes a local NDJSON file and appends it to an existing bigquery table.
 https://cloud.google.com/bigquery/docs/loading-data-cloud-storage-json#loading_json_data_into_a_new_table)
 
 EXAMPLE
-$ python upload_to_bq.py ../../tests/data/valid_arrays_v1.1.3_for_bq_v1.json
+$ python upload_to_bq.py dataset_id table_id ../../tests/data/valid_arrays_v1.1.3_for_bq_v1.json
 
 """
 
