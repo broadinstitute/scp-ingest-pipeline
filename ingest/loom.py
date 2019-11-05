@@ -9,10 +9,8 @@ Must have python 3.6 or higher.
 
 
 import sys
-from typing import List
 
 import loompy
-from gene_data_model import Gene
 import numpy as np
 
 np.set_printoptions(precision=8, threshold=sys.maxsize, edgeitems=1e9)
@@ -36,7 +34,7 @@ class Loom:
         for (ix, selection, view) in self.ds.scan(axis=0, batch_size=10):
             yield view
 
-    def transform_expression_data_by_gene(self, view) -> List[Gene]:
+    def transform_expression_data_by_gene(self, view):
         """Transforms LoomView into Firestore data model
         Returns:
         ------
@@ -45,17 +43,18 @@ class Loom:
         """
         # TODO: Find way to utilize generators and interators for memory and CPU efficiency
         # Checkout https://www.datacamp.com/community/tutorials/python-iterator-tutorial
-        gene_expression_models = []
-        for gene in view.ra.Gene:
-            gene_expression_models.append(
-                Gene(
-                    name=gene,
-                    source_file_type="loom",
-                    expression_scores=view[view.ra.Gene == gene, :][0],
-                    cell_names=self.ds.ca.CellID.tolist(),
-                    study_accession=self.study_accession,
-                    file_id=self.file_id,
-                    **self.matrix_params,
-                )
-            )
-        return gene_expression_models
+        # gene_expression_models = []
+        # for gene in view.ra.Gene:
+        #     gene_expression_models.append(
+        #         Gene(
+        #             name=gene,
+        #             source_file_type="loom",
+        #             expression_scores=view[view.ra.Gene == gene, :][0],
+        #             cell_names=self.ds.ca.CellID.tolist(),
+        #             study_accession=self.study_accession,
+        #             file_id=self.file_id,
+        #             **self.matrix_params,
+        #         )
+        #     )
+        # return gene_expression_models
+        pass

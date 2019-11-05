@@ -13,7 +13,6 @@ Must have python 3.6 or higher.
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
 import scipy.io
-from gene_data_model import Gene
 
 
 class Mtx:
@@ -38,7 +37,7 @@ class Mtx:
         self.genes = [g.strip() for g in self.genes_file.readlines()]
         self.cells = [c.strip() for c in self.barcodes_file.readlines()]
 
-    def transform_expression_data_by_gene(self) -> List[Gene]:
+    def transform_expression_data_by_gene(self):
         """Transforms dense matrix into firestore data model for genes.
 
         Args:
@@ -61,17 +60,18 @@ class Mtx:
                 exp_by_gene[gene].cell_names.append(cell_name)
             else:
                 # Create new key value pair with value being Gene object
-                exp_by_gene[gene] = Gene(
-                    gene,
-                    "Mtx",
-                    gene_id=gene_id,
-                    cell_names=[cell_name],
-                    expression_scores=[exp_score],
-                    check_for_zero_values=False,
-                    study_accession=self.study_accession,
-                    file_id=self.file_id,
-                    **self.matrix_params,
-                )
+                exp_by_gene[gene] = {}
+                # exp_by_gene[gene] = Gene(
+                #     gene,
+                #     "Mtx",
+                #     gene_id=gene_id,
+                #     cell_names=[cell_name],
+                #     expression_scores=[exp_score],
+                #     check_for_zero_values=False,
+                #     study_accession=self.study_accession,
+                #     file_id=self.file_id,
+                #     **self.matrix_params,
+                # )
         return exp_by_gene.values()
 
     def close(self):

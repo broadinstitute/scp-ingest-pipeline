@@ -8,26 +8,31 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 from typing import List  # noqa: F401
-
-from gene_data_model import Gene
-from ingest_files import IngestFiles
+from gene_data_model import GeneExpression
 
 
-class Dense(IngestFiles):
-    def __init__(self, file_path, file_id, study_accession, **kwargs):
+class Dense(GeneExpression):
+    def __init__(self, file_path, study_file_id, study_id, **kwargs):
         self.ALLOWED_FILE_TYPES = [
             "text/csv",
             "text/plain",
             "text/tab-separated-values",
         ]
-        IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
-        self.file_id = file_id
-        self.study_accession = study_accession
-        self.cell_names = self.get_next_line(increase_line_count=False)[1:]
+        GeneExpression.__init__(
+            self,
+            file_path,
+            study_file_id,
+            study_id,
+            self.ALLOWED_FILE_TYPES,
+            open_as='dataframe',
+        )
+        self.study_file_id = study_file_id
+        self.study_id = study_id
         # Remove from dictionary any keys that have value=None
-        self.matrix_params = {k: v for k, v in kwargs.items() if v is not None}
+        self.matrix_params = kwargs
+        self.preproccess()
 
-    def transform_expression_data_by_gene(self, expression_scores: List[str]) -> Gene:
+    def transform_expression_data_by_gene(self):
         """Transforms dense matrix into firestore data model for genes.
 
         Args:
@@ -38,16 +43,19 @@ class Dense(IngestFiles):
                 transformed_data : List[Gene]
                 A list of Gene objects
         """
-        gene_model = Gene(
-            name=expression_scores[0],
-            source_file_type="Dense",
-            expression_scores=expression_scores[1:],
-            cell_names=self.cell_names,
-            study_accession=self.study_accession,
-            file_id=self.file_id,
-            **self.matrix_params
-        )
-        return gene_model
+        for gene in self.file['GENE']:
+            gene = gene.replace('"', '').replace("'", '')
+            yield self.Model(
+                {
+                    'name': gene,
+                    'searchable_name': gene.lower(),
+                    'study_file_id': self.study_file_id,
+                    'study_id': self.study_id,
+                    'gene_id': self.matrix_params['gene_id']
+                    if 'gene_id' in self.matrix_params
+                    else None,
+                }
+            )
 
     def close(self):
         """Closes file

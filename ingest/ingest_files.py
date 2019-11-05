@@ -52,7 +52,7 @@ class DataArray(TypedDict):
 
 
 class IngestFiles:
-    def __init__(self, file_path, allowed_file_types, *, open_as=None):
+    def __init__(self, file_path, allowed_file_types, *, open_as=None, header=None):
         self.file_path = file_path
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
@@ -61,7 +61,9 @@ class IngestFiles:
         self.verify_file_exists(file_path)
 
         self.allowed_file_types = allowed_file_types
-        self.file_type, self.file, self.file_handle = self.open_file(file_path, open_as)
+        self.file_type, self.file, self.file_handle = self.open_file(
+            file_path, open_as, header=None
+        )
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
 
@@ -117,7 +119,7 @@ class IngestFiles:
             self.file_path, start_point=start_point, open_as=open_as
         )
 
-    def open_file(self, file_path, open_as=None, start_point: int = 0):
+    def open_file(self, file_path, open_as=None, header=None, start_point: int = 0):
         """ Opens txt, csv, or tsv formatted files"""
         open_file = self.resolve_path(file_path)
         if start_point != 0:
@@ -140,7 +142,9 @@ class IngestFiles:
             else:
                 return (
                     file_type,
-                    file_connections.get("dataframe")(open_file, file_path),
+                    file_connections.get("dataframe")(
+                        open_file, file_path, header=None
+                    ),
                     open_file,
                 )
         else:
@@ -170,17 +174,25 @@ class IngestFiles:
         """Returns file type"""
         return mimetypes.guess_type(file_path)
 
-    def open_pandas(self, opened_file, file_path):
+    def open_pandas(self, opened_file, file_path, header=[0, 1]):
         """Opens file as a dataframe """
         opened_file.readline()
         meta_data = opened_file.readline()
         if meta_data.find("\t") != -1:
             return pd.read_csv(
-                file_path, sep="\t", header=[0, 1], quoting=csv.QUOTE_NONE
+                file_path,
+                sep="\t",
+                skipinitialspace=True,
+                # header=[0, 1],
+                quoting=csv.QUOTE_NONE,
             )
         elif meta_data.find(",") != -1:
             return pd.read_csv(
-                file_path, sep=",", header=[0, 1], quoting=csv.QUOTE_NONE
+                file_path,
+                sep=",",
+                skipinitialspace=True,
+                # header=[0, 1],
+                quoting=csv.QUOTE_NONE,
             )
         else:
             raise ValueError("File must be tab or comma delimited")
