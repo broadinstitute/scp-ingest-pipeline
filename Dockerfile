@@ -1,4 +1,4 @@
-# Dockerfile for SCP Ingest Service
+# Dockerfile for SCP Ingest Pipeline
 #
 # PREREQUISITES
 # Run the following command to register gcloud as a Docker credential helper:
@@ -29,12 +29,12 @@ RUN ln -s /usr/bin/python3 /usr/bin/python & \
 
 # Copy contents of this repo into the Docker image
 # (See .Dockerignore for omitted files)
-COPY . scp-ingest-service
+COPY . scp-ingest-pipeline
 
-WORKDIR /scp-ingest-service
+WORKDIR /scp-ingest-pipeline
 
 # Install Python dependencies
 RUN pip install -r requirements.txt
 
-WORKDIR /scp-ingest-service/ingest
+WORKDIR /scp-ingest-pipeline/ingest
 CMD ["python", "ingest.py", "--help"]
