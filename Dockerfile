@@ -24,7 +24,7 @@ RUN apt-get -y update && \
   apt -y install python3-pip
 
 # Set cleaner defaults (`alias` fails)
-RUN ln -s /usr/bin/python3 /usr/bin/python & \
+RUN ln -s /usr/bin/python3 /usr/bin/python && \
     ln -s /usr/bin/pip3 /usr/bin/pip
 
 # Copy contents of this repo into the Docker image
