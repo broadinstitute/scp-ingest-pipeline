@@ -46,12 +46,12 @@ class Clusters(Annotations):
         self.determine_coordinates_and_cell_names()
         self.source_file_type = "cluster"
         self.cluster_type = (
-            '2d'
+            '3d'
             if (
                 "z" in self.coordinates_and_cell_headers
                 or "Z" in self.coordinates_and_cell_headers
             )
-            else '3d'
+            else '2d'
         )
         # self.cell_annotations = self.create_cell_annotations_field()
         self.cluster_subdocs = {}
