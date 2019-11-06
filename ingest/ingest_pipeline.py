@@ -46,7 +46,7 @@ from clusters import Clusters
 from dense import Dense
 from gene_data_model import Gene
 from google.api_core import exceptions
-from google.cloud import firestore
+from pymongo import MongoClient
 from mtx import Mtx
 from ingest_files import IngestFiles
 from subsample import SubSample
@@ -80,7 +80,7 @@ class IngestPipeline(object):
         self.study_accession = study_accession
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        self.db = firestore.Client()
+        self.db = self.get_mongo_client()
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
@@ -94,6 +94,21 @@ class IngestPipeline(object):
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
         elif matrix_file is None:
             self.matrix = matrix_file
+
+    def get_mongo_client():
+        user = os.environ['MONGO_USER']
+        password = os.environ['MONGO_PASSWORD']
+        host = os.environ['MONGO_HOST']
+        scp_env = os.environ['SCP_ENV']
+
+        client = MongoClient(
+            host,
+            username=user,
+            password=password,
+            authSource='single_cell_portal_' + scp_env,
+            authMechanism='SCRAM-SHA-1',
+        )
+        return client
 
     def initialize_file_connection(self, file_type, file_path):
         """Initializes connection to file.
