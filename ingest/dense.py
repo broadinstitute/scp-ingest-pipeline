@@ -43,6 +43,9 @@ class Dense(IngestFiles):
         self.file.rename(
             columns=lambda x: x.strip().strip('\"').strip('\''), inplace=True
         )
+        self.file.rename(
+            columns=lambda x: x.strip().strip('\'').strip('\"'), inplace=True
+        )
 
     def transform_expression_data_by_gene(self):
         """Transforms dense matrix into firestore data model for genes.
@@ -73,14 +76,19 @@ class Dense(IngestFiles):
                 ),
             )
 
-    def set_data_array(self, gene_name, name, linear_data_id):
+    def set_data_array(self, gene_name, gene_model, linear_data_id):
         input_args = locals()
         cells = self.file.columns.tolist()[1:]
-        values = self.file.loc[self.file['GENE'] == gene_name].values[1:]
+        gene_df = self.file[self.file['GENE'] == gene_name]
+        cells_and_expression_vals = (
+            gene_df[cells].round(3).astype(float).to_dict('records')[0]
+        )
+        dict(filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items()))
+        print(cells_and_expression_vals)
 
         # values = [round(float(value), 3) if float(value)>0 for value in values]
 
-        input_args['name'] = f'#{name} Cells'
+        input_args['gene_model']['name'] = f'name Cells'
 
         # return self.DataArray({**input_args, **base_data_array_model})
 
