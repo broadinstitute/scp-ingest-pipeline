@@ -80,7 +80,7 @@ class IngestPipeline(object):
         self.study_accession = study_accession
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        self.db = self.get_mongo_client()
+        self.db = self.get_mongo_db()
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
@@ -95,20 +95,22 @@ class IngestPipeline(object):
         elif matrix_file is None:
             self.matrix = matrix_file
 
-    def get_mongo_client():
+    def get_mongo_db():
         user = os.environ['MONGO_USER']
         password = os.environ['MONGO_PASSWORD']
         host = os.environ['MONGO_HOST']
         scp_env = os.environ['SCP_ENV']
 
+        db_name = 'single_cell_portal_' + scp_env
+
         client = MongoClient(
             host,
             username=user,
             password=password,
-            authSource='single_cell_portal_' + scp_env,
+            authSource=db_name,
             authMechanism='SCRAM-SHA-1',
         )
-        return client
+        return client[db_name]
 
     def initialize_file_connection(self, file_type, file_path):
         """Initializes connection to file.

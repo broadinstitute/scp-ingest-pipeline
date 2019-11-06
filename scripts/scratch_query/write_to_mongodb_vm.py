@@ -2,23 +2,25 @@ import os
 from pymongo import MongoClient
 
 
-def get_mongo_client():
+def get_mongo_db():
     user = os.environ['MONGO_USER']
     password = os.environ['MONGO_PASSWORD']
     host = os.environ['MONGO_HOST']
-    # scp_env = os.environ['SCP_ENV']
+    scp_env = os.environ['SCP_ENV']
+
+    db_name = 'single_cell_portal_' + scp_env
 
     client = MongoClient(
         host,
         username=user,
         password=password,
-        authSource='single_cell_portal_development',
+        authSource=db_name,
         authMechanism='SCRAM-SHA-1',
     )
-    return client
+    return client[db_name]
 
 
-db = get_mongo_client()['single_cell_portal_development']
+db = get_mongo_db()
 
 genes = db.genes
 gene = {'gene': 'HBB'}
