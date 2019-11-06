@@ -3,17 +3,16 @@ files into Firestore.
 
 DESCRIPTION
 This cli currently takes in extract and transform functions from different
-file types then uploads them into Firestore.
+file types then uploads them into Mongo.
 
 PREREQUISITES
-You must have Google Cloud Firestore installed, authenticated, and
-configured. Must have Python 3.6 or higher. Indexing must be turned off for sub-collections.
+Must have Python 3.6 or higher.
 
 EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
 python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
@@ -47,7 +46,6 @@ from clusters import Clusters
 from dense import Dense
 from gene_data_model import Gene
 from google.api_core import exceptions
-from google.cloud import firestore
 from mtx import Mtx
 
 # from ingest_files import IngestFiles
@@ -84,10 +82,7 @@ class IngestPipeline(object):
         self.study_file_id = study_file_id
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        if db is not None:
-            self.db = db
-        else:
-            self.db = firestore.Client()
+        self.db = None
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
