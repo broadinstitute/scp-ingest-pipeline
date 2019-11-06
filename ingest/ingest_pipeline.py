@@ -80,7 +80,11 @@ class IngestPipeline(object):
         self.study_accession = study_accession
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        self.db = self.get_mongo_db()
+        if os.environ.get('DATABASE_HOST') is not None:
+            # Needed to run tests in CircleCI.  TODO: add mock, remove this
+            self.db = self.get_mongo_db()
+        else:
+            self.db = None
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
