@@ -73,6 +73,7 @@ class IngestPipeline(object):
         subsample=False,
         ingest_cell_metadata=False,
         ingest_cluster=False,
+        db_creds=None,
         **kwargs,
     ):
         """Initializes variables in ingest service."""
@@ -80,7 +81,7 @@ class IngestPipeline(object):
         self.study_accession = study_accession
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        self.db = self.get_mongo_db()
+        self.db = self.get_mongo_db(db_creds)
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
@@ -95,13 +96,11 @@ class IngestPipeline(object):
         elif matrix_file is None:
             self.matrix = matrix_file
 
-    def get_mongo_db():
-        user = os.environ['MONGO_USER']
-        password = os.environ['MONGO_PASSWORD']
-        host = os.environ['MONGO_HOST']
-        scp_env = os.environ['SCP_ENV']
-
-        db_name = 'single_cell_portal_' + scp_env
+    def get_mongo_db(creds):
+        host = creds['database_host']
+        user = creds['mongodb_username']
+        password = creds['mongodb_password']
+        db_name = creds['database_name']
 
         client = MongoClient(
             host,
