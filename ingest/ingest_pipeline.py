@@ -261,8 +261,8 @@ class IngestPipeline(object):
                     + self.matrix.transform_expression_data_by_gene(expression_ds)
                 )
         else:
-            for model in self.matrix.transform_expression_data_by_gene():
-                print(model)
+            for gene in self.matrix.transform_expression_data_by_gene():
+                self.matrix.set_data_array(gene.gene_name, gene.gene_model, '1234fds')
 
         # self.load_expression_data(transformed_data)
         # TODO: Work on exception handling

@@ -92,5 +92,5 @@ class GeneExpression(IngestFiles):
     def preproccess(self):
         # Remove trailing white spaces, and quotes from column names
         self.file.rename(
-            columns=lambda x: x.strip().replace('"', '').replace("'", ''), inplace=True
+            columns=lambda x: x.strip().strip('"', '').strip("'", ''), inplace=True
         )
