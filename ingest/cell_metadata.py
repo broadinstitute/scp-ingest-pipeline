@@ -61,7 +61,6 @@ class CellMetadata(IngestFiles):
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
-        self.type = defaultdict(list)
         self.cells = []
         self.is_valid_file = self.validate_format()
 
@@ -270,6 +269,13 @@ class CellMetadata(IngestFiles):
                 # string for error reporting
                 if 'Unnamed' in t:
                     invalid_types.append('<empty value>')
+                # Duplicated metadata header name causes type annotation issue.
+                # Side effect of Pandas adding a suffix to uniquefy the header.
+                # These invalid annotations should not be included in invalid
+                # type annotation count. This exception may cause miscount of
+                # type annot errors if user-supplied annotation has period.
+                elif '.' in t:
+                    pass
                 else:
                     invalid_types.append(t)
         if invalid_types:

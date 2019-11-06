@@ -4,6 +4,9 @@
 #
 version: 2.1
 
+orbs:
+  codecov: codecov/codecov@1.0.5
+
 jobs:
   build:
     docker:
@@ -17,28 +20,9 @@ jobs:
       # Download and cache dependencies
       - restore_cache:
           keys:
-            - v2-dependencies-{{ checksum "requirements.txt" }}
+            - v3-dependencies-{{ checksum "requirements.txt" }}
             # fallback to using the latest cache if no exact match is found
-            - v2-dependencies-
-
-      - run:
-          name: Install Firestore emulator
-          command: |
-            # Add the Cloud SDK distribution URI as a package source
-            echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-
-            # Import the Google Cloud Platform public key
-            curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
-            
-            # Enable `add-apt-repository` command
-            sudo apt-get --yes install software-properties-common
-
-            # Enable installation of OpenJDK, needed by gcloud
-            sudo add-apt-repository --yes ppa:openjdk-r/ppa
-
-            # Update the package list and install the Cloud SDK
-            sudo apt-get --yes update && sudo apt-get --yes install google-cloud-sdk
-            sudo apt-get --yes install google-cloud-sdk google-cloud-sdk-firestore-emulator
+            - v3-dependencies-
 
       - run:
           name: Install Python dependencies
@@ -51,19 +35,14 @@ jobs:
       - save_cache:
           paths:
             - ./venv
-          key: v2-dependencies-{{ checksum "requirements.txt" }}
+          key: v3-dependencies-{{ checksum "requirements.txt" }}
 
       - run:
           name: Run tests
           command: |
-            env
-            gcloud beta emulators firestore start --host-port localhost:8081 &
-            export FIRESTORE_EMULATOR_HOST=localhost:8081
             . venv/bin/activate
             cd tests
-            coverage run -m pytest
-            coverage report --include *scp-ingest-pipeline/ingest*
-            coverage html --include *scp-ingest-pipeline/ingest*
+            pytest --cov-report=xml --cov=../ingest/
 
-      - store_artifacts:
-          path: tests/htmlcov
+      - codecov/upload:
+          file: tests/coverage.xml
