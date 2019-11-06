@@ -73,7 +73,6 @@ class IngestPipeline(object):
         subsample=False,
         ingest_cell_metadata=False,
         ingest_cluster=False,
-        db_creds=None,
         **kwargs,
     ):
         """Initializes variables in ingest service."""
@@ -81,7 +80,7 @@ class IngestPipeline(object):
         self.study_accession = study_accession
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        self.db = self.get_mongo_db(db_creds)
+        self.db = self.get_mongo_db()
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
@@ -96,11 +95,11 @@ class IngestPipeline(object):
         elif matrix_file is None:
             self.matrix = matrix_file
 
-    def get_mongo_db(creds):
-        host = creds['database_host']
-        user = creds['mongodb_username']
-        password = creds['mongodb_password']
-        db_name = creds['database_name']
+    def get_mongo_db(self):
+        host = os.environ['DATABASE_HOST']
+        user = os.environ['MONGODB_USERNAME']
+        password = os.environ['MONGODB_PASSWORD']
+        db_name = os.environ['DATABASE_NAME']
 
         client = MongoClient(
             host,
@@ -109,6 +108,14 @@ class IngestPipeline(object):
             authSource=db_name,
             authMechanism='SCRAM-SHA-1',
         )
+
+        # TODO: Remove this block.
+        # Uncomment and run `pytest -s` to manually verify your MongoDB set-up.
+        # genes = client[db_name].genes
+        # gene = {'gene': 'HBB'}
+        # gene_mongo_id = genes.insert_one(gene).inserted_id
+        # print(f'gene_mongo_id {gene_mongo_id}')
+
         return client[db_name]
 
     def initialize_file_connection(self, file_type, file_path):
