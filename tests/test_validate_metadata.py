@@ -56,7 +56,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Header rows of metadata file should conform to standard
         """
 
-        args = '../tests/data/AMC_v1.1.2.json ../tests/data/error_headers_v1.1.1.tsv'
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/error_headers_v1.1.3.tsv'
         metadata = self.setup_metadata(args)[0]
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
@@ -92,7 +92,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Metadata convention should be valid jsonschema
         """
 
-        args = '../tests/data/AMC_invalid.json ../tests/data/valid_v1.1.1.tsv'
+        args = '../tests/data/AMC_invalid.json ../tests/data/valid_no_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertIsNone(
             validate_schema(convention, metadata),
@@ -105,7 +105,7 @@ class TestValidateMetadata(unittest.TestCase):
         """
         # Note: this input metadata file does not have array-based metadata
         # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
-        args = '../tests/data/AMC_v1.1.2.json ../tests/data/valid_v1.1.1.tsv'
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/valid_no_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -119,7 +119,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
         """
-        args = '../tests/data/AMC_v1.1.2.json ../tests/data/invalid_metadata_v1.1.1.tsv'
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/invalid_metadata_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -151,7 +151,7 @@ class TestValidateMetadata(unittest.TestCase):
         """
         # Note: this input metadata file does not have array-based metadata
         # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
-        args = '../tests/data/AMC_v1.1.2.json ../tests/data/valid_v1.1.1.tsv'
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/valid_no_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -167,7 +167,7 @@ class TestValidateMetadata(unittest.TestCase):
         """
         # Note: this input metadata file does not have array-based metadata
         # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
-        args = '../tests/data/AMC_v1.1.2.json ../tests/data/invalid_ontology_v1.1.1.tsv'
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/invalid_ontology_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
