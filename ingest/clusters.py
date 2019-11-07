@@ -26,7 +26,7 @@ class Clusters(Annotations):
         name: str
         # 3d or 2d cluster
         cluster_type: str
-        # Array of Hash objects that describe all extra "annotation" columns
+        # List of dictionaries that describe all extra "annotation" columns
         cell_annotations: List
         file_id: str
         study_id: str
