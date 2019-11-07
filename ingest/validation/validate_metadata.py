@@ -398,32 +398,53 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
         return False
 
 
+def record_issue(errfile, warnfile, issue_type, msg):
+    """print issue to console with coloring and
+    appends issues to appropriate issue file
+    """
+
+    if issue_type == 'error':
+        errfile.write(msg + '\n')
+        color = Fore.RED
+    elif issue_type == 'warn':
+        warnfile.write(msg + '\n')
+        color = Fore.YELLOW
+    else:
+        color = ''
+    console_msg = color + msg
+    print(console_msg)
+
+
 def report_issues(metadata):
     """Report issues in CellMetadata.issues dictionary
     returns True if errors are reported, False if no errors to report
     """
     logger.debug('Begin: report_issues')
 
+    error_file = open('/tmp/errors.txt', 'w')
+    warn_file = open('/tmp/warnings.txt', 'w')
     has_errors = False
     has_warnings = False
     for issue_type in sorted(metadata.issues.keys()):
         for issue_category, category_dict in metadata.issues[issue_type].items():
             if category_dict:
-                print('\n***', issue_category, issue_type, 'list:')
+                category_header = f'\n*** {issue_category} {issue_type} list:'
+                record_issue(error_file, warn_file, issue_type, category_header)
                 if issue_type == 'error':
-                    color = Fore.RED
                     has_errors = True
                 elif issue_type == 'warn':
-                    color = Fore.YELLOW
                     has_warnings = True
                 for issue_text, cells in category_dict.items():
-                    issue_msg = color + issue_text
                     if cells:
-                        print(f'{issue_msg} [ Error count: {len(cells)} ]')
+                        issue_msg = f'{issue_text} [ Error count: {len(cells)} ]'
+                        record_issue(error_file, warn_file, issue_type, issue_msg)
                     else:
-                        print(issue_msg)
+                        record_issue(error_file, warn_file, issue_type, issue_text)
     if not has_errors and not has_warnings:
-        print('No errors or warnings detected for input metadata file')
+        no_issues = 'No errors or warnings detected for input metadata file'
+        record_issue(error_file, warn_file, None, no_issues)
+    error_file.close()
+    warn_file.close()
     return has_errors
 
 

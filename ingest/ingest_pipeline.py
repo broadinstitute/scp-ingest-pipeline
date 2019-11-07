@@ -226,12 +226,11 @@ class IngestPipeline(object):
 
     def has_valid_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        with open(self.JSON_CONVENTION, 'r') as f:
-            json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
-            convention = json.load(json_file.file)
-            validate_input_metadata(self.cell_metadata, convention)
+        json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        convention = json.load(json_file.file)
+        validate_input_metadata(self.cell_metadata, convention)
 
-        f.close()
+        json_file.file_handle.close()
         return not report_issues(self.cell_metadata)
 
     def ingest_expression(self) -> None:
