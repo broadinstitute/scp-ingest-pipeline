@@ -19,7 +19,7 @@ from google.cloud import storage
 
 @dataclass
 class DataArray(TypedDict):
-    MAX_ENTREIS = 100_000
+    MAX_ENTRIES = 100_000
 
     def __init__(
         self,
