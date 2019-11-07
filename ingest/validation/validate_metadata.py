@@ -400,7 +400,7 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
 
 def record_issue(errfile, warnfile, issue_type, msg):
     """print issue to console with coloring and
-    appends issues to appropriate issue file
+    writes issues to appropriate issue file
     """
 
     if issue_type == 'error':
@@ -421,8 +421,8 @@ def report_issues(metadata):
     """
     logger.debug('Begin: report_issues')
 
-    error_file = open('/tmp/errors.txt', 'w')
-    warn_file = open('/tmp/warnings.txt', 'w')
+    error_file = open('scp_validation_errors.txt', 'w')
+    warn_file = open('scp_validation_warnings.txt', 'w')
     has_errors = False
     has_warnings = False
     for issue_type in sorted(metadata.issues.keys()):

@@ -17,6 +17,7 @@ python3 test_validate_metadata.py
 import sys
 import unittest
 import json
+import os
 
 sys.path.append('../ingest')
 sys.path.append('../ingest/validation')
@@ -45,6 +46,11 @@ class TestValidateMetadata(unittest.TestCase):
 
     def teardown_metadata(self, metadata):
         metadata.file_handle.close()
+        try:
+            os.remove('scp_validation_errors.txt')
+            os.remove('scp_validation_warnings.txt')
+        except OSError:
+            print('no file to remove')
 
     def test_header_format(self):
         """Header rows of metadata file should conform to standard
