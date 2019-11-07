@@ -1,16 +1,15 @@
 """Ingest Pipeline for ingesting expression, metadata and cluster
-files into Firestore.
+files into MongoDB.
 
 DESCRIPTION
-This cli currently takes in extract and transform functions from different
-file types then uploads them into Firestore.
+This CLI extracts and transforms different file types then writes them into
+a remote MongoDB instance.
 
 PREREQUISITES
-You must have Google Cloud Firestore installed, authenticated, and
-configured. Must have Python 3.6 or higher. Indexing must be turned off for sub-collections.
+See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
 
 EXAMPLES
-# Takes expression file and stores it into Firestore
+# Takes expression file and stores it into MongoDB
 
 # Ingest cluster file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
