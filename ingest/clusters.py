@@ -22,7 +22,7 @@ class Clusters(Annotations):
     LINEAR_DATA_TYPE = 'ClusterGroup'
 
     @dataclass
-    class Document(TypedDict):
+    class Model(TypedDict):
         name: str
         # 3d or 2d cluster
         cluster_type: str
@@ -218,7 +218,7 @@ class Clusters(Annotations):
                     'values': list(self.file[annot].unique()),
                 }
             )
-        return self.Document(
+        return self.Model(
             name=self.name,
             cluster_type=self.cluster_type,
             cell_annotations=cell_annotations,

@@ -13,26 +13,26 @@ EXAMPLES
 # Takes expression file and stores it into Firestore
 
 # Ingest cluster file
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have permission to the SCP bucket
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
 
 # Ingest dense file
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
-# Ingest loom file
-python ingest_pipeline.py  --study-id SCP1 --study-file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
+# # Ingest loom file
+# python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
@@ -250,20 +250,31 @@ class IngestPipeline(object):
         Returns:
             None
         """
-        transformed_data = []
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
-            transformed_data = self.matrix.transform_expression_data_by_gene()
-        elif self.matrix_file_type == "loom":
-            for expression_ds in self.matrix.extract():
-                transformed_data = (
-                    transformed_data
-                    + self.matrix.transform_expression_data_by_gene(expression_ds)
-                )
-        else:
-            for gene in self.matrix.transform_expression_data_by_gene():
-                self.matrix.set_data_array(gene.gene_name, gene.gene_model, '1234fds')
-
+        # elif self.matrix_file_type == "loom":
+        #     for expression_ds in self.matrix.extract():
+        #         transformed_data = (
+        #             transformed_data
+        #             + self.matrix.transform_expression_data_by_gene(expression_ds)
+        #         )
+        for gene in self.matrix.transform():
+            # Here is where the Gene model would be loaded into MongoDB
+            # When loaded, return MongoID
+            print(gene.gene_model)
+            for model in self.matrix.set_data_array(
+                gene.gene_name, gene.gene_model['name'], '5d276a50421aa9'
+            ):
+                print(model)
+                print("\n")
+                print("\n")
+                print("\n")
+                print("\n")
+                print("\n")
+        # Create DataArray for cells that were observed in expression matrix
+        self.matrix.set_data_array(
+            None, None, '5d276a50421aa9', create_cell_DataArray=True
+        )
         # self.load_expression_data(transformed_data)
         # TODO: Work on exception handling
 

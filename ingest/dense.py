@@ -7,36 +7,26 @@ an dense matrix.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-from typing import List  # noqa: F401
-from ingest_files import IngestFiles
-from dataclasses import dataclass
-
-from mypy_extensions import TypedDict
 
 import collections
-import ntpath
+from typing import List  # noqa: F401
+
+from expression_files import GeneExpression
 
 
-class Dense(IngestFiles):
-    LINEAR_DATA_TYPE = 'Gene'
+class Dense(GeneExpression):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
-    # This model pertains to columns from cell metadata files
-    @dataclass
-    class Model(TypedDict):
-        name: str
-        # downcase version of 'name'
-        searchable_name: str
-        study_file_id: str
-        study_id: str
-        gene_id: str = None
-
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
-        IngestFiles.__init__(
-            self, file_path, self.ALLOWED_FILE_TYPES, open_as='dataframe'
+        GeneExpression.__init__(
+            self,
+            study_file_id,
+            study_id,
+            file_path=file_path,
+            allowed_file_types=self.ALLOWED_FILE_TYPES,
+            open_as='dataframe',
         )
-        self.study_file_id = study_file_id
-        self.study_id = study_id
+        self.hasAll = True
         # Remove from dictionary any keys that have value=None
         self.matrix_params = kwargs
         # Remove trailing white spaces, and quotes from column names
@@ -58,15 +48,18 @@ class Dense(IngestFiles):
                 transformed_data : List[Gene]
                 A list of Gene objects
         """
+
         Gene_Model = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
         for gene in self.file['GENE']:
-            formatted_gene = gene.strip().strip('\"').strip('\'')
+            # Remove white spaces and quotes
+            formatted_gene_name = gene.strip().strip('\"').strip('\'').strip('\"')
             yield Gene_Model(
+                # Name of gene as observed in file
                 gene,
                 self.Model(
                     {
-                        'name': formatted_gene,
-                        'searchable_name': formatted_gene.lower(),
+                        'name': formatted_gene_name,
+                        'searchable_name': formatted_gene_name.lower(),
                         'study_file_id': self.study_file_id,
                         'study_id': self.study_id,
                         'gene_id': self.matrix_params['gene_id']
@@ -76,31 +69,37 @@ class Dense(IngestFiles):
                 ),
             )
 
-    def set_data_array(self, gene_name, gene_model, linear_data_id):
+    def set_data_array(
+        self,
+        unformatted_gene_name,
+        gene_name,
+        linear_data_id,
+        create_cell_DataArray=False,
+    ):
         input_args = locals()
-        cells = self.file.columns.tolist()[1:]
-        gene_df = self.file[self.file['GENE'] == gene_name]
-        cells_and_expression_vals = (
-            gene_df[cells].round(3).astype(float).to_dict('records')[0]
-        )
-        dict(filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items()))
-        print(cells_and_expression_vals)
+        gene_df = self.file[self.file['GENE'] == unformatted_gene_name]
 
-        # values = [round(float(value), 3) if float(value)>0 for value in values]
-
-        input_args['gene_model']['name'] = f'name Cells'
-
-        # return self.DataArray({**input_args, **base_data_array_model})
-
-    def set_cell_data_array(self, name, linear_data_id):
-        head, tail = ntpath.split(self.file_path)
-        base_data_array_model = {
-            'cluster_name': tail or ntpath.basename(head),
-            'array_type': 'cells',
-            'linear_data_type': 'Gene',
-            'linear_data_id': linear_data_id,
-        }
-        return base_data_array_model
+        if create_cell_DataArray:
+            yield self.set_data_array_cells(self.file['GENE'].tolist())
+        else:
+            # Get list of cell names
+            cells = self.file.columns.tolist()[1:]
+            # Get row of expression values for gene
+            # Round expression values to 3 decimal points
+            # Insure data type of float
+            cells_and_expression_vals = (
+                gene_df[cells].round(3).astype(float).to_dict('records')[0]
+            )
+            # Filter out expression values = 0
+            cells_and_expression_vals = dict(
+                filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items())
+            )
+            yield self.set_data_array_gene_cell_names(
+                gene_name, linear_data_id, list(cells_and_expression_vals.keys())
+            )
+            yield self.set_data_array_gene_expression_values(
+                gene_name, linear_data_id, list(cells_and_expression_vals.values())
+            )
 
     def close(self):
         """Closes file

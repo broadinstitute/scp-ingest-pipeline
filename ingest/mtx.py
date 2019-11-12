@@ -1,4 +1,5 @@
-"""Module for ingesting MTX
+"""
+Module for ingesting MTX files
 
 DESCRIPTION
 This module provides extract and transforms function for gene expression data for
@@ -11,18 +12,21 @@ Must have python 3.6 or higher.
 """
 
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-
+import collections
 import scipy.io
+from expression_files import GeneExpression
 
 
-class Mtx:
-    def __init__(self, mtx_path: str, file_id: str, study_accession: str, **kwargs):
+class Mtx(GeneExpression):
+    def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
+        GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
         self.genes_file = open(kwargs.pop("gene_file"))
         self.barcodes_file = open(kwargs.pop("barcode_file"))
         self.mtx_path = mtx_path
-        self.file_id = file_id
-        self.study_accession = study_accession
+        self.study_id = study_id
+        self.study_file_id = study_file_id
         self.matrix_params = kwargs
+        self.exp_by_gene = {}
 
     def extract(self):
         """Sets relevant iterables for each file of the MTX bundle
@@ -37,7 +41,7 @@ class Mtx:
         self.genes = [g.strip() for g in self.genes_file.readlines()]
         self.cells = [c.strip() for c in self.barcodes_file.readlines()]
 
-    def transform_expression_data_by_gene(self):
+    def transform(self):
         """Transforms dense matrix into firestore data model for genes.
 
         Args:
@@ -47,32 +51,51 @@ class Mtx:
             transformed_data : List[Gene]
                 A list of Gene objects
         """
-        exp_by_gene = {}
+        GeneModel = collections.namedtuple('GeneModel', ['gene_name', 'gene_model'])
+
+        GeneExpressionValues = collections.namedtuple(
+            'GeneExpressionValues', ['expression_scores', 'cell_names']
+        )
         for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(
             self.matrix_file.row, self.matrix_file.col, self.matrix_file.data
         ):
-            gene_id, gene = self.genes[int(raw_gene_idx)].split("\t")
+            gene_id, gene = self.genes[int(raw_gene_idx)].split('\t')
             cell_name = self.cells[int(raw_barcode_idx)]
             exp_score = round(float(raw_exp_score), 3)
-            if gene in exp_by_gene:
+            if gene in self.exp_by_gene:
                 # Append new score to 'expression_scores' key in Gene object
-                exp_by_gene[gene].expression_scores.append(exp_score)
-                exp_by_gene[gene].cell_names.append(cell_name)
+                self.exp_by_gene[gene].expression_scores.append(exp_score)
+                self.exp_by_gene[gene].cell_names.append(cell_name)
             else:
-                # Create new key value pair with value being Gene object
-                exp_by_gene[gene] = {}
-                # exp_by_gene[gene] = Gene(
-                #     gene,
-                #     "Mtx",
-                #     gene_id=gene_id,
-                #     cell_names=[cell_name],
-                #     expression_scores=[exp_score],
-                #     check_for_zero_values=False,
-                #     study_accession=self.study_accession,
-                #     file_id=self.file_id,
-                #     **self.matrix_params,
-                # )
-        return exp_by_gene.values()
+                self.exp_by_gene[gene] = GeneExpressionValues([cell_name], [exp_score])
+                yield GeneModel(
+                    gene,
+                    self.Model(
+                        {
+                            'name': gene,
+                            'searchable_name': gene.lower(),
+                            'study_file_id': self.study_file_id,
+                            'study_id': self.study_id,
+                            'gene_id': gene_id,
+                        }
+                    ),
+                )
+
+    def set_data_array(
+        self, unformatted_gene_name, name, linear_data_id, create_cell_DataArray=False
+    ):
+        print(self.exp_by_gene[unformatted_gene_name])
+        if create_cell_DataArray:
+            yield self.set_data_array_cells(self.cells, linear_data_id)
+        else:
+            yield self.set_data_array_gene_cell_names(
+                name, linear_data_id, self.exp_by_gene[unformatted_gene_name].cell_names
+            )
+            yield self.set_data_array_gene_expression_values(
+                name,
+                linear_data_id,
+                self.exp_by_gene[unformatted_gene_name].expression_scores,
+            )
 
     def close(self):
         """Closes file
