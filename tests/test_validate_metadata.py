@@ -39,7 +39,7 @@ class TestValidateMetadata(unittest.TestCase):
         with open(args.convention) as f:
             convention = json.load(f)
         filetsv = args.input_metadata
-        metadata = CellMetadata(filetsv, '1234abc', 'SCP1', open_as='dataframe')
+        metadata = CellMetadata(filetsv, '1234abc', 'SCP1')
         metadata.validate_format()
         return (metadata, convention)
 
@@ -84,7 +84,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_convention_content(self):
         """Metadata convention should be valid jsonschema
-            """
+        """
 
         args = '../tests/data/AMC_invalid.json ../tests/data/valid_v1.1.1.tsv'
         metadata, convention = self.setup_metadata(args)

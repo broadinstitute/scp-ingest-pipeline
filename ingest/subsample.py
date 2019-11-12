@@ -17,7 +17,10 @@ class SubSample(IngestFiles):
         self.determine_coordinates_and_cell_names()
         self.cell_metadata_df = (
             IngestFiles(
-                cell_metadata_file, self.ALLOWED_FILE_TYPES, open_as='dataframe'
+                cell_metadata_file,
+                self.ALLOWED_FILE_TYPES,
+                open_as='dataframe',
+                header=[0, 1],
             )
             if cell_metadata_file is not None
             else None

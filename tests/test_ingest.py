@@ -159,36 +159,6 @@ class IngestTestCase(unittest.TestCase):
         doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
         self.assertEqual(doc, expected_doc)
 
-    def test_ingest_missing_file(self):
-        """Ingest Pipeline should throw error for missing file
-        """
-
-        study_accession = get_random_study_accession()
-
-        args = [
-            '--study-id',
-            study_accession,
-            '--study-file-id',
-            '1234abc',
-            'ingest_expression',
-            '--taxon-name',
-            'Homo sapiens',
-            '--taxon-common-name',
-            'human',
-            '--ncbi-taxid',
-            '9606',
-            '--genome-assembly-accession',
-            'GCA_000001405.15',
-            '--genome-annotation',
-            'Ensembl 94',
-            '--matrix-file',
-            'gs://fake-bucket/remote-matrix-file-does-not-exist.txt',
-            '--matrix-file-type',
-            'dense',
-        ]
-
-        self.assertRaises(OSError, self.setup_ingest, args)
-
     def test_ingest_local_dense_matrix(self):
         """Ingest Pipeline should extract, transform, and load local dense matrices
         """
@@ -229,36 +199,6 @@ class IngestTestCase(unittest.TestCase):
 
         num_docs = len(docs)
         self.assertEqual(num_docs, 19)
-
-    def test_ingest_missing_local_file(self):
-        """Ingest Pipeline should throw error for missing local file
-        """
-
-        study_accession = get_random_study_accession()
-
-        args = [
-            '--study-id',
-            study_accession,
-            '--study-file-id',
-            '1234abc',
-            'ingest_expression',
-            '--taxon-name',
-            'Homo sapiens',
-            '--taxon-common-name',
-            'human',
-            '--ncbi-taxid',
-            '9606',
-            '--genome-assembly-accession',
-            'GCA_000001405.15',
-            '--genome-annotation',
-            'Ensembl 94',
-            '--matrix-file',
-            '--matrix-file /this/file/does/not_exist.txt',
-            '--matrix-file-type',
-            'dense',
-        ]
-
-        self.assertRaises(OSError, self.setup_ingest, args)
 
     def test_ingest_mtx_matrix(self):
         """Ingest Pipeline should extract, transform, and load MTX matrix bundles
@@ -339,53 +279,53 @@ class IngestTestCase(unittest.TestCase):
 
         self.assertRaises(ValueError, self.setup_ingest, args)
 
-    def test_ingest_loom(self):
-        """Ingest Pipeline should extract, transform, and load Loom files
-        """
-
-        study_accession = get_random_study_accession()
-
-        args = [
-            '--study-id',
-            study_accession,
-            '--study-file-id',
-            '1234abc',
-            'ingest_expression',
-            '--taxon-name',
-            'Homo sapiens',
-            '--taxon-common-name',
-            'human',
-            '--ncbi-taxid',
-            '9606',
-            '--genome-assembly-accession',
-            'GCA_000001405.15',
-            '--genome-annotation',
-            'Ensembl 94',
-            '--matrix-file',
-            '../tests/data/test_loom.loom',
-            '--matrix-file-type',
-            'loom',
-        ]
-
-        ingest = self.setup_ingest(args)
-
-        genes = ingest.db.collection(u'genes')
-        stream = (
-            genes.where(u'taxon_common_name', u'==', u'human')
-            .where(u'study_id', u'==', study_accession)
-            .stream()
-        )
-
-        docs = [doc.to_dict() for doc in stream]
-
-        # Verify that 10 gene docs were written to Firestore
-        num_docs = len(docs)
-        self.assertEqual(num_docs, 10)
-
-        # Verify that the first gene document looks as expected
-        mock_dir = 'loom'
-        doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
-        self.assertEqual(doc, expected_doc)
+    # def test_ingest_loom(self):
+    #     """Ingest Pipeline should extract, transform, and load Loom files
+    #     """
+    #
+    #     study_accession = get_random_study_accession()
+    #
+    #     args = [
+    #         '--study-id',
+    #         study_accession,
+    #         '--study-file-id',
+    #         '1234abc',
+    #         'ingest_expression',
+    #         '--taxon-name',
+    #         'Homo sapiens',
+    #         '--taxon-common-name',
+    #         'human',
+    #         '--ncbi-taxid',
+    #         '9606',
+    #         '--genome-assembly-accession',
+    #         'GCA_000001405.15',
+    #         '--genome-annotation',
+    #         'Ensembl 94',
+    #         '--matrix-file',
+    #         '../tests/data/test_loom.loom',
+    #         '--matrix-file-type',
+    #         'loom',
+    #     ]
+    #
+    #     ingest = self.setup_ingest(args)
+    #
+    #     genes = ingest.db.collection(u'genes')
+    #     stream = (
+    #         genes.where(u'taxon_common_name', u'==', u'human')
+    #         .where(u'study_id', u'==', study_accession)
+    #         .stream()
+    #     )
+    #
+    #     docs = [doc.to_dict() for doc in stream]
+    #
+    #     # Verify that 10 gene docs were written to Firestore
+    #     num_docs = len(docs)
+    #     self.assertEqual(num_docs, 10)
+    #
+    #     # Verify that the first gene document looks as expected
+    #     mock_dir = 'loom'
+    #     doc, expected_doc = get_nth_gene_docs(0, docs, mock_dir)
+    #     self.assertEqual(doc, expected_doc)
 
 
 if __name__ == '__main__':

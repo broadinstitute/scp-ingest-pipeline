@@ -74,7 +74,6 @@ class IngestPipeline(object):
         subsample=False,
         ingest_cell_metadata=False,
         ingest_cluster=False,
-        db=None,
         **kwargs,
     ):
         """Initializes variables in ingest service."""
@@ -82,10 +81,7 @@ class IngestPipeline(object):
         self.study_file_id = study_file_id
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        if db is not None:
-            self.db = db
-        else:
-            self.db = 'nothing'
+        self.db = None
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file

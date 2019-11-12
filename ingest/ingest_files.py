@@ -12,7 +12,8 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
 
-import pandas as pd
+import gzip
+import pandas as pd  # NOqa: F821
 from google.cloud import storage
 
 
@@ -30,6 +31,7 @@ class DataArray(TypedDict):
         linear_data_id: str,
         study_id: str,
         study_file_id: str,
+        kwargs,
         array_index: int = 0,
         subsample_threshold: int = None,
         subsample_annotation: str = None,
@@ -45,6 +47,7 @@ class DataArray(TypedDict):
         self.linear_data_id = linear_data_id
         self.study_id = study_id
         self.study_file_id = study_file_id
+        self.kwargs = kwargs
 
         # TODO: Add logic for when len(self.values) > self.MAX_ENTREIS
         # get_dataArray(self):
@@ -52,11 +55,12 @@ class DataArray(TypedDict):
 
 
 class IngestFiles:
-    def __init__(self, file_path, allowed_file_types, *, open_as=None, header=None):
+    def __init__(self, file_path, allowed_file_types, *, open_as=None, kwargs):
         self.file_path = file_path
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
         self.is_remote_file = file_path[:5] == "gs://"
+        self.is_gzip_file = self.get_file_type(file_path)[1] == 'gzip'
 
         self.verify_file_exists(file_path)
 
@@ -66,6 +70,7 @@ class IngestFiles:
         )
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
+        self.kwargs = kwargs
 
     def download_from_bucket(self, file_path):
         """Downloads file from Google Cloud Storage bucket"""
@@ -107,9 +112,13 @@ class IngestFiles:
         """
         if self.is_remote_file:
             file_path = self.download_from_bucket(file_path)
-
         # Remove BOM with encoding ='utf - 8 - sig'
-        return open(file_path, encoding="utf-8-sig")
+        if self.is_gzip_file:
+            open_file = gzip.open(file_path, 'rt', encoding='utf-8-sig')
+        else:
+            open_file = open(file_path, encoding="utf-8-sig")
+
+        return open_file
 
     def reset_file(self, start_point, open_as=None):
         """Restart file reader at point that's equal to start_point.
@@ -174,7 +183,7 @@ class IngestFiles:
         """Returns file type"""
         return mimetypes.guess_type(file_path)
 
-    def open_pandas(self, opened_file, file_path, header=[0, 1]):
+    def open_pandas(self, opened_file, file_path):
         """Opens file as a dataframe """
         opened_file.readline()
         meta_data = opened_file.readline()
@@ -183,16 +192,16 @@ class IngestFiles:
                 file_path,
                 sep="\t",
                 skipinitialspace=True,
-                # header=[0, 1],
                 quoting=csv.QUOTE_NONE,
+                **self.file_kwargs,
             )
         elif meta_data.find(",") != -1:
             return pd.read_csv(
                 file_path,
                 sep=",",
                 skipinitialspace=True,
-                # header=[0, 1],
                 quoting=csv.QUOTE_NONE,
+                **self.file_kwargs,
             )
         else:
             raise ValueError("File must be tab or comma delimited")
@@ -260,48 +269,3 @@ class IngestFiles:
                 return self.split_line(next_row_revised)
             else:
                 return next_row_revised
-
-    # This function will be deleted and in replaced in annotations.py
-    def determine_coordinates_and_cell_names(self):
-        """Finds column names for coordinates, annotations, and cell names"""
-        self.coordinates_and_cell_names = [
-            annot[0]
-            for annot in self.file.columns
-            if annot[0].lower() in ('z', 'y', 'x', 'name')
-        ]
-        # annotation column names
-        self.columns = [
-            annot
-            for annot in self.file.columns
-            if annot[0].lower() not in ('z', 'y', 'x', 'name')
-        ]
-
-    # This function will be deleted and in replaced in annotations.py
-    def preproccess(self):
-        """Ensures that:
-            - Numeric columns are rounded to 3 decimals points
-            - Group annotations are strings
-            - 'NAME' in first header row is capitalized
-            - 'TYPE' in second header row is capitalized
-        """
-        headers = self.file.columns.get_level_values(0)
-        annot_types = self.file.columns.get_level_values(1)
-        # Lowercase second level. Example: NUMeric -> numeric
-        self.file.rename(
-            columns=lambda col_name: col_name.lower(), level=1, inplace=True
-        )
-        name = list(headers)[0]
-        type = list(annot_types)[0].lower()
-        # Uppercase NAME and TYPE
-        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
-        # Make sure group annotations are treated as strings
-        group_columns = self.file.xs(
-            "group", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        self.file[group_columns] = self.file[group_columns].astype(str)
-        # Find numeric columns and round to 3 decimals places and are floats
-        numeric_columns = self.file.xs(
-            "numeric", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        # TODO perform replace
-        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)

@@ -27,7 +27,7 @@ sys.path.append("../ingest")
 from subsample import IngestFiles
 
 
-class TestSubsample(unittest.TestCase):
+class TestIngestFiles(unittest.TestCase):
     AMOUNT_OF_NUMERIC_BINS = 20
     CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
     CELL_METADATA_PATH = '../tests/data/subsample_metadata_test.csv'
@@ -39,6 +39,18 @@ class TestSubsample(unittest.TestCase):
             self.CLUSTER_PATH,
             ['text/csv', 'text/plain', 'text/tab-separated-values'],
             open_as='dataframe',
+            header=[0, 1],
+        )
+
+    def test_ingest_missing_file(self):
+        """Should throw error for missing local file
+        """
+        self.assertRaises(
+            OSError,
+            IngestFiles(
+                '/this/file/does/not_exist.txt',
+                ['text/csv', 'text/plain', 'text/tab-separated-values'],
+            ),
         )
 
     def test_round(self):
@@ -69,6 +81,7 @@ class TestSubsample(unittest.TestCase):
             self.CELL_METADATA_PATH,
             ['text/csv', 'text/plain', 'text/tab-separated-values'],
             open_as='dataframe',
+            header=[0, 1],
         )
         cell_metadata_df.preproccess()
 

@@ -20,6 +20,7 @@ import sys
 import requests
 import urllib.parse as encoder
 import re
+import os
 
 import colorama
 from colorama import Fore
@@ -67,11 +68,14 @@ def create_parser():
 
     # helper param to create JSON representation of metadata.issues
     # to generate reference output for tests
-    parser.add_argument('--issues_json', action='store_true')
+    parser.add_argument('--issues-json', action='store_true')
+    # helper param to create JSON representation of convention metadata
+    # to generate json for bigquery testing
+    parser.add_argument('--bq-json', action='store_true')
     # validate_metadata.py CLI only for dev, bogus defaults below shouldn't propagate
-    parser.add_argument('--file_id', help='MongoDB identifier', default='Mongo_none')
+    parser.add_argument('--file-id', help='MongoDB identifier', default='Mongo_none')
     parser.add_argument(
-        '--study_accession', help='SCP study accession', default='SCP_none'
+        '--study-accession', help='SCP study accession', default='SCP_none'
     )
     parser.add_argument('convention', help='Metadata convention JSON file ')
     parser.add_argument('input_metadata', help='Metadata TSV file')
@@ -80,10 +84,7 @@ def create_parser():
 
 def validate_schema(json, metadata):
     """Check validity of metadata convention as JSON schema.
-
-    :param schemafile: metadata convention JSON file
-    :return: if valid, jsonschema validator object using input convention
-                or returns None
+    if valid, return jsonschema validator object else return None
     """
 
     try:
@@ -98,11 +99,6 @@ def validate_schema(json, metadata):
 
 def is_array_metadata(convention, metadatum):
     """Check if metadata is array type from metadata convention
-
-    :param convention: dict representation of metadata convention
-    :param metadatum: name of metadatum
-
-    :return:
     """
     logger.debug('Begin: is_array_metadata')
     try:
@@ -117,11 +113,6 @@ def is_array_metadata(convention, metadatum):
 
 def is_ontology_metadata(convention, metadatum):
     """Check if metadata is ontology from metadata convention
-
-    :param convention: dict representation of metadata convention
-    :param metadatum: name of metadatum
-
-    :return:
     """
     logger.debug('Begin: is_ontology_metadata')
     try:
@@ -132,11 +123,6 @@ def is_ontology_metadata(convention, metadatum):
 
 def lookup_metadata_type(convention, metadatum):
     """Look up metadata type from metadata convention
-
-    :param convention: dict representation of metadata convention
-    :param metadatum: name of metadatum
-
-    :return:
     """
     logger.debug('Begin: lookup_metadata_type')
     try:
@@ -165,8 +151,6 @@ def list_duplicates(cells):
 
 def validate_cells_unique(metadata):
     """Check all CellID are unique.
-
-    :return: boolean   True if valid, False otherwise
     """
     valid = False
     if len(metadata.cells) == len(set(metadata.cells)):
@@ -219,96 +203,16 @@ def collect_ontology_data(row_data, metadata, convention):
     return
 
 
-def cast_boolean_type(value):
-    """Cast metadata value as boolean, if castable
-    """
-    if value.lower() == 'true':
-        return True
-    elif value.lower() == 'false':
-        return False
-    else:
-        return value
-
-
-def cast_integer_type(value):
-    """Cast metadata value as integer
-    """
-    return int(value)
-
-
-def cast_float_type(value):
-    """Cast metadata value as float
-    """
-    return float(value)
-
-
-def return_without_cast(value):
-    """no need to cast Pandas objects
-    """
-    return value
-
-
-def cast_metadata_type(metadatum, value, row_info, convention, metadata):
-    """for metadatum, lookup expected type by metadata convention
-        and cast value as appropriate type for validation
-    """
-    metadata_types = {
-        'number': cast_float_type,
-        'boolean': cast_boolean_type,
-        'integer': cast_integer_type,
-        'string': return_without_cast,
-    }
-    if is_array_metadata(convention, metadatum):
-        cast_values = []
-        try:
-            # splitting on pipe character for array data, valid for Sarah's
-            # programmatically generated SCP TSV metadata files. When ingesting
-            # files that support array-based metadata navtively (eg. loom,
-            # anndata etc) splitting on pipe may become problematic
-            for element in value.split('|'):
-                cast_element = metadata_types.get(
-                    lookup_metadata_type(convention, metadatum)
-                )(element)
-                cast_values.append(cast_element)
-            row_info[metadatum] = cast_values
-        except ValueError:
-            error_msg = (
-                f'{metadatum}: "{element}" in "{value}" does not match '
-                f'expected "{lookup_metadata_type(convention, metadatum)}" type'
-            )
-            metadata.store_validation_issue(
-                'error', 'type', error_msg, [row_info['CellID']]
-            )
-        # This exception should only trigger if a single-value boolean array
-        # metadata is being cast - the value needs to be passed as an array,
-        # it is already boolean via Pandas' inference processes
-        except AttributeError:
-            row_info[metadatum] = [value]
-    else:
-        try:
-            cast_value = metadata_types.get(
-                lookup_metadata_type(convention, metadatum)
-            )(value)
-            row_info[metadatum] = cast_value
-        except ValueError:
-            error_msg = f'{metadatum}: "{value}" does not match expected type'
-            metadata.store_validation_issue(
-                'error', 'type', error_msg, [row_info['CellID']]
-            )
-        # particular metadatum is not in convention, value not needed for validation
-        except TypeError:
-            row_info[metadatum] = ''
-    return row_info
-
-
 def compare_type_annots_to_convention(metadata, convention):
     """Check if metadata type annotation is consistent with metadata convention type
-
-    :param metadata: cell metadata object
-    :param convention: dict representation of metadata convention
     """
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     type_annots = metadata.file.columns.get_level_values(1).tolist()
+    # if input was TSV metadata file, SCP format requires 'NAME' for the first
+    # column which is expected to be CellID, primarily based on loom convention
+    # would do conditional (eg. if metadata_names[0].upper() == 'NAME':)
+    # but subsequent code expects 'CellID' even if header check fails and first
+    # word in header is not some form of 'NAME' and script breaks
     metadata_names[0] = 'CellID'
     type_annots[0] = 'group'
     metadata_annots = dict(zip(metadata_names, type_annots))
@@ -352,30 +256,115 @@ def compare_type_annots_to_convention(metadata, convention):
                 metadata.store_validation_issue('error', 'type', error_msg)
 
 
-def process_metadata_row(metadata, convention, line):
-    """Read TSV metadata input file row by row
+def cast_boolean_type(value):
+    """Cast metadata value as boolean, if castable
+    """
+    if value.lower() == 'true':
+        return True
+    elif value.lower() == 'false':
+        return False
+    else:
+        return value
 
-    :param metadata: cell metadata object
-    :param convention: dict representation of metadata convention
-    :return: row of convention data
+
+def cast_integer_type(value):
+    """Cast metadata value as integer
+    """
+    return int(value)
+
+
+def cast_float_type(value):
+    """Cast metadata value as float
+    """
+    return float(value)
+
+
+def return_without_cast(value):
+    """no need to cast Pandas objects
+    """
+    return value
+
+
+def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metadata):
+    """for metadatum, lookup expected type by metadata convention
+        and cast value as appropriate type for validation
+    """
+    cast_metadata = {}
+    metadata_types = {
+        'number': cast_float_type,
+        'boolean': cast_boolean_type,
+        'integer': cast_integer_type,
+        'string': return_without_cast,
+    }
+    if is_array_metadata(convention, metadatum):
+        cast_values = []
+        try:
+            # splitting on pipe character for array data, valid for Sarah's
+            # programmatically generated SCP TSV metadata files. When ingesting
+            # files that support array-based metadata navtively (eg. loom,
+            # anndata etc) splitting on pipe may become problematic
+            for element in value.split('|'):
+                cast_element = metadata_types.get(
+                    lookup_metadata_type(convention, metadatum)
+                )(element)
+                cast_values.append(cast_element)
+            cast_metadata[metadatum] = cast_values
+        except ValueError:
+            error_msg = (
+                f'{metadatum}: "{element}" in "{value}" does not match '
+                f'expected "{lookup_metadata_type(convention, metadatum)}" type'
+            )
+            metadata.store_validation_issue(
+                'error', 'type', error_msg, [id_for_error_detail]
+            )
+        # This exception should only trigger if a single-value boolean array
+        # metadata is being cast - the value needs to be passed as an array,
+        # it is already boolean via Pandas' inference processes
+        except AttributeError:
+            cast_metadata[metadatum] = [value]
+    else:
+        try:
+            cast_value = metadata_types.get(
+                lookup_metadata_type(convention, metadatum)
+            )(value)
+            cast_metadata[metadatum] = cast_value
+        except ValueError:
+            error_msg = f'{metadatum}: "{value}" does not match expected type'
+            metadata.store_validation_issue(
+                'error', 'type', error_msg, [id_for_error_detail]
+            )
+        # particular metadatum is not in convention, metadata does not need
+        # to be added to new_row for validation, return empty dictionary
+        except TypeError:
+            return {}
+    return cast_metadata
+
+
+def process_metadata_row(metadata, convention, line):
+    """Process metadata row by row
+    returns processed row of convention data as dict
     """
     logger.debug('Begin: process_metadata_row')
-    # extract first row of metadata file from pandas array as python list
+    # extract first row of metadata from pandas array as python list
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
+    # if input was TSV metadata file, SCP format requires 'NAME' for the first
+    # column which is expected to be CellID, primarily based on loom convention
+    # would do conditional (eg. if metadata_names[0].upper() == 'NAME':)
+    # but subsequent code expects 'CellID' even if header check fails and first
+    # word in header is not some form of 'NAME' and script breaks
     metadata_names[0] = 'CellID'
     row_info = dict(zip(metadata_names, line))
+    processed_row = {}
     for k, v in row_info.items():
-        row_info = cast_metadata_type(k, v, row_info, convention, metadata)
-    return row_info
+        processed_row.update(
+            cast_metadata_type(k, v, row_info['CellID'], convention, metadata)
+        )
+    return processed_row
 
 
-def collect_jsonschema_errors(metadata, convention):
+def collect_jsonschema_errors(metadata, convention, bq_json=None):
     """Evaluate metadata input against metadata convention using JSON schema
-
-    :param metadata: cell metadata object
-    :param convention: dict representation of metadata convention
-    :return: tuple of non-ontology issues dict and ontology info dict
-            or False if input convention is invalid JSON schema
+    returns False if input convention is invalid JSON schema
     """
     logger.debug('Begin: collect_jsonschema_errors')
     # this function seems overloaded with its three tasks
@@ -383,7 +372,6 @@ def collect_jsonschema_errors(metadata, convention):
     # the latter two should be done together in the same pass thru the file
     js_errors = defaultdict(list)
     schema = validate_schema(convention, metadata)
-
     if schema:
         compare_type_annots_to_convention(metadata, convention)
         rows = metadata.yield_by_row()
@@ -391,6 +379,8 @@ def collect_jsonschema_errors(metadata, convention):
         while line:
             row = process_metadata_row(metadata, convention, line)
             metadata.cells.append(row['CellID'])
+            if bq_json:
+                serialize_bq(row)
             collect_ontology_data(row, metadata, convention)
             for error in schema.iter_errors(row):
                 try:
@@ -404,14 +394,13 @@ def collect_jsonschema_errors(metadata, convention):
                 break
         metadata.issues['error']['convention'] = js_errors
         validate_cells_unique(metadata)
-        return
+    else:
+        return False
 
 
 def report_issues(metadata):
     """Report issues in CellMetadata.issues dictionary
-
-    :param metadata: cell metadata object
-    :return: True if errors are reported, False if no errors to report
+    returns True if errors are reported, False if no errors to report
     """
     logger.debug('Begin: report_issues')
 
@@ -440,9 +429,7 @@ def report_issues(metadata):
 
 def exit_if_errors(metadata):
     """Determine if CellMetadata.issues has errors
-
-    :param metadata: cell metadata object
-    :return: Exit with error code 1 if errors are reported, False if no errors
+    Exit with error code 1 if errors are reported, return False if no errors
     """
     logger.debug('Begin: exit_if_errors')
 
@@ -459,8 +446,7 @@ def exit_if_errors(metadata):
 
 def retrieve_ontology(ontology_url):
     """Retrieve an ontology listing from EBI OLS
-    :param ontology_term: identifier of a term in an ontology in OLS (e.g. CL_0002419)
-    :return: JSON payload of ontology, or None
+    returns JSON payload of ontology, or None if unsuccessful
     """
     response = requests.get(ontology_url)
     if response.status_code == 200:
@@ -471,8 +457,7 @@ def retrieve_ontology(ontology_url):
 
 def retrieve_ontology_term(convention_url, ontology_id):
     """Retrieve an individual term from an ontology
-    :param ontology_term: term to query for in matching ontology
-    :return: JSON payload of ontology of ontology term, or None
+    returns JSON payload of ontology, or None if unsuccessful
     """
     OLS_BASE_URL = 'https://www.ebi.ac.uk/ols/api/ontologies/'
     convention_ontology = retrieve_ontology(convention_url)
@@ -506,10 +491,7 @@ def retrieve_ontology_term(convention_url, ontology_id):
 
 def encode_term_iri(term_id, base_uri):
     """Double url-encode a term Internationalized Resource Identifier (IRI) for querying OLS ontologies
-
-    :param term: ontology term
-    :param base_uri: base term URI for corresponding ontology
-    :return: double url-encoded ontology term IRI
+    returns double url-encoded ontology term IRI
     """
     query_uri = base_uri + term_id
     encoded_iri = encoder.quote_plus(encoder.quote_plus(query_uri))
@@ -606,6 +588,15 @@ def confirm_uniform_units(metadata, convention):
                 metadata.store_validation_issue('error', 'convention', error_msg)
 
 
+def serialize_bq(bq_dict):
+    """Write metadata collected for validation to json file
+    BigQuery requires newline delimited json objects
+    """
+    data = json.dumps(bq_dict)
+    with open('bq.json', 'a') as jsonfile:
+        jsonfile.write(data + '\n')
+
+
 def serialize_issues(metadata):
     """Write collected issues to json file
     """
@@ -627,10 +618,10 @@ def review_metadata_names(metadata):
             metadata.store_validation_issue('error', 'metadata_name', error_msg)
 
 
-def validate_input_metadata(metadata, convention):
+def validate_input_metadata(metadata, convention, bq_json=None):
     """Wrapper function to run validation functions
     """
-    collect_jsonschema_errors(metadata, convention)
+    collect_jsonschema_errors(metadata, convention, bq_json)
     review_metadata_names(metadata)
     validate_collected_ontology_data(metadata, convention)
     confirm_uniform_units(metadata, convention)
@@ -642,11 +633,13 @@ if __name__ == '__main__':
     with open(args.convention, 'r') as f:
         convention = json.load(f)
     filetsv = args.input_metadata
-    metadata = CellMetadata(
-        filetsv, args.file_id, args.study_accession, open_as='dataframe'
-    )
+    metadata = CellMetadata(filetsv, args.file_id, args.study_accession)
     print('Validating', filetsv)
-    validate_input_metadata(metadata, convention)
+    if args.bq_json:
+        if os.path.exists('bq.json'):
+            print('bq.json already exists, please delete file and try again')
+            exit(1)
+    validate_input_metadata(metadata, convention, args.bq_json)
     if args.issues_json:
         serialize_issues(metadata)
     report_issues(metadata)
