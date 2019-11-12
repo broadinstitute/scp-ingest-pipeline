@@ -22,9 +22,7 @@ class CellMetadata(Annotations):
         self, file_path: str, study_id: str, study_file_id: str, *args, **kwargs
     ):
 
-        Annotations.__init__(
-            self, file_path, self.ALLOWED_FILE_TYPES, open_as='dataframe'
-        )
+        Annotations.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
         self.file_path = file_path
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)

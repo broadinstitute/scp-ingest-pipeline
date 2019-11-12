@@ -15,23 +15,23 @@ EXAMPLES
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
+python ingest_pipeline.py --study-accession 5d276a50421aa9117c982845 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_v1.1.1.tsv --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have permission to the SCP bucket
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
+python ingest_pipeline.py --study-accession 5d276a50421aa9117c982845 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
 
 # Ingest dense file
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py --study-accession 5d276a50421aa9117c982845 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest loom file
-python ingest_pipeline.py  --study-id SCP1 --study-file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
+python ingest_pipeline.py  --study-accession 5d276a50421aa9117c982845 --file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
+python ingest_pipeline.py --study-accession 5d276a50421aa9117c982845 --file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-id SCP1 --study-file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-accession 5d276a50421aa9117c982845 --file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
@@ -189,43 +189,11 @@ class IngestPipeline(object):
 
     def load_cell_metadata(self, cell_metadata_model):
         """Loads cell metadata files into firestore."""
-        collection_name = cell_metadata_model.COLLECTION_NAME
-        subcollection_name = cell_metadata_model.SUBCOLLECTION_NAME
-        # Firestore document reference
-        doc_ref = self.db.collection(collection_name).document()
-        doc_ref.set(cell_metadata_model.doc)
-        try:
-            # Firestore subdocument reference
-            sub_doc_ref = doc_ref.collection(subcollection_name).document()
-            sub_doc_ref.set(cell_metadata_model.subdoc)
-        except exceptions.InvalidArgument as e:
-            # Catches invalid argument exception, which error "Maximum
-            # document size" falls under
-            print(e)
-            batch = self.db.batch()
-            for subdoc_chunk in self.cell_metadata.chunk_subdocuments(
-                sub_doc_ref.id, sub_doc_ref._document_path, cell_metadata_model
-            ):
-                batch.set(sub_doc_ref, subdoc_chunk)
-
-            batch.commit()
-        except Exception as e:
-            # TODO: Log this error
-            print(e)
-            return 1
-        return 0
+        pass
 
     def load_cluster_files(self):
         """Loads cluster files into Firestore."""
-        collection_name = self.cluster.COLLECTION_NAME
-        doc_ref = self.db.collection(collection_name).document()
-        doc_ref.set(self.cluster.top_level_doc)
-        subcollection_name = self.cluster.SUBCOLLECTION_NAME
-        for annot_name in self.cluster.cluster_subdocs.keys():
-            # batch = self.db.batch()
-            doc_ref_sub = doc_ref.collection(subcollection_name).document()
-            doc_ref_sub.set(self.cluster.cluster_subdocs[annot_name])
-        # TODO: Add exception handling and return codes
+        pass
 
     def load_subsample(self, doc):
         """Loads subsampled data into Firestore"""
@@ -322,8 +290,14 @@ class IngestPipeline(object):
     def ingest_cluster(self):
         """Ingests cluster files."""
 
-        for model in self.cluster.transform():
-            print(model)
+        for annot_model in self.cluster.transform():
+            # This is where to load Top-level ClusterGroup document
+            print(annot_model.model)
+            for data_array in self.cluster.get_data_array_annot(
+                annot_model.annot_name, '50421aa9117c982845'
+            ):
+                # Load individual DataArrays for cells, coordinates, and then annotations (if present)
+                print(data_array)
 
     def subsample(self):
         """Method for subsampling cluster and metadata files"""

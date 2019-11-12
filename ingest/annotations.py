@@ -17,9 +17,9 @@ class Annotations(IngestFiles):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, file_path, allowed_file_types):
-        IngestFiles.__init__(self, file_path, allowed_file_types, open_as='dataframe')
-
-        self.preproccess()
+        IngestFiles.__init__(
+            self, file_path, allowed_file_types, open_as='dataframe', header=[0, 1]
+        )
 
     @abc.abstractmethod
     def transform(self):
@@ -27,7 +27,7 @@ class Annotations(IngestFiles):
 
     # This will end up being a class method
     @abc.abstractmethod
-    def set_dataArray(self):
+    def set_data_array(self):
         """Sets DataArray"""
 
     def determine_coordinates_and_cell_names(self):

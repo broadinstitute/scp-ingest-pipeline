@@ -24,21 +24,18 @@ import random
 
 sys.path.append("../ingest")
 
-from subsample import IngestFiles
+from annotations import Annotations
 
 
-class TestSubsample(unittest.TestCase):
-    AMOUNT_OF_NUMERIC_BINS = 20
+class TestAnnotations(unittest.TestCase):
     CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
     CELL_METADATA_PATH = '../tests/data/subsample_metadata_test.csv'
 
     EXPONENT = -3
 
     def setUp(self):
-        self.df = IngestFiles(
-            self.CLUSTER_PATH,
-            ['text/csv', 'text/plain', 'text/tab-separated-values'],
-            open_as='dataframe',
+        self.df = Annotations(
+            self.CLUSTER_PATH, ['text/csv', 'text/plain', 'text/tab-separated-values']
         )
 
     def test_round(self):
@@ -65,10 +62,9 @@ class TestSubsample(unittest.TestCase):
 
     def test_merge_df(self):
         self.df.preproccess()
-        cell_metadata_df = IngestFiles(
+        cell_metadata_df = Annotations(
             self.CELL_METADATA_PATH,
             ['text/csv', 'text/plain', 'text/tab-separated-values'],
-            open_as='dataframe',
         )
         cell_metadata_df.preproccess()
 

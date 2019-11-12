@@ -117,9 +117,9 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -155,9 +155,9 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -183,9 +183,9 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -224,9 +224,9 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -264,9 +264,9 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -292,9 +292,9 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -336,7 +336,7 @@ class IngestTestCase(unittest.TestCase):
 
         args = [
             '--study-id',
-            'SCP1',
+            '5d276a50421aa9117c982845',
             '--study-file-id',
             '1234abc',
             'ingest_expression',
@@ -363,9 +363,9 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
