@@ -14,13 +14,6 @@ import ntpath
 from ingest_files import DataArray
 from annotations import Annotations
 
-try:
-    # Used when importing internally and in tests
-    from ingest_files import IngestFiles
-except ImportError:
-    # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .ingest_files import IngestFiles
-
 
 class CellMetadata(Annotations):
     ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
@@ -29,10 +22,9 @@ class CellMetadata(Annotations):
         self, file_path: str, study_id: str, study_file_id: str, *args, **kwargs
     ):
 
-        IngestFiles.__init__(
+        Annotations.__init__(
             self, file_path, self.ALLOWED_FILE_TYPES, open_as='dataframe'
         )
-        self.preproccess()
         self.file_path = file_path
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)

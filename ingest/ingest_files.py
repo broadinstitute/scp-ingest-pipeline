@@ -11,6 +11,7 @@ import re
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
+import gzip
 
 import pandas as pd
 from google.cloud import storage
@@ -57,6 +58,7 @@ class IngestFiles:
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
         self.is_remote_file = file_path[:5] == "gs://"
+        self.is_gzip_file = self.get_file_type(file_path)[1] == 'gzip'
 
         self.verify_file_exists(file_path)
 
@@ -105,9 +107,13 @@ class IngestFiles:
         """
         if self.is_remote_file:
             file_path = self.download_from_bucket(file_path)
-
         # Remove BOM with encoding ='utf - 8 - sig'
-        return open(file_path, encoding="utf-8-sig")
+        if self.is_gzip_file:
+            open_file = gzip.open(file_path, 'rt', encoding='utf-8-sig')
+        else:
+            open_file = open(file_path, encoding="utf-8-sig")
+
+        return open_file
 
     def reset_file(self, start_point, open_as=None):
         """Restart file reader at point that's equal to start_point.
