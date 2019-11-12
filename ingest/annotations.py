@@ -27,7 +27,7 @@ class Annotations(IngestFiles):
 
     # This will end up being a class method
     @abc.abstractmethod
-    def set_dataArray(self):
+    def set_data_array(self):
         """Sets DataArray"""
 
     def determine_coordinates_and_cell_names(self):
