@@ -633,9 +633,7 @@ if __name__ == '__main__':
     with open(args.convention, 'r') as f:
         convention = json.load(f)
     filetsv = args.input_metadata
-    metadata = CellMetadata(
-        filetsv, args.file_id, args.study_accession, open_as='dataframe'
-    )
+    metadata = CellMetadata(filetsv, args.file_id, args.study_accession)
     print('Validating', filetsv)
     if args.bq_json:
         if os.path.exists('bq.json'):

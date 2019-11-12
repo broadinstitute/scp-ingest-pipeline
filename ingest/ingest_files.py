@@ -53,8 +53,9 @@ class DataArray(TypedDict):
 
 
 class IngestFiles:
-    def __init__(self, file_path, allowed_file_types, *, open_as=None):
+    def __init__(self, file_path, allowed_file_types, open_as=None, **kwargs):
         self.file_path = file_path
+        self.kwargs = kwargs
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
         self.is_remote_file = file_path[:5] == "gs://"
@@ -182,11 +183,11 @@ class IngestFiles:
         meta_data = opened_file.readline()
         if meta_data.find("\t") != -1:
             return pd.read_csv(
-                file_path, sep="\t", header=[0, 1], quoting=csv.QUOTE_NONE
+                file_path, sep="\t", quoting=csv.QUOTE_NONE, **self.kwargs
             )
         elif meta_data.find(",") != -1:
             return pd.read_csv(
-                file_path, sep=",", header=[0, 1], quoting=csv.QUOTE_NONE
+                file_path, sep=",", quoting=csv.QUOTE_NONE, **self.kwargs
             )
         else:
             raise ValueError("File must be tab or comma delimited")
@@ -254,48 +255,3 @@ class IngestFiles:
                 return self.split_line(next_row_revised)
             else:
                 return next_row_revised
-
-    # This function will be deleted and in replaced in annotations.py
-    def determine_coordinates_and_cell_names(self):
-        """Finds column names for coordinates, annotations, and cell names"""
-        self.coordinates_and_cell_names = [
-            annot[0]
-            for annot in self.file.columns
-            if annot[0].lower() in ('z', 'y', 'x', 'name')
-        ]
-        # annotation column names
-        self.columns = [
-            annot
-            for annot in self.file.columns
-            if annot[0].lower() not in ('z', 'y', 'x', 'name')
-        ]
-
-    # This function will be deleted and in replaced in annotations.py
-    def preproccess(self):
-        """Ensures that:
-            - Numeric columns are rounded to 3 decimals points
-            - Group annotations are strings
-            - 'NAME' in first header row is capitalized
-            - 'TYPE' in second header row is capitalized
-        """
-        headers = self.file.columns.get_level_values(0)
-        annot_types = self.file.columns.get_level_values(1)
-        # Lowercase second level. Example: NUMeric -> numeric
-        self.file.rename(
-            columns=lambda col_name: col_name.lower(), level=1, inplace=True
-        )
-        name = list(headers)[0]
-        type = list(annot_types)[0].lower()
-        # Uppercase NAME and TYPE
-        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
-        # Make sure group annotations are treated as strings
-        group_columns = self.file.xs(
-            "group", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        self.file[group_columns] = self.file[group_columns].astype(str)
-        # Find numeric columns and round to 3 decimals places and are floats
-        numeric_columns = self.file.xs(
-            "numeric", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        # TODO perform replace
-        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)

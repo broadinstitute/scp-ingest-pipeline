@@ -17,7 +17,9 @@ class Annotations(IngestFiles):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, file_path, allowed_file_types):
-        IngestFiles.__init__(self, file_path, allowed_file_types, open_as='dataframe')
+        IngestFiles.__init__(
+            self, file_path, allowed_file_types, open_as='dataframe', header=[0, 1]
+        )
 
         self.preproccess()
 

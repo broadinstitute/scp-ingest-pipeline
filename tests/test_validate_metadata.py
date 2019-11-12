@@ -39,7 +39,7 @@ class TestValidateMetadata(unittest.TestCase):
         with open(args.convention) as f:
             convention = json.load(f)
         filetsv = args.input_metadata
-        metadata = CellMetadata(filetsv, '1234abc', 'SCP1', open_as='dataframe')
+        metadata = CellMetadata(filetsv, '1234abc', 'SCP1')
         metadata.validate_format()
         return (metadata, convention)
 
