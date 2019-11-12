@@ -84,7 +84,6 @@ class Mtx(GeneExpression):
     def set_data_array(
         self, unformatted_gene_name, name, linear_data_id, create_cell_DataArray=False
     ):
-        print(self.exp_by_gene[unformatted_gene_name])
         if create_cell_DataArray:
             yield self.set_data_array_cells(self.cells, linear_data_id)
         else:
@@ -99,12 +98,6 @@ class Mtx(GeneExpression):
 
     def close(self):
         """Closes file
-
-        Args:
-            None
-
-        Returns:
-            None
         """
         self.genes_file.close()
         self.barcodes_file.close()

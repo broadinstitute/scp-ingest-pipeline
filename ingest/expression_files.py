@@ -1,9 +1,9 @@
 """
-Creates a gene data model.
+An abstract Base class for expression files.
 
 DESCRIPTION
-This module currently takes in parameters from a file and creates a data model
-for genes.
+This base class provides functions to create dataArrays for gene expression
+files.
 
 PREREQUISITES
 Must have python 3.6 or higher.
@@ -47,7 +47,7 @@ class GeneExpression(IngestFiles):
 
     @abc.abstractmethod
     def transform(self):
-        """Transforms expression data into Gene data model"""
+        """Abstract method for transforming expression data into Gene data model"""
 
     # This will end up being a class method
     @abc.abstractmethod
@@ -58,7 +58,7 @@ class GeneExpression(IngestFiles):
         """
 
     def set_data_array_cells(self, values, linear_data_id):
-        """Sets DataArray for cells that were observed in a particular
+        """Sets DataArray for cells that were observed in a
         expression matrix."""
         return DataArray(
             {
@@ -72,7 +72,7 @@ class GeneExpression(IngestFiles):
         )
 
     def set_data_array_gene_cell_names(self, name, linear_data_id, values):
-        """Sets data array for gene cell names. This DataArray contains cell
+        """Sets DataArray for gene cell names. This DataArray contains cell
         names that had significant (i.e. non-zero) expression for a gene. """
         return DataArray(
             {

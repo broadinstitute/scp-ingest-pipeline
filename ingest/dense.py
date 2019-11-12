@@ -20,9 +20,9 @@ class Dense(GeneExpression):
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
         GeneExpression.__init__(
             self,
+            file_path,
             study_file_id,
             study_id,
-            file_path=file_path,
             allowed_file_types=self.ALLOWED_FILE_TYPES,
             open_as='dataframe',
         )
@@ -37,16 +37,8 @@ class Dense(GeneExpression):
             columns=lambda x: x.strip().strip('\'').strip('\"'), inplace=True
         )
 
-    def transform_expression_data_by_gene(self):
+    def transform(self):
         """Transforms dense matrix into firestore data model for genes.
-
-        Args:
-            lines : List[str]
-                Lines from dense matrix file
-
-        Returns:
-                transformed_data : List[Gene]
-                A list of Gene objects
         """
 
         Gene_Model = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
@@ -76,6 +68,7 @@ class Dense(GeneExpression):
         linear_data_id,
         create_cell_DataArray=False,
     ):
+        """Creates DataArray for expression, gene, and cell values."""
         input_args = locals()
         gene_df = self.file[self.file['GENE'] == unformatted_gene_name]
 
@@ -86,7 +79,7 @@ class Dense(GeneExpression):
             cells = self.file.columns.tolist()[1:]
             # Get row of expression values for gene
             # Round expression values to 3 decimal points
-            # Insure data type of float
+            # Insure data type of float for expression values
             cells_and_expression_vals = (
                 gene_df[cells].round(3).astype(float).to_dict('records')[0]
             )

@@ -18,7 +18,7 @@ pytest
 pytest -k 'dense'
 
 # Run all tests in a manner that shows any print() statements
-python3 test_ingest.py
+python3 test_ingest.py -s
 
 # Run all tests, using multiple CPUs
 # Details: https://pypi.org/project/pytest-xdist/
