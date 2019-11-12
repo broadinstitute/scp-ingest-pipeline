@@ -1,16 +1,15 @@
 """Ingest Pipeline for ingesting expression, metadata and cluster
-files into Firestore.
+files into MongoDB.
 
 DESCRIPTION
-This cli currently takes in extract and transform functions from different
-file types then uploads them into Firestore.
+This CLI extracts and transforms different file types then writes them into
+a remote MongoDB instance.
 
 PREREQUISITES
-You must have Google Cloud Firestore installed, authenticated, and
-configured. Must have Python 3.6 or higher. Indexing must be turned off for sub-collections.
+See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
 
 EXAMPLES
-# Takes expression file and stores it into Firestore
+# Takes expression file and stores it into MongoDB
 
 # Ingest cluster file
 python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
@@ -46,7 +45,7 @@ from clusters import Clusters
 from dense import Dense
 from gene_data_model import Gene
 from google.api_core import exceptions
-from google.cloud import firestore
+from pymongo import MongoClient
 from mtx import Mtx
 from ingest_files import IngestFiles
 from subsample import SubSample
@@ -80,7 +79,11 @@ class IngestPipeline(object):
         self.study_accession = study_accession
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        self.db = firestore.Client()
+        if os.environ.get('DATABASE_HOST') is not None:
+            # Needed to run tests in CircleCI.  TODO: add mock, remove this
+            self.db = self.get_mongo_db()
+        else:
+            self.db = None
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
@@ -94,6 +97,29 @@ class IngestPipeline(object):
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
         elif matrix_file is None:
             self.matrix = matrix_file
+
+    def get_mongo_db(self):
+        host = os.environ['DATABASE_HOST']
+        user = os.environ['MONGODB_USERNAME']
+        password = os.environ['MONGODB_PASSWORD']
+        db_name = os.environ['DATABASE_NAME']
+
+        client = MongoClient(
+            host,
+            username=user,
+            password=password,
+            authSource=db_name,
+            authMechanism='SCRAM-SHA-1',
+        )
+
+        # TODO: Remove this block.
+        # Uncomment and run `pytest -s` to manually verify your MongoDB set-up.
+        # genes = client[db_name].genes
+        # gene = {'gene': 'HBB'}
+        # gene_mongo_id = genes.insert_one(gene).inserted_id
+        # print(f'gene_mongo_id {gene_mongo_id}')
+
+        return client[db_name]
 
     def initialize_file_connection(self, file_type, file_path):
         """Initializes connection to file.
