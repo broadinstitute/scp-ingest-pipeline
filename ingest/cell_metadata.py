@@ -10,9 +10,9 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
 import ntpath
-
-from ingest_files import DataArray
 from annotations import Annotations
+import collections
+from ingest_files import DataArray
 
 
 class CellMetadata(Annotations):
@@ -48,10 +48,13 @@ class CellMetadata(Annotations):
 
     def transform(self):
         """ Builds cell metadata files into  cell_metadata model"""
+        AnnotationModel = collections.namedtuple(
+            'AnnotationModel', ['annot_header', 'model']
+        )
         for annot_header in self.file.columns[:]:
             annot_name = annot_header[0]
             annot_type = annot_header[1]
-            yield (
+            yield AnnotationModel(
                 annot_header,
                 self.Model(
                     {
