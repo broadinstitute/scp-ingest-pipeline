@@ -1,7 +1,7 @@
 """Integration tests for Ingest Pipeline; isolated tests for observable output
 
 These tests verify that various matrix file types can be extracted and
-transformed, as expected by code that loads transformed data into Firestore.
+transformed, as expected by code that loads transformed data into MongoDB.
 
 Test doubles are used for test speed and isolation.
 
