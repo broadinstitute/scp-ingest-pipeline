@@ -27,8 +27,6 @@ class CellMetadata(Annotations):
 
         Annotations.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
         self.file_path = file_path
-        self.headers = self.file.columns.get_level_values(0)
-        self.annot_types = self.file.columns.get_level_values(1)
         self.cell_names = []
         self.study_id = study_id
         self.study_file_id = study_file_id
