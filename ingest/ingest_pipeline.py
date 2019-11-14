@@ -28,7 +28,7 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 12
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --name custer1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
@@ -37,8 +37,7 @@ import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import ast
 
-# import os
-# import sys
+import sys
 import json
 import os
 
@@ -64,7 +63,6 @@ class IngestPipeline(object):
 
     def __init__(
         self,
-        *,
         study_id: str,
         study_file_id: str,
         matrix_file: str = None,
@@ -482,10 +480,10 @@ def main() -> None:
             status.append(status_subsample)
 
     # TODO: This check will need to changed
-    # if all(i < 1 for i in status) or len(status) == 0:
-    #     sys.exit(os.EX_OK)
-    # else:
-    #     sys.exit(os.EX_DATAERR)
+    if all(i < 1 for i in status) or len(status) == 0:
+        sys.exit(os.EX_OK)
+    else:
+        sys.exit(os.EX_DATAERR)
 
 
 if __name__ == "__main__":
