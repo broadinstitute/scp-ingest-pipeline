@@ -355,7 +355,7 @@ def create_parser():
     )
 
     parser.add_argument(
-        "--study-file-id",
+        "--study-id",
         required=True,
         help="SCP study ID associated with ingest files",
     )
