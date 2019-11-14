@@ -10,18 +10,20 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
 import ntpath
-
-from ingest_files import DataArray
 from annotations import Annotations
+import collections
+from ingest_files import DataArray
 
 
 class CellMetadata(Annotations):
     ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
+    COLLECTION_NAME = 'cell_metadata'
 
     def __init__(
         self, file_path: str, study_id: str, study_file_id: str, *args, **kwargs
     ):
-        self.preproccess()
+
+        Annotations.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
         self.file_path = file_path
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)
@@ -46,11 +48,14 @@ class CellMetadata(Annotations):
         values: List
 
     def transform(self):
-        """ Builds cell metadata files into  cell_metadata model"""
+        """ Builds cell metadata model"""
+        AnnotationModel = collections.namedtuple(
+            'AnnotationModel', ['annot_header', 'model']
+        )
         for annot_header in self.file.columns[:]:
             annot_name = annot_header[0]
             annot_type = annot_header[1]
-            yield (
+            yield AnnotationModel(
                 annot_header,
                 self.Model(
                     {
@@ -66,7 +71,7 @@ class CellMetadata(Annotations):
                 ),
             )
 
-    def set_data_array(self, annot_header: str, linear_data_id: str):
+    def set_data_array(self, linear_data_id: str, annot_header: str):
         data_array_attrs = locals()
         del data_array_attrs['annot_header']
         del data_array_attrs['self']
@@ -96,7 +101,7 @@ class CellMetadata(Annotations):
                     'linear_data_type': 'CellMetadatum',
                 }
             )
-        return DataArray({**data_array_attrs, **base_data_array_model})
+        yield DataArray({**data_array_attrs, **base_data_array_model})
 
     def yield_by_row(self) -> None:
         """ Yield row from cell metadata file"""

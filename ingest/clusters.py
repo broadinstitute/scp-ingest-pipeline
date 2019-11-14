@@ -14,19 +14,16 @@ class DomainRanges(TypedDict):
 
 
 class Clusters(Annotations):
-    # Need to delete after refactor
-    COLLECTION_NAME = "cluster_groups"
-    SUBCOLLECTION_NAME = "data"
-
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
     LINEAR_DATA_TYPE = 'ClusterGroup'
+    COLLECTION_NAME = 'cluster_groups'
 
     @dataclass
     class Model(TypedDict):
         name: str
         # 3d or 2d cluster
         cluster_type: str
-        # Array of Hash objects that describe all extra "annotation" columns
+        # List of dictionaries that describe all extra "annotation" columns
         cell_annotations: List
         file_id: str
         study_id: str
@@ -46,113 +43,56 @@ class Clusters(Annotations):
         self.determine_coordinates_and_cell_names()
         self.source_file_type = "cluster"
         self.cluster_type = (
-            '2d'
+            '3d'
             if (
                 "z" in self.coordinates_and_cell_headers
                 or "Z" in self.coordinates_and_cell_headers
             )
-            else '3d'
+            else '2d'
         )
-        # self.cell_annotations = self.create_cell_annotations_field()
-        self.cluster_subdocs = {}
         self.name = name
         self.domain_ranges = domain_ranges
         self.study_id = study_id
         self.study_file_id = study_file_id
-        # TODO: Populate the cell_annotations array when pandas is implemented
-        self.top_level_doc = {
-            "name": name,
-            "cell_annotations": [],
-            "study_accession": study_id,
-            "domain_ranges": domain_ranges,
-            "points": self.amount_of_lines,
-            "study_file_id": study_file_id,
-        }
-        self.model = self.create_cluster_model()
-        # for annot_name in self.header:
-        #     model = Clusters.return_cluster_subdocs(annot_name)
-        #     self.cluster_subdocs.update(model)
-
-    def update_points(self):
-        self.top_level_doc["points"] = self.amount_of_lines
-
-    def update_cell_annotations_field(self):
-        if self.cell_annotations.values():
-            self.top_level_doc["cell_annotations"] = list(
-                self.cell_annotations.values()
-            )
 
     def transform(self):
-        """ Add data from cluster files into annotation subdocs in cluster data model"""
+        """ Builds cluster data model"""
+        # Array of Hash objects that describe all extra "annotation" columns
+        cell_annotations = []
+        # Iterate through all extra "annotation" column headers
+        # (I.E. column headers that are not coordinates or where TYPE !=NAME)
+        for annot_headers in self.annot_column_headers:
+            annot_name = annot_headers[0]
+            annot_type = annot_headers[1]
+            # column_type = annot[1]
+            cell_annotations.append(
+                {
+                    'name': annot_name,
+                    'type': annot_type,
+                    'values': list(self.file[annot_headers].unique())
+                    if annot_type == 'group'
+                    else [],
+                }
+            )
+        yield self.Model(
+            name=self.name,
+            cluster_type=self.cluster_type,
+            cell_annotations=cell_annotations,
+            study_file_id=self.study_file_id,
+            study_id=self.study_id,
+            domain_ranges=DomainRanges(**self.domain_ranges),
+        )
+
+    def get_data_array_annot(self, linear_data_id):
         for annot_header in self.file.columns:
-            annot_name = annot_header[0]
             yield Clusters.set_data_array(
-                annot_name,
+                annot_header[0],
                 self.name,
                 list(self.file[annot_header]),
                 self.study_file_id,
                 self.study_id,
-                None,
+                linear_data_id,
             )
-
-    # set_data_array() replaces this method
-    @staticmethod
-    def return_cluster_subdocs(
-        annot_name, *, values=[], subsample_annotation=None, subsample_threshold=None
-    ):
-        """Creates cluster_subdocs"""
-        cluster_subdocs = {}
-        value = annot_name.lower()
-        if value == "name":
-            cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
-                "text",
-                "cells",
-                values=values,
-                subsample_annotation=subsample_annotation,
-                subsample_threshold=subsample_threshold,
-            )
-        elif value in ("x", "y", "z"):
-            cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
-                value,
-                "coordinates",
-                values=values,
-                subsample_annotation=subsample_annotation,
-                subsample_threshold=subsample_threshold,
-            )
-        else:
-            cluster_subdocs[annot_name] = Clusters.create_cluster_subdoc(
-                annot_name,
-                "annotations",
-                values=values,
-                subsample_annotation=subsample_annotation,
-                subsample_threshold=subsample_threshold,
-            )
-
-        if subsample_threshold is not None:
-            return cluster_subdocs[annot_name]
-
-        else:
-            return cluster_subdocs
-
-    # set_data_array() replaces this method
-    @staticmethod
-    def create_cluster_subdoc(
-        annot_name,
-        annot_type,
-        values=[],
-        subsample_annotation=None,
-        subsample_threshold=None,
-    ):
-        """Returns cluster subdoc"""
-
-        return {
-            "name": annot_name,
-            "array_index": 0,
-            "values": values,
-            "array_type": annot_type,
-            "subsample_annotation": subsample_annotation,
-            "subsample_threshold": subsample_threshold,
-        }
 
     def can_subsample(self):
         # TODO: Add more subsample validations
@@ -203,26 +143,3 @@ class Clusters(Annotations):
 
         # Merge BASE_DICT, cluster_attr & data_array_attr and return DataArray model
         return DataArray({**data_array_attr, **cluster_attr, **BASE_DICT})
-
-    def create_cluster_model(self):
-        # Array of Hash objects that describe all extra "annotation" columns
-        cell_annotations = []
-        # Grab all columns from df where annot_type = group
-        for annot in self.file.xs('group', axis=1, level=1, drop_level=False).columns:
-            col_name = annot[0]
-            # column_type = annot[1]
-            cell_annotations.append(
-                {
-                    'name': col_name,
-                    'type': 'group',
-                    'values': list(self.file[annot].unique()),
-                }
-            )
-        return self.Model(
-            name=self.name,
-            cluster_type=self.cluster_type,
-            cell_annotations=cell_annotations,
-            study_file_id=self.study_file_id,
-            study_id=self.study_id,
-            domain_ranges=DomainRanges(**self.domain_ranges),
-        )

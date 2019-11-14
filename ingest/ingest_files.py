@@ -11,7 +11,6 @@ import re
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
-
 import gzip
 import pandas as pd  # NOqa: F821
 from google.cloud import storage
@@ -19,7 +18,8 @@ from google.cloud import storage
 
 @dataclass
 class DataArray(TypedDict):
-    MAX_ENTREIS = 100_000
+    MAX_ENTRIES = 100_000
+    COLLECTION_NAME = 'data_arrays'
 
     def __init__(
         self,
@@ -31,7 +31,7 @@ class DataArray(TypedDict):
         linear_data_id: str,
         study_id: str,
         study_file_id: str,
-        kwargs,
+        file_kwargs: Dict,
         array_index: int = 0,
         subsample_threshold: int = None,
         subsample_annotation: str = None,
@@ -47,7 +47,6 @@ class DataArray(TypedDict):
         self.linear_data_id = linear_data_id
         self.study_id = study_id
         self.study_file_id = study_file_id
-        self.kwargs = kwargs
 
         # TODO: Add logic for when len(self.values) > self.MAX_ENTREIS
         # get_dataArray(self):
@@ -55,8 +54,9 @@ class DataArray(TypedDict):
 
 
 class IngestFiles:
-    def __init__(self, file_path, allowed_file_types, *, open_as=None, kwargs):
+    def __init__(self, file_path, allowed_file_types, open_as=None, **file_kwargs):
         self.file_path = file_path
+        self.file_kwargs = file_kwargs
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
         self.is_remote_file = file_path[:5] == "gs://"
@@ -65,12 +65,9 @@ class IngestFiles:
         self.verify_file_exists(file_path)
 
         self.allowed_file_types = allowed_file_types
-        self.file_type, self.file, self.file_handle = self.open_file(
-            file_path, open_as, header=None
-        )
+        self.file_type, self.file, self.file_handle = self.open_file(file_path, open_as)
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
-        self.kwargs = kwargs
 
     def download_from_bucket(self, file_path):
         """Downloads file from Google Cloud Storage bucket"""
@@ -151,9 +148,7 @@ class IngestFiles:
             else:
                 return (
                     file_type,
-                    file_connections.get("dataframe")(
-                        open_file, file_path, header=None
-                    ),
+                    file_connections.get("dataframe")(open_file, file_path),
                     open_file,
                 )
         else:

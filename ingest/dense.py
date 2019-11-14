@@ -63,9 +63,9 @@ class Dense(GeneExpression):
 
     def set_data_array(
         self,
+        linear_data_id,
         unformatted_gene_name,
         gene_name,
-        linear_data_id,
         create_cell_DataArray=False,
     ):
         """Creates DataArray for expression, gene, and cell values."""
@@ -74,25 +74,24 @@ class Dense(GeneExpression):
 
         if create_cell_DataArray:
             yield self.set_data_array_cells(self.file['GENE'].tolist())
-        else:
-            # Get list of cell names
-            cells = self.file.columns.tolist()[1:]
-            # Get row of expression values for gene
-            # Round expression values to 3 decimal points
-            # Insure data type of float for expression values
-            cells_and_expression_vals = (
-                gene_df[cells].round(3).astype(float).to_dict('records')[0]
-            )
-            # Filter out expression values = 0
-            cells_and_expression_vals = dict(
-                filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items())
-            )
-            yield self.set_data_array_gene_cell_names(
-                gene_name, linear_data_id, list(cells_and_expression_vals.keys())
-            )
-            yield self.set_data_array_gene_expression_values(
-                gene_name, linear_data_id, list(cells_and_expression_vals.values())
-            )
+        # Get list of cell names
+        cells = self.file.columns.tolist()[1:]
+        # Get row of expression values for gene
+        # Round expression values to 3 decimal points
+        # Insure data type of float for expression values
+        cells_and_expression_vals = (
+            gene_df[cells].round(3).astype(float).to_dict('records')[0]
+        )
+        # Filter out expression values = 0
+        cells_and_expression_vals = dict(
+            filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items())
+        )
+        yield self.set_data_array_gene_cell_names(
+            gene_name, linear_data_id, list(cells_and_expression_vals.keys())
+        )
+        yield self.set_data_array_gene_expression_values(
+            gene_name, linear_data_id, list(cells_and_expression_vals.values())
+        )
 
     def close(self):
         """Closes file

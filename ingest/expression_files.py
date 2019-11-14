@@ -18,6 +18,7 @@ import ntpath
 
 class GeneExpression(IngestFiles):
     __metaclass__ = abc.ABCMeta
+    COLLECTION_NAME = 'genes'
 
     @dataclass
     class Model(TypedDict):

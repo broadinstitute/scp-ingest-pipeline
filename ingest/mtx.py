@@ -82,16 +82,22 @@ class Mtx(GeneExpression):
                 )
 
     def set_data_array(
-        self, unformatted_gene_name, name, linear_data_id, create_cell_DataArray=False
+        self,
+        linear_data_id,
+        unformatted_gene_name,
+        gene_name,
+        create_cell_DataArray=False,
     ):
         if create_cell_DataArray:
             yield self.set_data_array_cells(self.cells, linear_data_id)
         else:
             yield self.set_data_array_gene_cell_names(
-                name, linear_data_id, self.exp_by_gene[unformatted_gene_name].cell_names
+                gene_name,
+                linear_data_id,
+                self.exp_by_gene[unformatted_gene_name].cell_names,
             )
             yield self.set_data_array_gene_expression_values(
-                name,
+                gene_name,
                 linear_data_id,
                 self.exp_by_gene[unformatted_gene_name].expression_scores,
             )

@@ -1,4 +1,4 @@
-"""Test ingest_files.py
+"""Test test_annotations.py
 
 These tests verify:
     - Group type annotations that have numeric-like values are being treated as strings
@@ -24,33 +24,18 @@ import random
 
 sys.path.append("../ingest")
 
-from subsample import IngestFiles
+from annotations import Annotations
 
 
-class TestIngestFiles(unittest.TestCase):
-    AMOUNT_OF_NUMERIC_BINS = 20
+class TestAnnotations(unittest.TestCase):
     CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
     CELL_METADATA_PATH = '../tests/data/subsample_metadata_test.csv'
 
     EXPONENT = -3
 
     def setUp(self):
-        self.df = IngestFiles(
-            self.CLUSTER_PATH,
-            ['text/csv', 'text/plain', 'text/tab-separated-values'],
-            open_as='dataframe',
-            header=[0, 1],
-        )
-
-    def test_ingest_missing_file(self):
-        """Should throw error for missing local file
-        """
-        self.assertRaises(
-            OSError,
-            IngestFiles(
-                '/this/file/does/not_exist.txt',
-                ['text/csv', 'text/plain', 'text/tab-separated-values'],
-            ),
+        self.df = Annotations(
+            self.CLUSTER_PATH, ['text/csv', 'text/plain', 'text/tab-separated-values']
         )
 
     def test_round(self):
@@ -77,7 +62,7 @@ class TestIngestFiles(unittest.TestCase):
 
     def test_merge_df(self):
         self.df.preproccess()
-        cell_metadata_df = IngestFiles(
+        cell_metadata_df = Annotations(
             self.CELL_METADATA_PATH,
             ['text/csv', 'text/plain', 'text/tab-separated-values'],
             open_as='dataframe',
