@@ -176,8 +176,9 @@ class IngestPipeline(object):
             # Either query mongo for linear_id from parent or have it passed in
             model = set_data_array_fn(
                 (
-                    annot_name,
+                    key_value[0],
                     cluster_name,
+                    key_value[1],
                     subsampled_data[1],
                     self.study_file_id,
                     self.study_id,
@@ -211,12 +212,6 @@ class IngestPipeline(object):
         """
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
-        # elif self.matrix_file_type == "loom":
-        #     for expression_ds in self.matrix.extract():
-        #         transformed_data = (
-        #             transformed_data
-        #             + self.matrix.transform_expression_data_by_gene(expression_ds)
-        #         )
         for idx, gene in enumerate(self.matrix.transform()):
             if idx == 0:
                 self.load(
@@ -421,6 +416,9 @@ def create_parser():
         required=True,
         action="store_true",
         help="Indicates that subsampliing functionality should be invoked",
+    )
+    parser_subsample.add_argument(
+        "--name", required=True, help="Name of cluster from input form"
     )
     parser_subsample.add_argument(
         "--cluster-file",
