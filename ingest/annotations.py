@@ -9,7 +9,7 @@ Must have python 3.6 or higher.
 """
 
 import abc
-
+import pandas as pd  # NOqa: F821
 from ingest_files import IngestFiles
 
 
@@ -25,7 +25,6 @@ class Annotations(IngestFiles):
     def transform(self):
         """Returns data model"""
 
-    # This will end up being a class method
     @abc.abstractmethod
     def set_data_array(self):
         """Sets DataArray"""
@@ -43,6 +42,10 @@ class Annotations(IngestFiles):
             for annot in self.file.columns
             if annot[0].lower() not in ('z', 'y', 'x', 'name')
         ]
+
+    def merge_df(self, first_df, second_df):
+        """ Does an inner join on a dataframe """
+        self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
 
     def preproccess(self):
         """Ensures that:

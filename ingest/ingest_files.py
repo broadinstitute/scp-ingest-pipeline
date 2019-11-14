@@ -201,10 +201,6 @@ class IngestFiles:
         else:
             raise ValueError("File must be tab or comma delimited")
 
-    def merge_df(self, first_df, second_df):
-        """ Does an inner join on a dataframe """
-        self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
-
     def open_csv(self, opened_file_object):
         """Opens csv file"""
         csv.register_dialect(

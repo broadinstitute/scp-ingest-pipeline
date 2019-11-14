@@ -19,19 +19,19 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845  --study-file-id 1
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have permission to the SCP bucket
-python ingest_pipeline.py --study-accession 5d276a50421aa9117c982845 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
 
 # Ingest dense file
-python ingest_pipeline.py --study-accession 5d276a50421aa9117c982845 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest loom file
-python ingest_pipeline.py  --study-accession 5d276a50421aa9117c982845 --file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py --study-accession 5d276a50421aa9117c982845 --file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-accession 5d276a50421aa9117c982845 --file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
@@ -45,7 +45,6 @@ import os
 from cell_metadata import CellMetadata
 from clusters import Clusters
 from dense import Dense
-from google.api_core import exceptions
 from pymongo import MongoClient
 from mtx import Mtx
 
@@ -166,31 +165,31 @@ class IngestPipeline(object):
             return 1
         return 0
 
-    def load_cell_metadata(self, cell_metadata_model):
-        """Loads cell metadata files into firestore."""
-        pass
-
-    def load_subsample(self, doc):
+    def load_subsample(self, subsampled_data, set_data_array_fn, scope):
         """Loads subsampled data into Firestore"""
+        for key_value in subsampled_data[0].items():
+            annot_name = subsampled_data[1][0]
+            cluster_name = '?'
+            annot_type = subsampled_data[1][1]
+            sample_size = subsampled_data[2]
         try:
-            docs = (
-                self.db.collection(u'clusters')
-                .where(u'study_accession', u'==', self.study_accession)
-                .where(u'file_id', u'==', self.file_id)
-            ).stream()
-            doc_id = next(docs).id
-            subdoc_ref = (
-                self.db.collection(u'clusters')
-                .document(doc_id)
-                .collection('data')
-                .document()
+            # Either query mongo for linear_id from parent or have it passed in
+            model = set_data_array_fn(
+                (
+                    annot_name,
+                    cluster_name,
+                    subsampled_data[1],
+                    self.study_file_id,
+                    self.study_id,
+                    '123456789asdfg',
+                ),
+                {
+                    'subsample_annotation': f"{annot_name}--{annot_type}--{scope}",
+                    'subsample_threshold': sample_size,
+                },
             )
+            print(model)
 
-            subdoc_ref.set(doc)
-        except exceptions.InvalidArgument as e:
-            # Catches invalid argument exception, which error "Maximum
-            # document size" falls under
-            print(e)
         except Exception as e:
             # TODO: Log this error
             print(e)
@@ -273,28 +272,17 @@ class IngestPipeline(object):
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
         )
 
-        def create_cluster_subdoc(scope):
-            for subdoc in subsample.subsample():
-                annot_name = subdoc[1][0].lower()
-                annot_type = subdoc[1][1]
-                sample_size = subdoc[2]
-                for key_value in subdoc[0].items():
-                    yield Clusters.return_cluster_subdocs(
-                        key_value[0],
-                        values=key_value[1],
-                        subsample_annotation=f"{annot_name}--{annot_type}--{scope}",
-                        subsample_threshold=sample_size,
-                    )
-
-        for doc in create_cluster_subdoc("cluster"):
-            load_status = self.load_subsample(doc)
+        for data in subsample.subsample():
+            load_status = self.load_subsample(data, subsample.set_data_array, 'cluster')
             if load_status != 0:
                 return load_status
 
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
-            for doc in create_cluster_subdoc("study"):
-                load_status = self.load_subsample(doc)
+            for doc in subsample.subsample():
+                load_status = load_status = self.load_subsample(
+                    data, subsample.set_data_array, 'study'
+                )
                 if load_status != 0:
                     return load_status
         return 0

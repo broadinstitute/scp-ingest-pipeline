@@ -64,6 +64,7 @@ def get_nth_gene_models(n, models, mock_dir):
     """
     # TODO: Dense loads models as a `list`, Mtx loads models as a `dict_values`
     # It seems both would ideally load using the same type.  Reconcile.
+    print(models)
     if isinstance(models, list):
         # For Dense
         actual_model = models[n].__dict__
