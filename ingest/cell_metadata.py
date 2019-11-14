@@ -1,7 +1,9 @@
 """Module for ingesting cell metadata files
+
 DESCRIPTION
 Module provides extract and transform functions for cell metadata files.
 Text, CSV, and TSV files are supported.
+
 PREREQUISITES
 Must have python 3.6 or higher.
 """
@@ -34,6 +36,7 @@ class CellMetadata(Annotations):
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.cells = []
+        self.is_valid_file = self.validate_format()
 
     # This model pertains to columns from cell metadata files
     @dataclass

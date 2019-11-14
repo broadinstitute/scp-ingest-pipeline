@@ -36,8 +36,10 @@ class Mtx(GeneExpression):
     def transform(self):
         """Transforms matrix gene data model
         """
-        GeneModel = collections.namedtuple('GeneModel', ['gene_name', 'gene_model'])
-
+        # Named tuple that has orignial string format of a gene's name, 'gene_name'
+        # and it's corresponding model 'gene_model'
+        GeneModelData = collections.namedtuple('GeneModel', ['gene_name', 'gene_model'])
+        # Named tuple to hold expression data for a single gene
         GeneExpressionValues = collections.namedtuple(
             'GeneExpressionValues', ['expression_scores', 'cell_names']
         )
@@ -48,12 +50,13 @@ class Mtx(GeneExpression):
             cell_name = self.cells[int(raw_barcode_idx)]
             exp_score = round(float(raw_exp_score), 3)
             if gene in self.exp_by_gene:
-                # Append new score to 'expression_scores' key in Gene object
+                # Append new score to 'expression_scores' key in GeneModelData
                 self.exp_by_gene[gene].expression_scores.append(exp_score)
+                # Append new cell name to 'cell_names' key in GeneModelData
                 self.exp_by_gene[gene].cell_names.append(cell_name)
             else:
                 self.exp_by_gene[gene] = GeneExpressionValues([cell_name], [exp_score])
-                yield GeneModel(
+                yield GeneModelData(
                     gene,
                     self.Model(
                         {

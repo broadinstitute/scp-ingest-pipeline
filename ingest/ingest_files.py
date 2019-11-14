@@ -2,7 +2,6 @@
 
 DESCRIPTION
 Module provides extract capabilities for text, CSV, and TSV file types
-
 """
 import csv
 import mimetypes

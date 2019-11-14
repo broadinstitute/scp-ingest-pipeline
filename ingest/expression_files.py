@@ -1,5 +1,4 @@
-"""
-An abstract Base class for expression files.
+"""A base class for expression files.
 
 DESCRIPTION
 This base class provides functions to create dataArrays for gene expression
@@ -54,11 +53,10 @@ class GeneExpression(IngestFiles):
     def set_dataArray(self):
         """An abstract method that will be implemented by inherrited classes.
         Each expression file will have its own implementation of setting the
-        DataArray with expression data.
-        """
+        DataArray with expression data."""
 
     def set_data_array_cells(self, values, linear_data_id):
-        """Sets DataArray for cells that were observed in a
+        """Sets DataArray for cells that were observed in an
         expression matrix."""
         return DataArray(
             {
@@ -72,8 +70,9 @@ class GeneExpression(IngestFiles):
         )
 
     def set_data_array_gene_cell_names(self, name, linear_data_id, values):
-        """Sets DataArray for gene cell names. This DataArray contains cell
-        names that had significant (i.e. non-zero) expression for a gene. """
+        """Sets DataArray for cell names associated to a single gene. This
+        DataArray contains cell names that had significant (i.e. non-zero)
+        expression for a gene. """
         return DataArray(
             {
                 'name': f'{name} Cells',
@@ -86,7 +85,7 @@ class GeneExpression(IngestFiles):
         )
 
     def set_data_array_gene_expression_values(self, name, linear_data_id, values):
-        """ Sets DataArray for gene expression values. This is an array of
+        """ Sets DataArray for expression values for a gene. This is an array of
         significant (i.e. non-zero) expression values for a gene. """
         return DataArray(
             {

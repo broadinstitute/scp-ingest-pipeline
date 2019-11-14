@@ -208,6 +208,7 @@ class IngestPipeline(object):
     def ingest_expression(self) -> None:
         """Ingests expression files.
         """
+        print('expression')
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
         for idx, gene in enumerate(self.matrix.transform()):
@@ -230,7 +231,7 @@ class IngestPipeline(object):
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         # TODO: Add self.has_valid_metadata_convention() to if statement
-        if self.cell_metadata.is_valid_file:
+        if self.cell_metadata.validate_format():
             # Check to see file needs to be check against metadata convention
             if self.kwargs['validate_convention'] is not None:
                 if self.kwargs['validate_convention']:
@@ -254,9 +255,9 @@ class IngestPipeline(object):
 
     def ingest_cluster(self):
         """Ingests cluster files."""
-
-        annotation_model = self.cluster.transform()
-        return self.load(annotation_model, self.cluster.get_data_array_annot)
+        if self.cluster.validate_format():
+            annotation_model = self.cluster.transform()
+            return self.load(annotation_model, self.cluster.get_data_array_annot)
 
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
@@ -292,6 +293,7 @@ def create_parser():
     Returns:
         parser: ArgumentParser object
     """
+    print('foo')
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )

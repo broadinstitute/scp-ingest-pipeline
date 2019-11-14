@@ -1,11 +1,10 @@
-"""Class for annotation files (such as cluster and metadata files)
+"""Base class for annotation files (such as cluster and metadata files)
 
 DESCRIPTION
-Class defines common functions and validation methods for annotation type files
+Class defines common functions and validation methods for annotation files
 
 PREREQUISITES
 Must have python 3.6 or higher.
-
 """
 
 import abc
@@ -20,7 +19,6 @@ class Annotations(IngestFiles):
         IngestFiles.__init__(
             self, file_path, allowed_file_types, open_as='dataframe', header=[0, 1]
         )
-        self.is_valid_file = self.validate_format()
 
     @abc.abstractmethod
     def transform(self):
@@ -79,7 +77,7 @@ class Annotations(IngestFiles):
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
-        :param type: type of issue (error or warn)
+            :param type: type of issue (error or warn)
         :param category: issue category (format, jsonschema, ontology)
         :param msg: issue message
         :param value: list of IDs associated with the issue
@@ -90,12 +88,9 @@ class Annotations(IngestFiles):
             self.issues[type][category][msg] = None
 
     def validate_header_keyword(self):
-        """Check metadata header row starts with NAME (case-insensitive).
-        :return: boolean   True if valid, False otherwise
-        """
+        """Check header row starts with NAME (case-insensitive).
 
-        """Check all metadata header names are unique.
-        :return: boolean   True if valid, False otherwise
+            return: boolean   True if valid, False otherwise
         """
 
         valid = False
@@ -110,8 +105,8 @@ class Annotations(IngestFiles):
         return valid
 
     def validate_unique_header(self):
-        """Check all metadata header names are unique and not empty.
-        :return: boolean   True if valid, False otherwise
+        """Check all header names are unique and not empty.
+            :return: boolean   True if valid, False otherwise
         """
         valid = False
         unique_headers = set(self.headers)
@@ -135,7 +130,7 @@ class Annotations(IngestFiles):
         return valid
 
     def validate_type_keyword(self):
-        """Check metadata second row starts with TYPE (case-insensitive).
+        """Check second row starts with TYPE (case-insensitive).
         :return: boolean   True if valid, False otherwise
         """
         valid = False
@@ -150,7 +145,7 @@ class Annotations(IngestFiles):
         return valid
 
     def validate_type_annotations(self):
-        """Check metadata second row contains only 'group' or 'numeric'.
+        """Ensure second row contains only 'group' or 'numeric'.
         :return: boolean   True if all type annotations are valid, otherwise False
         """
         valid = False
@@ -180,7 +175,7 @@ class Annotations(IngestFiles):
         return valid
 
     def validate_against_header_count(self):
-        """Metadata header and type counts should match.
+        """Header and type counts should match.
         :return: boolean   True if header and type counts match, otherwise False
         """
         valid = False
@@ -207,7 +202,7 @@ class Annotations(IngestFiles):
     def validate_format(self):
         """Check all metadata file format criteria for file validity
         """
-        return all(
+        self.is_valid_file = all(
             [
                 self.validate_header_keyword(),
                 self.validate_type_keyword(),
@@ -216,3 +211,4 @@ class Annotations(IngestFiles):
                 self.validate_against_header_count(),
             ]
         )
+        return self.is_valid_file
