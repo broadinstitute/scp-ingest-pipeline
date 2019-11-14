@@ -19,6 +19,8 @@ class Annotations(IngestFiles):
         IngestFiles.__init__(
             self, file_path, allowed_file_types, open_as='dataframe', header=[0, 1]
         )
+        self.headers = self.file.columns.get_level_values(0)
+        self.annot_types = self.file.columns.get_level_values(1)
 
     @abc.abstractmethod
     def transform(self):
