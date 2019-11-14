@@ -44,7 +44,6 @@ def mock_storage_blob(*args, **kwargs):
         def __init__(self, bucket=None, name=None):
             self.bucket = bucket
             self.name = '../' + name
-            print(locals())
 
         def exists(self, storage_client):
             return os.path.exists(self.name)
