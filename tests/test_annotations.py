@@ -65,8 +65,6 @@ class TestAnnotations(unittest.TestCase):
         cell_metadata_df = Annotations(
             self.CELL_METADATA_PATH,
             ['text/csv', 'text/plain', 'text/tab-separated-values'],
-            open_as='dataframe',
-            header=[0, 1],
         )
         cell_metadata_df.preproccess()
 
