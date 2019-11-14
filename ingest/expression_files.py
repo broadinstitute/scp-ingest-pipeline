@@ -50,12 +50,11 @@ class GeneExpression(IngestFiles):
     def transform(self):
         """Abstract method for transforming expression data into Gene data model"""
 
-    # This will end up being a class method
     @abc.abstractmethod
     def set_dataArray(self):
         """An abstract method that will be implemented by inherrited classes.
         Each expression file will have its own implementation of setting the
-        DataArray.
+        DataArray with expression data.
         """
 
     def set_data_array_cells(self, values, linear_data_id):

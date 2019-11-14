@@ -68,7 +68,7 @@ class Dense(GeneExpression):
         gene_name,
         create_cell_DataArray=False,
     ):
-        """Creates DataArray for expression, gene, and cell values."""
+        """Creates data array for expression, gene, and cell values."""
         input_args = locals()
         gene_df = self.file[self.file['GENE'] == unformatted_gene_name]
 

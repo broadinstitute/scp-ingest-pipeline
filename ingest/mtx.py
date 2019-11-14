@@ -23,33 +23,18 @@ class Mtx(GeneExpression):
         self.genes_file = open(kwargs.pop("gene_file"))
         self.barcodes_file = open(kwargs.pop("barcode_file"))
         self.mtx_path = mtx_path
-        self.study_id = study_id
-        self.study_file_id = study_file_id
         self.matrix_params = kwargs
         self.exp_by_gene = {}
 
     def extract(self):
         """Sets relevant iterables for each file of the MTX bundle
-
-        Args:
-            None
-
-        Returns:
-            None
         """
         self.matrix_file = scipy.io.mmread(self.mtx_path)
         self.genes = [g.strip() for g in self.genes_file.readlines()]
         self.cells = [c.strip() for c in self.barcodes_file.readlines()]
 
     def transform(self):
-        """Transforms dense matrix into firestore data model for genes.
-
-        Args:
-            None
-
-        Returns:
-            transformed_data : List[Gene]
-                A list of Gene objects
+        """Transforms matrix gene data model
         """
         GeneModel = collections.namedtuple('GeneModel', ['gene_name', 'gene_model'])
 

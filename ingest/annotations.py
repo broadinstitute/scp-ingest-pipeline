@@ -1,7 +1,7 @@
 """Class for annotation files (such as cluster and metadata files)
 
 DESCRIPTION
-Class defines common functions needed for annotation type files
+Class defines common functions and validation methods for annotation type files
 
 PREREQUISITES
 Must have python 3.6 or higher.
@@ -20,6 +20,7 @@ class Annotations(IngestFiles):
         IngestFiles.__init__(
             self, file_path, allowed_file_types, open_as='dataframe', header=[0, 1]
         )
+        self.is_valid_file = self.validate_format()
 
     @abc.abstractmethod
     def transform(self):
@@ -75,3 +76,143 @@ class Annotations(IngestFiles):
         ).columns.tolist()
         # TODO perform replace
         self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
+
+    def store_validation_issue(self, type, category, msg, associated_info=None):
+        """Store validation issues in proper arrangement
+        :param type: type of issue (error or warn)
+        :param category: issue category (format, jsonschema, ontology)
+        :param msg: issue message
+        :param value: list of IDs associated with the issue
+        """
+        if associated_info:
+            self.issues[type][category][msg].extend(associated_info)
+        else:
+            self.issues[type][category][msg] = None
+
+    def validate_header_keyword(self):
+        """Check metadata header row starts with NAME (case-insensitive).
+        :return: boolean   True if valid, False otherwise
+        """
+
+        """Check all metadata header names are unique.
+        :return: boolean   True if valid, False otherwise
+        """
+
+        valid = False
+        if self.headers[0].upper() == 'NAME':
+            valid = True
+            if self.headers[0] != 'NAME':
+                msg = f'Metadata file keyword "NAME" provided as ' f"{self.headers[0]}"
+                self.store_validation_issue('warn', 'format', msg)
+        else:
+            msg = 'Malformed metadata file header row, missing NAME. (Case Sensitive)'
+            self.store_validation_issue('error', 'format', msg)
+        return valid
+
+    def validate_unique_header(self):
+        """Check all metadata header names are unique and not empty.
+        :return: boolean   True if valid, False otherwise
+        """
+        valid = False
+        unique_headers = set(self.headers)
+        if len(unique_headers) == len(self.headers):
+            valid = True
+        else:
+            seen_headers = set()
+            duplicate_headers = set()
+            for x in self.headers:
+                if x in seen_headers or seen_headers.add(x):
+                    duplicate_headers.add(x)
+            msg = (
+                f'Duplicated metadata header names are not allowed: {duplicate_headers}'
+            )
+            self.store_validation_issue('error', 'format', msg)
+            valid = False
+        if any('Unnamed' in s for s in list(unique_headers)):
+            msg = 'Headers cannot contain empty values'
+            self.store_validation_issue('error', 'format', msg)
+            valid = False
+        return valid
+
+    def validate_type_keyword(self):
+        """Check metadata second row starts with TYPE (case-insensitive).
+        :return: boolean   True if valid, False otherwise
+        """
+        valid = False
+        if self.annot_types[0].upper() == 'TYPE':
+            valid = True
+            if self.annot_types[0] != 'TYPE':
+                msg = f'Metadata file keyword "TYPE" provided as {self.annot_types[0]}'
+                self.store_validation_issue('warn', 'format', msg)
+        else:
+            msg = 'Malformed metadata TYPE row, missing TYPE. (Case Sensitive)'
+            self.store_validation_issue('error', 'format', msg)
+        return valid
+
+    def validate_type_annotations(self):
+        """Check metadata second row contains only 'group' or 'numeric'.
+        :return: boolean   True if all type annotations are valid, otherwise False
+        """
+        valid = False
+        invalid_types = []
+        # skipping the TYPE keyword, iterate through the types
+        # collecting invalid type annotations in list annots
+        for t in self.annot_types[1:]:
+            if t.lower() not in ('group', 'numeric'):
+                # if the value is a blank space, store a higher visibility
+                # string for error reporting
+                if 'Unnamed' in t:
+                    invalid_types.append('<empty value>')
+                # Duplicated metadata header name causes type annotation issue.
+                # Side effect of Pandas adding a suffix to uniquefy the header.
+                # These invalid annotations should not be included in invalid
+                # type annotation count. This exception may cause miscount of
+                # type annot errors if user-supplied annotation has period.
+                elif '.' in t:
+                    pass
+                else:
+                    invalid_types.append(t)
+        if invalid_types:
+            msg = 'TYPE row annotations should be "group" or "numeric"'
+            self.store_validation_issue('error', 'format', msg, invalid_types)
+        else:
+            valid = True
+        return valid
+
+    def validate_against_header_count(self):
+        """Metadata header and type counts should match.
+        :return: boolean   True if header and type counts match, otherwise False
+        """
+        valid = False
+        len_headers = len(
+            [header for header in self.headers if 'Unnamed' not in header]
+        )
+        len_annot_type = len(
+            [
+                annot_type
+                for annot_type in self.annot_types
+                if 'Unnamed' not in annot_type
+            ]
+        )
+        if not len_headers == len_annot_type:
+            msg = (
+                f'Header mismatch: {len_annot_type} TYPE declarations '
+                f'for {len_headers} column headers'
+            )
+            self.store_validation_issue('error', 'format', msg)
+        else:
+            valid = True
+        return valid
+
+    def validate_format(self):
+        """Check all metadata file format criteria for file validity
+        """
+        return all(
+            [
+                self.validate_header_keyword(),
+                self.validate_type_keyword(),
+                self.validate_type_annotations(),
+                self.validate_unique_header(),
+                self.validate_against_header_count(),
+            ]
+        )
