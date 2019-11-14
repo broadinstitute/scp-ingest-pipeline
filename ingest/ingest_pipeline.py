@@ -357,7 +357,7 @@ def create_parser():
     parser.add_argument(
         "--study-file-id",
         required=True,
-        help="Single study accession associated with ingest files",
+        help="SCP study ID associated with ingest files",
     )
     parser.add_argument("--study-id", required=True, help="MongoDB identifier")
 
