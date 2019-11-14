@@ -69,6 +69,7 @@ class IngestFiles:
         """
         if self.is_remote_file:
             file_path = self.download_from_bucket(file_path)
+            self.local_file_path = file_path
         # Remove BOM with encoding ='utf - 8 - sig'
         if self.is_gzip_file:
             open_file = gzip.open(file_path, 'rt', encoding='utf-8-sig')
@@ -106,11 +107,20 @@ class IngestFiles:
             if open_as is None:
                 return file_type, file_connections.get(file_type), open_file
             else:
-                return (
-                    file_type,
-                    file_connections.get("dataframe")(open_file, file_path),
-                    open_file,
-                )
+                if self.is_remote_file:
+                    return (
+                        file_type,
+                        file_connections.get("dataframe")(
+                            open_file, self.local_file_path
+                        ),
+                        open_file,
+                    )
+                else:
+                    return (
+                        file_type,
+                        file_connections.get("dataframe")(open_file, file_path),
+                        open_file,
+                    )
         else:
             raise ValueError(
                 f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}"

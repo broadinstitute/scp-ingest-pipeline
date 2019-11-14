@@ -46,6 +46,7 @@ from clusters import Clusters
 from dense import Dense
 from gene_data_model import Gene
 from google.api_core import exceptions
+from google.cloud import storage
 from google.cloud import firestore
 from mtx import Mtx
 from ingest_files import IngestFiles
@@ -226,12 +227,11 @@ class IngestPipeline(object):
 
     def has_valid_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        with open(self.JSON_CONVENTION, 'r') as f:
-            json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
-            convention = json.load(json_file.file)
-            validate_input_metadata(self.cell_metadata, convention)
+        json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        convention = json.load(json_file.file)
+        validate_input_metadata(self.cell_metadata, convention)
 
-        f.close()
+        json_file.file_handle.close()
         return not report_issues(self.cell_metadata)
 
     def ingest_expression(self) -> None:
@@ -330,6 +330,17 @@ class IngestPipeline(object):
                 if load_status != 0:
                     return load_status
         return 0
+
+    def delocalize_error_file(self):
+        """Writes local error file to Google bucket
+        """
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket(self.cell_metadata.bucket)
+        destination_blob_name = f'parse_logs/{self.file_id}/errors.txt'
+        blob = bucket.blob(destination_blob_name)
+        source_file_name = 'scp_validation_errors.txt'
+        blob.upload_from_filename(source_file_name)
+        print(f'File {source_file_name} uploaded to {destination_blob_name}.')
 
 
 def create_parser():
@@ -531,6 +542,8 @@ def main() -> None:
     if all(i < 1 for i in status) or len(status) == 0:
         sys.exit(os.EX_OK)
     else:
+        if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
+            ingest.delocalize_error_file()
         sys.exit(os.EX_DATAERR)
 
 
