@@ -165,10 +165,6 @@ class IngestPipeline(object):
             print(e)
             return 1
         return 0
-        # get collection names
-        # file_object = COLLECTION_NAME
-
-        # Load top-level document
 
     def load_cell_metadata(self, cell_metadata_model):
         """Loads cell metadata files into firestore."""
@@ -212,14 +208,7 @@ class IngestPipeline(object):
         return not report_issues(self.cell_metadata)
 
     def ingest_expression(self) -> None:
-        """Ingests expression files. Calls file type's extract and transform
-        functions. Then loads data into Firestore.
-
-        Args:
-            None
-
-        Returns:
-            None
+        """Ingests expression files.
         """
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()

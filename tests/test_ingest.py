@@ -74,7 +74,7 @@ def get_nth_gene_models(n, models, mock_dir):
     # Uncomment to print out new baseline data
     # Process to update baselines is manual: copy and paste it into new file
     # TODO: Automate when reasonable
-    # print(f'actual_model: {actual_model}')
+    print(f'actual_model: {actual_model}')
 
     with open(f'mock_data/{mock_dir}/gene_model_{n}.txt') as f:
         # Create a dictionary from the string-literal mock
@@ -139,6 +139,7 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)
         models = ingest.load_args[0]
+        print(models)
 
         # Verify that 19 gene models were passed into load method
         num_models = len(models)
@@ -149,34 +150,6 @@ class IngestTestCase(unittest.TestCase):
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
 
         self.assertEqual(model, expected_model)
-
-    def test_ingest_missing_file(self):
-        """Ingest Pipeline should throw error for missing file
-        """
-
-        args = [
-            '--study-id',
-            '5d276a50421aa9117c982845',
-            '--study-file-id',
-            '1234abc',
-            'ingest_expression',
-            '--taxon-name',
-            'Homo sapiens',
-            '--taxon-common-name',
-            'human',
-            '--ncbi-taxid',
-            '9606',
-            '--genome-assembly-accession',
-            'GCA_000001405.15',
-            '--genome-annotation',
-            'Ensembl 94',
-            '--matrix-file',
-            'gs://fake-bucket/remote-matrix-file-does-not-exist.txt',
-            '--matrix-file-type',
-            'dense',
-        ]
-
-        self.assertRaises(OSError, self.setup_ingest, args)
 
     def test_ingest_local_dense_matrix(self):
         """Ingest Pipeline should extract and transform local dense matrices
@@ -258,34 +231,6 @@ class IngestTestCase(unittest.TestCase):
         model, expected_model = get_nth_gene_models(0, models, mock_dir)
 
         self.assertEqual(model, expected_model)
-
-    def test_ingest_missing_local_file(self):
-        """Ingest Pipeline should throw error for missing local file
-        """
-
-        args = [
-            '--study-id',
-            '5d276a50421aa9117c982845',
-            '--study-file-id',
-            '1234abc',
-            'ingest_expression',
-            '--taxon-name',
-            'Homo sapiens',
-            '--taxon-common-name',
-            'human',
-            '--ncbi-taxid',
-            '9606',
-            '--genome-assembly-accession',
-            'GCA_000001405.15',
-            '--genome-annotation',
-            'Ensembl 94',
-            '--matrix-file',
-            '--matrix-file /this/file/does/not_exist.txt',
-            '--matrix-file-type',
-            'dense',
-        ]
-
-        self.assertRaises(OSError, self.setup_ingest, args)
 
     def test_ingest_mtx_matrix(self):
         """Ingest Pipeline should extract and transform MTX matrix bundles
