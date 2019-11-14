@@ -17,7 +17,7 @@ git clone git@github.com:broadinstitute/scp-ingest-pipeline.git
 cd scp-ingest-pipeline
 python3 -m venv env --copies
 source env/bin/activate
-pip install -r requirements.txt # run
+pip install -r requirements.txt
 ```
 
 ## Git hooks
