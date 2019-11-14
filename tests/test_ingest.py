@@ -52,8 +52,6 @@ def mock_load(self, *args, **kwargs):
     Doing so via integration tests will isolate us from implementation changes.
     """
     self.load_args = args
-    print(f"args:{args}")
-    print(f"kwargs:{kwargs}")
     self.load_kwargs = kwargs
 
 
@@ -64,19 +62,6 @@ IngestPipeline.load = mock_load
 def get_gene_model(mock_dir):
     """Return actual and expected gene model, using actual and mock data
     """
-    # TODO: Dense loads models as a `list`, Mtx loads models as a `dict_values`
-    # It seems both would ideally load using the same type.  Reconcile.
-    # if isinstance(model, list):
-    #     # For Dense
-    #     actual_model = model.__dict__
-    # else:
-    # For Mtx
-    # actual_model = model
-
-    # Uncomment to print out new baseline data
-    # Process to update baselines is manual: copy and paste it into new file
-    # TODO: Automate when reasonable
-    # print(f'actual_model: {actual_model}')
 
     with open(f'mock_data/{mock_dir}/gene_model_0.txt') as f:
         # Create a dictionary from the string-literal mock
@@ -111,44 +96,39 @@ class IngestTestCase(unittest.TestCase):
                 ingest.subsample()
         return ingest
 
-    # def test_ingest_dense_matrix(self):
-    #     """Ingest Pipeline should extract, transform, and load dense matrices
-    #     """
-    #
-    #     args = [
-    #         '--study-id',
-    #         '5d276a50421aa9117c982845',
-    #         '--study-file-id',
-    #         '1234abc',
-    #         'ingest_expression',
-    #         '--taxon-name',
-    #         'Homo sapiens',
-    #         '--taxon-common-name',
-    #         'human',
-    #         '--ncbi-taxid',
-    #         '9606',
-    #         '--genome-assembly-accession',
-    #         'GCA_000001405.15',
-    #         '--genome-annotation',
-    #         'Ensembl 94',
-    #         '--matrix-file',
-    #         'gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt',
-    #         '--matrix-file-type',
-    #         'dense',
-    #     ]
-    #     ingest = self.setup_ingest(args)
-    #     models = ingest.load_args[0]
-    #     print(models)
-    #
-    #     # Verify that 19 gene models were passed into load method
-    #     num_models = len(models)
-    #     expected_num_models = 19
-    #     self.assertEqual(num_models, expected_num_models)
-    #     # Verify that the first gene model looks as expected
-    #     mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-    #     model, expected_model = get_nth_gene_models(0, models, mock_dir)
-    #
-    #     self.assertEqual(model, expected_model)
+    def test_ingest_dense_matrix(self):
+        """Ingest Pipeline should extract, transform, and load dense matrices
+        """
+
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            'gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt',
+            '--matrix-file-type',
+            'dense',
+        ]
+        ingest = self.setup_ingest(args)
+        model = ingest.load_args[0]
+
+        # Verify gene model looks as expected
+        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
+        expected_model = get_gene_model(mock_dir)
+
+        self.assertEqual(model, expected_model)
 
     def test_ingest_local_dense_matrix(self):
         """Ingest Pipeline should extract and transform local dense matrices
@@ -185,118 +165,106 @@ class IngestTestCase(unittest.TestCase):
 
         self.assertEqual(model, expected_model)
 
-    # def test_ingest_local_compressed_dense_matrix(self):
-    #     """Ingest Pipeline should extract and transform local dense matrices
-    #         from compressed file in the same manner as uncompressed file
-    #     """
-    #
-    #     args = [
-    #         '--study-id',
-    #         '5d276a50421aa9117c982845',
-    #         '--study-file-id',
-    #         '1234abc',
-    #         'ingest_expression',
-    #         '--taxon-name',
-    #         'Homo sapiens',
-    #         '--taxon-common-name',
-    #         'human',
-    #         '--ncbi-taxid',
-    #         '9606',
-    #         '--genome-assembly-accession',
-    #         'GCA_000001405.15',
-    #         '--genome-annotation',
-    #         'Ensembl 94',
-    #         '--matrix-file',
-    #         '../tests/data/dense_matrix_19_genes_100k_cells.txt.gz',
-    #         '--matrix-file-type',
-    #         'dense',
-    #     ]
-    #     ingest = self.setup_ingest(args)
-    #
-    #     models = ingest.load_args[0]
-    #
-    #     # Verify that 19 gene models were passed into load method
-    #     num_models = len(models)
-    #     expected_num_models = 19
-    #     self.assertEqual(num_models, expected_num_models)
-    #
-    #     # Verify that the first gene model looks as expected
-    #     mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-    #     model, expected_model = get_nth_gene_models(0, models, mock_dir)
-    #
-    #     self.assertEqual(model, expected_model)
-    #
-    # def test_ingest_mtx_matrix(self):
-    #     """Ingest Pipeline should extract and transform MTX matrix bundles
-    #     """
-    #
-    #     args = [
-    #         '--study-id',
-    #         '5d276a50421aa9117c982845',
-    #         '--study-file-id',
-    #         '1234abc',
-    #         'ingest_expression',
-    #         '--taxon-name',
-    #         'Homo sapiens',
-    #         '--taxon-common-name',
-    #         'human',
-    #         '--ncbi-taxid',
-    #         '9606',
-    #         '--genome-assembly-accession',
-    #         'GCA_000001405.15',
-    #         '--genome-annotation',
-    #         'Ensembl 94',
-    #         '--matrix-file',
-    #         '../tests/data/matrix.mtx',
-    #         '--matrix-file-type',
-    #         'mtx',
-    #         '--gene-file',
-    #         '../tests/data/genes.tsv',
-    #         '--barcode-file',
-    #         '../tests/data/barcodes.tsv',
-    #     ]
-    #     ingest = self.setup_ingest(args)
-    #
-    #     models = ingest.load_args[0]
-    #
-    #     # Verify that 25 gene models were passed into load method
-    #     num_models = len(models)
-    #     expected_num_models = 25
-    #     self.assertEqual(num_models, expected_num_models)
-    #
-    #     # Verify that the first gene model looks as expected
-    #     mock_dir = 'matrix_mtx'
-    #     model, expected_model = get_nth_gene_models(0, models, mock_dir)
-    #     self.assertEqual(model, expected_model)
-    #
-    # def test_mtx_bundle_argument_validation(self):
-    #     """Omitting --gene-file and --barcode-file in MTX ingest should error
-    #     """
-    #
-    #     args = [
-    #         '--study-id',
-    #         '5d276a50421aa9117c982845',
-    #         '--study-file-id',
-    #         '1234abc',
-    #         'ingest_expression',
-    #         '--taxon-name',
-    #         'Homo sapiens',
-    #         '--taxon-common-name',
-    #         'human',
-    #         '--ncbi-taxid',
-    #         '9606',
-    #         '--genome-assembly-accession',
-    #         'GCA_000001405.15',
-    #         '--genome-annotation',
-    #         'Ensembl 94',
-    #         '--matrix-file',
-    #         '../tests/data/matrix.mtx',
-    #         '--matrix-file-type',
-    #         'mtx',
-    #     ]
-    #
-    #     self.assertRaises(ValueError, self.setup_ingest, args)
-    #
+    def test_ingest_local_compressed_dense_matrix(self):
+        """Ingest Pipeline should extract and transform local dense matrices
+            from compressed file in the same manner as uncompressed file
+        """
+
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/dense_matrix_19_genes_100k_cells.txt.gz',
+            '--matrix-file-type',
+            'dense',
+        ]
+        ingest = self.setup_ingest(args)
+
+        model = ingest.load_args[0]
+        # Verify that the first gene model looks as expected
+        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
+        expected_model = get_gene_model(mock_dir)
+
+        self.assertEqual(model, expected_model)
+
+    def test_ingest_mtx_matrix(self):
+        """Ingest Pipeline should extract and transform MTX matrix bundles
+        """
+
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/matrix.mtx',
+            '--matrix-file-type',
+            'mtx',
+            '--gene-file',
+            '../tests/data/genes.tsv',
+            '--barcode-file',
+            '../tests/data/barcodes.tsv',
+        ]
+        ingest = self.setup_ingest(args)
+
+        model = ingest.load_args[0]
+
+        mock_dir = 'matrix_mtx'
+        expected_model = get_gene_model(mock_dir)
+        self.assertEqual(model, expected_model)
+
+    def test_mtx_bundle_argument_validation(self):
+        """Omitting --gene-file and --barcode-file in MTX ingest should error
+        """
+
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/matrix.mtx',
+            '--matrix-file-type',
+            'mtx',
+        ]
+
+        self.assertRaises(ValueError, self.setup_ingest, args)
+
     # def test_ingest_loom(self):
     #     """Ingest Pipeline should extract and transform loom files
     #     """
@@ -325,7 +293,7 @@ class IngestTestCase(unittest.TestCase):
     #
     #     ingest = self.setup_ingest(args)
     #
-    #     models = ingest.load_args[0]
+    #     model = ingest.load_args[0]
     #
     #     # Verify that 25 gene models were passed into load method
     #     num_models = len(models)
@@ -336,7 +304,6 @@ class IngestTestCase(unittest.TestCase):
     #     mock_dir = 'loom'
     #     model, expected_model = get_nth_gene_models(0, models, mock_dir)
     #     self.assertEqual(model, expected_model)
-    #
 
 
 if __name__ == '__main__':

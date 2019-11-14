@@ -293,7 +293,6 @@ def create_parser():
     Returns:
         parser: ArgumentParser object
     """
-    print('foo')
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -481,7 +480,6 @@ def main() -> None:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
-    # TODO: This check will need to changed
     if all(i < 1 for i in status) or len(status) == 0:
         sys.exit(os.EX_OK)
     else:
