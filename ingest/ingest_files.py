@@ -113,7 +113,6 @@ class IngestFiles:
             open_file = gzip.open(file_path, 'rt', encoding='utf-8-sig')
         else:
             open_file = open(file_path, encoding="utf-8-sig")
-
         return open_file, file_path
 
     def reset_file(self, start_point, open_as=None):

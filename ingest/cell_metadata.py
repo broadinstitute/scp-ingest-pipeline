@@ -25,10 +25,12 @@ class CellMetadata(Annotations):
         self, file_path: str, study_id: str, study_file_id: str, *args, **kwargs
     ):
 
-        Annotations.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
+        self.study_accession = kwargs.pop("study_accession")
+        Annotations.__init__(
+            self, file_path, self.ALLOWED_FILE_TYPES, study_id, study_file_id
+        )
         self.file_path = file_path
         self.cell_names = []
-        self.study_accession = kwargs.pop("study_accession")
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))

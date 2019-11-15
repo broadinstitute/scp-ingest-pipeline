@@ -15,7 +15,7 @@ EXAMPLES
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-accession 123abc --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_v1.1.1.tsv --ingest-cell-metadata
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_v1.1.1.tsv --study-accession SCP123 --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have permission to the SCP bucket
@@ -164,7 +164,7 @@ class IngestPipeline(object):
         return 0
 
     def load_subsample(self, subsampled_data, set_data_array_fn, scope):
-        """Loads subsampled data into Firestore"""
+        """Loads subsampled data into MongoDB"""
         for key_value in subsampled_data[0].items():
             annot_name = subsampled_data[1][0]
             cluster_name = '?'
@@ -208,7 +208,6 @@ class IngestPipeline(object):
     def ingest_expression(self) -> None:
         """Ingests expression files.
         """
-        print('expression')
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
         for idx, gene in enumerate(self.matrix.transform()):
@@ -218,7 +217,7 @@ class IngestPipeline(object):
                     self.matrix.set_data_array,
                     gene.gene_name,
                     gene.gene_model['searchable_name'],
-                    {'create_cell_DataArray': True},
+                    {'create_cell_data_array': True},
                 )
             else:
                 self.load(
@@ -230,9 +229,8 @@ class IngestPipeline(object):
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        # TODO: Add self.has_valid_metadata_convention() to if statement
         if self.cell_metadata.validate_format():
-            # Check to see file needs to be check against metadata convention
+            # Check file against metadata convention
             if self.kwargs['validate_convention'] is not None:
                 if self.kwargs['validate_convention']:
                     if self.has_valid_metadata_convention():

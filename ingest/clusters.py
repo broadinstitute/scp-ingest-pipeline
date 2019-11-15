@@ -39,7 +39,9 @@ class Clusters(Annotations):
         *,
         domain_ranges: Dict = None,
     ):
-        Annotations.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
+        Annotations.__init__(
+            self, file_path, self.ALLOWED_FILE_TYPES, study_id, study_file_id
+        )
         self.determine_coordinates_and_cell_names()
         self.source_file_type = "cluster"
         self.cluster_type = (
@@ -52,8 +54,6 @@ class Clusters(Annotations):
         )
         self.name = name
         self.domain_ranges = domain_ranges
-        self.study_id = study_id
-        self.study_file_id = study_file_id
 
     def transform(self):
         """ Builds cluster data model"""
