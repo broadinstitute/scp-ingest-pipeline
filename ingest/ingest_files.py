@@ -113,8 +113,7 @@ class IngestFiles:
             open_file = gzip.open(file_path, 'rt', encoding='utf-8-sig')
         else:
             open_file = open(file_path, encoding="utf-8-sig")
-
-        return open_file
+        return open_file, file_path
 
     def reset_file(self, start_point, open_as=None):
         """Restart file reader at point that's equal to start_point.
@@ -126,7 +125,7 @@ class IngestFiles:
 
     def open_file(self, file_path, open_as=None, header=None, start_point: int = 0):
         """ Opens txt, csv, or tsv formatted files"""
-        open_file = self.resolve_path(file_path)
+        open_file, file_path = self.resolve_path(file_path)
         if start_point != 0:
             for i in range(start_point):
                 open_file.readline()
