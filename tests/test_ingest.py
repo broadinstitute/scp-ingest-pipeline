@@ -99,7 +99,7 @@ class IngestTestCase(unittest.TestCase):
     def test_ingest_dense_matrix(self):
         """Ingest Pipeline should extract, transform, and load dense matrices
         """
-    
+
         args = [
             '--study-id',
             '5d276a50421aa9117c982845',
@@ -123,11 +123,11 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)
         model = ingest.load_args[0]
-    
+
         # Verify gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
         expected_model = get_gene_model(mock_dir)
-    
+
         self.assertEqual(model, expected_model)
 
     def test_ingest_local_dense_matrix(self):
