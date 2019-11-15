@@ -164,7 +164,7 @@ class IngestPipeline(object):
         return 0
 
     def load_subsample(self, subsampled_data, set_data_array_fn, scope):
-        """Loads subsampled data into Firestore"""
+        """Loads subsampled data into MongoDB"""
         for key_value in subsampled_data[0].items():
             annot_name = subsampled_data[1][0]
             cluster_name = '?'
