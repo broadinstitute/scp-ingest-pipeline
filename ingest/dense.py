@@ -26,7 +26,6 @@ class Dense(GeneExpression):
             allowed_file_types=self.ALLOWED_FILE_TYPES,
             open_as='dataframe',
         )
-        self.hasAll = True
         # Remove from dictionary any keys that have value=None
         self.matrix_params = kwargs
         # Remove trailing white spaces, and quotes from column names
@@ -40,12 +39,12 @@ class Dense(GeneExpression):
     def transform(self):
         """Transforms dense matrix into firestore data model for genes.
         """
-
-        Gene_Model = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
+        # Holds gene name and gene model for a single gene
+        GeneModel = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
         for gene in self.file['GENE']:
             # Remove white spaces and quotes
             formatted_gene_name = gene.strip().strip('\"').strip('\'').strip('\"')
-            yield Gene_Model(
+            yield GeneModel(
                 # Name of gene as observed in file
                 gene,
                 self.Model(
@@ -66,13 +65,13 @@ class Dense(GeneExpression):
         linear_data_id,
         unformatted_gene_name,
         gene_name,
-        create_cell_DataArray=False,
+        create_cell_data_array=False,
     ):
         """Creates data array for expression, gene, and cell values."""
         input_args = locals()
         gene_df = self.file[self.file['GENE'] == unformatted_gene_name]
 
-        if create_cell_DataArray:
+        if create_cell_data_array:
             yield self.set_data_array_cells(self.file['GENE'].tolist())
         # Get list of cell names
         cells = self.file.columns.tolist()[1:]

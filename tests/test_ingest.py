@@ -96,39 +96,39 @@ class IngestTestCase(unittest.TestCase):
                 ingest.subsample()
         return ingest
 
-    # def test_ingest_dense_matrix(self):
-    #     """Ingest Pipeline should extract, transform, and load dense matrices
-    #     """
-    #
-    #     args = [
-    #         '--study-id',
-    #         '5d276a50421aa9117c982845',
-    #         '--study-file-id',
-    #         '1234abc',
-    #         'ingest_expression',
-    #         '--taxon-name',
-    #         'Homo sapiens',
-    #         '--taxon-common-name',
-    #         'human',
-    #         '--ncbi-taxid',
-    #         '9606',
-    #         '--genome-assembly-accession',
-    #         'GCA_000001405.15',
-    #         '--genome-annotation',
-    #         'Ensembl 94',
-    #         '--matrix-file',
-    #         'gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt',
-    #         '--matrix-file-type',
-    #         'dense',
-    #     ]
-    #     ingest = self.setup_ingest(args)
-    #     model = ingest.load_args[0]
-    #
-    #     # Verify gene model looks as expected
-    #     mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-    #     expected_model = get_gene_model(mock_dir)
-    #
-    #     self.assertEqual(model, expected_model)
+    def test_ingest_dense_matrix(self):
+        """Ingest Pipeline should extract, transform, and load dense matrices
+        """
+
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '1234abc',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            'gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt',
+            '--matrix-file-type',
+            'dense',
+        ]
+        ingest = self.setup_ingest(args)
+        model = ingest.load_args[0]
+
+        # Verify gene model looks as expected
+        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
+        expected_model = get_gene_model(mock_dir)
+
+        self.assertEqual(model, expected_model)
 
     def test_ingest_local_dense_matrix(self):
         """Ingest Pipeline should extract and transform local dense matrices

@@ -15,7 +15,7 @@ EXAMPLES
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845  --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_v1.1.1.tsv --ingest-cell-metadata
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-accession 123abc --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_v1.1.1.tsv --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have permission to the SCP bucket
@@ -369,6 +369,11 @@ def create_parser():
         "--cell-metadata-file",
         required=True,
         help="Absolute or relative path to cell metadata file.",
+    )
+    parser_cell_metadata.add_argument(
+        "--study-accession",
+        required=True,
+        help="Single study accession associated with ingest files.",
     )
     parser_cell_metadata.add_argument(
         "--ingest-cell-metadata",
