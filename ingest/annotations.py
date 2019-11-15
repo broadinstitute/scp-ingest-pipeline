@@ -15,7 +15,9 @@ from ingest_files import IngestFiles
 class Annotations(IngestFiles):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, file_path, allowed_file_types, study_id, study_file_id):
+    def __init__(
+        self, file_path, allowed_file_types, study_id=None, study_file_id=None
+    ):
         IngestFiles.__init__(
             self, file_path, allowed_file_types, open_as='dataframe', header=[0, 1]
         )
