@@ -544,7 +544,7 @@ def main() -> None:
     else:
         if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
             ingest.delocalize_error_file()
-        # PAPI jobs failing metadata validation against convention report 
+        # PAPI jobs failing metadata validation against convention report
         #   "unexpected exit status 65 was not ignored"
         # EX_DATAERR (65) The input data was incorrect in some way.
         sys.exit(os.EX_DATAERR)
