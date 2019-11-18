@@ -1,7 +1,7 @@
 """Integration tests for Ingest Pipeline; isolated tests for observable output
 
 These tests verify that various matrix file types can be extracted and
-transformed, as expected by code that loads transformed data into Firestore.
+transformed, as expected by code that loads transformed data into MongoDB.
 
 Test doubles are used for test speed and isolation.
 
@@ -33,13 +33,13 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from gcp_mocks import mock_storage_client, mock_storage_blob, mock_firestore_client
+from gcp_mocks import mock_storage_client, mock_storage_blob
 
 sys.path.append('../ingest')
 from ingest_pipeline import create_parser, validate_arguments, IngestPipeline
 
 
-def mock_load_expression_data(self, *args, **kwargs):
+def mock_load(self, *args, **kwargs):
     """Enables overwriting normal function with this placeholder.
     Returning the arguments enables tests to verify that the code invokes
     this method with expected argument values.
@@ -51,45 +51,29 @@ def mock_load_expression_data(self, *args, **kwargs):
     unlike here where we merely give a way to verify loading-code *inputs*.
     Doing so via integration tests will isolate us from implementation changes.
     """
-    self.load_expression_data_args = args
-    self.load_expression_data_kwargs = kwargs
+    self.load_args = args
+    self.load_kwargs = kwargs
 
 
 # Mock method that writes to database
-IngestPipeline.load_expression_data = mock_load_expression_data
+IngestPipeline.load = mock_load
 
 
-def get_nth_gene_models(n, models, mock_dir):
-    """Return Nth actual and expected gene models, using actual and mock data
+def get_gene_model(mock_dir):
+    """Return actual and expected gene model, using actual and mock data
     """
-    # TODO: Dense loads models as a `list`, Mtx loads models as a `dict_values`
-    # It seems both would ideally load using the same type.  Reconcile.
-    if isinstance(models, list):
-        # For Dense
-        actual_model = models[n].__dict__
-    else:
-        # For Mtx
-        actual_model = list(models)[n].__dict__
 
-    # Uncomment to print out new baseline data
-    # Process to update baselines is manual: copy and paste it into new file
-    # TODO: Automate when reasonable
-    # print(f'actual_model: {actual_model}')
-
-    with open(f'mock_data/{mock_dir}/gene_model_{n}.txt') as f:
+    with open(f'mock_data/{mock_dir}/gene_model_0.txt') as f:
         # Create a dictionary from the string-literal mock
         expected_model = ast.literal_eval(f.read())
 
-    return actual_model, expected_model
+    return expected_model
 
 
 class IngestTestCase(unittest.TestCase):
     @patch('google.cloud.storage.Blob', side_effect=mock_storage_blob)
     @patch('google.cloud.storage.Client', side_effect=mock_storage_client)
-    @patch('google.cloud.firestore.Client', side_effect=mock_firestore_client)
-    def setup_ingest(
-        self, args, mock_storage_client, mock_storage_blob, mock_firestore_client
-    ):
+    def setup_ingest(self, args, mock_storage_client, mock_storage_blob):
 
         self.maxDiff = None
 
@@ -117,9 +101,9 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -138,54 +122,22 @@ class IngestTestCase(unittest.TestCase):
             'dense',
         ]
         ingest = self.setup_ingest(args)
-        models = ingest.load_expression_data_args[0]
+        model = ingest.load_args[0]
 
-        # Verify that 19 gene models were passed into load method
-        num_models = len(models)
-        expected_num_models = 19
-        self.assertEqual(num_models, expected_num_models)
-        # Verify that the first gene model looks as expected
+        # Verify gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-        model, expected_model = get_nth_gene_models(0, models, mock_dir)
+        expected_model = get_gene_model(mock_dir)
 
         self.assertEqual(model, expected_model)
-
-    def test_ingest_missing_file(self):
-        """Ingest Pipeline should throw error for missing file
-        """
-
-        args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
-            '1234abc',
-            'ingest_expression',
-            '--taxon-name',
-            'Homo sapiens',
-            '--taxon-common-name',
-            'human',
-            '--ncbi-taxid',
-            '9606',
-            '--genome-assembly-accession',
-            'GCA_000001405.15',
-            '--genome-annotation',
-            'Ensembl 94',
-            '--matrix-file',
-            'gs://fake-bucket/remote-matrix-file-does-not-exist.txt',
-            '--matrix-file-type',
-            'dense',
-        ]
-
-        self.assertRaises(OSError, self.setup_ingest, args)
 
     def test_ingest_local_dense_matrix(self):
         """Ingest Pipeline should extract and transform local dense matrices
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -205,16 +157,11 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)
 
-        models = ingest.load_expression_data_args[0]
-
-        # Verify that 19 gene models were passed into load method
-        num_models = len(models)
-        expected_num_models = 19
-        self.assertEqual(num_models, expected_num_models)
+        model = ingest.load_args[0]
 
         # Verify that the first gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-        model, expected_model = get_nth_gene_models(0, models, mock_dir)
+        expected_model = get_gene_model(mock_dir)
 
         self.assertEqual(model, expected_model)
 
@@ -224,9 +171,9 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -246,55 +193,21 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)
 
-        models = ingest.load_expression_data_args[0]
-
-        # Verify that 19 gene models were passed into load method
-        num_models = len(models)
-        expected_num_models = 19
-        self.assertEqual(num_models, expected_num_models)
-
+        model = ingest.load_args[0]
         # Verify that the first gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-        model, expected_model = get_nth_gene_models(0, models, mock_dir)
+        expected_model = get_gene_model(mock_dir)
 
         self.assertEqual(model, expected_model)
-
-    def test_ingest_missing_local_file(self):
-        """Ingest Pipeline should throw error for missing local file
-        """
-
-        args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
-            '1234abc',
-            'ingest_expression',
-            '--taxon-name',
-            'Homo sapiens',
-            '--taxon-common-name',
-            'human',
-            '--ncbi-taxid',
-            '9606',
-            '--genome-assembly-accession',
-            'GCA_000001405.15',
-            '--genome-annotation',
-            'Ensembl 94',
-            '--matrix-file',
-            '--matrix-file /this/file/does/not_exist.txt',
-            '--matrix-file-type',
-            'dense',
-        ]
-
-        self.assertRaises(OSError, self.setup_ingest, args)
 
     def test_ingest_mtx_matrix(self):
         """Ingest Pipeline should extract and transform MTX matrix bundles
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -318,16 +231,10 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)
 
-        models = ingest.load_expression_data_args[0]
+        model = ingest.load_args[0]
 
-        # Verify that 25 gene models were passed into load method
-        num_models = len(models)
-        expected_num_models = 25
-        self.assertEqual(num_models, expected_num_models)
-
-        # Verify that the first gene model looks as expected
         mock_dir = 'matrix_mtx'
-        model, expected_model = get_nth_gene_models(0, models, mock_dir)
+        expected_model = get_gene_model(mock_dir)
         self.assertEqual(model, expected_model)
 
     def test_mtx_bundle_argument_validation(self):
@@ -335,9 +242,9 @@ class IngestTestCase(unittest.TestCase):
         """
 
         args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
             '1234abc',
             'ingest_expression',
             '--taxon-name',
@@ -358,45 +265,45 @@ class IngestTestCase(unittest.TestCase):
 
         self.assertRaises(ValueError, self.setup_ingest, args)
 
-    def test_ingest_loom(self):
-        """Ingest Pipeline should extract and transform loom files
-        """
-
-        args = [
-            '--study-accession',
-            'SCP1',
-            '--file-id',
-            '1234abc',
-            'ingest_expression',
-            '--taxon-name',
-            'Homo Sapiens',
-            '--taxon-common-name',
-            'human',
-            '--ncbi-taxid',
-            '9606',
-            '--genome-assembly-accession',
-            'GCA_000001405.15',
-            '--genome-annotation',
-            'Ensemble 94',
-            '--matrix-file',
-            '../tests/data/test_loom.loom',
-            '--matrix-file-type',
-            'loom',
-        ]
-
-        ingest = self.setup_ingest(args)
-
-        models = ingest.load_expression_data_args[0]
-
-        # Verify that 25 gene models were passed into load method
-        num_models = len(models)
-        expected_num_models = 10
-        self.assertEqual(num_models, expected_num_models)
-
-        # Verify that the first gene model looks as expected
-        mock_dir = 'loom'
-        model, expected_model = get_nth_gene_models(0, models, mock_dir)
-        self.assertEqual(model, expected_model)
+    # def test_ingest_loom(self):
+    #     """Ingest Pipeline should extract and transform loom files
+    #     """
+    #
+    #     args = [
+    #         '--study-id',
+    #         '5d276a50421aa9117c982845',
+    #         '--study-file-id',
+    #         '1234abc',
+    #         'ingest_expression',
+    #         '--taxon-name',
+    #         'Homo Sapiens',
+    #         '--taxon-common-name',
+    #         'human',
+    #         '--ncbi-taxid',
+    #         '9606',
+    #         '--genome-assembly-accession',
+    #         'GCA_000001405.15',
+    #         '--genome-annotation',
+    #         'Ensemble 94',
+    #         '--matrix-file',
+    #         '../tests/data/test_loom.loom',
+    #         '--matrix-file-type',
+    #         'loom',
+    #     ]
+    #
+    #     ingest = self.setup_ingest(args)
+    #
+    #     model = ingest.load_args[0]
+    #
+    #     # Verify that 25 gene models were passed into load method
+    #     num_models = len(models)
+    #     expected_num_models = 10
+    #     self.assertEqual(num_models, expected_num_models)
+    #
+    #     # Verify that the first gene model looks as expected
+    #     mock_dir = 'loom'
+    #     model, expected_model = get_nth_gene_models(0, models, mock_dir)
+    #     self.assertEqual(model, expected_model)
 
 
 if __name__ == '__main__':

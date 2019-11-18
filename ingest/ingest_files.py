@@ -2,21 +2,60 @@
 
 DESCRIPTION
 Module provides extract capabilities for text, CSV, and TSV file types
-
 """
 import csv
 import mimetypes
 import os
 import re
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+from dataclasses import dataclass
+from mypy_extensions import TypedDict
 import gzip
-
-import pandas as pd
+import pandas as pd  # NOqa: F821
 from google.cloud import storage
 
 
+@dataclass
+class DataArray(TypedDict):
+    MAX_ENTRIES = 100_000
+    COLLECTION_NAME = 'data_arrays'
+
+    def __init__(
+        self,
+        name: str,
+        cluster_name: str,
+        array_type: str,
+        values: List,
+        linear_data_type: str,
+        linear_data_id: str,
+        study_id: str,
+        study_file_id: str,
+        file_kwargs: Dict,
+        array_index: int = 0,
+        subsample_threshold: int = None,
+        subsample_annotation: str = None,
+    ):
+        self.name = name
+        self.cluster_name = cluster_name
+        self.array_type = array_type
+        self.array_index = array_index
+        self.values = values
+        self.subsample_threshold = subsample_threshold
+        self.subsample_annotation = subsample_annotation
+        self.linear_data_type = linear_data_type
+        self.linear_data_id = linear_data_id
+        self.study_id = study_id
+        self.study_file_id = study_file_id
+
+        # TODO: Add logic for when len(self.values) > self.MAX_ENTREIS
+        # get_dataArray(self):
+        #     if len(self.values) > self.MAX_ENTREIS:
+
+
 class IngestFiles:
-    def __init__(self, file_path, allowed_file_types, *, open_as=None):
+    def __init__(self, file_path, allowed_file_types, open_as=None, **file_kwargs):
         self.file_path = file_path
+        self.file_kwargs = file_kwargs
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
         self.is_remote_file = file_path[:5] == "gs://"
@@ -75,8 +114,7 @@ class IngestFiles:
             open_file = gzip.open(file_path, 'rt', encoding='utf-8-sig')
         else:
             open_file = open(file_path, encoding="utf-8-sig")
-
-        return open_file
+        return open_file, file_path
 
     def reset_file(self, start_point, open_as=None):
         """Restart file reader at point that's equal to start_point.
@@ -86,9 +124,9 @@ class IngestFiles:
             self.file_path, start_point=start_point, open_as=open_as
         )
 
-    def open_file(self, file_path, open_as=None, start_point: int = 0):
+    def open_file(self, file_path, open_as=None, header=None, start_point: int = 0):
         """ Opens txt, csv, or tsv formatted files"""
-        open_file = self.resolve_path(file_path)
+        open_file, file_path = self.resolve_path(file_path)
         if start_point != 0:
             for i in range(start_point):
                 open_file.readline()
@@ -154,18 +192,22 @@ class IngestFiles:
         meta_data = opened_file.readline()
         if meta_data.find("\t") != -1:
             return pd.read_csv(
-                file_path, sep="\t", header=[0, 1], quoting=csv.QUOTE_NONE
+                file_path,
+                sep="\t",
+                skipinitialspace=True,
+                quoting=csv.QUOTE_NONE,
+                **self.file_kwargs,
             )
         elif meta_data.find(",") != -1:
             return pd.read_csv(
-                file_path, sep=",", header=[0, 1], quoting=csv.QUOTE_NONE
+                file_path,
+                sep=",",
+                skipinitialspace=True,
+                quoting=csv.QUOTE_NONE,
+                **self.file_kwargs,
             )
         else:
             raise ValueError("File must be tab or comma delimited")
-
-    def merge_df(self, first_df, second_df):
-        """ Does an inner join on a dataframe """
-        self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
 
     def open_csv(self, opened_file_object):
         """Opens csv file"""
@@ -226,31 +268,3 @@ class IngestFiles:
                 return self.split_line(next_row_revised)
             else:
                 return next_row_revised
-
-    def preproccess(self):
-        """Ensures that:
-            - Numeric columns are rounded to 3 decimals points
-            - Group annotations are strings
-            - 'NAME' in first header row is capitalized
-            - 'TYPE' in second header row is capitalized
-        """
-        headers = self.file.columns.get_level_values(0)
-        annot_types = self.file.columns.get_level_values(1)
-        # Lowercase second level. Example: NUMeric -> numeric
-        self.file.rename(
-            columns=lambda col_name: col_name.lower(), level=1, inplace=True
-        )
-        name = list(headers)[0]
-        type = list(annot_types)[0].lower()
-        # Uppercase NAME and TYPE
-        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
-        # Make sure group annotations are treated as strings
-        group_columns = self.file.xs(
-            "group", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        self.file[group_columns] = self.file[group_columns].astype(str)
-        # Find numeric columns and round to 3 decimals places and are floats
-        numeric_columns = self.file.xs(
-            "numeric", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
