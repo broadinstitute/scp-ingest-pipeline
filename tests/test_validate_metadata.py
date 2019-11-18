@@ -9,9 +9,6 @@ Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
 and Firestore emulator must be running, see PR26 for instructions
 (https://github.com/broadinstitute/scp-ingest-pipeline/pull/26)
 
-Note: When CI environment moves to Python 3.7, tests may break due to minor
-differences in how the reference issues are serialized
-
 # Run all tests in a manner that shows report_issues output
 python3 test_validate_metadata.py
 
@@ -20,6 +17,7 @@ python3 test_validate_metadata.py
 import sys
 import unittest
 import json
+import os
 
 sys.path.append('../ingest')
 sys.path.append('../ingest/validation')
@@ -42,18 +40,24 @@ class TestValidateMetadata(unittest.TestCase):
         with open(args.convention) as f:
             convention = json.load(f)
         filetsv = args.input_metadata
-        metadata = CellMetadata(filetsv, '1234abc', 'SCP1', open_as='dataframe')
+        metadata = CellMetadata(filetsv, '1234abc', 'SCP1', study_accession='SCP1')
         metadata.validate_format()
+        print(f"Format is corrrect {metadata.validate_format()}")
         return (metadata, convention)
 
     def teardown_metadata(self, metadata):
         metadata.file_handle.close()
+        try:
+            os.remove('scp_validation_errors.txt')
+            os.remove('scp_validation_warnings.txt')
+        except OSError:
+            print('no file to remove')
 
     def test_header_format(self):
         """Header rows of metadata file should conform to standard
         """
 
-        args = '../tests/data/AMC_v1.1.1.json ../tests/data/error_headers_v1.1.1.tsv'
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/error_headers_v1.1.3.tsv'
         metadata = self.setup_metadata(args)[0]
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
@@ -87,9 +91,9 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_convention_content(self):
         """Metadata convention should be valid jsonschema
-            """
+        """
 
-        args = '../tests/data/AMC_invalid.json ../tests/data/valid_v1.1.1.tsv'
+        args = '../tests/data/AMC_invalid.json ../tests/data/valid_no_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertIsNone(
             validate_schema(convention, metadata),
@@ -99,8 +103,10 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_valid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
-            """
-        args = '../tests/data/AMC_v1.1.1.json ../tests/data/valid_v1.1.1.tsv'
+        """
+        # Note: this input metadata file does not have array-based metadata
+        # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/valid_no_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -113,8 +119,8 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_invalid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
-            """
-        args = '../tests/data/AMC_v1.1.1.json ../tests/data/metadata_invalid_v1.1.1.tsv'
+        """
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/invalid_metadata_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -134,22 +140,19 @@ class TestValidateMetadata(unittest.TestCase):
         reference_file = open('../tests/data/issues_metadata_v1.1.1.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
-        print(metadata.issues)
-        print('\n')
-        print(reference_issues)
-        print('\n')
         self.assertEqual(
             metadata.issues,
             reference_issues,
             'Metadata validation issues do not match reference issues',
         )
-
         self.teardown_metadata(metadata)
 
     def test_valid_ontology_content(self):
         """Ontology metadata should conform to convention requirements
-            """
-        args = '../tests/data/AMC_v1.1.1.json ../tests/data/valid_v1.1.1.tsv'
+        """
+        # Note: this input metadata file does not have array-based metadata
+        # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/valid_no_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -162,8 +165,10 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_invalid_ontology_content(self):
         """Ontology metadata should conform to convention requirements
-            """
-        args = '../tests/data/AMC_v1.1.1.json ../tests/data/ontology_invalid_v1.1.1.tsv'
+        """
+        # Note: this input metadata file does not have array-based metadata
+        # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/invalid_ontology_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -190,7 +195,57 @@ class TestValidateMetadata(unittest.TestCase):
             'Ontology validation issues do not match reference issues',
         )
         reference_file.close()
+        self.teardown_metadata(metadata)
 
+    def test_valid_array_content(self):
+        """array-based metadata should conform to convention requirements
+        """
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/valid_array_v1.1.3.tsv'
+        metadata, convention = self.setup_metadata(args)
+        self.assertTrue(
+            metadata.validate_format(), 'Valid metadata headers should not elicit error'
+        )
+        validate_input_metadata(metadata, convention)
+        self.assertFalse(
+            report_issues(metadata), 'Valid ontology content should not elicit error'
+        )
+        # valid array data emits one warning message for disease__time_since_onset__unit
+        # because no ontology label supplied in metadata file for the unit ontology
+        reference_file = open('../tests/data/issues_warn_v1.1.2.json')
+        reference_issues = json.load(reference_file)
+        reference_file.close()
+        self.assertEqual(
+            metadata.issues,
+            reference_issues,
+            'Metadata validation issues do not match reference issues',
+        )
+        self.teardown_metadata(metadata)
+
+    def test_invalid_array_content(self):
+        """array-based metadata should conform to convention requirements
+        """
+        args = '../tests/data/AMC_v1.1.3.json ../tests/data/invalid_array_v1.1.3.tsv'
+        metadata, convention = self.setup_metadata(args)
+        self.assertTrue(
+            metadata.validate_format(), 'Valid metadata headers should not elicit error'
+        )
+        validate_input_metadata(metadata, convention)
+        # reference errors tests for:
+        # conflict between convention type and input metadata type annotation
+        #     group instead of numeric: organism_age
+        #     numeric instead of group: sample_type
+        # invalid array-based metadata type: disease__time_since_onset
+        # invalid boolean value: disease__treated
+        # non-uniform unit values: organism_age__unit
+        # missing ontology ID or label for non-required metadata: ethnicity
+        reference_file = open('../tests/data/issues_array_v1.1.2.json')
+        reference_issues = json.load(reference_file)
+        reference_file.close()
+        self.assertEqual(
+            metadata.issues,
+            reference_issues,
+            'Metadata validation issues do not match reference issues',
+        )
         self.teardown_metadata(metadata)
 
 

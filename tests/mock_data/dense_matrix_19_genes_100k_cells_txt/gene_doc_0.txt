@@ -1,1 +1,0 @@
-{'genome_assembly_accession': 'GCA_000001405.15', 'taxon_name': 'Homo sapiens', 'gene_id': None, 'taxon_common_name': 'human', 'study_accession': 'SCP315811', 'name': 'A1BG', 'searchable_name': 'a1bg', 'file_id': '1234abc', 'ncbi_taxid': '9606', 'genome_annotation': 'Ensembl 94'}

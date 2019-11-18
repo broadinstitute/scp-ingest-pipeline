@@ -2,22 +2,43 @@
 File Ingest Pipeline for Single Cell Portal
 
 [![Build status](https://img.shields.io/circleci/build/github/broadinstitute/scp-ingest-pipeline.svg)](https://circleci.com/gh/broadinstitute/scp-ingest-pipeline)
+[![Code coverage](https://codecov.io/gh/broadinstitute/scp-ingest-pipeline/branch/master/graph/badge.svg)](https://codecov.io/gh/broadinstitute/scp-ingest-pipeline)
 
 The SCP Ingest Pipeline is an ETL pipeline for single-cell RNA-seq data.
 
 # Prerequisites
 * Python 3.6+
-* Google Cloud project, including
-  * Firestore in Native Mode
-  * Service accounts
+* Google Cloud Platform project
+* Suitable service account (SA) and MongoDB VM in GCP.  SA needs roles "Editor", "Genomics Pipelines Runner", and "Storage Object Admin".  Broad Institute engineers: see instructions [here](https://github.com/broadinstitute/single_cell_portal_configs/tree/master/terraform-mongodb).
 
 # Install
+Fetch the code, boot your virtualenv, install dependencies:
 ```
 git clone git@github.com:broadinstitute/scp-ingest-pipeline.git
 cd scp-ingest-pipeline
 python3 -m venv env --copies
 source env/bin/activate
 pip install -r requirements.txt
+```
+
+Now get secrets from Vault to set environment variables needed to write to the database:
+```
+export BROAD_USER="<username in your email address>"
+
+export DATABASE_NAME="single_cell_portal_development"
+
+vault login -method=github token=`~/bin/git-vault-token`
+
+# Get username and password
+vault read secret/kdux/scp/development/$BROAD_USER/mongo/user
+
+export MONGODB_USERNAME="<username from Vault>"
+export MONGODB_PASSWORD="<password from Vault>"
+
+# Get external IP address for host
+vault read secret/kdux/scp/development/$BROAD_USER/mongo/hostname
+
+export DATABASE_HOST="<ip from Vault (omit brackets)>"
 ```
 
 ## Git hooks

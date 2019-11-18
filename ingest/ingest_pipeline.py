@@ -1,54 +1,56 @@
 """Ingest Pipeline for ingesting expression, metadata and cluster
-files into Firestore.
+files into MongoDB.
 
 DESCRIPTION
-This cli currently takes in extract and transform functions from different
-file types then uploads them into Firestore.
+This CLI extracts and transforms different file types then writes them into
+a remote MongoDB instance.
 
 PREREQUISITES
-You must have Google Cloud Firestore installed, authenticated, and
-configured. Must have Python 3.6 or higher. Indexing must be turned off for sub-collections.
+See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
 
 EXAMPLES
-# Takes expression file and stores it into Firestore
+# Takes expression file and stores it into MongoDB
 
 # Ingest cluster file
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_v1.1.1.tsv --study-accession SCP123 --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/metadata_valid.tsv --ingest-cell-metadata --validate-convention
+!! Please note that you must have permission to the SCP bucket
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
 
 # Ingest dense file
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest loom file
-python ingest_pipeline.py  --study-accession SCP1 --file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --name custer1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-accession SCP1 --file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import ast
-import os
+
 import sys
 import json
+import os
 
 from cell_metadata import CellMetadata
 from clusters import Clusters
 from dense import Dense
-from gene_data_model import Gene
-from google.api_core import exceptions
-from google.cloud import firestore
+from pymongo import MongoClient
 from mtx import Mtx
+
+# from ingest_files import IngestFiles
 from subsample import SubSample
 from loom import Loom
+from ingest_files import IngestFiles
 from validation.validate_metadata import validate_input_metadata, report_issues
 
 # Ingest file types
@@ -57,13 +59,12 @@ EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 
 class IngestPipeline(object):
     # File location for metadata json convention
-    JSON_CONVENTION = 'DoNotTouch/AMC_v0.8.json'
+    JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
 
     def __init__(
         self,
-        *,
-        file_id: str,
-        study_accession: str,
+        study_id: str,
+        study_file_id: str,
         matrix_file: str = None,
         matrix_file_type: str = None,
         cell_metadata_file: str = None,
@@ -71,18 +72,18 @@ class IngestPipeline(object):
         subsample=False,
         ingest_cell_metadata=False,
         ingest_cluster=False,
-        db=None,
         **kwargs,
     ):
         """Initializes variables in ingest service."""
-        self.file_id = file_id
-        self.study_accession = study_accession
+        self.study_id = study_id
+        self.study_file_id = study_file_id
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        if db is not None:
-            self.db = db
+        if os.environ.get('DATABASE_HOST') is not None:
+            # Needed to run tests in CircleCI.  TODO: add mock, remove this
+            self.db = self.get_mongo_db()
         else:
-            self.db = firestore.Client()
+            self.db = None
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
@@ -96,6 +97,29 @@ class IngestPipeline(object):
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
         elif matrix_file is None:
             self.matrix = matrix_file
+
+    def get_mongo_db(self):
+        host = os.environ['DATABASE_HOST']
+        user = os.environ['MONGODB_USERNAME']
+        password = os.environ['MONGODB_PASSWORD']
+        db_name = os.environ['DATABASE_NAME']
+
+        client = MongoClient(
+            host,
+            username=user,
+            password=password,
+            authSource=db_name,
+            authMechanism='SCRAM-SHA-1',
+        )
+
+        # TODO: Remove this block.
+        # Uncomment and run `pytest -s` to manually verify your MongoDB set-up.
+        # genes = client[db_name].genes
+        # gene = {'gene': 'HBB'}
+        # gene_mongo_id = genes.insert_one(gene).inserted_id
+        # print(f'gene_mongo_id {gene_mongo_id}')
+
+        return client[db_name]
 
     def initialize_file_connection(self, file_type, file_path):
         """Initializes connection to file.
@@ -112,114 +136,59 @@ class IngestPipeline(object):
             "loom": Loom,
         }
         return file_connections.get(file_type)(
-            file_path, self.file_id, self.study_accession, **self.kwargs
+            file_path, self.study_id, self.study_file_id, **self.kwargs
         )
 
     def close_matrix(self):
         """Closes connection to file"""
         self.matrix.close()
 
-    def load_expression_data(self, list_of_expression_models: List[Gene]) -> None:
-        """Loads expression data into Firestore.
-
-        Args:
-            list_of_transformed_data: List[Gene]
-            A list of object type Gene that's stored into Firestore
-
-        Returns:
-            None
-        """
-        for expression_model in list_of_expression_models:
-            collection_name = expression_model.COLLECTION_NAME
-            batch = self.db.batch()
-            doc_ref = self.db.collection(collection_name).document()
-            batch.set(doc_ref, expression_model.top_level_doc)
-            batch.commit()
-            i = 0
-            if expression_model.has_subcollection_data():
-                try:
-                    print(f"Ingesting {expression_model.name}")
-                    subcollection_name = expression_model.SUBCOLLECTION_NAME
-                    doc_ref_sub = doc_ref.collection(subcollection_name).document()
-                    print(
-                        f"Length of scores is: {len(expression_model.expression_scores)}"
-                    )
-                    doc_ref_sub.set(expression_model.subdocument)
-                except exceptions.InvalidArgument as e:
-                    # Catches invalid argument exception, which error "Maximum
-                    # document size" falls under
-                    print(e)
-                    batch = self.db.batch()
-                    for subdoc in expression_model.chunk_gene_expression_documents(
-                        doc_ref_sub.id, doc_ref_sub._document_path
-                    ):
-                        print({i})
-                        batch.set(doc_ref_sub, subdoc)
-                        i += 1
-
-                    batch.commit()
-
-    def load_cell_metadata(self, cell_metadata_model):
-        """Loads cell metadata files into firestore."""
-        collection_name = cell_metadata_model.COLLECTION_NAME
-        subcollection_name = cell_metadata_model.SUBCOLLECTION_NAME
-        # Firestore document reference
-        doc_ref = self.db.collection(collection_name).document()
-        doc_ref.set(cell_metadata_model.doc)
+    def load(
+        self,
+        model,
+        set_data_array_fn,
+        *set_data_array_fn_args,
+        **set_data_array_fn_kwargs,
+    ):
         try:
-            # Firestore subdocument reference
-            sub_doc_ref = doc_ref.collection(subcollection_name).document()
-            sub_doc_ref.set(cell_metadata_model.subdoc)
-        except exceptions.InvalidArgument as e:
-            # Catches invalid argument exception, which error "Maximum
-            # document size" falls under
-            print(e)
-            batch = self.db.batch()
-            for subdoc_chunk in self.cell_metadata.chunk_subdocuments(
-                sub_doc_ref.id, sub_doc_ref._document_path, cell_metadata_model
-            ):
-                batch.set(sub_doc_ref, subdoc_chunk)
 
-            batch.commit()
+            print(model)
+            # TODO: Get Linear_id from model
+            for data_array_model in set_data_array_fn(
+                'linear_id', *set_data_array_fn_args, **set_data_array_fn_kwargs
+            ):
+                print(data_array_model)
         except Exception as e:
-            # TODO: Log this error
             print(e)
             return 1
         return 0
 
-    def load_cluster_files(self):
-        """Loads cluster files into Firestore."""
-        collection_name = self.cluster.COLLECTION_NAME
-        doc_ref = self.db.collection(collection_name).document()
-        doc_ref.set(self.cluster.top_level_doc)
-        subcollection_name = self.cluster.SUBCOLLECTION_NAME
-        for annot_name in self.cluster.cluster_subdocs.keys():
-            # batch = self.db.batch()
-            doc_ref_sub = doc_ref.collection(subcollection_name).document()
-            doc_ref_sub.set(self.cluster.cluster_subdocs[annot_name])
-        # TODO: Add exception handling and return codes
-
-    def load_subsample(self, doc):
-        """Loads subsampled data into Firestore"""
+    def load_subsample(self, subsampled_data, set_data_array_fn, scope):
+        """Loads subsampled data into MongoDB"""
+        for key_value in subsampled_data[0].items():
+            annot_name = subsampled_data[1][0]
+            cluster_name = '?'
+            annot_type = subsampled_data[1][1]
+            sample_size = subsampled_data[2]
         try:
-            docs = (
-                self.db.collection(u'clusters')
-                .where(u'study_accession', u'==', self.study_accession)
-                .where(u'file_id', u'==', self.file_id)
-            ).stream()
-            doc_id = next(docs).id
-            subdoc_ref = (
-                self.db.collection(u'clusters')
-                .document(doc_id)
-                .collection('data')
-                .document()
+            # Either query mongo for linear_id from parent or have it passed in
+            model = set_data_array_fn(
+                (
+                    key_value[0],
+                    cluster_name,
+                    key_value[1],
+                    subsampled_data[1],
+                    self.study_file_id,
+                    self.study_id,
+                    '123456789asdfg',
+                ),
+                {
+                    'subsample_annotation': f"{annot_name}--{annot_type}--{scope}",
+                    'subsample_threshold': sample_size,
+                },
             )
+            print(model)
 
-            subdoc_ref.set(doc)
-        except exceptions.InvalidArgument as e:
-            # Catches invalid argument exception, which error "Maximum
-            # document size" falls under
-            print(e)
         except Exception as e:
             # TODO: Log this error
             print(e)
@@ -228,48 +197,39 @@ class IngestPipeline(object):
 
     def has_valid_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        with open(self.JSON_CONVENTION, 'r') as f:
-            convention = json.load(f)
-
+        json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        convention = json.load(json_file.file)
         validate_input_metadata(self.cell_metadata, convention)
+
+        json_file.file_handle.close()
         return not report_issues(self.cell_metadata)
 
     def ingest_expression(self) -> None:
-        """Ingests expression files. Calls file type's extract and transform
-        functions. Then loads data into Firestore.
-
-        Args:
-            None
-
-        Returns:
-            None
+        """Ingests expression files.
         """
-        transformed_data = []
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
-            transformed_data = self.matrix.transform_expression_data_by_gene()
-        elif self.matrix_file_type == "loom":
-            for expression_ds in self.matrix.extract():
-                transformed_data = (
-                    transformed_data
-                    + self.matrix.transform_expression_data_by_gene(expression_ds)
+        for idx, gene in enumerate(self.matrix.transform()):
+            if idx == 0:
+                self.load(
+                    gene.gene_model,
+                    self.matrix.set_data_array,
+                    gene.gene_name,
+                    gene.gene_model['searchable_name'],
+                    {'create_cell_data_array': True},
                 )
-        else:
-            while True:
-                row = self.matrix.extract()
-                if row is None:
-                    break
-                transformed_data.append(
-                    self.matrix.transform_expression_data_by_gene(row)
+            else:
+                self.load(
+                    gene.gene_model,
+                    self.matrix.set_data_array,
+                    gene.gene_name,
+                    gene.gene_model['searchable_name'],
                 )
-        self.load_expression_data(transformed_data)
-        # TODO: Work on exception handling
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        # TODO: Add self.has_valid_metadata_convention() to if statement
-        if self.cell_metadata.is_valid_file:
-            # Check to see file needs to be check against metadata convention
+        if self.cell_metadata.validate_format():
+            # Check file against metadata convention
             if self.kwargs['validate_convention'] is not None:
                 if self.kwargs['validate_convention']:
                     if self.has_valid_metadata_convention():
@@ -279,23 +239,22 @@ class IngestPipeline(object):
             self.cell_metadata.reset_file(2, open_as="dataframe")
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
-                load_status = self.load_cell_metadata(metadataModel)
-                if load_status != 0:
-                    return load_status
-            return 0
-        else:
-            return 1
+                # This is where to load Top-level ClusterGroup document
+                # TODO: 'Linear_id' will need to change to MongoDB ObjectId
+                status = self.load(
+                    metadataModel.model,
+                    self.cell_metadata.set_data_array,
+                    metadataModel.annot_header,
+                )
+                if status != 0:
+                    return status
+            return status
 
     def ingest_cluster(self):
-        """Ingests cluster files into Firestore."""
-        while True:
-            row = self.cluster.extract()
-            if row is None:
-                self.cluster.update_points()
-                self.cluster.update_cell_annotations_field()
-                break
-            self.cluster.transform(row)
-        self.load_cluster_files()
+        """Ingests cluster files."""
+        if self.cluster.validate_format():
+            annotation_model = self.cluster.transform()
+            return self.load(annotation_model, self.cluster.get_data_array_annot)
 
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
@@ -304,31 +263,31 @@ class IngestPipeline(object):
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
         )
 
-        def create_cluster_subdoc(scope):
-            for subdoc in subsample.subsample():
-                annot_name = subdoc[1][0].lower()
-                annot_type = subdoc[1][1]
-                sample_size = subdoc[2]
-                for key_value in subdoc[0].items():
-                    yield Clusters.return_cluster_subdocs(
-                        key_value[0],
-                        values=key_value[1],
-                        subsample_annotation=f"{annot_name}--{annot_type}--{scope}",
-                        subsample_threshold=sample_size,
-                    )
-
-        for doc in create_cluster_subdoc("cluster"):
-            load_status = self.load_subsample(doc)
+        for data in subsample.subsample():
+            load_status = self.load_subsample(data, subsample.set_data_array, 'cluster')
             if load_status != 0:
                 return load_status
 
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
-            for doc in create_cluster_subdoc("study"):
-                load_status = self.load_subsample(doc)
+            for doc in subsample.subsample():
+                load_status = load_status = self.load_subsample(
+                    data, subsample.set_data_array, 'study'
+                )
                 if load_status != 0:
                     return load_status
         return 0
+
+    def delocalize_error_file(self):
+        """Writes local error file to Google bucket
+        """
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket(self.cell_metadata.bucket)
+        destination_blob_name = f'parse_logs/{self.file_id}/errors.txt'
+        blob = bucket.blob(destination_blob_name)
+        source_file_name = 'scp_validation_errors.txt'
+        blob.upload_from_filename(source_file_name)
+        print(f'File {source_file_name} uploaded to {destination_blob_name}.')
 
 
 def create_parser():
@@ -347,11 +306,11 @@ def create_parser():
     )
 
     parser.add_argument(
-        "--study-accession",
+        "--study-file-id",
         required=True,
         help="Single study accession associated with ingest files",
     )
-    parser.add_argument("--file-id", required=True, help="MongoDB identifier")
+    parser.add_argument("--study-id", required=True, help="MongoDB identifier")
 
     subparsers = parser.add_subparsers()
 
@@ -420,6 +379,11 @@ def create_parser():
         help="Absolute or relative path to cell metadata file.",
     )
     parser_cell_metadata.add_argument(
+        "--study-accession",
+        required=True,
+        help="Single study accession associated with ingest files.",
+    )
+    parser_cell_metadata.add_argument(
         "--ingest-cell-metadata",
         required=True,
         action="store_true",
@@ -464,6 +428,9 @@ def create_parser():
         required=True,
         action="store_true",
         help="Indicates that subsampliing functionality should be invoked",
+    )
+    parser_subsample.add_argument(
+        "--name", required=True, help="Name of cluster from input form"
     )
     parser_subsample.add_argument(
         "--cluster-file",
@@ -513,23 +480,27 @@ def main() -> None:
     ingest = IngestPipeline(**arguments)
     # TODO: Add validation for gene and cluster file types
     if "matrix_file" in arguments:
-        ingest.ingest_expression()
+        status.append(ingest.ingest_expression())
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
             status_cell_metadata = ingest.ingest_cell_metadata()
             status.append(status_cell_metadata)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
-            ingest.ingest_cluster()
+            status.append(ingest.ingest_cluster())
     elif "subsample" in arguments:
         if arguments["subsample"]:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
-    # TODO: This check will need to changed
     if all(i < 1 for i in status) or len(status) == 0:
         sys.exit(os.EX_OK)
     else:
+        if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
+            ingest.delocalize_error_file()
+        # PAPI jobs failing metadata validation against convention report
+        #   "unexpected exit status 65 was not ignored"
+        # EX_DATAERR (65) The input data was incorrect in some way.
         sys.exit(os.EX_DATAERR)
 
 

@@ -2,23 +2,20 @@ import copy
 from typing import List, Tuple  # noqa: F401
 
 import numpy as np
-from ingest_files import IngestFiles
+from annotations import Annotations
+from clusters import Clusters
 
 
-class SubSample(IngestFiles):
+class SubSample(Annotations):
     ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
     MAX_THRESHOLD = 100_000
     SUBSAMPLE_THRESHOLDS = [MAX_THRESHOLD, 20_000, 10_000, 1_000]
 
-    def __init__(self, *, cluster_file=None, cell_metadata_file=None):
-        IngestFiles.__init__(
-            self, cluster_file, self.ALLOWED_FILE_TYPES, open_as='dataframe'
-        )
+    def __init__(self, cluster_file, cell_metadata_file=None):
+        Annotations.__init__(self, cluster_file, self.ALLOWED_FILE_TYPES)
         self.determine_coordinates_and_cell_names()
         self.cell_metadata_df = (
-            IngestFiles(
-                cell_metadata_file, self.ALLOWED_FILE_TYPES, open_as='dataframe'
-            )
+            Annotations(cell_metadata_file, self.ALLOWED_FILE_TYPES)
             if cell_metadata_file is not None
             else None
         )
@@ -75,6 +72,7 @@ class SubSample(IngestFiles):
             columns = copy.copy(self.coordinates_and_cell_names)
             # coordinates, cell names and annotation name
             columns.append(annotation[0])
+            # Subset of df where header is [cell_names, x, y, z, <annot_name>]
             subset = self.file[columns].copy()
             subset.sort_values(by=[annotation], inplace=True)
             # Generates 20 bins
@@ -100,10 +98,10 @@ class SubSample(IngestFiles):
                 # Dict of values for the x, y, and z coordinates
                 points = {k: [] for k in self.coordinates_and_cell_names}
                 num_per_group = int(sample_size / group_size)
-
+                cells_left = sample_size
                 # bin = ("unique value in column" : dataframe)
                 for bin in self.return_sorted_bin(anotation_dict, annotation_name):
-                    cells_left = sample_size
+
                     amount_of_rows = len(bin[1].index)
                     # If the amount of sampled values is larger
                     # than the whole array, take the whole array
@@ -136,3 +134,6 @@ class SubSample(IngestFiles):
             return sorted(bin.items(), key=lambda x: len(x[1]))
         else:
             return bin.items()
+
+    def set_data_array(self, args, kwargs):
+        return Clusters.set_data_array(*args, **kwargs)
