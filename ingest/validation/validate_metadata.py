@@ -25,6 +25,7 @@ import os
 import colorama
 from colorama import Fore
 import jsonschema
+from google.cloud import bigquery
 
 sys.path.append('..')
 try:
@@ -73,10 +74,18 @@ def create_parser():
     # to generate json for bigquery testing
     parser.add_argument('--bq-json', action='store_true')
     # validate_metadata.py CLI only for dev, bogus defaults below shouldn't propagate
-    parser.add_argument('--file-id', help='MongoDB identifier', default='Mongo_none')
     parser.add_argument(
-        '--study-accession', help='SCP study accession', default='SCP_none'
+        '--study-id',
+        help='MongoDB study identifier',
+        default='6d276a50421aa9117c982846',
     )
+    parser.add_argument(
+        '--study-file-id', help='MongoDB file identifier', default='abc123'
+    )
+    parser.add_argument(
+        '--study-accession', help='SCP study accession', default='SCP888'
+    )
+
     parser.add_argument('convention', help='Metadata convention JSON file ')
     parser.add_argument('input_metadata', help='Metadata TSV file')
     return parser
@@ -362,7 +371,7 @@ def process_metadata_row(metadata, convention, line):
     return processed_row
 
 
-def collect_jsonschema_errors(metadata, convention, bq_json=None):
+def collect_jsonschema_errors(metadata, convention, bq_json=None, filename=None):
     """Evaluate metadata input against metadata convention using JSON schema
     returns False if input convention is invalid JSON schema
     """
@@ -380,7 +389,10 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
             row = process_metadata_row(metadata, convention, line)
             metadata.cells.append(row['CellID'])
             if bq_json:
-                serialize_bq(row)
+                # add non-convention, SCP-required, metadata for BigQuery
+                row['study_accession'] = metadata.study_accession
+                row['file_id'] = metadata.study_file_id
+                serialize_bq(row, filename)
             collect_ontology_data(row, metadata, convention)
             for error in schema.iter_errors(row):
                 try:
@@ -609,12 +621,12 @@ def confirm_uniform_units(metadata, convention):
                 metadata.store_validation_issue('error', 'convention', error_msg)
 
 
-def serialize_bq(bq_dict):
+def serialize_bq(bq_dict, filename='bq.json'):
     """Write metadata collected for validation to json file
     BigQuery requires newline delimited json objects
     """
     data = json.dumps(bq_dict)
-    with open('bq.json', 'a') as jsonfile:
+    with open(filename, 'a') as jsonfile:
         jsonfile.write(data + '\n')
 
 
@@ -648,14 +660,47 @@ def validate_input_metadata(metadata, convention, bq_json=None):
     confirm_uniform_units(metadata, convention)
 
 
+def push_metadata_to_bq(ndjson):
+    """upload local NDJSON to BigQuery
+    """
+    client = bigquery.Client()
+    dataset_ref = client.dataset('cell_metadata')
+    table_ref = dataset_ref.table('alexandria')
+    job_config = bigquery.LoadJobConfig()
+    job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
+    job_config.source_format = bigquery.SourceFormat.NEWLINE_DELIMITED_JSON
+    with open(ndjson, 'rb') as source_file:
+        job = client.load_table_from_file(source_file, table_ref, job_config=job_config)
+
+    job.result()  # Waits for table load to complete.
+    print("Metadata uploaded to BigQuery.")
+    print("Loaded {} rows into {}.".format(job.output_rows, table_ref))
+    destination_table = client.get_table(table_ref)
+    print("{} rows in destination table.".format(destination_table.num_rows))
+    os.remove(ndjson)
+
+
+def write_metadata_to_bq(metadata, convention):
+    """Wrapper function to gather metadata and write to BigQuery
+    """
+    bq_name = metadata.study_file_id + '.json'
+    collect_jsonschema_errors(metadata, convention, bq_json=True, filename=bq_name)
+    # gsutil bq.json to bucket?
+    push_metadata_to_bq(bq_name)
+
+
 if __name__ == '__main__':
     args = create_parser().parse_args()
     arguments = vars(args)
     with open(args.convention, 'r') as f:
         convention = json.load(f)
-    filetsv = args.input_metadata
-    metadata = CellMetadata(filetsv, args.file_id, args.study_accession)
-    print('Validating', filetsv)
+    metadata = CellMetadata(
+        file_path=args.input_metadata,
+        study_id=args.study_id,
+        study_file_id=args.study_file_id,
+        study_accession=args.study_accession,
+    )
+    print('Validating', args.input_metadata)
     if args.bq_json:
         if os.path.exists('bq.json'):
             print('bq.json already exists, please delete file and try again')

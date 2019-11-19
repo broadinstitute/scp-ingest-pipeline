@@ -46,12 +46,17 @@ from clusters import Clusters
 from dense import Dense
 from pymongo import MongoClient
 from mtx import Mtx
+from google.cloud import storage
 
 # from ingest_files import IngestFiles
 from subsample import SubSample
 from loom import Loom
 from ingest_files import IngestFiles
-from validation.validate_metadata import validate_input_metadata, report_issues
+from validation.validate_metadata import (
+    validate_input_metadata,
+    report_issues,
+    write_metadata_to_bq,
+)
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
@@ -203,6 +208,15 @@ class IngestPipeline(object):
 
         json_file.file_handle.close()
         return not report_issues(self.cell_metadata)
+
+    def write_metadata_to_bq(self):
+        """Uploads metadata to BigQuery"""
+
+        json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        convention = json.load(json_file.file)
+        write_metadata_to_bq(self.cell_metadata, convention)
+
+        json_file.file_handle.close()
 
     def ingest_expression(self) -> None:
         """Ingests expression files.
@@ -494,6 +508,7 @@ def main() -> None:
             status.append(status_subsample)
 
     if all(i < 1 for i in status) or len(status) == 0:
+        ingest.write_metadata_to_bq()
         sys.exit(os.EX_OK)
     else:
         if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
