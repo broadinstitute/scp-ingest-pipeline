@@ -18,8 +18,8 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 12
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_v1.1.1.tsv --study-accession SCP123 --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
-!! Please note that you must have permission to the SCP bucket
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
+!! Please note that you must have a pre-configured BigQuery table available
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
 
 # Ingest dense file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
@@ -211,12 +211,27 @@ class IngestPipeline(object):
 
     def write_metadata_to_bq(self):
         """Uploads metadata to BigQuery"""
+        if self.kwargs['validate_convention'] is not None:
+            if (
+                self.kwargs['validate_convention']
+                and self.kwargs['bq_dataset']
+                and self.kwargs['bq_table']
+            ):
+                json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+                convention = json.load(json_file.file)
+                write_status = write_metadata_to_bq(
+                    self.cell_metadata,
+                    convention,
+                    self.kwargs['bq_dataset'],
+                    self.kwargs['bq_table'],
+                )
 
-        json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
-        convention = json.load(json_file.file)
-        write_metadata_to_bq(self.cell_metadata, convention)
-
-        json_file.file_handle.close()
+                json_file.file_handle.close()
+                return write_status
+            else:
+                print('missing bigquery parameters for metadata upload')
+                return 1
+        return 0
 
     def ingest_expression(self) -> None:
         """Ingests expression files.
@@ -398,6 +413,12 @@ def create_parser():
         help="Single study accession associated with ingest files.",
     )
     parser_cell_metadata.add_argument(
+        "--bq-dataset", help="BigQuery dataset identifer for ingest job."
+    )
+    parser_cell_metadata.add_argument(
+        "--bq-table", help="BigQuery table identifer for ingest job."
+    )
+    parser_cell_metadata.add_argument(
         "--ingest-cell-metadata",
         required=True,
         action="store_true",
@@ -499,6 +520,8 @@ def main() -> None:
         if arguments["ingest_cell_metadata"]:
             status_cell_metadata = ingest.ingest_cell_metadata()
             status.append(status_cell_metadata)
+            status_metadata_bq = ingest.write_metadata_to_bq()
+            status.append(status_metadata_bq)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
             status.append(ingest.ingest_cluster())
@@ -507,16 +530,26 @@ def main() -> None:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
-    if all(i < 1 for i in status) or len(status) == 0:
-        ingest.write_metadata_to_bq()
-        sys.exit(os.EX_OK)
-    else:
-        if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
-            ingest.delocalize_error_file()
+    if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
+        ingest.delocalize_error_file()
+
+    if status_cell_metadata > 0:
         # PAPI jobs failing metadata validation against convention report
         #   "unexpected exit status 65 was not ignored"
         # EX_DATAERR (65) The input data was incorrect in some way.
         sys.exit(os.EX_DATAERR)
+    elif status_metadata_bq > 0:
+        # PAPI jobs failing BigQuery upload
+        #   "unexpected exit status 76 was not ignored"
+        # EX_PROTOCOL (76) A protocol exchange was illegal, invalid, or not understood.
+        sys.exit(os.EX_PROTOCOL)
+    elif all(i < 1 for i in status) or len(status) == 0:
+        sys.exit(os.EX_OK)
+    else:
+        # PAPI jobs failing for non-metadata statuses
+        #   "unexpected exit status 70 was not ignored"
+        # EX_SOFTWARE (70) An internal software error has been detected.
+        sys.exit(os.EX_SOFTWARE)
 
 
 if __name__ == "__main__":

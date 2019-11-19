@@ -73,6 +73,10 @@ def create_parser():
     # helper param to create JSON representation of convention metadata
     # to generate json for bigquery testing
     parser.add_argument('--bq-json', action='store_true')
+    # overwrite existing output
+    parser.add_argument('--force', action='store_true')
+    # test BigQuery upload functions
+    parser.add_argument('--upload', action='store_true')
     # validate_metadata.py CLI only for dev, bogus defaults below shouldn't propagate
     parser.add_argument(
         '--study-id',
@@ -85,7 +89,12 @@ def create_parser():
     parser.add_argument(
         '--study-accession', help='SCP study accession', default='SCP888'
     )
-
+    parser.add_argument(
+        '--bq-dataset', help='BigQuery dataset identifier', default='cell_metadata'
+    )
+    parser.add_argument(
+        '--bq-table', help='BigQuery table identifier', default='alexandria_convention'
+    )
     parser.add_argument('convention', help='Metadata convention JSON file ')
     parser.add_argument('input_metadata', help='Metadata TSV file')
     return parser
@@ -660,38 +669,75 @@ def validate_input_metadata(metadata, convention, bq_json=None):
     confirm_uniform_units(metadata, convention)
 
 
-def push_metadata_to_bq(ndjson):
+def push_metadata_to_bq(metadata, ndjson, dataset, table):
     """upload local NDJSON to BigQuery
     """
     client = bigquery.Client()
-    dataset_ref = client.dataset('cell_metadata')
-    table_ref = dataset_ref.table('alexandria')
+    dataset_ref = client.dataset(dataset)
+    table_ref = dataset_ref.table(table)
+    destination_table_preload = client.get_table(table_ref)
     job_config = bigquery.LoadJobConfig()
     job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
     job_config.source_format = bigquery.SourceFormat.NEWLINE_DELIMITED_JSON
     with open(ndjson, 'rb') as source_file:
         job = client.load_table_from_file(source_file, table_ref, job_config=job_config)
-
     job.result()  # Waits for table load to complete.
-    print("Metadata uploaded to BigQuery.")
-    print("Loaded {} rows into {}.".format(job.output_rows, table_ref))
-    destination_table = client.get_table(table_ref)
-    print("{} rows in destination table.".format(destination_table.num_rows))
-    os.remove(ndjson)
+    print(f'Metadata uploaded to BigQuery. ({job.output_rows} rows)')
+    destination_table_postload = client.get_table(table_ref)
+    print(f'{len(metadata.cells)} cells')
+    rows_loaded = (
+        destination_table_postload.num_rows - destination_table_preload.num_rows
+    )
+    if job.output_rows != len(metadata.cells):
+        print(
+            f'BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells'
+        )
+        return 1
+    elif rows_loaded != len(metadata.cells):
+        print(
+            f'BigQuery upload error: calculated new rows ({rows_loaded} rows) does not match number of cells in file, {len(metadata.cells)} cells'
+        )
+        return 1
+    return 0
 
 
-def write_metadata_to_bq(metadata, convention):
+def write_metadata_to_bq(metadata, convention, bq_dataset, bq_table):
     """Wrapper function to gather metadata and write to BigQuery
     """
     bq_name = metadata.study_file_id + '.json'
+    # 2nd collect_jsonschema_errors adds cells to CellMetadata object twice
+    # reset cells for accurate # rows expected for addition to BigQuery
+    # @eno are there side effects I need to worry about? or a better way?
+    metadata.cells = []
     collect_jsonschema_errors(metadata, convention, bq_json=True, filename=bq_name)
-    # gsutil bq.json to bucket?
-    push_metadata_to_bq(bq_name)
+    push_status = push_metadata_to_bq(metadata, bq_name, bq_dataset, bq_table)
+    return push_status
+
+
+def check_if_old_output():
+    """Exit if old output files found
+    """
+    output_files = [
+        'scp_validation_errors.txt',
+        'scp_validation_warnings.txt',
+        'bq.json',
+    ]
+
+    old_output = False
+    for file in output_files:
+        if os.path.exists(file):
+            print(f'{file} already exists, please delete file and try again')
+            old_output = True
+    if old_output:
+        exit(1)
 
 
 if __name__ == '__main__':
     args = create_parser().parse_args()
     arguments = vars(args)
+    if not args.force:
+        check_if_old_output()
+
     with open(args.convention, 'r') as f:
         convention = json.load(f)
     metadata = CellMetadata(
@@ -701,12 +747,11 @@ if __name__ == '__main__':
         study_accession=args.study_accession,
     )
     print('Validating', args.input_metadata)
-    if args.bq_json:
-        if os.path.exists('bq.json'):
-            print('bq.json already exists, please delete file and try again')
-            exit(1)
+
     validate_input_metadata(metadata, convention, args.bq_json)
     if args.issues_json:
         serialize_issues(metadata)
     report_issues(metadata)
+    if args.upload:
+        write_metadata_to_bq(metadata, convention, args.bq_dataset, args.bq_table)
     exit_if_errors(metadata)
