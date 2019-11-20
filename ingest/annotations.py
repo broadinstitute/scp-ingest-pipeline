@@ -79,7 +79,7 @@ class Annotations(IngestFiles):
             "numeric", axis=1, level=1, drop_level=False
         ).columns.tolist()
         # TODO perform replace
-        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(int)
+        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
