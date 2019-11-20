@@ -172,13 +172,13 @@ class IngestPipeline(object):
         """Loads subsampled data into MongoDB"""
         documents = []
         for key_value in subsampled_data[0].items():
-            print(key_value[0])
             annot_name = subsampled_data[1][0]
             annot_type = subsampled_data[1][1]
             sample_size = subsampled_data[2]
             try:
                 # Query mongo for linear_id and name of parent
                 query = {'study_id': self.study_id}
+                # Return 'name' and 'id' fields from query results
                 parent_data = self.db[parent_collection_name].find_one(
                     query, {'name': 1}
                 )
