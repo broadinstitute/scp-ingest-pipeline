@@ -152,49 +152,59 @@ class IngestPipeline(object):
         **set_data_array_fn_kwargs,
     ):
         documents = []
-        # get collection
+
         try:
+            print(model)
             linear_id = self.db[collection_name].insert(model)
             for data_array_model in set_data_array_fn(
-                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
+                'linear_id', *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
+                print(data_array_model)
                 documents.append(data_array_model)
+                # print(data_array_model)
             self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             print(e)
             return 1
         return 0
 
-    def load_subsample(self, subsampled_data, set_data_array_fn, scope):
+    def load_subsample(
+        self, parent_collection_name, subsampled_data, set_data_array_fn, scope
+    ):
         """Loads subsampled data into MongoDB"""
+        documents = []
         for key_value in subsampled_data[0].items():
+            print(key_value[0])
             annot_name = subsampled_data[1][0]
-            cluster_name = '?'
             annot_type = subsampled_data[1][1]
             sample_size = subsampled_data[2]
-        try:
-            # Either query mongo for linear_id from parent or have it passed in
-            model = set_data_array_fn(
-                (
-                    key_value[0],
-                    cluster_name,
-                    key_value[1],
-                    subsampled_data[1],
-                    self.study_file_id,
-                    self.study_id,
-                    '123456789asdfg',
-                ),
-                {
-                    'subsample_annotation': f"{annot_name}--{annot_type}--{scope}",
-                    'subsample_threshold': sample_size,
-                },
-            )
-            print(model)
+            try:
+                # Query mongo for linear_id and name of parent
+                query = {'study_id': self.study_id}
+                parent_data = self.db[parent_collection_name].find_one(
+                    query, {'name': 1}
+                )
+                for model in set_data_array_fn(
+                    (
+                        key_value[0],
+                        parent_data['name'],
+                        key_value[1],
+                        self.study_file_id,
+                        self.study_id,
+                        str(parent_data['_id']),
+                    ),
+                    {
+                        'subsample_annotation': f"{annot_name}--{annot_type}--{scope}",
+                        'subsample_threshold': sample_size,
+                    },
+                ):
+                    documents.append(model)
+                self.db['data_arrays'].insert_many(documents)
 
-        except Exception as e:
-            # TODO: Log this error
-            print(e)
-            return 1
+            except Exception as e:
+                # TODO: Log this error
+                print(e)
+                return 1
         return 0
 
     def has_valid_metadata_convention(self):
@@ -258,12 +268,15 @@ class IngestPipeline(object):
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate_format():
-            annotation_model = self.cluster.transform()
-            return self.load(
-                self.cluster.COLLECTION_NAME,
-                annotation_model,
-                self.cluster.get_data_array_annot,
-            )
+            for annotation_model in self.cluster.transform():
+                status = self.load(
+                    self.cluster.COLLECTION_NAME,
+                    annotation_model,
+                    self.cluster.get_data_array_annot,
+                )
+                if status != 0:
+                    return status
+        return status
 
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
@@ -273,7 +286,9 @@ class IngestPipeline(object):
         )
 
         for data in subsample.subsample():
-            load_status = self.load_subsample(data, subsample.set_data_array, 'cluster')
+            load_status = self.load_subsample(
+                Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
+            )
             if load_status != 0:
                 return load_status
 
@@ -281,7 +296,10 @@ class IngestPipeline(object):
             subsample.prepare_cell_metadata()
             for doc in subsample.subsample():
                 load_status = load_status = self.load_subsample(
-                    data, subsample.set_data_array, 'study'
+                    CellMetadata.COLLECTION_NAME,
+                    data,
+                    subsample.set_data_array,
+                    'study',
                 )
                 if load_status != 0:
                     return load_status
@@ -483,6 +501,7 @@ def main() -> None:
         None
     """
     status = []
+    status_cell_metadata = None
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
@@ -505,8 +524,9 @@ def main() -> None:
     if all(i < 1 for i in status) or len(status) == 0:
         sys.exit(os.EX_OK)
     else:
-        if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
-            ingest.delocalize_error_file()
+        if status_cell_metadata is not None:
+            if status_cell_metadata == 0 and ingest.cell_metadata.is_remote_file:
+                ingest.delocalize_error_file()
         # PAPI jobs failing metadata validation against convention report
         #   "unexpected exit status 65 was not ignored"
         # EX_DATAERR (65) The input data was incorrect in some way.

@@ -22,7 +22,7 @@ pytest -s
 
 # Run all tests, using multiple CPUs
 # Details: https://pypi.org/project/pytest-xdist/
-pytest -ns auto
+pytest -n auto -s
 
 # Run all tests, show code coverage metrics
 pytest --cov=../ingest/
@@ -122,7 +122,8 @@ class IngestTestCase(unittest.TestCase):
             'dense',
         ]
         ingest = self.setup_ingest(args)
-        model = ingest.load_args[0]
+        model = ingest.load_args[1]
+        print(model)
 
         # Verify gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
@@ -157,7 +158,8 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)
 
-        model = ingest.load_args[0]
+        model = ingest.load_args[1]
+        print(model)
 
         # Verify that the first gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
@@ -193,7 +195,7 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)
 
-        model = ingest.load_args[0]
+        model = ingest.load_args[1]
         # Verify that the first gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
         expected_model = get_gene_model(mock_dir)
@@ -231,7 +233,8 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)
 
-        model = ingest.load_args[0]
+        model = ingest.load_args[1]
+        # print(model)
 
         mock_dir = 'matrix_mtx'
         expected_model = get_gene_model(mock_dir)

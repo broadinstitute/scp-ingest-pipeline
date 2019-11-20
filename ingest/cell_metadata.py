@@ -80,7 +80,7 @@ class CellMetadata(Annotations):
         head, tail = ntpath.split(self.file_path)
         base_data_array_model = {
             'cluster_name': tail or ntpath.basename(head),
-            'value': list(self.file[annot_header]),
+            'values': list(self.file[annot_header]),
             'study_file_id': self.study_file_id,
             'study_id': self.study_id,
         }
@@ -102,8 +102,7 @@ class CellMetadata(Annotations):
                     'linear_data_type': 'CellMetadatum',
                 }
             )
-        da: DataArray = {**base_data_array_model, **data_array_attrs}
-        yield da
+        return DataArray(**base_data_array_model, **data_array_attrs).get_data_array()
 
     def yield_by_row(self) -> None:
         """ Yield row from cell metadata file"""
