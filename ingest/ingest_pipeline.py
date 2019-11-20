@@ -15,7 +15,7 @@ EXAMPLES
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_v1.1.1.tsv --study-accession SCP123 --ingest-cell-metadata
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --study-accession SCP123 --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have permission to the SCP bucket
@@ -151,7 +151,7 @@ class IngestPipeline(object):
         *set_data_array_fn_args,
         **set_data_array_fn_kwargs,
     ):
-        document = []
+        documents = []
         # get collection
         try:
             linear_id = self.db[collection_name].insert(model)
@@ -159,7 +159,7 @@ class IngestPipeline(object):
                 linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
                 documents.append(data_array_model)
-                self.db['data_arrays'].insert_many(data_array_model)
+            self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             print(e)
             return 1

@@ -9,7 +9,6 @@ import os
 import re
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
-from mypy_extensions import TypedDict
 import gzip
 import pandas as pd  # NOqa: F821
 from google.cloud import storage
