@@ -154,14 +154,12 @@ class IngestPipeline(object):
         documents = []
 
         try:
-            print(model)
             linear_id = self.db[collection_name].insert(model)
             for data_array_model in set_data_array_fn(
-                'linear_id', *set_data_array_fn_args, **set_data_array_fn_kwargs
+                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
-                print(data_array_model)
+
                 documents.append(data_array_model)
-                # print(data_array_model)
             self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             print(e)
