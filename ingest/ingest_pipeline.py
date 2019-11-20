@@ -48,15 +48,27 @@ from pymongo import MongoClient
 from mtx import Mtx
 from google.cloud import storage
 
-# from ingest_files import IngestFiles
-from subsample import SubSample
-from loom import Loom
-from ingest_files import IngestFiles
-from validation.validate_metadata import (
-    validate_input_metadata,
-    report_issues,
-    write_metadata_to_bq,
-)
+try:
+    # Used when importing internally and in tests
+    from ingest_files import IngestFiles
+    from subsample import SubSample
+    from loom import Loom
+    from validation.validate_metadata import (
+        validate_input_metadata,
+        report_issues,
+        write_metadata_to_bq,
+    )
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .ingest_files import IngestFiles
+    from .subsample import SubSample
+    from .loom import Loom
+    from .validation.validate_metadata import (
+        validate_input_metadata,
+        report_issues,
+        write_metadata_to_bq,
+    )
+
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]

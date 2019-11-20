@@ -12,9 +12,16 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
 import ntpath
-from annotations import Annotations
 import collections
-from ingest_files import DataArray
+
+try:
+    # Used when importing internally and in tests
+    from annotations import Annotations
+    from ingest_files import DataArray
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .annotations import Annotations
+    from .ingest_files import DataArray
 
 
 class CellMetadata(Annotations):

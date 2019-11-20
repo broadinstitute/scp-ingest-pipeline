@@ -9,6 +9,7 @@ setup(
     install_requires=[
         'google-cloud-firestore',
         'google-cloud-storage',
+        'google-cloud-bigquery',
         'requests',
         'numpy',
         'scipy',
