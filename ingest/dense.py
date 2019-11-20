@@ -30,10 +30,8 @@ class Dense(GeneExpression):
         self.matrix_params = kwargs
         # Remove trailing white spaces, and quotes from column names
         self.file.rename(
-            columns=lambda x: x.strip().strip('\"').strip('\''), inplace=True
-        )
-        self.file.rename(
-            columns=lambda x: x.strip().strip('\'').strip('\"'), inplace=True
+            columns=lambda x: x.strip().strip('\"').strip('\'').strip('\"'),
+            inplace=True,
         )
 
     def transform(self):
@@ -72,7 +70,7 @@ class Dense(GeneExpression):
         gene_df = self.file[self.file['GENE'] == unformatted_gene_name]
 
         if create_cell_data_array:
-            yield self.set_data_array_cells(self.file['GENE'].tolist())
+            return self.set_data_array_cells(self.file['GENE'].tolist(), linear_data_id)
         # Get list of cell names
         cells = self.file.columns.tolist()[1:]
         # Get row of expression values for gene
@@ -85,11 +83,11 @@ class Dense(GeneExpression):
         cells_and_expression_vals = dict(
             filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items())
         )
-        yield self.set_data_array_gene_cell_names(
-            gene_name, linear_data_id, list(cells_and_expression_vals.keys())
+        return self.set_data_array_gene_cell_names(
+            gene_name, linear_data_id, list(cells_and_expression_vals)
         )
-        yield self.set_data_array_gene_expression_values(
-            gene_name, linear_data_id, list(cells_and_expression_vals.values())
+        return self.set_data_array_gene_expression_values(
+            gene_name, linear_data_id, cells_and_expression_vals.values()
         )
 
     def close(self):

@@ -15,7 +15,7 @@ EXAMPLES
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_v1.1.1.tsv --study-accession SCP123 --ingest-cell-metadata
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --study-accession SCP123 --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have permission to the SCP bucket
@@ -145,49 +145,59 @@ class IngestPipeline(object):
 
     def load(
         self,
+        collection_name,
         model,
         set_data_array_fn,
         *set_data_array_fn_args,
         **set_data_array_fn_kwargs,
     ):
-        try:
+        documents = []
 
-            print(model)
-            # TODO: Get Linear_id from model
+        try:
+            linear_id = self.db[collection_name].insert(model)
             for data_array_model in set_data_array_fn(
-                'linear_id', *set_data_array_fn_args, **set_data_array_fn_kwargs
+                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
-                print(data_array_model)
+
+                documents.append(data_array_model)
+            self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             print(e)
             return 1
         return 0
 
-    def load_subsample(self, subsampled_data, set_data_array_fn, scope):
+    def load_subsample(
+        self, parent_collection_name, subsampled_data, set_data_array_fn, scope
+    ):
         """Loads subsampled data into MongoDB"""
-        for key_value in subsampled_data[0].items():
-            annot_name = subsampled_data[1][0]
-            cluster_name = '?'
-            annot_type = subsampled_data[1][1]
-            sample_size = subsampled_data[2]
+        documents = []
         try:
-            # Either query mongo for linear_id from parent or have it passed in
-            model = set_data_array_fn(
-                (
-                    key_value[0],
-                    cluster_name,
-                    key_value[1],
-                    subsampled_data[1],
-                    self.study_file_id,
-                    self.study_id,
-                    '123456789asdfg',
-                ),
-                {
-                    'subsample_annotation': f"{annot_name}--{annot_type}--{scope}",
-                    'subsample_threshold': sample_size,
-                },
-            )
-            print(model)
+            for key_value in subsampled_data[0].items():
+                annot_name = subsampled_data[1][0]
+                annot_type = subsampled_data[1][1]
+                sample_size = subsampled_data[2]
+                query = {'study_id': self.study_id}
+                # Query mongo for linear_id and 'name' of parent
+                # Then return 'name' and 'id' fields from query results
+                parent_data = self.db[parent_collection_name].find_one(
+                    query, {'name': 1}
+                )
+                for model in set_data_array_fn(
+                    (
+                        key_value[0],  # NAMES, x, y, or z
+                        parent_data['name'],  # Cluster name provided from parent
+                        key_value[1],  # Subsampled data/values
+                        self.study_file_id,
+                        self.study_id,
+                        str(parent_data['_id']),
+                    ),
+                    {
+                        'subsample_annotation': f"{annot_name}--{annot_type}--{scope}",
+                        'subsample_threshold': sample_size,
+                    },
+                ):
+                    documents.append(model)
+            self.db['data_arrays'].insert_many(documents)
 
         except Exception as e:
             # TODO: Log this error
@@ -212,6 +222,7 @@ class IngestPipeline(object):
         for idx, gene in enumerate(self.matrix.transform()):
             if idx == 0:
                 self.load(
+                    self.matrix.COLLECTION_NAME,
                     gene.gene_model,
                     self.matrix.set_data_array,
                     gene.gene_name,
@@ -220,6 +231,7 @@ class IngestPipeline(object):
                 )
             else:
                 self.load(
+                    self.matrix.COLLECTION_NAME,
                     gene.gene_model,
                     self.matrix.set_data_array,
                     gene.gene_name,
@@ -239,9 +251,8 @@ class IngestPipeline(object):
             self.cell_metadata.reset_file(2, open_as="dataframe")
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
-                # This is where to load Top-level ClusterGroup document
-                # TODO: 'Linear_id' will need to change to MongoDB ObjectId
                 status = self.load(
+                    self.cell_metadata.COLLECTION_NAME,
                     metadataModel.model,
                     self.cell_metadata.set_data_array,
                     metadataModel.annot_header,
@@ -253,8 +264,15 @@ class IngestPipeline(object):
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate_format():
-            annotation_model = self.cluster.transform()
-            return self.load(annotation_model, self.cluster.get_data_array_annot)
+            for annotation_model in self.cluster.transform():
+                status = self.load(
+                    self.cluster.COLLECTION_NAME,
+                    annotation_model,
+                    self.cluster.get_data_array_annot,
+                )
+                if status != 0:
+                    return status
+        return status
 
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
@@ -264,7 +282,9 @@ class IngestPipeline(object):
         )
 
         for data in subsample.subsample():
-            load_status = self.load_subsample(data, subsample.set_data_array, 'cluster')
+            load_status = self.load_subsample(
+                Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
+            )
             if load_status != 0:
                 return load_status
 
@@ -272,7 +292,10 @@ class IngestPipeline(object):
             subsample.prepare_cell_metadata()
             for doc in subsample.subsample():
                 load_status = load_status = self.load_subsample(
-                    data, subsample.set_data_array, 'study'
+                    CellMetadata.COLLECTION_NAME,
+                    data,
+                    subsample.set_data_array,
+                    'study',
                 )
                 if load_status != 0:
                     return load_status
@@ -474,6 +497,7 @@ def main() -> None:
         None
     """
     status = []
+    status_cell_metadata = None
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
@@ -493,11 +517,13 @@ def main() -> None:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
-    if all(i < 1 for i in status) or len(status) == 0:
-        sys.exit(os.EX_OK)
+    if len(status) > 0:
+        if all(i < 1 for i in status):
+            sys.exit(os.EX_OK)
     else:
-        if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
-            ingest.delocalize_error_file()
+        if status_cell_metadata is not None:
+            if status_cell_metadata == 0 and ingest.cell_metadata.is_remote_file:
+                ingest.delocalize_error_file()
         # PAPI jobs failing metadata validation against convention report
         #   "unexpected exit status 65 was not ignored"
         # EX_DATAERR (65) The input data was incorrect in some way.

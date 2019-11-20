@@ -77,14 +77,14 @@ class Mtx(GeneExpression):
         create_cell_DataArray=False,
     ):
         if create_cell_DataArray:
-            yield self.set_data_array_cells(self.cells, linear_data_id)
+            return self.set_data_array_cells(self.cells, linear_data_id)
         else:
-            yield self.set_data_array_gene_cell_names(
+            return self.set_data_array_gene_cell_names(
                 gene_name,
                 linear_data_id,
                 self.exp_by_gene[unformatted_gene_name].cell_names,
             )
-            yield self.set_data_array_gene_expression_values(
+            return self.set_data_array_gene_expression_values(
                 gene_name,
                 linear_data_id,
                 self.exp_by_gene[unformatted_gene_name].expression_scores,
