@@ -171,22 +171,22 @@ class IngestPipeline(object):
     ):
         """Loads subsampled data into MongoDB"""
         documents = []
-        for key_value in subsampled_data[0].items():
-            annot_name = subsampled_data[1][0]
-            annot_type = subsampled_data[1][1]
-            sample_size = subsampled_data[2]
-            try:
-                # Query mongo for linear_id and name of parent
+        try:
+            for key_value in subsampled_data[0].items():
+                annot_name = subsampled_data[1][0]
+                annot_type = subsampled_data[1][1]
+                sample_size = subsampled_data[2]
                 query = {'study_id': self.study_id}
+                # Query mongo for linear_id and name of parent
                 # Return 'name' and 'id' fields from query results
                 parent_data = self.db[parent_collection_name].find_one(
                     query, {'name': 1}
                 )
                 for model in set_data_array_fn(
                     (
-                        key_value[0],
-                        parent_data['name'],
-                        key_value[1],
+                        key_value[0],  # NAMES, x, y, or z
+                        parent_data['name'],  # Cluster name provided from parent
+                        key_value[1],  # Subsampled data/values
                         self.study_file_id,
                         self.study_id,
                         str(parent_data['_id']),
@@ -197,12 +197,12 @@ class IngestPipeline(object):
                     },
                 ):
                     documents.append(model)
-                self.db['data_arrays'].insert_many(documents)
+            self.db['data_arrays'].insert_many(documents)
 
-            except Exception as e:
-                # TODO: Log this error
-                print(e)
-                return 1
+        except Exception as e:
+            # TODO: Log this error
+            print(e)
+            return 1
         return 0
 
     def has_valid_metadata_convention(self):
@@ -251,8 +251,6 @@ class IngestPipeline(object):
             self.cell_metadata.reset_file(2, open_as="dataframe")
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
-                # This is where to load Top-level ClusterGroup document
-                # TODO: 'Linear_id' will need to change to MongoDB ObjectId
                 status = self.load(
                     self.cell_metadata.COLLECTION_NAME,
                     metadataModel.model,
@@ -519,8 +517,9 @@ def main() -> None:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
-    if all(i < 1 for i in status) or len(status) == 0:
-        sys.exit(os.EX_OK)
+    if len(status) > 0:
+        if all(i < 1 for i in status):
+            sys.exit(os.EX_OK)
     else:
         if status_cell_metadata is not None:
             if status_cell_metadata == 0 and ingest.cell_metadata.is_remote_file:
