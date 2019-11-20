@@ -177,8 +177,8 @@ class IngestPipeline(object):
                 annot_type = subsampled_data[1][1]
                 sample_size = subsampled_data[2]
                 query = {'study_id': self.study_id}
-                # Query mongo for linear_id and name of parent
-                # Return 'name' and 'id' fields from query results
+                # Query mongo for linear_id and 'name' of parent
+                # Then return 'name' and 'id' fields from query results
                 parent_data = self.db[parent_collection_name].find_one(
                     query, {'name': 1}
                 )
