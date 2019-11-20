@@ -16,7 +16,7 @@ from google.cloud import storage
 
 
 @dataclass
-class DataArray(TypedDict):
+class DataArray:
     MAX_ENTRIES = 100_000
     COLLECTION_NAME = 'data_arrays'
 
@@ -30,7 +30,6 @@ class DataArray(TypedDict):
         linear_data_id: str,
         study_id: str,
         study_file_id: str,
-        file_kwargs: Dict,
         array_index: int = 0,
         subsample_threshold: int = None,
         subsample_annotation: str = None,
@@ -47,9 +46,15 @@ class DataArray(TypedDict):
         self.study_id = study_id
         self.study_file_id = study_file_id
 
-        # TODO: Add logic for when len(self.values) > self.MAX_ENTREIS
-        # get_dataArray(self):
-        #     if len(self.values) > self.MAX_ENTREIS:
+    def get_data_array(self):
+        if len(self.values) > self.MAX_ENTRIES:
+            values = self.values
+            for i in range(0, len(self.values), self.MAX_ENTRIES):
+                self.__dict__['values']: values[i : i + self.MAX_ENTRIES]
+                self.__dict__['array_index']: i
+                yield self.__dict__
+        else:
+            yield self.__dict__
 
 
 class IngestFiles:

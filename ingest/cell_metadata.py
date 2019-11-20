@@ -102,7 +102,8 @@ class CellMetadata(Annotations):
                     'linear_data_type': 'CellMetadatum',
                 }
             )
-        yield DataArray({**data_array_attrs, **base_data_array_model})
+        da: DataArray = {**base_data_array_model, **data_array_attrs}
+        yield da
 
     def yield_by_row(self) -> None:
         """ Yield row from cell metadata file"""

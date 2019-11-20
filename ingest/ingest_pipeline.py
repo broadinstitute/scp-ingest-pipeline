@@ -145,19 +145,21 @@ class IngestPipeline(object):
 
     def load(
         self,
+        collection_name,
         model,
         set_data_array_fn,
         *set_data_array_fn_args,
         **set_data_array_fn_kwargs,
     ):
+        document = []
+        # get collection
         try:
-
-            print(model)
-            # TODO: Get Linear_id from model
+            linear_id = self.db[collection_name].insert(model)
             for data_array_model in set_data_array_fn(
-                'linear_id', *set_data_array_fn_args, **set_data_array_fn_kwargs
+                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
-                print(data_array_model)
+                documents.append(data_array_model)
+                self.db['data_arrays'].insert_many(data_array_model)
         except Exception as e:
             print(e)
             return 1
@@ -213,6 +215,7 @@ class IngestPipeline(object):
         for idx, gene in enumerate(self.matrix.transform()):
             if idx == 0:
                 self.load(
+                    self.matrix.COLLECTION_NAME,
                     gene.gene_model,
                     self.matrix.set_data_array,
                     gene.gene_name,
@@ -221,6 +224,7 @@ class IngestPipeline(object):
                 )
             else:
                 self.load(
+                    self.matrix.COLLECTION_NAME,
                     gene.gene_model,
                     self.matrix.set_data_array,
                     gene.gene_name,
@@ -243,6 +247,7 @@ class IngestPipeline(object):
                 # This is where to load Top-level ClusterGroup document
                 # TODO: 'Linear_id' will need to change to MongoDB ObjectId
                 status = self.load(
+                    self.cell_metadata.COLLECTION_NAME,
                     metadataModel.model,
                     self.cell_metadata.set_data_array,
                     metadataModel.annot_header,
@@ -255,7 +260,11 @@ class IngestPipeline(object):
         """Ingests cluster files."""
         if self.cluster.validate_format():
             annotation_model = self.cluster.transform()
-            return self.load(annotation_model, self.cluster.get_data_array_annot)
+            return self.load(
+                self.cluster.COLLECTION_NAME,
+                annotation_model,
+                self.cluster.get_data_array_annot,
+            )
 
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
