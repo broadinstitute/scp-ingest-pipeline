@@ -2,9 +2,13 @@
 
 DESCRIPTION
 This CLI takes a tsv metadata convention and creates a BigQuery schema JSON file.
+JSON file is written to the directory where the input file lives.
+
+SYNTAX
+$ python convention_to_bq_schema.py metadata_convention.tsv
 
 EXAMPLE
-$ python convention_to_bq_schema.py metadata_convention.tsv
+$ python convention_to_bq_schema.py ../../tests/data/AMC_v1.1.3.tsv
 
 """
 
@@ -13,7 +17,7 @@ import csv
 import os
 import json
 
-REQUIRED_FIELDS = ['CellID', 'biosample_id', 'donor_id']
+REQUIRED_FIELDS = ['CellID', 'study_accession', 'file_id']
 
 
 def create_parser():
@@ -66,8 +70,10 @@ def build_schema(input_convention):
 
 
 def add_scp_fields_to_schema(schema):
-    scp_entry = {'name': 'scp_accession', 'type': 'string', 'mode': 'REQUIRED'}
-    schema.append(scp_entry)
+    entries = ['study_accession', 'file_id']
+    for entry in entries:
+        schema_entry = {'name': entry, 'type': 'string', 'mode': 'REQUIRED'}
+        schema.append(schema_entry)
     return schema
 
 

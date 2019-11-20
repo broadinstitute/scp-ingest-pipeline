@@ -59,7 +59,7 @@ EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 
 class IngestPipeline(object):
     # File location for metadata json convention
-    JSON_CONVENTION = 'gs://fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2/metadata_conventions/AMC_v1.1.3/AMC_v1.1.3.json'
+    JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
 
     def __init__(
         self,
@@ -199,12 +199,11 @@ class IngestPipeline(object):
 
     def has_valid_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        with open(self.JSON_CONVENTION, 'r') as f:
-            json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
-            convention = json.load(json_file.file)
-            validate_input_metadata(self.cell_metadata, convention)
+        json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        convention = json.load(json_file.file)
+        validate_input_metadata(self.cell_metadata, convention)
 
-        f.close()
+        json_file.file_handle.close()
         return not report_issues(self.cell_metadata)
 
     def ingest_expression(self) -> None:
@@ -287,6 +286,17 @@ class IngestPipeline(object):
                 if load_status != 0:
                     return load_status
         return 0
+
+    def delocalize_error_file(self):
+        """Writes local error file to Google bucket
+        """
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket(self.cell_metadata.bucket)
+        destination_blob_name = f'parse_logs/{self.file_id}/errors.txt'
+        blob = bucket.blob(destination_blob_name)
+        source_file_name = 'scp_validation_errors.txt'
+        blob.upload_from_filename(source_file_name)
+        print(f'File {source_file_name} uploaded to {destination_blob_name}.')
 
 
 def create_parser():
@@ -495,6 +505,11 @@ def main() -> None:
     if all(i < 1 for i in status) or len(status) == 0:
         sys.exit(os.EX_OK)
     else:
+        if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
+            ingest.delocalize_error_file()
+        # PAPI jobs failing metadata validation against convention report
+        #   "unexpected exit status 65 was not ignored"
+        # EX_DATAERR (65) The input data was incorrect in some way.
         sys.exit(os.EX_DATAERR)
 
 
