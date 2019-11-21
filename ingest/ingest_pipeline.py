@@ -98,6 +98,12 @@ class IngestPipeline(object):
         elif matrix_file is None:
             self.matrix = matrix_file
 
+        # # Instantiates a client
+        # ingest_logger = google.cloud.logging.Client()
+        # # Connects the logger to the root logging handler; by default this captures
+        # # all logs at INFO level and higher
+        # ingest_logger.setup_logging('')
+
     def get_mongo_db(self):
         host = os.environ['DATABASE_HOST']
         user = os.environ['MONGODB_USERNAME']
@@ -221,7 +227,7 @@ class IngestPipeline(object):
             self.matrix.extract()
         for idx, gene in enumerate(self.matrix.transform()):
             if idx == 0:
-                self.load(
+                status = self.load(
                     self.matrix.COLLECTION_NAME,
                     gene.gene_model,
                     self.matrix.set_data_array,
@@ -230,13 +236,16 @@ class IngestPipeline(object):
                     {'create_cell_data_array': True},
                 )
             else:
-                self.load(
+                status = self.load(
                     self.matrix.COLLECTION_NAME,
                     gene.gene_model,
                     self.matrix.set_data_array,
                     gene.gene_name,
                     gene.gene_model['searchable_name'],
                 )
+            if status != 0:
+                return status
+        return status
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
@@ -516,7 +525,7 @@ def main() -> None:
         if arguments["subsample"]:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
-
+    print(status)
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
