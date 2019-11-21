@@ -69,7 +69,7 @@ class Clusters(Annotations):
                 {
                     'name': annot_name,
                     'type': annot_type,
-                    'values': list(self.file[annot_headers].unique())
+                    'values': self.file[annot_headers].unique().tolist()
                     if annot_type == 'group'
                     else [],
                 }
@@ -85,10 +85,10 @@ class Clusters(Annotations):
 
     def get_data_array_annot(self, linear_data_id):
         for annot_header in self.file.columns:
-            yield Clusters.set_data_array(
+            return Clusters.set_data_array(
                 annot_header[0],
                 self.name,
-                list(self.file[annot_header]),
+                self.file[annot_header].tolist(),
                 self.study_file_id,
                 self.study_id,
                 linear_data_id,
@@ -142,4 +142,6 @@ class Clusters(Annotations):
         del data_array_attr['name']
 
         # Merge BASE_DICT, cluster_attr & data_array_attr and return DataArray model
-        return DataArray({**data_array_attr, **cluster_attr, **BASE_DICT})
+        return DataArray(
+            **data_array_attr, **cluster_attr, **BASE_DICT
+        ).get_data_array()

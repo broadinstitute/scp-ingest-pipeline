@@ -676,29 +676,28 @@ def push_metadata_to_bq(metadata, ndjson, dataset, table):
     client = bigquery.Client()
     dataset_ref = client.dataset(dataset)
     table_ref = dataset_ref.table(table)
-    destination_table_preload = client.get_table(table_ref)
     job_config = bigquery.LoadJobConfig()
     job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
     job_config.source_format = bigquery.SourceFormat.NEWLINE_DELIMITED_JSON
-    with open(ndjson, 'rb') as source_file:
-        job = client.load_table_from_file(source_file, table_ref, job_config=job_config)
-    job.result()  # Waits for table load to complete.
-    print(f'Metadata uploaded to BigQuery. ({job.output_rows} rows)')
-    destination_table_postload = client.get_table(table_ref)
-    print(f'{len(metadata.cells)} cells')
-    rows_loaded = (
-        destination_table_postload.num_rows - destination_table_preload.num_rows
-    )
+    try:
+        with open(ndjson, 'rb') as source_file:
+            job = client.load_table_from_file(
+                source_file, table_ref, job_config=job_config
+            )
+        job.result()  # Waits for table load to complete.
+        print(f'Metadata uploaded to BigQuery. ({job.output_rows} rows)')
+    # Unable to intentionally trigger a failed BigQuery upload
+    # please add print statement below to error logging so
+    # error handling can be updated when better understood
+    except Exception as e:
+        print(e)
+        return 1
     if job.output_rows != len(metadata.cells):
         print(
             f'BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells'
         )
         return 1
-    elif rows_loaded != len(metadata.cells):
-        print(
-            f'BigQuery upload error: calculated new rows ({rows_loaded} rows) does not match number of cells in file, {len(metadata.cells)} cells'
-        )
-        return 1
+    os.remove(ndjson)
     return 0
 
 

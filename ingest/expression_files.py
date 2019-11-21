@@ -55,45 +55,51 @@ class GeneExpression(IngestFiles):
         Each expression file will have its own implementation of setting the
         DataArray with expression data."""
 
-    def set_data_array_cells(self, values, linear_data_id):
+    def set_data_array_cells(self, values: List, linear_data_id):
         """Sets DataArray for cells that were observed in an
         expression matrix."""
         return DataArray(
-            {
-                'name': f'{self.cluster_name} Cells',
-                'cluster_name': self.cluster_name,
-                'array_type': 'cells',
-                'linear_data_type': 'Study',
-                'linear_data_id': linear_data_id,
-                'vaules': values,
-            }
-        )
+            f'{self.cluster_name} Cells',
+            self.cluster_name,
+            'cells',
+            values,
+            'Study',
+            linear_data_id,
+            self.study_id,
+            self.study_file_id,
+        ).get_data_array()
 
-    def set_data_array_gene_cell_names(self, name, linear_data_id, values):
+    def set_data_array_gene_cell_names(
+        self, name: str, linear_data_id: str, values: List
+    ):
         """Sets DataArray for cell names associated to a single gene. This
         DataArray contains cell names that had significant (i.e. non-zero)
         expression for a gene. """
-        return DataArray(
-            {
-                'name': f'{name} Cells',
-                'cluster_name': self.cluster_name,
-                'array_type': 'cells',
-                'linear_data_type': 'Gene',
-                'linear_data_id': linear_data_id,
-                'values': values,
-            }
-        )
 
-    def set_data_array_gene_expression_values(self, name, linear_data_id, values):
+        return DataArray(
+            f'{name} Cells',
+            self.cluster_name,
+            'cells',
+            values,
+            'Gene',
+            linear_data_id,
+            self.study_id,
+            self.study_file_id,
+        ).get_data_array()
+
+    def set_data_array_gene_expression_values(
+        self, name: str, linear_data_id: str, values: List
+    ):
         """ Sets DataArray for expression values for a gene. This is an array of
         significant (i.e. non-zero) expression values for a gene. """
+
         return DataArray(
-            {
-                'name': f'{name} Expression',
-                'cluster_name': self.cluster_name,
-                'array_type': 'expression',
-                'linear_data_type': 'for Gene',
-                'linear_data_id': linear_data_id,
-                'value': values,
-            }
-        )
+            f'{name} Expression',
+            self.cluster_name,
+            'expression',
+            values,
+            'for Gene',
+            linear_data_id,
+            self.study_id,
+            self.study_file_id,
+        ).get_data_array()
