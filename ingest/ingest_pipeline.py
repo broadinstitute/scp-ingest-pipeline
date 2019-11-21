@@ -539,24 +539,25 @@ def validate_arguments(parsed_args):
             "must include .genes.tsv, and .barcodes.tsv files. See --help for "
             "more information"
         )
-    if (parsed_args.bq_dataset is not None and parsed_args.bq_table is None) or (
-        parsed_args.bq_dataset is None and parsed_args.bq_table is not None
-    ):
-        raise ValueError(
-            'Missing argument: --bq_dataset and --bq_table are both required for BigQuery upload.'
-        )
-    if parsed_args.bq_dataset is not None and not bq_dataset_exists(
-        parsed_args.bq_dataset
-    ):
-        raise ValueError(
-            f' Invalid argument: {parsed_args.bq_dataset} is not a valid BigQuery dataset.'
-        )
-    if parsed_args.bq_table is not None and not bq_table_exists(
-        parsed_args.bq_dataset, parsed_args.bq_table
-    ):
-        raise ValueError(
-            f' Invalid argument: {parsed_args.bq_table} is not a valid BigQuery table.'
-        )
+    if "ingest_cell_metadata" in parsed_args:
+        if (parsed_args.bq_dataset is not None and parsed_args.bq_table is None) or (
+            parsed_args.bq_dataset is None and parsed_args.bq_table is not None
+        ):
+            raise ValueError(
+                'Missing argument: --bq_dataset and --bq_table are both required for BigQuery upload.'
+            )
+        if parsed_args.bq_dataset is not None and not bq_dataset_exists(
+            parsed_args.bq_dataset
+        ):
+            raise ValueError(
+                f' Invalid argument: {parsed_args.bq_dataset} is not a valid BigQuery dataset.'
+            )
+        if parsed_args.bq_table is not None and not bq_table_exists(
+            parsed_args.bq_dataset, parsed_args.bq_table
+        ):
+            raise ValueError(
+                f' Invalid argument: {parsed_args.bq_table} is not a valid BigQuery table.'
+            )
 
 
 def main() -> None:
