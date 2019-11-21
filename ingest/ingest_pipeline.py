@@ -619,15 +619,18 @@ def main() -> None:
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
-    if status_cell_metadata is not None:
-        if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
-            ingest.delocalize_error_file()
-            # PAPI jobs failing metadata validation against convention report
-            #   "unexpected exit status 65 was not ignored"
-            # EX_DATAERR (65) The input data was incorrect in some way.
-            sys.exit(os.EX_DATAERR)
     else:
-        sys.exit(1)
+        if status_cell_metadata is not None:
+            if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
+                ingest.delocalize_error_file()
+                # PAPI jobs failing metadata validation against convention report
+                # will have "unexpected exit status 65 was not ignored"
+                # EX_DATAERR (65) The input data was incorrect in some way.
+                # note that failure to load to MongoDB also triggers this error
+                sys.exit(os.EX_DATAERR)
+            if status_metadata_bq is not None:
+                if status_metadata_bq > 0:
+                    sys.exit(1)
 
 
 if __name__ == "__main__":
