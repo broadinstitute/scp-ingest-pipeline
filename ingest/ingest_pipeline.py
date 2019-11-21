@@ -18,8 +18,8 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 12
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --study-accession SCP123 --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
-!! Please note that you must have permission to the SCP bucket
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention
+!! Please note that you must have a pre-configured BigQuery table available
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
 
 # Ingest dense file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
@@ -46,12 +46,31 @@ from clusters import Clusters
 from dense import Dense
 from pymongo import MongoClient
 from mtx import Mtx
+from google.cloud import storage
+from google.cloud import bigquery
+from google.cloud.exceptions import NotFound
 
-# from ingest_files import IngestFiles
-from subsample import SubSample
-from loom import Loom
-from ingest_files import IngestFiles
-from validation.validate_metadata import validate_input_metadata, report_issues
+try:
+    # Used when importing internally and in tests
+    from ingest_files import IngestFiles
+    from subsample import SubSample
+    from loom import Loom
+    from validation.validate_metadata import (
+        validate_input_metadata,
+        report_issues,
+        write_metadata_to_bq,
+    )
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .ingest_files import IngestFiles
+    from .subsample import SubSample
+    from .loom import Loom
+    from .validation.validate_metadata import (
+        validate_input_metadata,
+        report_issues,
+        write_metadata_to_bq,
+    )
+
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
@@ -211,14 +230,41 @@ class IngestPipeline(object):
             return 1
         return 0
 
-    def has_valid_metadata_convention(self):
+    def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
         json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
         convention = json.load(json_file.file)
-        validate_input_metadata(self.cell_metadata, convention)
+        if self.kwargs['validate_convention'] is not None:
+            if (
+                self.kwargs['validate_convention']
+                and self.kwargs['bq_dataset']
+                and self.kwargs['bq_table']
+            ):
+                validate_input_metadata(self.cell_metadata, convention, bq_json=True)
+            else:
+                validate_input_metadata(self.cell_metadata, convention)
 
         json_file.file_handle.close()
         return not report_issues(self.cell_metadata)
+
+    def upload_metadata_to_bq(self):
+        """Uploads metadata to BigQuery"""
+        if self.kwargs['validate_convention'] is not None:
+            if (
+                self.kwargs['validate_convention']
+                and self.kwargs['bq_dataset']
+                and self.kwargs['bq_table']
+            ):
+                write_status = write_metadata_to_bq(
+                    self.cell_metadata,
+                    self.kwargs['bq_dataset'],
+                    self.kwargs['bq_table'],
+                )
+                return write_status
+            else:
+                print('Erroneous call to upload_metadata_to_bq')
+                return 1
+        return 0
 
     def ingest_expression(self) -> None:
         """Ingests expression files.
@@ -253,7 +299,7 @@ class IngestPipeline(object):
             # Check file against metadata convention
             if self.kwargs['validate_convention'] is not None:
                 if self.kwargs['validate_convention']:
-                    if self.has_valid_metadata_convention():
+                    if self.conforms_to_metadata_convention():
                         pass
                     else:
                         return 1
@@ -315,7 +361,7 @@ class IngestPipeline(object):
         """
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(self.cell_metadata.bucket)
-        destination_blob_name = f'parse_logs/{self.file_id}/errors.txt'
+        destination_blob_name = f'parse_logs/{self.study_file_id}/errors.txt'
         blob = bucket.blob(destination_blob_name)
         source_file_name = 'scp_validation_errors.txt'
         blob.upload_from_filename(source_file_name)
@@ -416,6 +462,12 @@ def create_parser():
         help="Single study accession associated with ingest files.",
     )
     parser_cell_metadata.add_argument(
+        "--bq-dataset", help="BigQuery dataset identifer for ingest job."
+    )
+    parser_cell_metadata.add_argument(
+        "--bq-table", help="BigQuery table identifer for ingest job."
+    )
+    parser_cell_metadata.add_argument(
         "--ingest-cell-metadata",
         required=True,
         action="store_true",
@@ -476,6 +528,31 @@ def create_parser():
     return parser
 
 
+def bq_dataset_exists(dataset):
+    bigquery_client = bigquery.Client()
+    dataset_ref = bigquery_client.dataset(dataset)
+    exists = False
+    try:
+        bigquery_client.get_dataset(dataset_ref)
+        exists = True
+    except NotFound:
+        print(f'Dataset {dataset} not found')
+    return exists
+
+
+def bq_table_exists(dataset, table):
+    bigquery_client = bigquery.Client()
+    dataset_ref = bigquery_client.dataset(dataset)
+    table_ref = dataset_ref.table(table)
+    exists = False
+    try:
+        bigquery_client.get_table(table_ref)
+        exists = True
+    except NotFound:
+        print(f'Dataset {table} not found')
+    return exists
+
+
 def validate_arguments(parsed_args):
     """Verify parsed input arguments
 
@@ -494,6 +571,25 @@ def validate_arguments(parsed_args):
             "must include .genes.tsv, and .barcodes.tsv files. See --help for "
             "more information"
         )
+    if "ingest_cell_metadata" in parsed_args:
+        if (parsed_args.bq_dataset is not None and parsed_args.bq_table is None) or (
+            parsed_args.bq_dataset is None and parsed_args.bq_table is not None
+        ):
+            raise ValueError(
+                'Missing argument: --bq_dataset and --bq_table are both required for BigQuery upload.'
+            )
+        if parsed_args.bq_dataset is not None and not bq_dataset_exists(
+            parsed_args.bq_dataset
+        ):
+            raise ValueError(
+                f' Invalid argument: unable to connect to a BigQuery dataset called {parsed_args.bq_dataset}.'
+            )
+        if parsed_args.bq_table is not None and not bq_table_exists(
+            parsed_args.bq_dataset, parsed_args.bq_table
+        ):
+            raise ValueError(
+                f' Invalid argument: unable to connect to a BigQuery table called {parsed_args.bq_table}.'
+            )
 
 
 def main() -> None:
@@ -518,6 +614,9 @@ def main() -> None:
         if arguments["ingest_cell_metadata"]:
             status_cell_metadata = ingest.ingest_cell_metadata()
             status.append(status_cell_metadata)
+            if parsed_args.bq_table is not None and status_cell_metadata == 0:
+                status_metadata_bq = ingest.upload_metadata_to_bq()
+                status.append(status_metadata_bq)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
             status.append(ingest.ingest_cluster())
@@ -530,12 +629,16 @@ def main() -> None:
             sys.exit(os.EX_OK)
     else:
         if status_cell_metadata is not None:
-            if status_cell_metadata == 0 and ingest.cell_metadata.is_remote_file:
+            if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
                 ingest.delocalize_error_file()
-        # PAPI jobs failing metadata validation against convention report
-        #   "unexpected exit status 65 was not ignored"
-        # EX_DATAERR (65) The input data was incorrect in some way.
-        sys.exit(os.EX_DATAERR)
+                # PAPI jobs failing metadata validation against convention report
+                # will have "unexpected exit status 65 was not ignored"
+                # EX_DATAERR (65) The input data was incorrect in some way.
+                # note that failure to load to MongoDB also triggers this error
+                sys.exit(os.EX_DATAERR)
+            if status_metadata_bq is not None:
+                if status_metadata_bq > 0:
+                    sys.exit(1)
 
 
 if __name__ == "__main__":

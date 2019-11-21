@@ -25,6 +25,7 @@ import os
 import colorama
 from colorama import Fore
 import jsonschema
+from google.cloud import bigquery
 
 sys.path.append('..')
 try:
@@ -72,10 +73,27 @@ def create_parser():
     # helper param to create JSON representation of convention metadata
     # to generate json for bigquery testing
     parser.add_argument('--bq-json', action='store_true')
+    # overwrite existing output
+    parser.add_argument('--force', action='store_true')
+    # test BigQuery upload functions
+    parser.add_argument('--upload', action='store_true')
     # validate_metadata.py CLI only for dev, bogus defaults below shouldn't propagate
-    parser.add_argument('--file-id', help='MongoDB identifier', default='Mongo_none')
     parser.add_argument(
-        '--study-accession', help='SCP study accession', default='SCP_none'
+        '--study-id',
+        help='MongoDB study identifier',
+        default='6d276a50421aa9117c982846',
+    )
+    parser.add_argument(
+        '--study-file-id', help='MongoDB file identifier', default='abc123'
+    )
+    parser.add_argument(
+        '--study-accession', help='SCP study accession', default='SCP888'
+    )
+    parser.add_argument(
+        '--bq-dataset', help='BigQuery dataset identifier', default='cell_metadata'
+    )
+    parser.add_argument(
+        '--bq-table', help='BigQuery table identifier', default='alexandria_convention'
     )
     parser.add_argument('convention', help='Metadata convention JSON file ')
     parser.add_argument('input_metadata', help='Metadata TSV file')
@@ -379,8 +397,6 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
         while line:
             row = process_metadata_row(metadata, convention, line)
             metadata.cells.append(row['CellID'])
-            if bq_json:
-                serialize_bq(row)
             collect_ontology_data(row, metadata, convention)
             for error in schema.iter_errors(row):
                 try:
@@ -388,6 +404,12 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
                 except IndexError:
                     pass
                 js_errors[error.message].append(row['CellID'])
+            if bq_json:
+                bq_filename = metadata.study_file_id + '.json'
+                # add non-convention, SCP-required, metadata for BigQuery
+                row['study_accession'] = metadata.study_accession
+                row['file_id'] = metadata.study_file_id
+                serialize_bq(row, bq_filename)
             try:
                 line = next(rows)
             except StopIteration:
@@ -609,12 +631,12 @@ def confirm_uniform_units(metadata, convention):
                 metadata.store_validation_issue('error', 'convention', error_msg)
 
 
-def serialize_bq(bq_dict):
+def serialize_bq(bq_dict, filename='bq.json'):
     """Write metadata collected for validation to json file
     BigQuery requires newline delimited json objects
     """
     data = json.dumps(bq_dict)
-    with open('bq.json', 'a') as jsonfile:
+    with open(filename, 'a') as jsonfile:
         jsonfile.write(data + '\n')
 
 
@@ -648,20 +670,83 @@ def validate_input_metadata(metadata, convention, bq_json=None):
     confirm_uniform_units(metadata, convention)
 
 
+def push_metadata_to_bq(metadata, ndjson, dataset, table):
+    """upload local NDJSON to BigQuery
+    """
+    client = bigquery.Client()
+    dataset_ref = client.dataset(dataset)
+    table_ref = dataset_ref.table(table)
+    job_config = bigquery.LoadJobConfig()
+    job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
+    job_config.source_format = bigquery.SourceFormat.NEWLINE_DELIMITED_JSON
+    try:
+        with open(ndjson, 'rb') as source_file:
+            job = client.load_table_from_file(
+                source_file, table_ref, job_config=job_config
+            )
+        job.result()  # Waits for table load to complete.
+        print(f'Metadata uploaded to BigQuery. ({job.output_rows} rows)')
+    # Unable to intentionally trigger a failed BigQuery upload
+    # please add print statement below to error logging so
+    # error handling can be updated when better understood
+    except Exception as e:
+        print(e)
+        return 1
+    if job.output_rows != len(metadata.cells):
+        print(
+            f'BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells'
+        )
+        return 1
+    os.remove(ndjson)
+    return 0
+
+
+def write_metadata_to_bq(metadata, bq_dataset, bq_table):
+    """Wrapper function to gather metadata and write to BigQuery
+    """
+    bq_filename = metadata.study_file_id + '.json'
+    push_status = push_metadata_to_bq(metadata, bq_filename, bq_dataset, bq_table)
+    return push_status
+
+
+def check_if_old_output():
+    """Exit if old output files found
+    """
+    output_files = [
+        'scp_validation_errors.txt',
+        'scp_validation_warnings.txt',
+        'bq.json',
+    ]
+
+    old_output = False
+    for file in output_files:
+        if os.path.exists(file):
+            print(f'{file} already exists, please delete file and try again')
+            old_output = True
+    if old_output:
+        exit(1)
+
+
 if __name__ == '__main__':
     args = create_parser().parse_args()
     arguments = vars(args)
+    if not args.force:
+        check_if_old_output()
+
     with open(args.convention, 'r') as f:
         convention = json.load(f)
-    filetsv = args.input_metadata
-    metadata = CellMetadata(filetsv, args.file_id, args.study_accession)
-    print('Validating', filetsv)
-    if args.bq_json:
-        if os.path.exists('bq.json'):
-            print('bq.json already exists, please delete file and try again')
-            exit(1)
+    metadata = CellMetadata(
+        file_path=args.input_metadata,
+        study_id=args.study_id,
+        study_file_id=args.study_file_id,
+        study_accession=args.study_accession,
+    )
+    print('Validating', args.input_metadata)
+
     validate_input_metadata(metadata, convention, args.bq_json)
     if args.issues_json:
         serialize_issues(metadata)
     report_issues(metadata)
+    if args.upload:
+        write_metadata_to_bq(metadata, args.bq_dataset, args.bq_table)
     exit_if_errors(metadata)
