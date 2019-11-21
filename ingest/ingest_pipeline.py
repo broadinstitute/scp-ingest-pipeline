@@ -525,7 +525,6 @@ def main() -> None:
         if arguments["subsample"]:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
-    print(status)
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
