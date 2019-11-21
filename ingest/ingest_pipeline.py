@@ -47,6 +47,8 @@ from dense import Dense
 from pymongo import MongoClient
 from mtx import Mtx
 from google.cloud import storage
+from google.cloud import bigquery
+from google.cloud.exceptions import NotFound
 
 try:
     # Used when importing internally and in tests
@@ -212,16 +214,24 @@ class IngestPipeline(object):
             return 1
         return 0
 
-    def has_valid_metadata_convention(self):
+    def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
         json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
         convention = json.load(json_file.file)
-        validate_input_metadata(self.cell_metadata, convention)
+        if self.kwargs['validate_convention'] is not None:
+            if (
+                self.kwargs['validate_convention']
+                and self.kwargs['bq_dataset']
+                and self.kwargs['bq_table']
+            ):
+                validate_input_metadata(self.cell_metadata, convention, bq_json=True)
+            else:
+                validate_input_metadata(self.cell_metadata, convention)
 
         json_file.file_handle.close()
         return not report_issues(self.cell_metadata)
 
-    def write_metadata_to_bq(self):
+    def upload_metadata_to_bq(self):
         """Uploads metadata to BigQuery"""
         if self.kwargs['validate_convention'] is not None:
             if (
@@ -229,19 +239,14 @@ class IngestPipeline(object):
                 and self.kwargs['bq_dataset']
                 and self.kwargs['bq_table']
             ):
-                json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
-                convention = json.load(json_file.file)
                 write_status = write_metadata_to_bq(
                     self.cell_metadata,
-                    convention,
                     self.kwargs['bq_dataset'],
                     self.kwargs['bq_table'],
                 )
-
-                json_file.file_handle.close()
                 return write_status
             else:
-                print('missing bigquery parameters for metadata upload')
+                print('Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
@@ -273,7 +278,7 @@ class IngestPipeline(object):
             # Check file against metadata convention
             if self.kwargs['validate_convention'] is not None:
                 if self.kwargs['validate_convention']:
-                    if self.has_valid_metadata_convention():
+                    if self.conforms_to_metadata_convention():
                         pass
                     else:
                         return 1
@@ -491,6 +496,31 @@ def create_parser():
     return parser
 
 
+def bq_dataset_exists(dataset):
+    bigquery_client = bigquery.Client()
+    dataset_ref = bigquery_client.dataset(dataset)
+    exists = False
+    try:
+        bigquery_client.get_dataset(dataset_ref)
+        exists = True
+    except NotFound:
+        print(f'Dataset {dataset} not found')
+    return exists
+
+
+def bq_table_exists(dataset, table):
+    bigquery_client = bigquery.Client()
+    dataset_ref = bigquery_client.dataset(dataset)
+    table_ref = dataset_ref.table(table)
+    exists = False
+    try:
+        bigquery_client.get_table(table_ref)
+        exists = True
+    except NotFound:
+        print(f'Dataset {table} not found')
+    return exists
+
+
 def validate_arguments(parsed_args):
     """Verify parsed input arguments
 
@@ -508,6 +538,24 @@ def validate_arguments(parsed_args):
             " Missing arguments: --gene-file and --barcode-file. Mtx files "
             "must include .genes.tsv, and .barcodes.tsv files. See --help for "
             "more information"
+        )
+    if (parsed_args.bq_dataset is not None and parsed_args.bq_table is None) or (
+        parsed_args.bq_dataset is None and parsed_args.bq_table is not None
+    ):
+        raise ValueError(
+            'Missing argument: --bq_dataset and --bq_table are both required for BigQuery upload.'
+        )
+    if parsed_args.bq_dataset is not None and not bq_dataset_exists(
+        parsed_args.bq_dataset
+    ):
+        raise ValueError(
+            f' Invalid argument: {parsed_args.bq_dataset} is not a valid BigQuery dataset.'
+        )
+    if parsed_args.bq_table is not None and not bq_table_exists(
+        parsed_args.bq_dataset, parsed_args.bq_table
+    ):
+        raise ValueError(
+            f' Invalid argument: {parsed_args.bq_table} is not a valid BigQuery table.'
         )
 
 
@@ -532,8 +580,9 @@ def main() -> None:
         if arguments["ingest_cell_metadata"]:
             status_cell_metadata = ingest.ingest_cell_metadata()
             status.append(status_cell_metadata)
-            status_metadata_bq = ingest.write_metadata_to_bq()
-            status.append(status_metadata_bq)
+            if parsed_args.bq_table is not None:
+                status_metadata_bq = ingest.upload_metadata_to_bq()
+                status.append(status_metadata_bq)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
             status.append(ingest.ingest_cluster())
@@ -550,18 +599,10 @@ def main() -> None:
         #   "unexpected exit status 65 was not ignored"
         # EX_DATAERR (65) The input data was incorrect in some way.
         sys.exit(os.EX_DATAERR)
-    elif status_metadata_bq > 0:
-        # PAPI jobs failing BigQuery upload
-        #   "unexpected exit status 76 was not ignored"
-        # EX_PROTOCOL (76) A protocol exchange was illegal, invalid, or not understood.
-        sys.exit(os.EX_PROTOCOL)
     elif all(i < 1 for i in status) or len(status) == 0:
         sys.exit(os.EX_OK)
     else:
-        # PAPI jobs failing for non-metadata statuses
-        #   "unexpected exit status 70 was not ignored"
-        # EX_SOFTWARE (70) An internal software error has been detected.
-        sys.exit(os.EX_SOFTWARE)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

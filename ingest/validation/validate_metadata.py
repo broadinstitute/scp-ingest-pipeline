@@ -380,7 +380,7 @@ def process_metadata_row(metadata, convention, line):
     return processed_row
 
 
-def collect_jsonschema_errors(metadata, convention, bq_json=None, filename=None):
+def collect_jsonschema_errors(metadata, convention, bq_json=None):
     """Evaluate metadata input against metadata convention using JSON schema
     returns False if input convention is invalid JSON schema
     """
@@ -397,11 +397,6 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None, filename=None)
         while line:
             row = process_metadata_row(metadata, convention, line)
             metadata.cells.append(row['CellID'])
-            if bq_json:
-                # add non-convention, SCP-required, metadata for BigQuery
-                row['study_accession'] = metadata.study_accession
-                row['file_id'] = metadata.study_file_id
-                serialize_bq(row, filename)
             collect_ontology_data(row, metadata, convention)
             for error in schema.iter_errors(row):
                 try:
@@ -409,6 +404,12 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None, filename=None)
                 except IndexError:
                     pass
                 js_errors[error.message].append(row['CellID'])
+            if bq_json:
+                bq_filename = metadata.study_file_id + '.json'
+                # add non-convention, SCP-required, metadata for BigQuery
+                row['study_accession'] = metadata.study_accession
+                row['file_id'] = metadata.study_file_id
+                serialize_bq(row, bq_filename)
             try:
                 line = next(rows)
             except StopIteration:
@@ -701,16 +702,11 @@ def push_metadata_to_bq(metadata, ndjson, dataset, table):
     return 0
 
 
-def write_metadata_to_bq(metadata, convention, bq_dataset, bq_table):
+def write_metadata_to_bq(metadata, bq_dataset, bq_table):
     """Wrapper function to gather metadata and write to BigQuery
     """
-    bq_name = metadata.study_file_id + '.json'
-    # 2nd collect_jsonschema_errors adds cells to CellMetadata object twice
-    # reset cells for accurate # rows expected for addition to BigQuery
-    # @eno are there side effects I need to worry about? or a better way?
-    metadata.cells = []
-    collect_jsonschema_errors(metadata, convention, bq_json=True, filename=bq_name)
-    push_status = push_metadata_to_bq(metadata, bq_name, bq_dataset, bq_table)
+    bq_filename = metadata.study_file_id + '.json'
+    push_status = push_metadata_to_bq(metadata, bq_filename, bq_dataset, bq_table)
     return push_status
 
 
@@ -753,5 +749,5 @@ if __name__ == '__main__':
         serialize_issues(metadata)
     report_issues(metadata)
     if args.upload:
-        write_metadata_to_bq(metadata, convention, args.bq_dataset, args.bq_table)
+        write_metadata_to_bq(metadata, args.bq_dataset, args.bq_table)
     exit_if_errors(metadata)
