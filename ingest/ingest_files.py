@@ -13,6 +13,9 @@ import gzip
 import pandas as pd  # NOqa: F821
 from google.cloud import storage
 
+# from google.cloud.logging.resource import Resource
+# import google.cloud.logging
+
 
 @dataclass
 class DataArray:
