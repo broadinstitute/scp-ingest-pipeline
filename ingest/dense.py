@@ -11,8 +11,11 @@ Must have python 3.6 or higher.
 import collections
 from typing import List  # noqa: F401
 
-from expression_files import GeneExpression
-
+try:
+    from expression_files import GeneExpression
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .expression_files import GeneExpression
 
 class Dense(GeneExpression):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
