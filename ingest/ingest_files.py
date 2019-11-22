@@ -47,6 +47,9 @@ class DataArray:
         self.linear_data_id = linear_data_id
         self.study_id = study_id
         self.study_file_id = study_file_id
+        # special case to override linear_data_id in case of 'Study' linear_data_type
+        if (self.linear_data_type == 'Study'):
+            self.linear_data_id = self.study_id
 
     def get_data_array(self):
         if len(self.values) > self.MAX_ENTRIES:

@@ -11,6 +11,7 @@ from collections import defaultdict
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
+from bson.objectid import ObjectId
 import ntpath
 import collections
 
@@ -29,7 +30,7 @@ class CellMetadata(Annotations):
     COLLECTION_NAME = 'cell_metadata'
 
     def __init__(
-        self, file_path: str, study_id: str, study_file_id: str, *args, **kwargs
+        self, file_path: str, study_id: ObjectId, study_file_id: ObjectId, *args, **kwargs
     ):
 
         self.study_accession = kwargs.pop("study_accession")
@@ -50,8 +51,8 @@ class CellMetadata(Annotations):
         # value from column header
         name: str
         annotation_type: str
-        study_file_id: str
-        study_id: str
+        study_file_id: ObjectId
+        study_id: ObjectId
         # unique values from "group" type annotations
         values: List
 

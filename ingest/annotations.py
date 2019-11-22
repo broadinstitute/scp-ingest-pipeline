@@ -9,6 +9,7 @@ Must have python 3.6 or higher.
 
 import abc
 import pandas as pd  # NOqa: F821
+from bson.objectid import ObjectId
 
 try:
     # Used when importing internally and in tests
@@ -29,8 +30,8 @@ class Annotations(IngestFiles):
         )
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)
-        self.study_id = study_id
-        self.study_file_id = study_file_id
+        self.study_id = ObjectId(study_id)
+        self.study_file_id = ObjectId(study_file_id)
 
     @abc.abstractmethod
     def transform(self):

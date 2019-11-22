@@ -32,6 +32,7 @@ import ast
 import sys
 import unittest
 from unittest.mock import patch
+from bson.objectid import ObjectId
 
 from gcp_mocks import mock_storage_client, mock_storage_blob
 
@@ -66,6 +67,11 @@ def get_gene_model(mock_dir):
     with open(f'mock_data/{mock_dir}/gene_model_0.txt') as f:
         # Create a dictionary from the string-literal mock
         expected_model = ast.literal_eval(f.read())
+        # convert strings to BSON ObjectIds
+        study_id = ObjectId(expected_model['study_id'])
+        study_file_id = ObjectId(expected_model['study_file_id'])
+        expected_model['study_id'] = study_id
+        expected_model['study_file_id'] = study_file_id
 
     return expected_model
 
@@ -104,7 +110,7 @@ class IngestTestCase(unittest.TestCase):
             '--study-id',
             '5d276a50421aa9117c982845',
             '--study-file-id',
-            '1234abc',
+            '5dd5ae25421aa910a723a337',
             'ingest_expression',
             '--taxon-name',
             'Homo sapiens',
@@ -139,7 +145,7 @@ class IngestTestCase(unittest.TestCase):
             '--study-id',
             '5d276a50421aa9117c982845',
             '--study-file-id',
-            '1234abc',
+            '5dd5ae25421aa910a723a337',
             'ingest_expression',
             '--taxon-name',
             'Homo sapiens',
@@ -176,7 +182,7 @@ class IngestTestCase(unittest.TestCase):
             '--study-id',
             '5d276a50421aa9117c982845',
             '--study-file-id',
-            '1234abc',
+            '5dd5ae25421aa910a723a337',
             'ingest_expression',
             '--taxon-name',
             'Homo sapiens',
@@ -210,7 +216,7 @@ class IngestTestCase(unittest.TestCase):
             '--study-id',
             '5d276a50421aa9117c982845',
             '--study-file-id',
-            '1234abc',
+            '5dd5ae25421aa910a723a337',
             'ingest_expression',
             '--taxon-name',
             'Homo sapiens',
@@ -248,7 +254,7 @@ class IngestTestCase(unittest.TestCase):
             '--study-id',
             '5d276a50421aa9117c982845',
             '--study-file-id',
-            '1234abc',
+            '5dd5ae25421aa910a723a337',
             'ingest_expression',
             '--taxon-name',
             'Homo sapiens',
@@ -276,7 +282,7 @@ class IngestTestCase(unittest.TestCase):
     #         '--study-id',
     #         '5d276a50421aa9117c982845',
     #         '--study-file-id',
-    #         '1234abc',
+    #         '5dd5ae25421aa910a723a337',
     #         'ingest_expression',
     #         '--taxon-name',
     #         'Homo Sapiens',

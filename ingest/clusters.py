@@ -4,6 +4,7 @@ from mypy_extensions import TypedDict
 
 from ingest_files import DataArray
 from annotations import Annotations
+from bson.objectid import ObjectId
 
 
 @dataclass
@@ -25,16 +26,16 @@ class Clusters(Annotations):
         cluster_type: str
         # List of dictionaries that describe all extra "annotation" columns
         cell_annotations: List
-        file_id: str
-        study_id: str
+        file_id: ObjectId
+        study_id: ObjectId
         # Hash containing min/max arrays for each axis in the cluster plot
         domain_ranges: DomainRanges = None
 
     def __init__(
         self,
         file_path: str,
-        study_id: str,
-        study_file_id: str,
+        study_id: ObjectId,
+        study_file_id: ObjectId,
         name: str,
         *,
         domain_ranges: Dict = None,
