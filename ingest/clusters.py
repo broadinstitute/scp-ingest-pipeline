@@ -10,6 +10,7 @@ except ImportError:
     from .ingest_files import DataArray
     from .annotations import Annotations
 
+
 @dataclass
 class DomainRanges(TypedDict):
     x: List

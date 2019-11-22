@@ -17,6 +17,7 @@ except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
 
+
 class Dense(GeneExpression):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 

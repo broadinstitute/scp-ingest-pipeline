@@ -19,6 +19,7 @@ except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles, DataArray
 
+
 class GeneExpression(IngestFiles):
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = 'genes'

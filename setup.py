@@ -20,7 +20,7 @@ setup(
         'dataclasses',
         'mypy_extensions',
         'pymongo',
-        'loompy'
+        'loompy',
     ],
     packages=find_packages(),
 )
