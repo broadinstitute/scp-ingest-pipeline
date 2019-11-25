@@ -98,7 +98,7 @@ class GeneExpression(IngestFiles):
             self.cluster_name,
             'expression',
             values,
-            'for Gene',
+            'Gene',
             linear_data_id,
             self.study_id,
             self.study_file_id,

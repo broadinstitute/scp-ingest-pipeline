@@ -61,7 +61,7 @@ class CellMetadata(Annotations):
         AnnotationModel = collections.namedtuple(
             'AnnotationModel', ['annot_header', 'model']
         )
-        for annot_header in self.file.columns[:]:
+        for annot_header in self.file.columns[1:]:
             annot_name = annot_header[0]
             annot_type = annot_header[1]
             yield AnnotationModel(

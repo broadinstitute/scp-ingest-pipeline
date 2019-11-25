@@ -179,13 +179,15 @@ class IngestPipeline(object):
         documents = []
 
         try:
-            linear_id = self.db[collection_name].insert(model)
+            linear_id = self.db[collection_name].insert_one(model).inserted_id
             for data_array_model in set_data_array_fn(
                 linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
 
                 documents.append(data_array_model)
-            self.db['data_arrays'].insert_many(documents)
+            # only insert documents if present
+            if (len(documents) > 0):
+                self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             print(e)
             return 1
@@ -319,14 +321,14 @@ class IngestPipeline(object):
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate_format():
-            for annotation_model in self.cluster.transform():
-                status = self.load(
-                    self.cluster.COLLECTION_NAME,
-                    annotation_model,
-                    self.cluster.get_data_array_annot,
-                )
-                if status != 0:
-                    return status
+            annotation_model = self.cluster.transform()
+            status = self.load(
+                self.cluster.COLLECTION_NAME,
+                annotation_model,
+                self.cluster.get_data_array_annot,
+            )
+            if status != 0:
+                return status
         return status
 
     def subsample(self):

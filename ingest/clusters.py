@@ -26,7 +26,7 @@ class Clusters(Annotations):
         cluster_type: str
         # List of dictionaries that describe all extra "annotation" columns
         cell_annotations: List
-        file_id: ObjectId
+        study_file_id: ObjectId
         study_id: ObjectId
         # Hash containing min/max arrays for each axis in the cluster plot
         domain_ranges: DomainRanges = None
@@ -86,7 +86,7 @@ class Clusters(Annotations):
 
     def get_data_array_annot(self, linear_data_id):
         for annot_header in self.file.columns:
-            return Clusters.set_data_array(
+            yield Clusters.set_data_array(
                 annot_header[0],
                 self.name,
                 self.file[annot_header].tolist(),
@@ -118,7 +118,6 @@ class Clusters(Annotations):
         BASE_DICT = {'linear_data_type': Clusters.LINEAR_DATA_TYPE}
 
         def get_cluster_attr(annot_name):
-
             cluster_group_types = {
                 'name': {'name': "text", 'array_type': "cells"},
                 'coordinates': {

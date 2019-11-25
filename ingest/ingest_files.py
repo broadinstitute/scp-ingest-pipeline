@@ -149,6 +149,7 @@ class IngestFiles:
         }
         # Check file type
         file_type = self.get_file_type(file_path)[0]
+        print(f'opening {file_path} as: {file_type}')
         # See if file type is allowed
         if file_type in self.allowed_file_types:
             # Return file object and type
