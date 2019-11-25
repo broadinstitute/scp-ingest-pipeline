@@ -279,12 +279,14 @@ def compare_type_annots_to_convention(metadata, convention):
 def cast_boolean_type(value):
     """Cast metadata value as boolean, if castable
     """
-    if str(value).lower() == 'true':
+    if isinstance(value, bool):
+        return value
+    elif str(value).lower() == 'true':
         return True
     elif str(value).lower() == 'false':
         return False
     else:
-        return value
+        raise ValueError(f'cannot cast {value} as boolean')
 
 
 def cast_integer_type(value):
@@ -334,8 +336,8 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
             cast_metadata[metadatum] = cast_values
         except ValueError:
             error_msg = (
-                f'{metadatum}: "{element}" in "{value}" does not match '
-                f'expected "{lookup_metadata_type(convention, metadatum)}" type'
+                f"{metadatum}: '{element}' in '{value}' does not match "
+                f"expected '{lookup_metadata_type(convention, metadatum)}' type"
             )
             metadata.store_validation_issue(
                 'error', 'type', error_msg, [id_for_error_detail]
