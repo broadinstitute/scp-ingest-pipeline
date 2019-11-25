@@ -84,10 +84,10 @@ class Dense(GeneExpression):
             filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items())
         )
         return self.set_data_array_gene_cell_names(
-            gene_name, linear_data_id, list(cells_and_expression_vals)
+            unformatted_gene_name, linear_data_id, list(cells_and_expression_vals)
         )
         return self.set_data_array_gene_expression_values(
-            gene_name, linear_data_id, cells_and_expression_vals.values()
+            unformatted_gene_name, linear_data_id, cells_and_expression_vals.values()
         )
 
     def close(self):
