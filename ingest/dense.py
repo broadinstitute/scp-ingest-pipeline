@@ -87,7 +87,7 @@ class Dense(GeneExpression):
         observed_values = list(cells_and_expression_vals.values())
 
         # only return significant data (skip if no expression was observed)
-        if (len(observed_values) > 0):
+        if len(observed_values) > 0:
             yield from self.set_data_array_gene_cell_names(
                 unformatted_gene_name, linear_data_id, observed_cells
             )
