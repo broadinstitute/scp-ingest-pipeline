@@ -19,6 +19,8 @@ setup(
         'colorama',
         'dataclasses',
         'mypy_extensions',
+        'pymongo',
+        'loompy',
     ],
     packages=find_packages(),
 )

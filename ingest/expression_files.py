@@ -7,12 +7,17 @@ files.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-from ingest_files import IngestFiles, DataArray
 import abc
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
 from typing import List  # noqa: F401
 import ntpath
+
+try:
+    from ingest_files import IngestFiles, DataArray
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .ingest_files import IngestFiles, DataArray
 
 
 class GeneExpression(IngestFiles):
