@@ -21,6 +21,7 @@ import requests
 import urllib.parse as encoder
 import re
 import os
+import numbers
 
 import colorama
 from colorama import Fore
@@ -277,12 +278,14 @@ def compare_type_annots_to_convention(metadata, convention):
 def cast_boolean_type(value):
     """Cast metadata value as boolean, if castable
     """
-    if value.lower() == 'true':
+    if isinstance(value, bool):
+        return value
+    elif str(value).lower() == 'true':
         return True
-    elif value.lower() == 'false':
+    elif str(value).lower() == 'false':
         return False
     else:
-        return value
+        raise ValueError(f'cannot cast {value} as boolean')
 
 
 def cast_integer_type(value):
@@ -297,10 +300,13 @@ def cast_float_type(value):
     return float(value)
 
 
-def return_without_cast(value):
-    """no need to cast Pandas objects
+def cast_string_type(value):
+    """Cast string type per convention where Pandas autodetected a number
     """
-    return value
+    if isinstance(value, numbers.Number):
+        return str(value)
+    else:
+        return value
 
 
 def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metadata):
@@ -312,7 +318,7 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         'number': cast_float_type,
         'boolean': cast_boolean_type,
         'integer': cast_integer_type,
-        'string': return_without_cast,
+        'string': cast_string_type,
     }
     if is_array_metadata(convention, metadatum):
         cast_values = []
@@ -329,8 +335,8 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
             cast_metadata[metadatum] = cast_values
         except ValueError:
             error_msg = (
-                f'{metadatum}: "{element}" in "{value}" does not match '
-                f'expected "{lookup_metadata_type(convention, metadatum)}" type'
+                f"{metadatum}: '{element}' in '{value}' does not match "
+                f"expected '{lookup_metadata_type(convention, metadatum)}' type"
             )
             metadata.store_validation_issue(
                 'error', 'type', error_msg, [id_for_error_detail]
