@@ -179,6 +179,7 @@ class IngestPipeline(object):
         documents = []
 
         try:
+            print(f'model to insert: {model}')
             linear_id = self.db[collection_name].insert_one(model).inserted_id
             for data_array_model in set_data_array_fn(
                 linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
@@ -187,6 +188,7 @@ class IngestPipeline(object):
                 documents.append(data_array_model)
             # only insert documents if present
             if (len(documents) > 0):
+                print(f'documents to insert: {documents}')
                 self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             print(e)

@@ -75,7 +75,7 @@ class Clusters(Annotations):
                     else [],
                 }
             )
-        yield self.Model(
+        return self.Model(
             name=self.name,
             cluster_type=self.cluster_type,
             cell_annotations=cell_annotations,
@@ -86,7 +86,7 @@ class Clusters(Annotations):
 
     def get_data_array_annot(self, linear_data_id):
         for annot_header in self.file.columns:
-            yield Clusters.set_data_array(
+            yield from Clusters.set_data_array(
                 annot_header[0],
                 self.name,
                 self.file[annot_header].tolist(),
