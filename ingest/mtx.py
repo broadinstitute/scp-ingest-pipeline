@@ -14,7 +14,12 @@ Must have python 3.6 or higher.
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import collections
 import scipy.io
-from expression_files import GeneExpression
+
+try:
+    from expression_files import GeneExpression
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .expression_files import GeneExpression
 
 
 class Mtx(GeneExpression):

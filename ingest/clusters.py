@@ -1,11 +1,15 @@
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
-
-from ingest_files import DataArray
-from annotations import Annotations
 from bson.objectid import ObjectId
 
+try:
+    from ingest_files import DataArray
+    from annotations import Annotations
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .ingest_files import DataArray
+    from .annotations import Annotations
 
 @dataclass
 class DomainRanges(TypedDict):

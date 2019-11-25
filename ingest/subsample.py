@@ -2,8 +2,14 @@ import copy
 from typing import List, Tuple  # noqa: F401
 
 import numpy as np
-from annotations import Annotations
-from clusters import Clusters
+
+try:
+    from annotations import Annotations
+    from clusters import Clusters
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .annotations import Annotations
+    from .clusters import Clusters
 
 
 class SubSample(Annotations):

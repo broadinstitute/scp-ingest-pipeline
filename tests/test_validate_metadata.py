@@ -139,7 +139,7 @@ class TestValidateMetadata(unittest.TestCase):
         #   missing value for non-required property 'is_living'
         #   value provided not in enumerated list for 'sample_type'
         #   value provided not a number for 'organism_age'
-        reference_file = open('../tests/data/issues_metadata_v1.1.1.json')
+        reference_file = open('../tests/data/issues_metadata_v1.1.3.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
@@ -188,7 +188,7 @@ class TestValidateMetadata(unittest.TestCase):
         #     with species ontologyID of 'NCBITaxon_9606'
         #   invalid ontologyID of 'NCBITaxon_9606' for geographical_region
         #   invalid ontologyID UBERON_1000331 for organ__ontology_label
-        reference_file = open('../tests/data/issues_ontology_v1.1.1.json')
+        reference_file = open('../tests/data/issues_ontology_v1.1.3.json')
         reference_issues = json.load(reference_file)
 
         self.assertEqual(
@@ -240,7 +240,7 @@ class TestValidateMetadata(unittest.TestCase):
         # invalid boolean value: disease__treated
         # non-uniform unit values: organism_age__unit
         # missing ontology ID or label for non-required metadata: ethnicity
-        reference_file = open('../tests/data/issues_array_v1.1.2.json')
+        reference_file = open('../tests/data/issues_array_v1.1.3.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(

@@ -41,11 +41,7 @@ import sys
 import json
 import os
 
-from cell_metadata import CellMetadata
-from clusters import Clusters
-from dense import Dense
 from pymongo import MongoClient
-from mtx import Mtx
 from google.cloud import storage
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
@@ -61,6 +57,10 @@ try:
         report_issues,
         write_metadata_to_bq,
     )
+    from cell_metadata import CellMetadata
+    from clusters import Clusters
+    from dense import Dense
+    from mtx import Mtx
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
@@ -71,6 +71,10 @@ except ImportError:
         report_issues,
         write_metadata_to_bq,
     )
+    from .cell_metadata import CellMetadata
+    from .clusters import Clusters
+    from .dense import Dense
+    from .mtx import Mtx
 
 
 # Ingest file types

@@ -3,23 +3,22 @@
     "type": {
       "sample_type: \"numeric\" annotation in metadata file conflicts with metadata convention. Convention expects \"group\" values.": null,
       "organism_age: \"group\" annotation in metadata file conflicts with metadata convention. Convention expects \"numeric\" values.": null,
-      "disease__time_since_onset: \"three\" in \"36|three|1\" does not match expected \"number\" type": [
+      "disease__treated: 'F' in 'F' does not match expected 'boolean' type": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "disease__treated: 'T' in 'T|F' does not match expected 'boolean' type": [
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ],
+      "disease__time_since_onset: 'three' in '36|three|1' does not match expected 'number' type": [
         "BM01_16dpp_CGGTAAACCATT"
       ],
-      "disease__time_since_onset: \"zero\" in \"zero\" does not match expected \"number\" type": [
+      "disease__time_since_onset: 'zero' in 'zero' does not match expected 'number' type": [
         "BM01_16dpp_CCGAATTCACCG"
       ]
     },
     "convention": {
-      "disease__treated: 'F' is not of type 'boolean'": [
-        "BM01_16dpp_TAAGCAGTGGTA",
-        "BM01_16dpp_CTAAGCAGTGGT"
-      ],
       "ethnicity__ontology_label: nan is not of type 'string'": [
         "BM01_16dpp_TAAGCAGTGGTA"
-      ],
-      "disease__treated: 'T' is not of type 'boolean'": [
-        "BM01_16dpp_CTAAGCAGTGGT"
       ],
       "'disease__time_since_onset' is a dependency of 'disease__time_since_onset__unit'": [
         "BM01_16dpp_CGGTAAACCATT",
