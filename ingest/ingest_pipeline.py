@@ -49,6 +49,7 @@ from mtx import Mtx
 from google.cloud import storage
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
+from bson.objectid import ObjectId
 
 try:
     # Used when importing internally and in tests
@@ -177,18 +178,20 @@ class IngestPipeline(object):
         **set_data_array_fn_kwargs,
     ):
         documents = []
-
         try:
-            print(f'model to insert: {model}')
-            linear_id = self.db[collection_name].insert_one(model).inserted_id
-            for data_array_model in set_data_array_fn(
-                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
-            ):
+            # hack to avoid inserting invalid CellMetadata object from first column
+            # TODO: implement method similar to kwargs solution in ingest_expression
+            if collection_name == 'cell_metadata' and model['name'] == 'NAME' and model['annotation_type'] == 'TYPE':
+                linear_id = ObjectId(self.study_id)
+            else:
+                linear_id = self.db[collection_name].insert_one(model).inserted_id
 
+            for data_array_model in set_data_array_fn(
+                    linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
+            ):
                 documents.append(data_array_model)
             # only insert documents if present
             if (len(documents) > 0):
-                print(f'documents to insert: {documents}')
                 self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             print(e)
@@ -310,6 +313,7 @@ class IngestPipeline(object):
             self.cell_metadata.reset_file(2, open_as="dataframe")
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
+
                 status = self.load(
                     self.cell_metadata.COLLECTION_NAME,
                     metadataModel.model,
