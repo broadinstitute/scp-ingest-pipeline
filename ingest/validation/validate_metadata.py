@@ -22,7 +22,6 @@ import urllib.parse as encoder
 import re
 import os
 import numbers
-import pandas as pd
 
 import colorama
 from colorama import Fore
