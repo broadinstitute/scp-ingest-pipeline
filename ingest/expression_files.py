@@ -12,13 +12,13 @@ from dataclasses import dataclass
 from mypy_extensions import TypedDict
 from typing import List  # noqa: F401
 import ntpath
+from bson.objectid import ObjectId
 
 try:
     from ingest_files import IngestFiles, DataArray
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles, DataArray
-
 
 class GeneExpression(IngestFiles):
     __metaclass__ = abc.ABCMeta
@@ -29,8 +29,8 @@ class GeneExpression(IngestFiles):
         name: str
         # downcase version of 'name'
         searchable_name: str
-        study_file_id: str
-        study_id: str
+        study_file_id: ObjectId
+        study_id: ObjectId
         gene_id: str = None
 
     def __init__(
@@ -41,8 +41,8 @@ class GeneExpression(IngestFiles):
         allowed_file_types: str = None,
         open_as=None,
     ):
-        self.study_id = study_id
-        self.study_file_id = study_file_id
+        self.study_id = ObjectId(study_id)
+        self.study_file_id = ObjectId(study_file_id)
         self.head, self.tail = ntpath.split(file_path)
         self.cluster_name = self.tail or ntpath.basename(self.head)
         if open_as is not None:
@@ -103,7 +103,7 @@ class GeneExpression(IngestFiles):
             self.cluster_name,
             'expression',
             values,
-            'for Gene',
+            'Gene',
             linear_data_id,
             self.study_id,
             self.study_file_id,

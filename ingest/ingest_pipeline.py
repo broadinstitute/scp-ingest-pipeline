@@ -12,26 +12,26 @@ EXAMPLES
 # Takes expression file and stores it into MongoDB
 
 # Ingest cluster file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --study-accession SCP123 --ingest-cell-metadata
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --study-accession SCP123 --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have a pre-configured BigQuery table available
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
 
 # Ingest dense file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest loom file
-python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --name custer1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --name custer1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
@@ -45,6 +45,7 @@ from pymongo import MongoClient
 from google.cloud import storage
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
+from bson.objectid import ObjectId
 
 try:
     # Used when importing internally and in tests
@@ -181,15 +182,21 @@ class IngestPipeline(object):
         **set_data_array_fn_kwargs,
     ):
         documents = []
-
         try:
-            linear_id = self.db[collection_name].insert(model)
-            for data_array_model in set_data_array_fn(
-                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
-            ):
+            # hack to avoid inserting invalid CellMetadata object from first column
+            # TODO: implement method similar to kwargs solution in ingest_expression
+            if collection_name == 'cell_metadata' and model['name'] == 'NAME' and model['annotation_type'] == 'TYPE':
+                linear_id = ObjectId(self.study_id)
+            else:
+                linear_id = self.db[collection_name].insert_one(model).inserted_id
 
+            for data_array_model in set_data_array_fn(
+                    linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
+            ):
                 documents.append(data_array_model)
-            self.db['data_arrays'].insert_many(documents)
+            # only insert documents if present
+            if (len(documents) > 0):
+                self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             print(e)
             return 1
@@ -310,6 +317,7 @@ class IngestPipeline(object):
             self.cell_metadata.reset_file(2, open_as="dataframe")
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
+
                 status = self.load(
                     self.cell_metadata.COLLECTION_NAME,
                     metadataModel.model,
@@ -323,14 +331,14 @@ class IngestPipeline(object):
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate_format():
-            for annotation_model in self.cluster.transform():
-                status = self.load(
-                    self.cluster.COLLECTION_NAME,
-                    annotation_model,
-                    self.cluster.get_data_array_annot,
-                )
-                if status != 0:
-                    return status
+            annotation_model = self.cluster.transform()
+            status = self.load(
+                self.cluster.COLLECTION_NAME,
+                annotation_model,
+                self.cluster.get_data_array_annot,
+            )
+            if status != 0:
+                return status
         return status
 
     def subsample(self):

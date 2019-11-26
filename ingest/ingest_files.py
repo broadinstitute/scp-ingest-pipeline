@@ -47,6 +47,9 @@ class DataArray:
         self.linear_data_id = linear_data_id
         self.study_id = study_id
         self.study_file_id = study_file_id
+        # special case to override linear_data_id in case of 'Study' linear_data_type
+        if (self.linear_data_type == 'Study'):
+            self.linear_data_id = self.study_id
 
     def get_data_array(self):
         if len(self.values) > self.MAX_ENTRIES:
@@ -146,6 +149,7 @@ class IngestFiles:
         }
         # Check file type
         file_type = self.get_file_type(file_path)[0]
+        print(f'opening {file_path} as: {file_type}')
         # See if file type is allowed
         if file_type in self.allowed_file_types:
             # Return file object and type

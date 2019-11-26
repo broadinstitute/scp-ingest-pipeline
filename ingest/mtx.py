@@ -85,12 +85,12 @@ class Mtx(GeneExpression):
             return self.set_data_array_cells(self.cells, linear_data_id)
         else:
             return self.set_data_array_gene_cell_names(
-                gene_name,
+                unformatted_gene_name,
                 linear_data_id,
                 self.exp_by_gene[unformatted_gene_name].cell_names,
             )
             return self.set_data_array_gene_expression_values(
-                gene_name,
+                unformatted_gene_name,
                 linear_data_id,
                 self.exp_by_gene[unformatted_gene_name].expression_scores,
             )

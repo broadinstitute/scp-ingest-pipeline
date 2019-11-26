@@ -72,11 +72,11 @@ class Dense(GeneExpression):
         """Creates data array for expression, gene, and cell values."""
         input_args = locals()
         gene_df = self.file[self.file['GENE'] == unformatted_gene_name]
-
-        if create_cell_data_array:
-            return self.set_data_array_cells(self.file['GENE'].tolist(), linear_data_id)
         # Get list of cell names
         cells = self.file.columns.tolist()[1:]
+        if create_cell_data_array:
+            yield from self.set_data_array_cells(cells, linear_data_id)
+
         # Get row of expression values for gene
         # Round expression values to 3 decimal points
         # Insure data type of float for expression values
@@ -87,12 +87,17 @@ class Dense(GeneExpression):
         cells_and_expression_vals = dict(
             filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items())
         )
-        return self.set_data_array_gene_cell_names(
-            gene_name, linear_data_id, list(cells_and_expression_vals)
-        )
-        return self.set_data_array_gene_expression_values(
-            gene_name, linear_data_id, cells_and_expression_vals.values()
-        )
+        observed_cells = list(cells_and_expression_vals)
+        observed_values = list(cells_and_expression_vals.values())
+
+        # only return significant data (skip if no expression was observed)
+        if len(observed_values) > 0:
+            yield from self.set_data_array_gene_cell_names(
+                unformatted_gene_name, linear_data_id, observed_cells
+            )
+            yield from self.set_data_array_gene_expression_values(
+                unformatted_gene_name, linear_data_id, observed_values
+            )
 
     def close(self):
         """Closes file

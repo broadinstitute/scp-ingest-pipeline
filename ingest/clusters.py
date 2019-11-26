@@ -1,6 +1,7 @@
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
+from bson.objectid import ObjectId
 
 try:
     from ingest_files import DataArray
@@ -9,7 +10,6 @@ except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import DataArray
     from .annotations import Annotations
-
 
 @dataclass
 class DomainRanges(TypedDict):
@@ -30,16 +30,16 @@ class Clusters(Annotations):
         cluster_type: str
         # List of dictionaries that describe all extra "annotation" columns
         cell_annotations: List
-        file_id: str
-        study_id: str
+        study_file_id: ObjectId
+        study_id: ObjectId
         # Hash containing min/max arrays for each axis in the cluster plot
         domain_ranges: DomainRanges = None
 
     def __init__(
         self,
         file_path: str,
-        study_id: str,
-        study_file_id: str,
+        study_id: ObjectId,
+        study_file_id: ObjectId,
         name: str,
         *,
         domain_ranges: Dict = None,
@@ -79,7 +79,7 @@ class Clusters(Annotations):
                     else [],
                 }
             )
-        yield self.Model(
+        return self.Model(
             name=self.name,
             cluster_type=self.cluster_type,
             cell_annotations=cell_annotations,
@@ -90,7 +90,7 @@ class Clusters(Annotations):
 
     def get_data_array_annot(self, linear_data_id):
         for annot_header in self.file.columns:
-            return Clusters.set_data_array(
+            yield from Clusters.set_data_array(
                 annot_header[0],
                 self.name,
                 self.file[annot_header].tolist(),
@@ -122,7 +122,6 @@ class Clusters(Annotations):
         BASE_DICT = {'linear_data_type': Clusters.LINEAR_DATA_TYPE}
 
         def get_cluster_attr(annot_name):
-
             cluster_group_types = {
                 'name': {'name': "text", 'array_type': "cells"},
                 'coordinates': {
