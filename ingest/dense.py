@@ -10,8 +10,16 @@ Must have python 3.6 or higher.
 
 import collections
 from typing import List  # noqa: F401
+import logging
 
-from expression_files import GeneExpression
+try:
+    from expression_files import GeneExpression, my_debug_logger
+    from monitor import setup_logger, log
+
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .expression_files import GeneExpression
+    from .monitor import setup_logger, log
 
 
 class Dense(GeneExpression):
@@ -42,6 +50,9 @@ class Dense(GeneExpression):
         for gene in self.file['GENE']:
             # Remove white spaces and quotes
             formatted_gene_name = gene.strip().strip('\"').strip('\'').strip('\"')
+            self.info_logger.info(
+                f'Transforming gene :{gene}', extra=self.extra_log_params
+            )
             yield GeneModel(
                 # Name of gene as observed in file
                 gene,
@@ -68,11 +79,15 @@ class Dense(GeneExpression):
         """Creates data array for expression, gene, and cell values."""
         input_args = locals()
         gene_df = self.file[self.file['GENE'] == unformatted_gene_name]
-
-        if create_cell_data_array:
-            return self.set_data_array_cells(self.file['GENE'].tolist(), linear_data_id)
         # Get list of cell names
         cells = self.file.columns.tolist()[1:]
+        if create_cell_data_array:
+            self.info_logger.info(
+                f'Creating cell data array for gene : {gene_name}',
+                extra=self.extra_log_params,
+            )
+            yield from self.set_data_array_cells(cells, linear_data_id)
+
         # Get row of expression values for gene
         # Round expression values to 3 decimal points
         # Insure data type of float for expression values
@@ -83,12 +98,25 @@ class Dense(GeneExpression):
         cells_and_expression_vals = dict(
             filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items())
         )
-        return self.set_data_array_gene_cell_names(
-            gene_name, linear_data_id, list(cells_and_expression_vals)
-        )
-        return self.set_data_array_gene_expression_values(
-            gene_name, linear_data_id, cells_and_expression_vals.values()
-        )
+        observed_cells = list(cells_and_expression_vals)
+        observed_values = list(cells_and_expression_vals.values())
+
+        # Return significant data (skip if no expression was observed)
+        if len(observed_values) > 0:
+            self.info_logger.info(
+                f'Creating cell names data array for gene: {gene_name}',
+                extra=self.extra_log_params,
+            )
+            yield from self.set_data_array_gene_cell_names(
+                gene_name, linear_data_id, observed_cells
+            )
+            self.info_logger.info(
+                f'Creating gene expression data array for gene: {gene_name}',
+                extra=self.extra_log_params,
+            )
+            yield from self.set_data_array_gene_expression_values(
+                gene_name, linear_data_id, observed_values
+            )
 
     def close(self):
         """Closes file

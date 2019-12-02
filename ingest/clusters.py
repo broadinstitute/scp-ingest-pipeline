@@ -2,10 +2,17 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
 import logging
+from bson.objectid import ObjectId
 
-from ingest_files import DataArray
-from annotations import Annotations
-from monitor import log, setup_logger
+try:
+    from ingest_files import DataArray
+    from annotations import Annotations
+    from monitor import setup_logger, log
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .ingest_files import DataArray
+    from .annotations import Annotations
+    from .monitor import setup_logger, log
 
 # from ingest_pipeline import log
 
@@ -36,16 +43,16 @@ class Clusters(Annotations):
         cluster_type: str
         # List of dictionaries that describe all extra "annotation" columns
         cell_annotations: List
-        file_id: str
-        study_id: str
+        study_file_id: ObjectId
+        study_id: ObjectId
         # Hash containing min/max arrays for each axis in the cluster plot
         domain_ranges: DomainRanges = None
 
     def __init__(
         self,
         file_path: str,
-        study_id: str,
-        study_file_id: str,
+        study_id: ObjectId,
+        study_file_id: ObjectId,
         name: str,
         *,
         domain_ranges: Dict = None,
@@ -66,7 +73,6 @@ class Clusters(Annotations):
         self.name = name
         self.domain_ranges = domain_ranges
 
-    @my_debug_logger()
     def transform(self):
         """ Builds cluster data model"""
         # Array of Hash objects that describe all extra "annotation" columns
@@ -74,6 +80,10 @@ class Clusters(Annotations):
         # Iterate through all extra "annotation" column headers
         # (I.E. column headers that are not coordinates or where TYPE !=NAME)
         for annot_headers in self.annot_column_headers:
+            self.info_logger.info(
+                f'Transforming header {annot_headers[0]}',
+                extra={'study_id': self.study_id, 'duration': None},
+            )
             annot_name = annot_headers[0]
             annot_type = annot_headers[1]
             # column_type = annot[1]
@@ -86,7 +96,9 @@ class Clusters(Annotations):
                     else [],
                 }
             )
-        self.info_logger.info(f'Created model for {self.study_id}')
+        self.info_logger.info(
+            f'Created model for {self.study_id}', extra=self.extra_log_params
+        )
         return self.Model(
             name=self.name,
             cluster_type=self.cluster_type,
@@ -96,13 +108,13 @@ class Clusters(Annotations):
             domain_ranges=DomainRanges(**self.domain_ranges),
         )
 
-    @my_debug_logger()
     def get_data_array_annot(self, linear_data_id):
         for annot_header in self.file.columns:
             self.info_logger.info(
-                f'Creating data array for header {annot_header[0]} for {self.study_id}'
+                f'Creating data array for header {annot_header[0]}',
+                extra={'study_id': self.study_id, 'duration': None},
             )
-            yield Clusters.set_data_array(
+            yield from Clusters.set_data_array(
                 annot_header[0],
                 self.name,
                 self.file[annot_header].tolist(),
@@ -130,11 +142,11 @@ class Clusters(Annotations):
         subsample_annotation: str = None,
         subsample_threshold: int = None,
     ):
+        # Add any other arguments below data_array_attr
         data_array_attr = locals()
         BASE_DICT = {'linear_data_type': Clusters.LINEAR_DATA_TYPE}
 
         def get_cluster_attr(annot_name):
-
             cluster_group_types = {
                 'name': {'name': "text", 'array_type': "cells"},
                 'coordinates': {
@@ -157,7 +169,6 @@ class Clusters(Annotations):
         cluster_attr = get_cluster_attr(name)
         # Remove 'name' from function aruguments
         del data_array_attr['name']
-
         # Merge BASE_DICT, cluster_attr & data_array_attr and return DataArray model
         return DataArray(
             **data_array_attr, **cluster_attr, **BASE_DICT

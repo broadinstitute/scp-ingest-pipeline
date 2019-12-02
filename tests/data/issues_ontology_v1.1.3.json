@@ -1,13 +1,10 @@
 {
   "error": {
     "convention": {
-      "cell_type: nan is not of type 'string'": [
+      "cell_type: 'nan' does not match '^[A-Za-z]+[_:][0-9]'": [
         "BM01_16dpp_AAGCAGTGGTAT"
       ],
-      "geographical_region: nan is not of type 'string'": [
-        "BM01_16dpp_AAGCAGTGGTAT"
-      ],
-      "geographical_region__ontology_label: nan is not of type 'string'": [
+      "geographical_region: 'nan' does not match '^[A-Za-z]+[_:][0-9]'": [
         "BM01_16dpp_AAGCAGTGGTAT"
       ],
       "library_preparation_protocol: 'EFO0008919' does not match '^[A-Za-z]+[_:][0-9]'": [

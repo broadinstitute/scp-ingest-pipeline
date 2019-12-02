@@ -12,26 +12,26 @@ EXAMPLES
 # Takes expression file and stores it into MongoDB
 
 # Ingest cluster file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --study-accession SCP123 --ingest-cell-metadata
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --study-accession SCP123 --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have a pre-configured BigQuery table available
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
 
 # Ingest dense file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
 
 # Ingest loom file
-python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --name custer1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --name custer1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 123abc ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
@@ -41,18 +41,16 @@ import sys
 import json
 import os
 import logging
+import re
 
-from cell_metadata import CellMetadata
-from clusters import Clusters
-from dense import Dense
 from pymongo import MongoClient
-from mtx import Mtx
 from google.cloud import storage
 from google.cloud import *
 from google.cloud import bigquery
 
 # import google.cloud.logging
 from google.cloud.exceptions import NotFound
+from bson.objectid import ObjectId
 
 # from google.cloud.logging.resource import Resource
 
@@ -68,6 +66,11 @@ try:
         report_issues,
         write_metadata_to_bq,
     )
+    from monitor import setup_logger, log
+    from cell_metadata import CellMetadata
+    from clusters import Clusters
+    from dense import Dense
+    from mtx import Mtx
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
@@ -78,6 +81,11 @@ except ImportError:
         report_issues,
         write_metadata_to_bq,
     )
+    from .monitor import setup_logger, log
+    from .cell_metadata import CellMetadata
+    from .clusters import Clusters
+    from .dense import Dense
+    from .mtx import Mtx
 
 
 # Ingest file types
@@ -88,6 +96,11 @@ class IngestPipeline(object):
     # File location for metadata json convention
     JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
     logger = logging.getLogger(__name__)
+    errors_logger = setup_logger(
+        __name__ + '_errors', 'errors.txt', level=logging.ERROR
+    )
+    info_logger = setup_logger(__name__, 'info.txt')
+    my_debug_logger = log(errors_logger)
 
     def __init__(
         self,
@@ -125,27 +138,22 @@ class IngestPipeline(object):
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
         elif matrix_file is None:
             self.matrix = matrix_file
+        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
 
-        # self.ingest_logger = Logger().get_logger()
-
+    @my_debug_logger()
     def get_mongo_db(self):
         host = os.environ['DATABASE_HOST']
         user = os.environ['MONGODB_USERNAME']
         password = os.environ['MONGODB_PASSWORD']
         db_name = os.environ['DATABASE_NAME']
 
-        try:
-            client = MongoClient(
-                host,
-                username=user,
-                password=password,
-                authSource=db_name,
-                authMechanism='SCRAM-SHA-1',
-            )
-            # logging.info('Connected to MongoDB')
-        except:
-            e = sys.exc_info()[0]
-            # logger.error(e)
+        client = MongoClient(
+            host,
+            username=user,
+            password=password,
+            authSource=db_name,
+            authMechanism='SCRAM-SHA-1',
+        )
 
         # TODO: Remove this block.
         # Uncomment and run `pytest -s` to manually verify your MongoDB set-up.
@@ -187,18 +195,28 @@ class IngestPipeline(object):
         **set_data_array_fn_kwargs,
     ):
         documents = []
-
         try:
-            # linear_id = self.db[collection_name].insert(model)
+            # hack to avoid inserting invalid CellMetadata object from first column
+            # TODO: implement method similar to kwargs solution in ingest_expression
+            # if (
+            #     collection_name == 'cell_metadata'
+            #     and model['name'] == 'NAME'
+            #     and model['annotation_type'] == 'TYPE'
+            # ):
+            #     linear_id = ObjectId(self.study_id)
+            # else:
+            #     linear_id = self.db[collection_name].insert_one(model).inserted_id
             for data_array_model in set_data_array_fn(
-                '1234', *set_data_array_fn_args, **set_data_array_fn_kwargs
+                '5d276a50421aa9117c982845',
+                *set_data_array_fn_args,
+                **set_data_array_fn_kwargs,
             ):
-
-                # documents.append(data_array_model)
-                print(set_data_array)
-            # self.db['data_arrays'].insert_many(documents)
+                documents.append(data_array_model)
+            # only insert documents if present
+            if len(documents) > 0:
+                self.db['data_arrays'].insert_many(documents)
         except Exception as e:
-            print(e)
+            self.errors_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -237,7 +255,7 @@ class IngestPipeline(object):
 
         except Exception as e:
             # TODO: Log this error
-            print(e)
+            self.errors_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -273,16 +291,21 @@ class IngestPipeline(object):
                 )
                 return write_status
             else:
-                print('Erroneous call to upload_metadata_to_bq')
+                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
-    def ingest_expression(self) -> None:
+    @my_debug_logger()
+    def ingest_expression(self) -> int:
         """Ingests expression files.
         """
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
         for idx, gene in enumerate(self.matrix.transform()):
+            self.info_logger.info(
+                f'Attempting to load gene: {gene.gene_name}',
+                extra=self.extra_log_params,
+            )
             if idx == 0:
                 status = self.load(
                     self.matrix.COLLECTION_NAME,
@@ -301,22 +324,38 @@ class IngestPipeline(object):
                     gene.gene_model['searchable_name'],
                 )
             if status != 0:
+                self.errors_logger.error(
+                    f'Loading gene name {gene.gene_name} failed. Exiting program',
+                    extra=self.extra_log_params,
+                )
                 return status
         return status
 
+    @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         if self.cell_metadata.validate_format():
+            self.info_logger.info(
+                f'Cell metadata file formate valid', extra=self.extra_log_params
+            )
             # Check file against metadata convention
             if self.kwargs['validate_convention'] is not None:
                 if self.kwargs['validate_convention']:
                     if self.conforms_to_metadata_convention():
+                        self.info_logger.info(
+                            f'Cell metadata file conforms to metadata convention',
+                            extra=self.extra_log_params,
+                        )
                         pass
                     else:
                         return 1
             self.cell_metadata.reset_file(2, open_as="dataframe")
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
+                self.info_logger.info(
+                    f'Attempting to load cell metadata header : {metadataModel.annot_header}',
+                    extra=self.extra_log_params,
+                )
                 status = self.load(
                     self.cell_metadata.COLLECTION_NAME,
                     metadataModel.model,
@@ -324,15 +363,18 @@ class IngestPipeline(object):
                     metadataModel.annot_header,
                 )
                 if status != 0:
+                    self.errors_logger.error(
+                        f'Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program',
+                        extra=self.extra_log_params,
+                    )
                     return status
             return status
 
+    @my_debug_logger()
     def ingest_cluster(self):
         """Ingests cluster files."""
-        status = 0
         if self.cluster.validate_format():
             annotation_model = self.cluster.transform()
-            print(annotation_model)
             status = self.load(
                 self.cluster.COLLECTION_NAME,
                 annotation_model,
@@ -368,17 +410,6 @@ class IngestPipeline(object):
                 if load_status != 0:
                     return load_status
         return 0
-
-    def delocalize_error_file(self):
-        """Writes local error file to Google bucket
-        """
-        storage_client = storage.Client()
-        bucket = storage_client.get_bucket(self.cell_metadata.bucket)
-        destination_blob_name = f'parse_logs/{self.study_file_id}/errors.txt'
-        blob = bucket.blob(destination_blob_name)
-        source_file_name = 'scp_validation_errors.txt'
-        blob.upload_from_filename(source_file_name)
-        print(f'File {source_file_name} uploaded to {destination_blob_name}.')
 
 
 def create_parser():
@@ -620,7 +651,7 @@ def main() -> None:
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     ingest = IngestPipeline(**arguments)
-    # TODO: Add validation for gene and cluster file types
+    # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
         status.append(ingest.ingest_expression())
     elif "ingest_cell_metadata" in arguments:
@@ -637,21 +668,36 @@ def main() -> None:
         if arguments["subsample"]:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
+
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
-    else:
-        if status_cell_metadata is not None:
-            if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
-                ingest.delocalize_error_file()
-                # PAPI jobs failing metadata validation against convention report
-                # will have "unexpected exit status 65 was not ignored"
-                # EX_DATAERR (65) The input data was incorrect in some way.
-                # note that failure to load to MongoDB also triggers this error
-                sys.exit(os.EX_DATAERR)
-            if status_metadata_bq is not None:
-                if status_metadata_bq > 0:
-                    sys.exit(1)
+        else:
+            r = re.compile("\b(\w*file)$")
+            # delocalize errors file
+            for argument in list(arguments.keys()):
+                captured_argument = re.match("(\w*file)$", argument)
+                if captured_argument is not None:
+                    study_file_id = arguments['study_file_id']
+                    matched_arugment = captured_argument.groups()[0]
+                    file_path = arguments[matched_arugment]
+                    if IngestFiles.is_remote_file(file_path):
+                        IngestFiles.delocalize_file(
+                            study_file_id,
+                            arguments['study_id'],
+                            file_path,
+                            'errors.txt',
+                            f'parse_logs/{study_file_id}/errors.txt',
+                        )
+                    break
+            if status_cell_metadata is not None:
+                if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
+                    # PAPI jobs failing metadata validation against convention report
+                    # will have "unexpected exit status 65 was not ignored"
+                    # EX_DATAERR (65) The input data was incorrect in some way.
+                    # note that failure to load to MongoDB also triggers this error
+                    sys.exit(os.EX_DATAERR)
+            sys.exit(1)
 
 
 if __name__ == "__main__":

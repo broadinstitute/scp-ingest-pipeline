@@ -14,7 +14,15 @@ Must have python 3.6 or higher.
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import collections
 import scipy.io
-from expression_files import GeneExpression
+import logging
+
+try:
+    from expression_files import GeneExpression, my_debug_logger
+    from monitor import setup_logger, log
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .expression_files import GeneExpression
+    from .monitor import setup_logger, log
 
 
 class Mtx(GeneExpression):
@@ -56,6 +64,9 @@ class Mtx(GeneExpression):
                 self.exp_by_gene[gene].cell_names.append(cell_name)
             else:
                 self.exp_by_gene[gene] = GeneExpressionValues([cell_name], [exp_score])
+                self.info_logger.info(
+                    f'Creating model for {gene} ', extra=self.extra_log_params
+                )
                 yield GeneModelData(
                     gene,
                     self.Model(
@@ -77,15 +88,27 @@ class Mtx(GeneExpression):
         create_cell_DataArray=False,
     ):
         if create_cell_DataArray:
-            return self.set_data_array_cells(self.cells, linear_data_id)
+            self.info_logger.info(
+                f'Creating cell data array for gene :{unformatted_gene_name}',
+                extra=self.extra_log_params,
+            )
+            yield from self.set_data_array_cells(self.cells, linear_data_id)
         else:
-            return self.set_data_array_gene_cell_names(
-                gene_name,
+            self.info_logger.info(
+                f'Creating cell names data array for gene:{unformatted_gene_name}',
+                extra=self.extra_log_params,
+            )
+            yield from self.set_data_array_gene_cell_names(
+                unformatted_gene_name,
                 linear_data_id,
                 self.exp_by_gene[unformatted_gene_name].cell_names,
             )
-            return self.set_data_array_gene_expression_values(
-                gene_name,
+            self.info_logger.info(
+                f'Creating gene expression data array for gene:{unformatted_gene_name}',
+                extra=self.extra_log_params,
+            )
+            yield from self.set_data_array_gene_expression_values(
+                unformatted_gene_name,
                 linear_data_id,
                 self.exp_by_gene[unformatted_gene_name].expression_scores,
             )

@@ -18,6 +18,7 @@ import sys
 import unittest
 import json
 import os
+from bson.objectid import ObjectId
 
 sys.path.append('../ingest')
 sys.path.append('../ingest/validation')
@@ -40,7 +41,8 @@ class TestValidateMetadata(unittest.TestCase):
         with open(args.convention) as f:
             convention = json.load(f)
         filetsv = args.input_metadata
-        metadata = CellMetadata(filetsv, '1234abc', 'SCP1', study_accession='SCP1')
+        metadata = CellMetadata(filetsv, ObjectId('5d276a50421aa9117c982845'),
+                                ObjectId('5dd5ae25421aa910a723a337'), 'SCP1', study_accession='SCP1')
         metadata.validate_format()
         print(f"Format is corrrect {metadata.validate_format()}")
         return (metadata, convention)
@@ -137,7 +139,7 @@ class TestValidateMetadata(unittest.TestCase):
         #   missing value for non-required property 'is_living'
         #   value provided not in enumerated list for 'sample_type'
         #   value provided not a number for 'organism_age'
-        reference_file = open('../tests/data/issues_metadata_v1.1.1.json')
+        reference_file = open('../tests/data/issues_metadata_v1.1.3.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
@@ -186,7 +188,7 @@ class TestValidateMetadata(unittest.TestCase):
         #     with species ontologyID of 'NCBITaxon_9606'
         #   invalid ontologyID of 'NCBITaxon_9606' for geographical_region
         #   invalid ontologyID UBERON_1000331 for organ__ontology_label
-        reference_file = open('../tests/data/issues_ontology_v1.1.1.json')
+        reference_file = open('../tests/data/issues_ontology_v1.1.3.json')
         reference_issues = json.load(reference_file)
 
         self.assertEqual(
@@ -238,7 +240,7 @@ class TestValidateMetadata(unittest.TestCase):
         # invalid boolean value: disease__treated
         # non-uniform unit values: organism_age__unit
         # missing ontology ID or label for non-required metadata: ethnicity
-        reference_file = open('../tests/data/issues_array_v1.1.2.json')
+        reference_file = open('../tests/data/issues_array_v1.1.3.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
