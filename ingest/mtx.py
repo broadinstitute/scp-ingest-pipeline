@@ -61,6 +61,9 @@ class Mtx(GeneExpression):
                 self.exp_by_gene[gene].cell_names.append(cell_name)
             else:
                 self.exp_by_gene[gene] = GeneExpressionValues([cell_name], [exp_score])
+                self.info_logger.info(
+                    f'Creating model for {gene} ', extra=self.extra_log_params
+                )
                 yield GeneModelData(
                     gene,
                     self.Model(
@@ -82,14 +85,26 @@ class Mtx(GeneExpression):
         create_cell_DataArray=False,
     ):
         if create_cell_DataArray:
-            return self.set_data_array_cells(self.cells, linear_data_id)
+            self.info_logger.info(
+                f'Creating cell data array for gene :{unformatted_gene_name}',
+                extra=self.extra_log_params,
+            )
+            yield from self.set_data_array_cells(self.cells, linear_data_id)
         else:
-            return self.set_data_array_gene_cell_names(
+            self.info_logger.info(
+                f'Creating cell names data array for gene:{unformatted_gene_name}',
+                extra=self.extra_log_params,
+            )
+            yield from self.set_data_array_gene_cell_names(
                 unformatted_gene_name,
                 linear_data_id,
                 self.exp_by_gene[unformatted_gene_name].cell_names,
             )
-            return self.set_data_array_gene_expression_values(
+            self.info_logger.info(
+                f'Creating gene expression data array for gene:{unformatted_gene_name}',
+                extra=self.extra_log_params,
+            )
+            yield from self.set_data_array_gene_expression_values(
                 unformatted_gene_name,
                 linear_data_id,
                 self.exp_by_gene[unformatted_gene_name].expression_scores,

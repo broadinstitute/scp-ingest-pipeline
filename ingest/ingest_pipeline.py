@@ -40,12 +40,19 @@ import ast
 import sys
 import json
 import os
+import logging
+import re
 
 from pymongo import MongoClient
-from google.cloud import storage
 from google.cloud import bigquery
+
+# import google.cloud.logging
 from google.cloud.exceptions import NotFound
 from bson.objectid import ObjectId
+
+# from google.cloud.logging.resource import Resource
+
+# import logging
 
 try:
     # Used when importing internally and in tests
@@ -57,6 +64,7 @@ try:
         report_issues,
         write_metadata_to_bq,
     )
+    from monitor import setup_logger, log
     from cell_metadata import CellMetadata
     from clusters import Clusters
     from dense import Dense
@@ -71,6 +79,7 @@ except ImportError:
         report_issues,
         write_metadata_to_bq,
     )
+    from .monitor import setup_logger, log
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
     from .dense import Dense
@@ -84,6 +93,12 @@ EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 class IngestPipeline(object):
     # File location for metadata json convention
     JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
+    logger = logging.getLogger(__name__)
+    errors_logger = setup_logger(
+        __name__ + '_errors', 'errors.txt', level=logging.ERROR
+    )
+    info_logger = setup_logger(__name__, 'info.txt')
+    my_debug_logger = log(errors_logger)
 
     def __init__(
         self,
@@ -121,13 +136,9 @@ class IngestPipeline(object):
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
         elif matrix_file is None:
             self.matrix = matrix_file
+        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
 
-        # # Instantiates a client
-        # ingest_logger = google.cloud.logging.Client()
-        # # Connects the logger to the root logging handler; by default this captures
-        # # all logs at INFO level and higher
-        # ingest_logger.setup_logging('')
-
+    @my_debug_logger()
     def get_mongo_db(self):
         host = os.environ['DATABASE_HOST']
         user = os.environ['MONGODB_USERNAME']
@@ -185,20 +196,23 @@ class IngestPipeline(object):
         try:
             # hack to avoid inserting invalid CellMetadata object from first column
             # TODO: implement method similar to kwargs solution in ingest_expression
-            if collection_name == 'cell_metadata' and model['name'] == 'NAME' and model['annotation_type'] == 'TYPE':
+            if (
+                collection_name == 'cell_metadata'
+                and model['name'] == 'NAME'
+                and model['annotation_type'] == 'TYPE'
+            ):
                 linear_id = ObjectId(self.study_id)
             else:
                 linear_id = self.db[collection_name].insert_one(model).inserted_id
-
             for data_array_model in set_data_array_fn(
-                    linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
+                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
                 documents.append(data_array_model)
             # only insert documents if present
-            if (len(documents) > 0):
+            if len(documents) > 0:
                 self.db['data_arrays'].insert_many(documents)
         except Exception as e:
-            print(e)
+            self.errors_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -237,7 +251,7 @@ class IngestPipeline(object):
 
         except Exception as e:
             # TODO: Log this error
-            print(e)
+            self.errors_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -273,16 +287,21 @@ class IngestPipeline(object):
                 )
                 return write_status
             else:
-                print('Erroneous call to upload_metadata_to_bq')
+                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
-    def ingest_expression(self) -> None:
+    @my_debug_logger()
+    def ingest_expression(self) -> int:
         """Ingests expression files.
         """
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
         for idx, gene in enumerate(self.matrix.transform()):
+            self.info_logger.info(
+                f"Attempting to load gene: {gene.gene_model['searchable_name']}",
+                extra=self.extra_log_params,
+            )
             if idx == 0:
                 status = self.load(
                     self.matrix.COLLECTION_NAME,
@@ -301,23 +320,38 @@ class IngestPipeline(object):
                     gene.gene_model['searchable_name'],
                 )
             if status != 0:
+                self.errors_logger.error(
+                    f'Loading gene name {gene.gene_name} failed. Exiting program',
+                    extra=self.extra_log_params,
+                )
                 return status
         return status
 
+    @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         if self.cell_metadata.validate_format():
+            self.info_logger.info(
+                f'Cell metadata file formate valid', extra=self.extra_log_params
+            )
             # Check file against metadata convention
             if self.kwargs['validate_convention'] is not None:
                 if self.kwargs['validate_convention']:
                     if self.conforms_to_metadata_convention():
+                        self.info_logger.info(
+                            f'Cell metadata file conforms to metadata convention',
+                            extra=self.extra_log_params,
+                        )
                         pass
                     else:
                         return 1
             self.cell_metadata.reset_file(2, open_as="dataframe")
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
-
+                self.info_logger.info(
+                    f'Attempting to load cell metadata header : {metadataModel.annot_header}',
+                    extra=self.extra_log_params,
+                )
                 status = self.load(
                     self.cell_metadata.COLLECTION_NAME,
                     metadataModel.model,
@@ -325,9 +359,14 @@ class IngestPipeline(object):
                     metadataModel.annot_header,
                 )
                 if status != 0:
+                    self.errors_logger.error(
+                        f'Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program',
+                        extra=self.extra_log_params,
+                    )
                     return status
             return status
 
+    @my_debug_logger()
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate_format():
@@ -367,17 +406,6 @@ class IngestPipeline(object):
                 if load_status != 0:
                     return load_status
         return 0
-
-    def delocalize_error_file(self):
-        """Writes local error file to Google bucket
-        """
-        storage_client = storage.Client()
-        bucket = storage_client.get_bucket(self.cell_metadata.bucket)
-        destination_blob_name = f'parse_logs/{self.study_file_id}/errors.txt'
-        blob = bucket.blob(destination_blob_name)
-        source_file_name = 'scp_validation_errors.txt'
-        blob.upload_from_filename(source_file_name)
-        print(f'File {source_file_name} uploaded to {destination_blob_name}.')
 
 
 def create_parser():
@@ -619,7 +647,7 @@ def main() -> None:
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     ingest = IngestPipeline(**arguments)
-    # TODO: Add validation for gene and cluster file types
+    # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
         status.append(ingest.ingest_expression())
     elif "ingest_cell_metadata" in arguments:
@@ -636,22 +664,62 @@ def main() -> None:
         if arguments["subsample"]:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
+
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
-    else:
-        if status_cell_metadata is not None:
-            if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
-                ingest.delocalize_error_file()
-                # PAPI jobs failing metadata validation against convention report
-                # will have "unexpected exit status 65 was not ignored"
-                # EX_DATAERR (65) The input data was incorrect in some way.
-                # note that failure to load to MongoDB also triggers this error
-                sys.exit(os.EX_DATAERR)
-            if status_metadata_bq is not None:
-                if status_metadata_bq > 0:
-                    sys.exit(1)
+        else:
+            # delocalize errors file
+            for argument in list(arguments.keys()):
+                captured_argument = re.match("(\w*file)$", argument)
+                if captured_argument is not None:
+                    study_file_id = arguments['study_file_id']
+                    matched_arugment = captured_argument.groups()[0]
+                    file_path = arguments[matched_arugment]
+                    if IngestFiles.is_remote_file(file_path):
+                        IngestFiles.delocalize_file(
+                            study_file_id,
+                            arguments['study_id'],
+                            file_path,
+                            'errors.txt',
+                            f'parse_logs/{study_file_id}/errors.txt',
+                        )
+                    break
+            if status_cell_metadata is not None:
+                if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
+                    # PAPI jobs failing metadata validation against convention report
+                    # will have "unexpected exit status 65 was not ignored"
+                    # EX_DATAERR (65) The input data was incorrect in some way.
+                    # note that failure to load to MongoDB also triggers this error
+                    sys.exit(os.EX_DATAERR)
+            sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
+
+# Custom formatter returns a structure, than a string
+# class CustomFormatter(logging.Formatter):
+#     def format(self, record):
+#         template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+#         message = template.format(type(ex).__name__, ex.args)
+#         logmsg = super(CustomFormatter, self).format(record)
+#         return {'msg': logmsg, 'args': record.args}
+
+
+# class Logger:
+#     def __init__(self):
+#
+#         # Instantiates a client
+#         ingest_logger = google.cloud.logging.Client()
+#         # Connects the logger to the root logging handler; by default this captures
+#         # all logs at INFO level and higher
+#         handler = self.ingest_logger.get_default_handler()
+#         handler.setFormatter(CustomFormatter())
+#         ingest_logger.setup_logging(os.environ['LOG_NAME'])
+#         logger = logging.getLogger()
+#         logger.setLevel(logging.INFO)
+#         logger.addHandler(handler)
+#
+#     def get_logger(self):
+# return logger

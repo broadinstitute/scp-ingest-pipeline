@@ -12,17 +12,26 @@ from dataclasses import dataclass
 from mypy_extensions import TypedDict
 from typing import List  # noqa: F401
 import ntpath
+import logging
 from bson.objectid import ObjectId
 
 try:
     from ingest_files import IngestFiles, DataArray
+    from monitor import setup_logger, log
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles, DataArray
+    from .monitor import setup_logger, log
+
+
+error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
+my_debug_logger = log(error_logger)
+
 
 class GeneExpression(IngestFiles):
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = 'genes'
+    info_logger = setup_logger(__name__, 'info.txt')
 
     @dataclass
     class Model(TypedDict):
@@ -49,6 +58,7 @@ class GeneExpression(IngestFiles):
             IngestFiles.__init__(
                 self, file_path, allowed_file_types, open_as='dataframe'
             )
+        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
 
     @abc.abstractmethod
     def transform(self):

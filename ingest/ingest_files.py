@@ -4,6 +4,7 @@ DESCRIPTION
 Module provides extract capabilities for text, CSV, and TSV file types
 """
 import csv
+import logging
 import mimetypes
 import os
 import re
@@ -16,11 +17,19 @@ from google.cloud import storage
 # from google.cloud.logging.resource import Resource
 # import google.cloud.logging
 
+try:
+    from monitor import setup_logger
+except ImportError:
+    from .monitor import setup_logger
+
 
 @dataclass
 class DataArray:
     MAX_ENTRIES = 100_000
     COLLECTION_NAME = 'data_arrays'
+    errors_logger = setup_logger(
+        __name__ + '_errors', 'errors.txt', level=logging.ERROR
+    )
 
     def __init__(
         self,
@@ -48,7 +57,7 @@ class DataArray:
         self.study_id = study_id
         self.study_file_id = study_file_id
         # special case to override linear_data_id in case of 'Study' linear_data_type
-        if (self.linear_data_type == 'Study'):
+        if self.linear_data_type == 'Study':
             self.linear_data_id = self.study_id
 
     def get_data_array(self):
@@ -63,12 +72,16 @@ class DataArray:
 
 
 class IngestFiles:
+    # General logger for class
+    info_logger = setup_logger(__name__, 'info.txt')
+    error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
+
     def __init__(self, file_path, allowed_file_types, open_as=None, **file_kwargs):
         self.file_path = file_path
         self.file_kwargs = file_kwargs
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
-        self.is_remote_file = file_path[:5] == "gs://"
+        self.is_remote_file = IngestFiles.is_remote_file(file_path)
         self.is_gzip_file = self.get_file_type(file_path)[1] == 'gzip'
 
         self.verify_file_exists(file_path)
@@ -78,12 +91,19 @@ class IngestFiles:
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
 
+    @staticmethod
+    def is_remote_file(file_path):
+        return file_path[:5] == "gs://"
+
     def download_from_bucket(self, file_path):
         """Downloads file from Google Cloud Storage bucket"""
         blob = self.bucket.blob(self.source)
         destination = "/tmp/" + self.source.replace("/", "%2f")
         blob.download_to_filename(destination)
-        print(f"{file_path} downloaded to {destination}.")
+        self.info_logger.info(
+            f"{file_path} downloaded to {destination}.",
+            extra={'study_id': None, 'duration': None},
+        )
         return destination
 
     def set_gcs_attrs(self, file_path):
@@ -134,6 +154,45 @@ class IngestFiles:
             self.file_path, start_point=start_point, open_as=open_as
         )
 
+    @staticmethod
+    def delocalize_file(
+        study_file_id, study_id, file_path, file_to_delocalize, bucket_destination
+    ):
+        """Writes local file to Google bucket
+        Args:
+            file_path: path of an ingest file (MUST BE  GS url)
+            file_to_delocalize: name of local file to delocalize (ie. errors.txt)
+            bucket_destination: path to google bucket (ie. parse_logs/{study_file_id}/errors.txt)
+
+        """
+        info_logger = setup_logger(__name__, 'info.txt')
+        error_logger = setup_logger(
+            __name__ + '_errors', 'errors.txt', level=logging.ERROR
+        )
+        extra_log_params = {'study_id': study_id, 'duration': None}
+        if IngestFiles.is_remote_file(file_path):
+            try:
+                path_segments = file_path[5:].split("/")
+                bucket_name = path_segments[0]
+                storage_client = storage.Client()
+                bucket = storage_client.get_bucket(bucket_name)
+                blob = bucket.blob(bucket_destination)
+                blob.upload_from_filename(file_to_delocalize)
+                info_logger.info(
+                    f'File {file_to_delocalize} uploaded to {bucket_destination}.',
+                    extra=extra_log_params,
+                )
+            except Exception as e:
+                error_logger.error(
+                    f'File {file_to_delocalize} not uploaded to {bucket_destination}.',
+                    extra=extra_log_params,
+                )
+                error_logger.error(e, extra=extra_log_params)
+        else:
+            error_logger.error(
+                'Cannot push to bucket. File is not remote', extra=extra_log_params
+            )
+
     def open_file(self, file_path, open_as=None, header=None, start_point: int = 0):
         """ Opens txt, csv, or tsv formatted files"""
         open_file, file_path = self.resolve_path(file_path)
@@ -149,7 +208,10 @@ class IngestFiles:
         }
         # Check file type
         file_type = self.get_file_type(file_path)[0]
-        print(f'opening {file_path} as: {file_type}')
+        self.info_logger.info(
+            f'opening {file_path} as: {file_type}',
+            extra={'study_id': None, 'duration': None},
+        )
         # See if file type is allowed
         if file_type in self.allowed_file_types:
             # Return file object and type

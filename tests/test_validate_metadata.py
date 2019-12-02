@@ -41,8 +41,13 @@ class TestValidateMetadata(unittest.TestCase):
         with open(args.convention) as f:
             convention = json.load(f)
         filetsv = args.input_metadata
-        metadata = CellMetadata(filetsv, ObjectId('5d276a50421aa9117c982845'),
-                                ObjectId('5dd5ae25421aa910a723a337'), 'SCP1', study_accession='SCP1')
+        metadata = CellMetadata(
+            filetsv,
+            ObjectId('5d276a50421aa9117c982845'),
+            ObjectId('5dd5ae25421aa910a723a337'),
+            'SCP1',
+            study_accession='SCP1',
+        )
         metadata.validate_format()
         print(f"Format is corrrect {metadata.validate_format()}")
         return (metadata, convention)

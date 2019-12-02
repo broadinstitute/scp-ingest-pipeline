@@ -13,6 +13,7 @@ from typing import List  # noqa: F401
 
 try:
     from expression_files import GeneExpression
+
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
@@ -46,6 +47,9 @@ class Dense(GeneExpression):
         for gene in self.file['GENE']:
             # Remove white spaces and quotes
             formatted_gene_name = gene.strip().strip('\"').strip('\'').strip('\"')
+            self.info_logger.info(
+                f'Transforming gene :{gene}', extra=self.extra_log_params
+            )
             yield GeneModel(
                 # Name of gene as observed in file
                 gene,
@@ -75,6 +79,10 @@ class Dense(GeneExpression):
         # Get list of cell names
         cells = self.file.columns.tolist()[1:]
         if create_cell_data_array:
+            self.info_logger.info(
+                f'Creating cell data array for gene : {gene_name}',
+                extra=self.extra_log_params,
+            )
             yield from self.set_data_array_cells(cells, linear_data_id)
 
         # Get row of expression values for gene
@@ -90,13 +98,21 @@ class Dense(GeneExpression):
         observed_cells = list(cells_and_expression_vals)
         observed_values = list(cells_and_expression_vals.values())
 
-        # only return significant data (skip if no expression was observed)
+        # Return significant data (skip if no expression was observed)
         if len(observed_values) > 0:
+            self.info_logger.info(
+                f'Creating cell names data array for gene: {gene_name}',
+                extra=self.extra_log_params,
+            )
             yield from self.set_data_array_gene_cell_names(
-                unformatted_gene_name, linear_data_id, observed_cells
+                gene_name, linear_data_id, observed_cells
+            )
+            self.info_logger.info(
+                f'Creating gene expression data array for gene: {gene_name}',
+                extra=self.extra_log_params,
             )
             yield from self.set_data_array_gene_expression_values(
-                unformatted_gene_name, linear_data_id, observed_values
+                gene_name, linear_data_id, observed_values
             )
 
     def close(self):

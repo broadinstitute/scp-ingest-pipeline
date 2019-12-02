@@ -30,7 +30,12 @@ class CellMetadata(Annotations):
     COLLECTION_NAME = 'cell_metadata'
 
     def __init__(
-        self, file_path: str, study_id: ObjectId, study_file_id: ObjectId, *args, **kwargs
+        self,
+        file_path: str,
+        study_id: ObjectId,
+        study_file_id: ObjectId,
+        *args,
+        **kwargs
     ):
 
         self.study_accession = kwargs.pop("study_accession")
