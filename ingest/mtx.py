@@ -17,7 +17,6 @@ import scipy.io
 
 try:
     from expression_files import GeneExpression
-    from monitor import setup_logger, log
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
