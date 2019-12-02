@@ -198,18 +198,16 @@ class IngestPipeline(object):
         try:
             # hack to avoid inserting invalid CellMetadata object from first column
             # TODO: implement method similar to kwargs solution in ingest_expression
-            # if (
-            #     collection_name == 'cell_metadata'
-            #     and model['name'] == 'NAME'
-            #     and model['annotation_type'] == 'TYPE'
-            # ):
-            #     linear_id = ObjectId(self.study_id)
-            # else:
-            #     linear_id = self.db[collection_name].insert_one(model).inserted_id
+            if (
+                collection_name == 'cell_metadata'
+                and model['name'] == 'NAME'
+                and model['annotation_type'] == 'TYPE'
+            ):
+                linear_id = ObjectId(self.study_id)
+            else:
+                linear_id = self.db[collection_name].insert_one(model).inserted_id
             for data_array_model in set_data_array_fn(
-                '5d276a50421aa9117c982845',
-                *set_data_array_fn_args,
-                **set_data_array_fn_kwargs,
+                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
                 documents.append(data_array_model)
             # only insert documents if present

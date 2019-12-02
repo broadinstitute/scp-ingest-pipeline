@@ -18,9 +18,9 @@ from google.cloud import storage
 # import google.cloud.logging
 
 try:
-    from monitor import setup_logger, log
+    from monitor import setup_logger
 except ImportError:
-    from .monitor import setup_logger, log
+    from .monitor import setup_logger
 
 
 @dataclass
@@ -184,12 +184,12 @@ class IngestFiles:
                 )
             except Exception as e:
                 error_logger.error(
-                    f'File {file_to_delocalize} not uploaded to {destination_blob_name}.',
+                    f'File {file_to_delocalize} not uploaded to {bucket_destination}.',
                     extra=extra_log_params,
                 )
                 error_logger.error(e, extra=extra_log_params)
         else:
-            self.error_logger.error(
+            error_logger.error(
                 'Cannot push to bucket. File is not remote', extra=extra_log_params
             )
 
