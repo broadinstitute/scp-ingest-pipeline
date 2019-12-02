@@ -40,6 +40,7 @@ import ast
 import sys
 import json
 import os
+import logging
 
 from cell_metadata import CellMetadata
 from clusters import Clusters
@@ -47,8 +48,15 @@ from dense import Dense
 from pymongo import MongoClient
 from mtx import Mtx
 from google.cloud import storage
+from google.cloud import *
 from google.cloud import bigquery
+
+# import google.cloud.logging
 from google.cloud.exceptions import NotFound
+
+# from google.cloud.logging.resource import Resource
+
+# import logging
 
 try:
     # Used when importing internally and in tests
@@ -79,6 +87,7 @@ EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
 class IngestPipeline(object):
     # File location for metadata json convention
     JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
+    logger = logging.getLogger(__name__)
 
     def __init__(
         self,
@@ -117,11 +126,7 @@ class IngestPipeline(object):
         elif matrix_file is None:
             self.matrix = matrix_file
 
-        # # Instantiates a client
-        # ingest_logger = google.cloud.logging.Client()
-        # # Connects the logger to the root logging handler; by default this captures
-        # # all logs at INFO level and higher
-        # ingest_logger.setup_logging('')
+        # self.ingest_logger = Logger().get_logger()
 
     def get_mongo_db(self):
         host = os.environ['DATABASE_HOST']
@@ -129,13 +134,18 @@ class IngestPipeline(object):
         password = os.environ['MONGODB_PASSWORD']
         db_name = os.environ['DATABASE_NAME']
 
-        client = MongoClient(
-            host,
-            username=user,
-            password=password,
-            authSource=db_name,
-            authMechanism='SCRAM-SHA-1',
-        )
+        try:
+            client = MongoClient(
+                host,
+                username=user,
+                password=password,
+                authSource=db_name,
+                authMechanism='SCRAM-SHA-1',
+            )
+            # logging.info('Connected to MongoDB')
+        except:
+            e = sys.exc_info()[0]
+            # logger.error(e)
 
         # TODO: Remove this block.
         # Uncomment and run `pytest -s` to manually verify your MongoDB set-up.
@@ -179,13 +189,14 @@ class IngestPipeline(object):
         documents = []
 
         try:
-            linear_id = self.db[collection_name].insert(model)
+            # linear_id = self.db[collection_name].insert(model)
             for data_array_model in set_data_array_fn(
-                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
+                '1234', *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
 
-                documents.append(data_array_model)
-            self.db['data_arrays'].insert_many(documents)
+                # documents.append(data_array_model)
+                print(set_data_array)
+            # self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             print(e)
             return 1
@@ -318,15 +329,17 @@ class IngestPipeline(object):
 
     def ingest_cluster(self):
         """Ingests cluster files."""
+        status = 0
         if self.cluster.validate_format():
-            for annotation_model in self.cluster.transform():
-                status = self.load(
-                    self.cluster.COLLECTION_NAME,
-                    annotation_model,
-                    self.cluster.get_data_array_annot,
-                )
-                if status != 0:
-                    return status
+            annotation_model = self.cluster.transform()
+            print(annotation_model)
+            status = self.load(
+                self.cluster.COLLECTION_NAME,
+                annotation_model,
+                self.cluster.get_data_array_annot,
+            )
+            if status != 0:
+                return status
         return status
 
     def subsample(self):
@@ -643,3 +656,29 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# Custom formatter returns a structure, than a string
+# class CustomFormatter(logging.Formatter):
+#     def format(self, record):
+#         template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+#         message = template.format(type(ex).__name__, ex.args)
+#         logmsg = super(CustomFormatter, self).format(record)
+#         return {'msg': logmsg, 'args': record.args}
+
+
+# class Logger:
+#     def __init__(self):
+#
+#         # Instantiates a client
+#         ingest_logger = google.cloud.logging.Client()
+#         # Connects the logger to the root logging handler; by default this captures
+#         # all logs at INFO level and higher
+#         handler = self.ingest_logger.get_default_handler()
+#         handler.setFormatter(CustomFormatter())
+#         ingest_logger.setup_logging(os.environ['LOG_NAME'])
+#         logger = logging.getLogger()
+#         logger.setLevel(logging.INFO)
+#         logger.addHandler(handler)
+#
+#     def get_logger(self):
+# return logger

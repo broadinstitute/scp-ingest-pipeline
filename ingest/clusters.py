@@ -1,9 +1,13 @@
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
+import logging
 
 from ingest_files import DataArray
 from annotations import Annotations
+from monitor import log, setup_logger
+
+# from ingest_pipeline import log
 
 
 @dataclass
@@ -17,6 +21,13 @@ class Clusters(Annotations):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
     LINEAR_DATA_TYPE = 'ClusterGroup'
     COLLECTION_NAME = 'cluster_groups'
+    errors_logger = setup_logger(
+        __name__ + '_errors', 'errors.txt', level=logging.ERROR
+    )
+    # General logger for class
+    info_logger = setup_logger(__name__, 'info.txt')
+
+    my_debug_logger = log(errors_logger)
 
     @dataclass
     class Model(TypedDict):
@@ -55,6 +66,7 @@ class Clusters(Annotations):
         self.name = name
         self.domain_ranges = domain_ranges
 
+    @my_debug_logger()
     def transform(self):
         """ Builds cluster data model"""
         # Array of Hash objects that describe all extra "annotation" columns
@@ -74,7 +86,8 @@ class Clusters(Annotations):
                     else [],
                 }
             )
-        yield self.Model(
+        self.info_logger.info(f'Created model for {self.study_id}')
+        return self.Model(
             name=self.name,
             cluster_type=self.cluster_type,
             cell_annotations=cell_annotations,
@@ -83,9 +96,13 @@ class Clusters(Annotations):
             domain_ranges=DomainRanges(**self.domain_ranges),
         )
 
+    @my_debug_logger()
     def get_data_array_annot(self, linear_data_id):
         for annot_header in self.file.columns:
-            return Clusters.set_data_array(
+            self.info_logger.info(
+                f'Creating data array for header {annot_header[0]} for {self.study_id}'
+            )
+            yield Clusters.set_data_array(
                 annot_header[0],
                 self.name,
                 self.file[annot_header].tolist(),

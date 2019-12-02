@@ -8,11 +8,13 @@ Must have python 3.6 or higher.
 """
 
 import abc
+import logging
 import pandas as pd  # NOqa: F821
 
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
+    from monitor import log
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
