@@ -299,7 +299,7 @@ class IngestPipeline(object):
             self.matrix.extract()
         for idx, gene in enumerate(self.matrix.transform()):
             self.info_logger.info(
-                f'Attempting to load gene: {gene.gene_name}',
+                f"Attempting to load gene: {gene.gene_model['searchable_name']}",
                 extra=self.extra_log_params,
             )
             if idx == 0:

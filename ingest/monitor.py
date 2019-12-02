@@ -41,7 +41,7 @@ def log(error_logger):
                     if exit_message:
                         info_logger.info(exit_message, extra=exit_params)
                     else:
-                        info_logger.info(f'Finishing {fn.__name__}', extra=exit_params)
+                        info_logger.info(f'Finished {fn.__name__}', extra=exit_params)
                     return return_statements
                 except Exception as e:
                     error_logger.exception(e)

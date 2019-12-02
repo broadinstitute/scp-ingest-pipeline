@@ -10,16 +10,14 @@ Must have python 3.6 or higher.
 
 import collections
 from typing import List  # noqa: F401
-import logging
 
 try:
-    from expression_files import GeneExpression, my_debug_logger
+    from expression_files import GeneExpression
     from monitor import setup_logger, log
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
-    from .monitor import setup_logger, log
 
 
 class Dense(GeneExpression):
