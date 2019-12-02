@@ -30,9 +30,6 @@ class DataArray:
     errors_logger = setup_logger(
         __name__ + '_errors', 'errors.txt', level=logging.ERROR
     )
-    # General logger for class
-    info_logger = setup_logger(__name__, 'info.txt')
-    error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
 
     def __init__(
         self,
@@ -75,6 +72,10 @@ class DataArray:
 
 
 class IngestFiles:
+    # General logger for class
+    info_logger = setup_logger(__name__, 'info.txt')
+    error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
+
     def __init__(self, file_path, allowed_file_types, open_as=None, **file_kwargs):
         self.file_path = file_path
         self.file_kwargs = file_kwargs

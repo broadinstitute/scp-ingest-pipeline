@@ -72,6 +72,7 @@ class Clusters(Annotations):
         )
         self.name = name
         self.domain_ranges = domain_ranges
+        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
 
     def transform(self):
         """ Builds cluster data model"""

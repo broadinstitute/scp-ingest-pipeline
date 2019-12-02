@@ -34,7 +34,6 @@ class Annotations(IngestFiles):
         self.annot_types = self.file.columns.get_level_values(1)
         self.study_id = ObjectId(study_id)
         self.study_file_id = ObjectId(study_file_id)
-        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
 
     @abc.abstractmethod
     def transform(self):
