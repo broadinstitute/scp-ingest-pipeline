@@ -44,8 +44,6 @@ import logging
 import re
 
 from pymongo import MongoClient
-from google.cloud import storage
-from google.cloud import *
 from google.cloud import bigquery
 
 # import google.cloud.logging
@@ -671,7 +669,6 @@ def main() -> None:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:
-            r = re.compile("\b(\w*file)$")
             # delocalize errors file
             for argument in list(arguments.keys()):
                 captured_argument = re.match("(\w*file)$", argument)
