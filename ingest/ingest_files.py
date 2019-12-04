@@ -208,14 +208,14 @@ class IngestFiles:
         # See if file type is allowed
         file_type = self.get_file_type(file_path)[0]
         self.info_logger.info(
-            f"opening {file_path} as: {self.file_type}",
+            f"opening {file_path} as: {file_type}",
             extra={"study_id": None, "duration": None},
         )
         if file_type in self.allowed_file_types:
             # Return file object and type
             if open_as is None:
                 return (
-                    file_connections.get(file_type)(open_file, kwargs),
+                    file_connections.get(file_type)(open_file, **kwargs),
                     open_file,
                 )
             else:
