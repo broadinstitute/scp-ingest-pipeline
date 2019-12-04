@@ -379,6 +379,7 @@ class IngestPipeline(object):
                 return status
         return status
 
+    @my_debug_logger()
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
 
