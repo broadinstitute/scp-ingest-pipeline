@@ -11,7 +11,6 @@ def setup_logger(logger_name, log_file, level=logging.DEBUG):
     handler.setFormatter(formatter)
     logger.setLevel(level)
     logger.addHandler(handler)
-
     return logger
 
 

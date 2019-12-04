@@ -26,9 +26,9 @@ except ImportError:
 @dataclass
 class DataArray:
     MAX_ENTRIES = 100_000
-    COLLECTION_NAME = 'data_arrays'
+    COLLECTION_NAME = "data_arrays"
     errors_logger = setup_logger(
-        __name__ + '_errors', 'errors.txt', level=logging.ERROR
+        __name__ + "_errors", "errors.txt", level=logging.ERROR
     )
 
     def __init__(
@@ -57,15 +57,15 @@ class DataArray:
         self.study_id = study_id
         self.study_file_id = study_file_id
         # special case to override linear_data_id in case of 'Study' linear_data_type
-        if self.linear_data_type == 'Study':
+        if self.linear_data_type == "Study":
             self.linear_data_id = self.study_id
 
     def get_data_array(self):
         if len(self.values) > self.MAX_ENTRIES:
             values = self.values
             for i in range(0, len(self.values), self.MAX_ENTRIES):
-                self.__dict__['values']: values[i : i + self.MAX_ENTRIES]
-                self.__dict__['array_index']: i
+                self.__dict__["values"]: values[i : i + self.MAX_ENTRIES]
+                self.__dict__["array_index"]: i
                 yield self.__dict__
         else:
             yield self.__dict__
@@ -73,12 +73,11 @@ class DataArray:
 
 class IngestFiles:
     # General logger for class
-    info_logger = setup_logger(__name__, 'info.txt')
-    error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
+    info_logger = setup_logger(__name__, "info.txt")
+    error_logger = setup_logger(__name__ + "_errors", "errors.txt", level=logging.ERROR)
 
-    def __init__(self, file_path, allowed_file_types, open_as=None, **file_kwargs):
+    def __init__(self, file_path, allowed_file_types):
         self.file_path = file_path
-        self.file_kwargs = file_kwargs
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
         self.is_remote_file = IngestFiles.is_remote_file(file_path)
@@ -87,7 +86,6 @@ class IngestFiles:
         self.verify_file_exists(file_path)
 
         self.allowed_file_types = allowed_file_types
-        self.file_type, self.file, self.file_handle = self.open_file(file_path, open_as)
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
 
@@ -102,7 +100,7 @@ class IngestFiles:
         blob.download_to_filename(destination)
         self.info_logger.info(
             f"{file_path} downloaded to {destination}.",
-            extra={'study_id': None, 'duration': None},
+            extra={"study_id": None, "duration": None},
         )
         return destination
 
@@ -141,18 +139,16 @@ class IngestFiles:
             self.local_file_path = file_path
         # Remove BOM with encoding ='utf - 8 - sig'
         if self.is_gzip_file:
-            open_file = gzip.open(file_path, 'rt', encoding='utf-8-sig')
+            open_file = gzip.open(file_path, "rt", encoding="utf-8-sig")
         else:
-            open_file = open(file_path, encoding="utf-8-sig")
+            open_file = open(file_path, 'rt', encoding="utf-8-sig")
         return open_file, file_path
 
-    def reset_file(self, start_point, open_as=None):
+    def reset_file(self, file_path, start_point, open_as=None):
         """Restart file reader at point that's equal to start_point.
         Method is used in cases where a file may need to be read multiple times"""
 
-        self.file_type, self.file, self.file_handle = self.open_file(
-            self.file_path, start_point=start_point, open_as=open_as
-        )
+        return self.open_file(file_path, start_point=start_point, open_as=open_as)
 
     @staticmethod
     def delocalize_file(
@@ -165,11 +161,11 @@ class IngestFiles:
             bucket_destination: path to google bucket (ie. parse_logs/{study_file_id}/errors.txt)
 
         """
-        info_logger = setup_logger(__name__, 'info.txt')
+        info_logger = setup_logger(__name__, "info.txt")
         error_logger = setup_logger(
-            __name__ + '_errors', 'errors.txt', level=logging.ERROR
+            __name__ + "_errors", "errors.txt", level=logging.ERROR
         )
-        extra_log_params = {'study_id': study_id, 'duration': None}
+        extra_log_params = {"study_id": study_id, "duration": None}
         if IngestFiles.is_remote_file(file_path):
             try:
                 path_segments = file_path[5:].split("/")
@@ -179,62 +175,55 @@ class IngestFiles:
                 blob = bucket.blob(bucket_destination)
                 blob.upload_from_filename(file_to_delocalize)
                 info_logger.info(
-                    f'File {file_to_delocalize} uploaded to {bucket_destination}.',
+                    f"File {file_to_delocalize} uploaded to {bucket_destination}.",
                     extra=extra_log_params,
                 )
             except Exception as e:
                 error_logger.error(
-                    f'File {file_to_delocalize} not uploaded to {bucket_destination}.',
+                    f"File {file_to_delocalize} not uploaded to {bucket_destination}.",
                     extra=extra_log_params,
                 )
                 error_logger.error(e, extra=extra_log_params)
         else:
             error_logger.error(
-                'Cannot push to bucket. File is not remote', extra=extra_log_params
+                "Cannot push to bucket. File is not remote", extra=extra_log_params
             )
 
-    def open_file(self, file_path, open_as=None, header=None, start_point: int = 0):
-        """ Opens txt, csv, or tsv formatted files"""
-        open_file, file_path = self.resolve_path(file_path)
-        if start_point != 0:
-            for i in range(start_point):
-                open_file.readline()
+    def open_file(self, file_path, open_as=None, start_point: int = 0, **kwargs):
+        """ Opens txt (txt is expected to be tsv or csv), csv, or tsv formatted files"""
         file_connections = {
-            "text/csv": self.open_csv(open_file),
-            "text/plain": open_file,
-            "application/json": open_file,
-            "text/tab-separated-values": self.open_tsv(open_file),
+            "text/csv": self.open_csv,
+            "text/plain": self.open_txt,
+            "application/json": self.open_file,
+            "text/tab-separated-values": self.open_tsv,
             "dataframe": self.open_pandas,
         }
-        # Check file type
+        open_file, file_path = self.resolve_path(file_path)
+        if start_point != 0:
+            self.amount_of_lines = 0
+            for i in range(start_point):
+                open_file.readline()
+        # See if file type is allowed
         file_type = self.get_file_type(file_path)[0]
         self.info_logger.info(
-            f'opening {file_path} as: {file_type}',
-            extra={'study_id': None, 'duration': None},
+            f"opening {file_path} as: {file_type}",
+            extra={"study_id": None, "duration": None},
         )
-        # See if file type is allowed
         if file_type in self.allowed_file_types:
             # Return file object and type
             if open_as is None:
-                return file_type, file_connections.get(file_type), open_file
+                return (
+                    file_connections.get(file_type)(open_file, **kwargs),
+                    open_file,
+                )
             else:
-                if self.is_remote_file:
-                    return (
-                        file_type,
-                        file_connections.get("dataframe")(
-                            open_file, self.local_file_path
-                        ),
-                        open_file,
-                    )
-                else:
-                    return (
-                        file_type,
-                        file_connections.get("dataframe")(open_file, file_path),
-                        open_file,
-                    )
+                return (
+                    file_connections.get(open_as)(file_path, file_type, **kwargs),
+                    open_file,
+                )
         else:
             raise ValueError(
-                f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_type)}"
+                f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_types)}"
             )
 
     # Inherited function
@@ -259,85 +248,76 @@ class IngestFiles:
         """Returns file type"""
         return mimetypes.guess_type(file_path)
 
-    def open_pandas(self, opened_file, file_path):
+    def open_txt(self, open_file_object, **kwargs):
+        """Method for opening txt files that are expected be tab
+        or comma delimited"""
+        # Determined if file is tsv or csv
+        csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
+        csv_dialect.skipinitialspace = True
+        open_file_object.seek(0)
+        return csv.reader(open_file_object, csv_dialect)
+
+    def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
-        opened_file.readline()
-        meta_data = opened_file.readline()
-        if meta_data.find("\t") != -1:
+        if file_type == "text/tab-separated-values":
             return pd.read_csv(
                 file_path,
                 sep="\t",
                 skipinitialspace=True,
-                quoting=csv.QUOTE_NONE,
-                **self.file_kwargs,
+                quoting=csv.QUOTE_NONNUMERIC,
+                **kwargs,
             )
-        elif meta_data.find(",") != -1:
+        elif file_type == "text/csv":
             return pd.read_csv(
                 file_path,
                 sep=",",
+                quotechar='"',
+                quoting=csv.QUOTE_NONNUMERIC,
                 skipinitialspace=True,
-                quoting=csv.QUOTE_NONE,
-                **self.file_kwargs,
+                escapechar='\\',
+                **kwargs,
             )
+        elif file_type == 'text/plain':
+            try:
+                open_file_object = kwargs.pop('open_file_object')
+            except Exception as e:
+                self.error_logger.ERROR(e)
+            open_file_object.seek(0)
+            csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
+            csv_dialect.skipinitialspace = True
+            return pd.read_csv(file_path, dialect=csv_dialect, **kwargs)
+
         else:
             raise ValueError("File must be tab or comma delimited")
 
-    def open_csv(self, opened_file_object):
+    def open_csv(self, opened_file_object, **kwargs):
         """Opens csv file"""
         csv.register_dialect(
-            "csvDialect", delimiter=",", quoting=csv.QUOTE_ALL, skipinitialspace=True
+            "csvDialect",
+            delimiter=",",
+            quotechar='"',
+            quoting=csv.QUOTE_NONNUMERIC,
+            skipinitialspace=True,
+            escapechar='\\',
         )
         return csv.reader(opened_file_object, dialect="csvDialect")
 
-    def open_tsv(self, opened_file_object):
+    def open_tsv(self, opened_file_object, file_type):
         """Opens tsv file"""
         csv.register_dialect(
-            "tsvDialect", delimiter="\t", quoting=csv.QUOTE_ALL, skipinitialspace=True
+            "tsvDialect",
+            delimiter="\t",
+            quoting=csv.QUOTE_NONNUMERIC,
+            skipinitialspace=True,
         )
         return csv.reader(opened_file_object, dialect="tsvDialect")
 
-    def extract_csv_or_tsv(self):
+    def extract_csv_or_tsv(self, file):
         """Extracts all rows from a csv or tsv file"""
         while True:
             try:
-                row = next(self.file)
+                row = next(file)
                 self.amount_of_lines += 1
                 return row
             except StopIteration:
                 break
-
-    def extract_txt(self):
-        """Extracts all lines from txt files
-
-        Returns:
-                next_row_revised : List[str]
-                    A single row from a txt file.
-        """
-        while True:
-            next_row = self.file.readline()
-            if not next_row:
-                break
-            self.amount_of_lines += 1
-            # Create array with no new line, commas, or tab characters
-            next_row_revised = self.split_line(
-                next_row.replace("\n", "").replace('"', "")
-            )
-            return next_row_revised
-
-    def get_next_line(self, *, increase_line_count=True, split_line=True):
-        """Returns a single line of txt, csv or tsv files"""
-
-        next_row = next(self.file)
-        # Increase counter for line extracted
-        if increase_line_count:
-            self.amount_of_lines += 1
-        elif self.file_type in ("text/csv", "text/tab-separated-values"):
-            # CSV and TSV files returns next lines as array split on tabs/commas
-            return next_row
-        elif self.file_type == "text/plain":
-            # Create array with no new line, commas, or tab characters
-            next_row_revised = next_row.replace("\n", "")
-            if split_line:
-                return self.split_line(next_row_revised)
-            else:
-                return next_row_revised

@@ -42,7 +42,6 @@ class CellMetadata(Annotations):
         Annotations.__init__(
             self, file_path, self.ALLOWED_FILE_TYPES, study_id, study_file_id
         )
-        self.file_path = file_path
         self.cell_names = []
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))

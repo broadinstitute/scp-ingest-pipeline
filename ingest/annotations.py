@@ -25,13 +25,21 @@ class Annotations(IngestFiles):
     def __init__(
         self, file_path, allowed_file_types, study_id=None, study_file_id=None
     ):
-        IngestFiles.__init__(
-            self, file_path, allowed_file_types, open_as='dataframe', header=[0, 1]
+        IngestFiles.__init__(self, file_path, allowed_file_types)
+        if study_id is not None:
+            self.study_id = ObjectId(study_id)
+        if study_file_id is not None:
+            self.study_file_id = ObjectId(study_file_id)
+        self.file, self.file_handle = self.open_file(
+            file_path, open_as='dataframe', header=[0, 1]
         )
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)
-        self.study_id = ObjectId(study_id)
-        self.study_file_id = ObjectId(study_file_id)
+
+    def reset_file(self):
+        self.file, self.file_handle = self.open_file(
+            self.file_path, open_as='dataframe', header=[0, 1]
+        )
 
     @abc.abstractmethod
     def transform(self):
@@ -90,7 +98,9 @@ class Annotations(IngestFiles):
                 "numeric", axis=1, level=1, drop_level=False
             ).columns.tolist()
             # TODO perform replace
-            self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
+            self.file[numeric_columns] = (
+                self.file[numeric_columns].round(3).astype(float)
+            )
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement

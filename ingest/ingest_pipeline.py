@@ -52,8 +52,6 @@ from bson.objectid import ObjectId
 
 # from google.cloud.logging.resource import Resource
 
-# import logging
-
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
@@ -128,13 +126,13 @@ class IngestPipeline(object):
         self.cell_metadata_file = cell_metadata_file
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
-        elif ingest_cell_metadata:
+        if ingest_cell_metadata:
             self.cell_metadata = self.initialize_file_connection(
                 "cell_metadata", cell_metadata_file
             )
-        elif ingest_cluster:
+        if ingest_cluster:
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
-        elif matrix_file is None:
+        if matrix_file is None:
             self.matrix = matrix_file
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
 
@@ -287,7 +285,7 @@ class IngestPipeline(object):
                 )
                 return write_status
             else:
-                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
+                self.errors_logger.error('Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
@@ -325,14 +323,14 @@ class IngestPipeline(object):
                     extra=self.extra_log_params,
                 )
                 return status
-        return status
+        return 1
 
     @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         if self.cell_metadata.validate_format():
             self.info_logger.info(
-                f'Cell metadata file formate valid', extra=self.extra_log_params
+                f'Cell metadata file format valid', extra=self.extra_log_params
             )
             # Check file against metadata convention
             if self.kwargs['validate_convention'] is not None:
@@ -345,7 +343,8 @@ class IngestPipeline(object):
                         pass
                     else:
                         return 1
-            self.cell_metadata.reset_file(2, open_as="dataframe")
+
+            self.cell_metadata.reset_file()
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
                 self.info_logger.info(
@@ -380,11 +379,12 @@ class IngestPipeline(object):
                 return status
         return status
 
+    @my_debug_logger()
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
 
         subsample = SubSample(
-            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
+            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file,
         )
 
         for data in subsample.subsample():
@@ -684,6 +684,8 @@ def main() -> None:
                             'errors.txt',
                             f'parse_logs/{study_file_id}/errors.txt',
                         )
+                    # Need 1 argument that has a path to identify google bucket
+                    # Break after first argument
                     break
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:

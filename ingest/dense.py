@@ -13,40 +13,61 @@ from typing import List  # noqa: F401
 
 try:
     from expression_files import GeneExpression
+    from ingest_files import IngestFiles
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
+    from .ingest_files import IngestFiles
 
 
-class Dense(GeneExpression):
+class Dense(GeneExpression, IngestFiles):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
         GeneExpression.__init__(
-            self,
-            file_path,
-            study_file_id,
-            study_id,
-            allowed_file_types=self.ALLOWED_FILE_TYPES,
-            open_as='dataframe',
+            self, file_path, study_file_id, study_id,
         )
-        # Remove from dictionary any keys that have value=None
+        IngestFiles.__init__(
+            self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
+        )
         self.matrix_params = kwargs
-        # Remove trailing white spaces, and quotes from column names
-        self.file.rename(
-            columns=lambda x: x.strip().strip('\"').strip('\'').strip('\"'),
-            inplace=True,
-        )
+
+        self.preprocess()
+
+    def preprocess(self):
+        csv_file, open_file_object = self.open_file(self.file_path)
+        header = next(csv_file)
+        dtypes = {'GENE': object}
+
+        # # Remove white spaces and quotes
+        header = [col_name.strip().strip('\"') for col_name in header]
+        # See if R formatted file
+        if (header[-1] == '') and (header[0].upper() != 'GENE'):
+            header.insert(0, 'GENE')
+            # Although the last column in the header is empty, python treats it
+            # as an empty string,[ ..., ""]
+            header = header[0:-1]
+        else:
+            header[0] = header[0].upper()
+        # Set dtype for expression values to floats
+        dtypes.update({cell_name: 'float' for cell_name in header[1:]})
+        self.df = self.open_file(
+            self.file_path,
+            open_as='dataframe',
+            names=header,
+            skiprows=1,
+            dtype=dtypes,
+            open_file_object=open_file_object,
+        )[0]
 
     def transform(self):
         """Transforms dense matrix into firestore data model for genes.
         """
         # Holds gene name and gene model for a single gene
         GeneModel = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
-        for gene in self.file['GENE']:
-            # Remove white spaces and quotes
-            formatted_gene_name = gene.strip().strip('\"').strip('\'').strip('\"')
+        for gene in self.df['GENE']:
+            formatted_gene_name = gene.strip().strip('\"')
             self.info_logger.info(
                 f'Transforming gene :{gene}', extra=self.extra_log_params
             )
@@ -75,9 +96,9 @@ class Dense(GeneExpression):
     ):
         """Creates data array for expression, gene, and cell values."""
         input_args = locals()
-        gene_df = self.file[self.file['GENE'] == unformatted_gene_name]
+        gene_df = self.df[self.df['GENE'] == unformatted_gene_name]
         # Get list of cell names
-        cells = self.file.columns.tolist()[1:]
+        cells = self.df.columns.tolist()[1:]
         if create_cell_data_array:
             self.info_logger.info(
                 f'Creating cell data array for gene : {gene_name}',
@@ -87,10 +108,7 @@ class Dense(GeneExpression):
 
         # Get row of expression values for gene
         # Round expression values to 3 decimal points
-        # Insure data type of float for expression values
-        cells_and_expression_vals = (
-            gene_df[cells].round(3).astype(float).to_dict('records')[0]
-        )
+        cells_and_expression_vals = gene_df[cells].round(3).to_dict('records')[0]
         # Filter out expression values = 0
         cells_and_expression_vals = dict(
             filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items())
@@ -124,4 +142,4 @@ class Dense(GeneExpression):
         Returns:
             None
         """
-        self.file.close()
+        self.df.close()

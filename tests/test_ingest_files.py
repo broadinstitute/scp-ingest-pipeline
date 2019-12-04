@@ -26,5 +26,4 @@ class TestIngestFiles(unittest.TestCase):
             IngestFiles(
                 '/this/file/does/not_exist.txt',
                 ['text/csv', 'text/plain', 'text/tab-separated-values'],
-                open_as='dataframe',
             )

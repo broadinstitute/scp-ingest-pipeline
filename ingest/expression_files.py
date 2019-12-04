@@ -16,22 +16,22 @@ import logging
 from bson.objectid import ObjectId
 
 try:
-    from ingest_files import IngestFiles, DataArray
+    from ingest_files import DataArray
     from monitor import setup_logger, log
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .ingest_files import IngestFiles, DataArray
+    from .ingest_files import DataArray
     from .monitor import setup_logger, log
 
 
-error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
+error_logger = setup_logger(__name__ + "_errors", "errors.txt", level=logging.ERROR)
 my_debug_logger = log(error_logger)
 
 
-class GeneExpression(IngestFiles):
+class GeneExpression:
     __metaclass__ = abc.ABCMeta
-    COLLECTION_NAME = 'genes'
-    info_logger = setup_logger(__name__, 'info.txt')
+    COLLECTION_NAME = "genes"
+    info_logger = setup_logger(__name__, "info.txt")
 
     @dataclass
     class Model(TypedDict):
@@ -43,22 +43,13 @@ class GeneExpression(IngestFiles):
         gene_id: str = None
 
     def __init__(
-        self,
-        file_path: str,
-        study_id: str,
-        study_file_id: str,
-        allowed_file_types: str = None,
-        open_as=None,
+        self, file_path: str, study_id: str, study_file_id: str,
     ):
         self.study_id = ObjectId(study_id)
         self.study_file_id = ObjectId(study_file_id)
         self.head, self.tail = ntpath.split(file_path)
         self.cluster_name = self.tail or ntpath.basename(self.head)
-        if open_as is not None:
-            IngestFiles.__init__(
-                self, file_path, allowed_file_types, open_as='dataframe'
-            )
-        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
+        self.extra_log_params = {"study_id": self.study_id, "duration": None}
 
     @abc.abstractmethod
     def transform(self):
@@ -74,11 +65,11 @@ class GeneExpression(IngestFiles):
         """Sets DataArray for cells that were observed in an
         expression matrix."""
         return DataArray(
-            f'{self.cluster_name} Cells',
+            f"{self.cluster_name} Cells",
             self.cluster_name,
-            'cells',
+            "cells",
             values,
-            'Study',
+            "Study",
             linear_data_id,
             self.study_id,
             self.study_file_id,
@@ -92,11 +83,11 @@ class GeneExpression(IngestFiles):
         expression for a gene. """
 
         return DataArray(
-            f'{name} Cells',
+            f"{name} Cells",
             self.cluster_name,
-            'cells',
+            "cells",
             values,
-            'Gene',
+            "Gene",
             linear_data_id,
             self.study_id,
             self.study_file_id,
@@ -109,11 +100,11 @@ class GeneExpression(IngestFiles):
         significant (i.e. non-zero) expression values for a gene. """
 
         return DataArray(
-            f'{name} Expression',
+            f"{name} Expression",
             self.cluster_name,
-            'expression',
+            "expression",
             values,
-            'Gene',
+            "Gene",
             linear_data_id,
             self.study_id,
             self.study_file_id,

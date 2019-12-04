@@ -29,7 +29,7 @@ from annotations import Annotations
 
 class TestAnnotations(unittest.TestCase):
     CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
-    CELL_METADATA_PATH = '../tests/data/subsample_metadata_test.csv'
+    CELL_METADATA_PATH = '../tests/data/valid_no_array_v1.1.3.tsv'
 
     EXPONENT = -3
 
@@ -67,7 +67,6 @@ class TestAnnotations(unittest.TestCase):
             ['text/csv', 'text/plain', 'text/tab-separated-values'],
         )
         cell_metadata_df.preproccess()
-
         cell_names_cell_metadata_df = np.asarray(cell_metadata_df.file['NAME'])
         cell_names_cluster_df = np.asarray(self.df.file['NAME'])
 
