@@ -85,16 +85,20 @@ class Annotations(IngestFiles):
         # Uppercase NAME and TYPE
         self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
         # Make sure group annotations are treated as strings
-        group_columns = self.file.xs(
-            "group", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        self.file[group_columns] = self.file[group_columns].astype(str)
+        # only run this assignment if group annotations are present
+        if 'group' in list(annot_types):
+            group_columns = self.file.xs(
+                "group", axis=1, level=1, drop_level=False
+            ).columns.tolist()
+            self.file[group_columns] = self.file[group_columns].astype(str)
         # Find numeric columns and round to 3 decimals places and are floats
-        numeric_columns = self.file.xs(
-            "numeric", axis=1, level=1, drop_level=False
-        ).columns.tolist()
-        # TODO perform replace
-        self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
+        # only run this assignment if numeric annotations are present
+        if 'numeric' in list(annot_types):
+            numeric_columns = self.file.xs(
+                "numeric", axis=1, level=1, drop_level=False
+            ).columns.tolist()
+            # TODO perform replace
+            self.file[numeric_columns] = self.file[numeric_columns].round(3).astype(float)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
