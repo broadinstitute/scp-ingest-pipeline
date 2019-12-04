@@ -46,13 +46,11 @@ import re
 from pymongo import MongoClient
 from google.cloud import bigquery
 
-# import google.cloud.logging
+import google.cloud.logging
 from google.cloud.exceptions import NotFound
 from bson.objectid import ObjectId
 
 # from google.cloud.logging.resource import Resource
-
-# import logging
 
 try:
     # Used when importing internally and in tests
@@ -302,30 +300,30 @@ class IngestPipeline(object):
                 f"Attempting to load gene: {gene.gene_model['searchable_name']}",
                 extra=self.extra_log_params,
             )
-            if idx == 0:
-                status = self.load(
-                    self.matrix.COLLECTION_NAME,
-                    gene.gene_model,
-                    self.matrix.set_data_array,
-                    gene.gene_name,
-                    gene.gene_model['searchable_name'],
-                    {'create_cell_data_array': True},
-                )
-            else:
-                status = self.load(
-                    self.matrix.COLLECTION_NAME,
-                    gene.gene_model,
-                    self.matrix.set_data_array,
-                    gene.gene_name,
-                    gene.gene_model['searchable_name'],
-                )
-            if status != 0:
-                self.errors_logger.error(
-                    f'Loading gene name {gene.gene_name} failed. Exiting program',
-                    extra=self.extra_log_params,
-                )
-                return status
-        return status
+            # if idx == 0:
+            #     status = self.load(
+            #         self.matrix.COLLECTION_NAME,
+            #         gene.gene_model,
+            #         self.matrix.set_data_array,
+            #         gene.gene_name,
+            #         gene.gene_model['searchable_name'],
+            #         {'create_cell_data_array': True},
+            #     )
+            # else:
+            #     status = self.load(
+            #         self.matrix.COLLECTION_NAME,
+            #         gene.gene_model,
+            #         self.matrix.set_data_array,
+            #         gene.gene_name,
+            #         gene.gene_model['searchable_name'],
+            #     )
+            # if status != 0:
+            #     self.errors_logger.error(
+            #         f'Loading gene name {gene.gene_name} failed. Exiting program',
+            #         extra=self.extra_log_params,
+            #     )
+            #     return status
+        return 1
 
     @my_debug_logger()
     def ingest_cell_metadata(self):
@@ -684,6 +682,8 @@ def main() -> None:
                             'errors.txt',
                             f'parse_logs/{study_file_id}/errors.txt',
                         )
+                    # Need 1 argument that has a path to identify google bucket
+                    # Break after first argument
                     break
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:

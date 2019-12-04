@@ -22,16 +22,15 @@ except ImportError:
 class Annotations(IngestFiles):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(
-        self, file_path, allowed_file_types, study_id=None, study_file_id=None
-    ):
-        IngestFiles.__init__(
-            self, file_path, allowed_file_types, open_as='dataframe', header=[0, 1]
+    def __init__(self, file_path, study_id=None, study_file_id=None):
+        IngestFiles.__init__(self, file_path, self.ALLOWED_FILE_TYPES)
+        self.study_id = ObjectId(study_id)
+        self.study_file_id = ObjectId(study_file_id)
+        self.file, self.file_handle = self.open_file(
+            file_path, open_as='dataframe', header=[0, 1]
         )
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)
-        self.study_id = ObjectId(study_id)
-        self.study_file_id = ObjectId(study_file_id)
 
     @abc.abstractmethod
     def transform(self):

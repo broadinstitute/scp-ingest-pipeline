@@ -6,10 +6,12 @@ import numpy as np
 try:
     from annotations import Annotations
     from clusters import Clusters
+    from cell_metadata import CellMetadata
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .annotations import Annotations
     from .clusters import Clusters
+    from .cell_metadata import CellMetadata
 
 
 class SubSample(Annotations):
@@ -20,8 +22,8 @@ class SubSample(Annotations):
     def __init__(self, cluster_file, cell_metadata_file=None):
         Annotations.__init__(self, cluster_file, self.ALLOWED_FILE_TYPES)
         self.determine_coordinates_and_cell_names()
-        self.cell_metadata_df = (
-            Annotations(cell_metadata_file, self.ALLOWED_FILE_TYPES)
+        self.cell_metadata = (
+            Annotations(cell_metadata_file, CellMetadata.ALLOWED_FILE_TYPES)
             if cell_metadata_file is not None
             else None
         )
@@ -29,10 +31,10 @@ class SubSample(Annotations):
 
     def prepare_cell_metadata(self):
         """ Does an inner join on cell and cluster file """
-        if self.cell_metadata_df is not None:
-            self.cell_metadata_df.preproccess()
+        if self.cell_metadata is not None:
+            self.cell_metadata.preproccess()
             self.merge_df(
-                self.file[self.coordinates_and_cell_names], self.cell_metadata_df.file
+                self.file[self.coordinates_and_cell_names], self.cell_metadata.file
             )
             self.determine_coordinates_and_cell_names()
 
