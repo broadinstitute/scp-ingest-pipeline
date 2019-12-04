@@ -220,7 +220,7 @@ class IngestFiles:
                 )
             else:
                 return (
-                    file_connections.get(open_as)(file_path, **kwargs),
+                    file_connections.get(open_as)(file_path, file_type, **kwargs),
                     open_file,
                 )
         else:
@@ -250,18 +250,18 @@ class IngestFiles:
         """Returns file type"""
         return mimetypes.guess_type(file_path)
 
-    def open_txt(self, open_file_object):
+    def open_txt(self, open_file_object, **kwargs):
         """Method for opening txt files that are expected be tab
         or comma delimited"""
         # Determined if file is tsv or csv
         csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
         csv_dialect.skipinitialspace = True
         open_file_object.seek(0)
-        return csv.reader(open_file_object, self.csv_dialect)
+        return csv.reader(open_file_object, csv_dialect)
 
-    def open_pandas(self, file_path, **kwargs):
+    def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
-        if self.file_type == "text/tab-separated-values":
+        if file_type == "text/tab-separated-values":
             return pd.read_csv(
                 file_path,
                 sep="\t",
@@ -269,7 +269,7 @@ class IngestFiles:
                 quoting=csv.QUOTE_NONNUMERIC,
                 **kwargs,
             )
-        elif self.file_type == "text/csv":
+        elif file_type == "text/csv":
             return pd.read_csv(
                 file_path,
                 sep=",",
@@ -279,28 +279,33 @@ class IngestFiles:
                 escapechar='\\',
                 **kwargs,
             )
-        elif self.file_type == 'text/plain':
+        elif file_type == 'text/plain':
+            try:
+                open_file_object = kwargs.pop('open_file_object')
+            except Exception as e:
+                self.error_logger.ERROR(e)
             open_file_object.seek(0)
             csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
             csv_dialect.skipinitialspace = True
+            print(csv_dialect.__dict__)
             return pd.read_csv(file_path, dialect=csv_dialect, **kwargs)
 
         else:
             raise ValueError("File must be tab or comma delimited")
 
-    def open_csv(self, opened_file_object):
+    def open_csv(self, opened_file_object, **kwargs):
         """Opens csv file"""
         csv.register_dialect(
             "csvDialect",
             delimiter=",",
             quotechar='"',
-            quoting=csv.QUOTE_NONE,
+            quoting=csv.QUOTE_NONNUMERIC,
             skipinitialspace=True,
             escapechar='\\',
         )
         return csv.reader(opened_file_object, dialect="csvDialect")
 
-    def open_tsv(self, opened_file_object):
+    def open_tsv(self, opened_file_object, file_type):
         """Opens tsv file"""
         csv.register_dialect(
             "tsvDialect",

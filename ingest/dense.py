@@ -36,13 +36,15 @@ class Dense(GeneExpression, IngestFiles):
         self.preprocess()
 
     def preprocess(self):
-        self.open_file_object = self.open_file(self.file_path)[0]
-        header = next(open_file_object)
-        first_row = next(open_file_object)
+        csv_file, open_file_object = self.open_file(self.file_path)
+        header = next(csv_file)
+        print(header)
+        first_row = next(csv_file)
         dtypes = {'GENE': object}
 
         # # Remove white spaces and quotes
         header = [col_name.strip().strip('\"') for col_name in header]
+        print(header)
         # See if R formatted file
         if (header[-1] == '') and (header[0].upper() != 'GENE'):
             header.insert(0, 'GENE')
@@ -55,7 +57,15 @@ class Dense(GeneExpression, IngestFiles):
         dtypes.update({cell_name: 'float' for cell_name in header[1:]})
 
         # print(dtypes)
-        self.df = self.open_pandas(self.df_path, names=header, skiprows=1, dtype=dtypes)
+        self.df = self.open_file(
+            self.file_path,
+            open_as='dataframe',
+            names=header,
+            skiprows=1,
+            dtype=dtypes,
+            open_file_object=open_file_object,
+        )[0]
+        print(self.df)
 
     def transform(self):
         """Transforms dense matrix into firestore data model for genes.
