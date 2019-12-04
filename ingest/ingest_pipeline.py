@@ -46,7 +46,7 @@ import re
 from pymongo import MongoClient
 from google.cloud import bigquery
 
-import google.cloud.logging
+# import google.cloud.logging
 from google.cloud.exceptions import NotFound
 from bson.objectid import ObjectId
 
@@ -575,7 +575,7 @@ def bq_dataset_exists(dataset):
         bigquery_client.get_dataset(dataset_ref)
         exists = True
     except NotFound:
-        self.errors_logger(f'Dataset {dataset} not found')
+        print(f'Dataset {dataset} not found')
     return exists
 
 
@@ -588,7 +588,7 @@ def bq_table_exists(dataset, table):
         bigquery_client.get_table(table_ref)
         exists = True
     except NotFound:
-        self.errors_logger(f'Dataset {table} not found')
+        print(f'Dataset {table} not found')
     return exists
 
 

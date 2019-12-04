@@ -38,7 +38,6 @@ class Dense(GeneExpression, IngestFiles):
     def preprocess(self):
         csv_file, open_file_object = self.open_file(self.file_path)
         header = next(csv_file)
-        first_row = next(csv_file)
         dtypes = {'GENE': object}
 
         # # Remove white spaces and quotes
