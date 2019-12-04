@@ -144,13 +144,11 @@ class IngestFiles:
             open_file = open(file_path, 'rt', encoding="utf-8-sig")
         return open_file, file_path
 
-    def reset_file(self, start_point, open_as=None):
+    def reset_file(self, file_path, start_point, open_as=None):
         """Restart file reader at point that's equal to start_point.
         Method is used in cases where a file may need to be read multiple times"""
 
-        self.file, self.file_handle = self.open_file(
-            self.file_path, start_point=start_point, open_as=open_as
-        )
+        return self.open_file(file_path, start_point=start_point, open_as=open_as)
 
     @staticmethod
     def delocalize_file(
@@ -202,7 +200,7 @@ class IngestFiles:
         }
         open_file, file_path = self.resolve_path(file_path)
         if start_point != 0:
-            self.amount_of_lines = start
+            self.amount_of_lines = 0
             for i in range(start_point):
                 open_file.readline()
         # See if file type is allowed
@@ -287,7 +285,6 @@ class IngestFiles:
             open_file_object.seek(0)
             csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
             csv_dialect.skipinitialspace = True
-            print(csv_dialect.__dict__)
             return pd.read_csv(file_path, dialect=csv_dialect, **kwargs)
 
         else:

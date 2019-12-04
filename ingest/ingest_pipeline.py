@@ -126,13 +126,13 @@ class IngestPipeline(object):
         self.cell_metadata_file = cell_metadata_file
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
-        elif ingest_cell_metadata:
+        if ingest_cell_metadata:
             self.cell_metadata = self.initialize_file_connection(
                 "cell_metadata", cell_metadata_file
             )
-        elif ingest_cluster:
+        if ingest_cluster:
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
-        elif matrix_file is None:
+        if matrix_file is None:
             self.matrix = matrix_file
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
 
@@ -285,7 +285,7 @@ class IngestPipeline(object):
                 )
                 return write_status
             else:
-                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
+                self.errors_logger.error('Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
@@ -300,29 +300,29 @@ class IngestPipeline(object):
                 f"Attempting to load gene: {gene.gene_model['searchable_name']}",
                 extra=self.extra_log_params,
             )
-            # if idx == 0:
-            #     status = self.load(
-            #         self.matrix.COLLECTION_NAME,
-            #         gene.gene_model,
-            #         self.matrix.set_data_array,
-            #         gene.gene_name,
-            #         gene.gene_model['searchable_name'],
-            #         {'create_cell_data_array': True},
-            #     )
-            # else:
-            #     status = self.load(
-            #         self.matrix.COLLECTION_NAME,
-            #         gene.gene_model,
-            #         self.matrix.set_data_array,
-            #         gene.gene_name,
-            #         gene.gene_model['searchable_name'],
-            #     )
-            # if status != 0:
-            #     self.errors_logger.error(
-            #         f'Loading gene name {gene.gene_name} failed. Exiting program',
-            #         extra=self.extra_log_params,
-            #     )
-            #     return status
+            if idx == 0:
+                status = self.load(
+                    self.matrix.COLLECTION_NAME,
+                    gene.gene_model,
+                    self.matrix.set_data_array,
+                    gene.gene_name,
+                    gene.gene_model['searchable_name'],
+                    {'create_cell_data_array': True},
+                )
+            else:
+                status = self.load(
+                    self.matrix.COLLECTION_NAME,
+                    gene.gene_model,
+                    self.matrix.set_data_array,
+                    gene.gene_name,
+                    gene.gene_model['searchable_name'],
+                )
+            if status != 0:
+                self.errors_logger.error(
+                    f'Loading gene name {gene.gene_name} failed. Exiting program',
+                    extra=self.extra_log_params,
+                )
+                return status
         return 1
 
     @my_debug_logger()
@@ -330,7 +330,7 @@ class IngestPipeline(object):
         """Ingests cell metadata files into Firestore."""
         if self.cell_metadata.validate_format():
             self.info_logger.info(
-                f'Cell metadata file formate valid', extra=self.extra_log_params
+                f'Cell metadata file format valid', extra=self.extra_log_params
             )
             # Check file against metadata convention
             if self.kwargs['validate_convention'] is not None:
@@ -343,7 +343,8 @@ class IngestPipeline(object):
                         pass
                     else:
                         return 1
-            self.cell_metadata.reset_file(2, open_as="dataframe")
+
+            self.cell_metadata.reset_file()
             self.cell_metadata.preproccess()
             for metadataModel in self.cell_metadata.transform():
                 self.info_logger.info(
@@ -382,7 +383,7 @@ class IngestPipeline(object):
         """Method for subsampling cluster and metadata files"""
 
         subsample = SubSample(
-            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
+            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file,
         )
 
         for data in subsample.subsample():
@@ -574,7 +575,7 @@ def bq_dataset_exists(dataset):
         bigquery_client.get_dataset(dataset_ref)
         exists = True
     except NotFound:
-        print(f'Dataset {dataset} not found')
+        self.errors_logger(f'Dataset {dataset} not found')
     return exists
 
 
@@ -587,7 +588,7 @@ def bq_table_exists(dataset, table):
         bigquery_client.get_table(table_ref)
         exists = True
     except NotFound:
-        print(f'Dataset {table} not found')
+        self.errors_logger(f'Dataset {table} not found')
     return exists
 
 
