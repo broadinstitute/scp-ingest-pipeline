@@ -51,7 +51,7 @@ class SubSample(Annotations):
             if annot[0].lower() not in ('z', 'y', 'x', 'name')
         ]
 
-    def bin(self, annotation: Tuple[str, str]):
+    def bin(self, annotation: Tuple[str, str], scope:str):
         """Creates bins for a given group
 
         Args:
@@ -69,8 +69,9 @@ class SubSample(Annotations):
         bin = {}
 
         # sample the annotation along with coordinates and cell names
-        columns_to_sample = self.coordinates_and_cell_names
-        columns_to_sample.append(annotation[0])
+        columns_to_sample = copy.copy(self.coordinates_and_cell_names)
+        if scope == 'cluster':
+            columns_to_sample.append(annotation[0])
         if 'group' in annotation:
             # get unique values in column
             unique_values = self.file[annotation].unique()
@@ -91,14 +92,14 @@ class SubSample(Annotations):
                 bin[str(index)] = df[columns_to_sample]
         return bin, annotation
 
-    def subsample(self):
+    def subsample(self, scope):
         """Subsamples groups across a given file"""
         sample_sizes = [
             sample_size
             for sample_size in self.SUBSAMPLE_THRESHOLDS
             if sample_size < len(self.file.index)
         ]
-        for bins in map(self.bin, self.columns):
+        for bins in [self.bin(col, scope) for col in self.columns]:
             # (name of current column)
             annotation_name = bins[1]
 
@@ -109,6 +110,8 @@ class SubSample(Annotations):
                 group_size = len(annotation_dict.keys())
                 # Dict of values for the x, y, and z coordinates
                 points = {k: [] for k in self.coordinates_and_cell_names}
+                if scope == 'cluster':
+                    points[annotation_name[0]] = []
                 num_per_group = int(sample_size / group_size)
                 cells_left = sample_size
                 # bin = ("unique value in column" : dataframe)
@@ -138,7 +141,7 @@ class SubSample(Annotations):
                         num_per_group = cells_left
                     else:
                         group_size -= 1
-                        num_per_group = int(cells_left / (group_size))
+                        num_per_group = int(cells_left / group_size)
                 # returns tuple = (subsampled values as dictionary, annotation name, sample size )
             yield (points, annotation_name, sample_size)
 

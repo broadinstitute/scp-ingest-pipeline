@@ -135,6 +135,9 @@ class IngestPipeline(object):
         if matrix_file is None:
             self.matrix = matrix_file
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
+        if subsample:
+            self.cluster_file = cluster_file
+            self.cell_metadata_file = cell_metadata_file
 
     @my_debug_logger()
     def get_mongo_db(self):
@@ -387,7 +390,7 @@ class IngestPipeline(object):
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file,
         )
 
-        for data in subsample.subsample():
+        for data in subsample.subsample('cluster'):
             load_status = self.load_subsample(
                 Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
             )
@@ -396,9 +399,9 @@ class IngestPipeline(object):
 
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
-            for doc in subsample.subsample():
-                load_status = load_status = self.load_subsample(
-                    CellMetadata.COLLECTION_NAME,
+            for data in subsample.subsample('study'):
+                load_status = self.load_subsample(
+                    Clusters.COLLECTION_NAME,
                     data,
                     subsample.set_data_array,
                     'study',
