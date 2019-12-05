@@ -218,7 +218,7 @@ class IngestFiles:
                 )
             else:
                 return (
-                    file_connections.get(open_as)(file_path, file_type, **kwargs),
+                    file_connections.get(open_as)(file_path, file_type, open_file_object=open_file, **kwargs),
                     open_file,
                 )
         else:
@@ -281,7 +281,7 @@ class IngestFiles:
             try:
                 open_file_object = kwargs.pop('open_file_object')
             except Exception as e:
-                self.error_logger.ERROR(e)
+                self.error_logger.error(e)
             open_file_object.seek(0)
             csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
             csv_dialect.skipinitialspace = True
