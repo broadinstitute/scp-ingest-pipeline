@@ -224,7 +224,7 @@ class IngestPipeline(object):
                 annot_name = subsampled_data[1][0]
                 annot_type = subsampled_data[1][1]
                 sample_size = subsampled_data[2]
-                query = {'study_id': self.study_id}
+                query = {'study_id': ObjectId(self.study_id), 'study_file_id': ObjectId(self.study_file_id)}
                 # Query mongo for linear_id and 'name' of parent
                 # Then return 'name' and 'id' fields from query results
                 parent_data = self.db[parent_collection_name].find_one(
@@ -235,9 +235,9 @@ class IngestPipeline(object):
                         key_value[0],  # NAMES, x, y, or z
                         parent_data['name'],  # Cluster name provided from parent
                         key_value[1],  # Subsampled data/values
-                        self.study_file_id,
-                        self.study_id,
-                        str(parent_data['_id']),
+                        ObjectId(self.study_file_id),
+                        ObjectId(self.study_id),
+                        parent_data['_id'],
                     ),
                     {
                         'subsample_annotation': f"{annot_name}--{annot_type}--{scope}",

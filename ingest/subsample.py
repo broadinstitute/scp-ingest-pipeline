@@ -67,6 +67,10 @@ class SubSample(Annotations):
                 The second value in the tuple is structured exactly like the input value.
             """
         bin = {}
+
+        # sample the annotation along with coordinates and cell names
+        columns_to_sample = self.coordinates_and_cell_names
+        columns_to_sample.append(annotation[0])
         if 'group' in annotation:
             # get unique values in column
             unique_values = self.file[annotation].unique()
@@ -74,7 +78,7 @@ class SubSample(Annotations):
             for col_val in unique_values:
                 # get subset of data where row is equal to the unique value
                 subset = self.file[self.file[annotation] == col_val]
-                bin[col_val] = subset[self.coordinates_and_cell_names]
+                bin[col_val] = subset[columns_to_sample]
         else:
             columns = copy.copy(self.coordinates_and_cell_names)
             # coordinates, cell names and annotation name
@@ -84,7 +88,7 @@ class SubSample(Annotations):
             subset.sort_values(by=[annotation], inplace=True)
             # Generates 20 bins
             for index, df in enumerate(np.array_split(subset, 20)):
-                bin[str(index)] = df[self.coordinates_and_cell_names]
+                bin[str(index)] = df[columns_to_sample]
         return bin, annotation
 
     def subsample(self):
@@ -97,17 +101,18 @@ class SubSample(Annotations):
         for bins in map(self.bin, self.columns):
             # (name of current column)
             annotation_name = bins[1]
+
             # Holds bins for annotation
             # Looks like {"Unique value #1" : dataframe, "Unique value #2": dataframe,...}
-            anotation_dict = bins[0]
+            annotation_dict = bins[0]
             for sample_size in sample_sizes:
-                group_size = len(anotation_dict.keys())
+                group_size = len(annotation_dict.keys())
                 # Dict of values for the x, y, and z coordinates
                 points = {k: [] for k in self.coordinates_and_cell_names}
                 num_per_group = int(sample_size / group_size)
                 cells_left = sample_size
                 # bin = ("unique value in column" : dataframe)
-                for bin in self.return_sorted_bin(anotation_dict, annotation_name):
+                for bin in self.return_sorted_bin(annotation_dict, annotation_name):
 
                     amount_of_rows = len(bin[1].index)
                     # If the amount of sampled values is larger
@@ -123,10 +128,13 @@ class SubSample(Annotations):
                     )
                     for column in shuffled_df:
                         points[column[0]].extend(shuffled_df[column].values.tolist())
+                    # add the current observed annotation to the points dict the amount
+                    # of times it has been sampled
+                    # points[annotation_name] = [bin[0] for i in range(amount_picked_rows)]
                     # Subtract number of cells 'subsampled' from the number of cells left
                     cells_left -= amount_picked_rows
                     # For last bin sample the number of cells left over
-                    if bin[0] == list(anotation_dict.keys())[-2]:
+                    if bin[0] == list(annotation_dict.keys())[-2]:
                         num_per_group = cells_left
                     else:
                         group_size -= 1
