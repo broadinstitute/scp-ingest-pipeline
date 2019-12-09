@@ -51,7 +51,7 @@ class SubSample(Annotations):
             if annot[0].lower() not in ('z', 'y', 'x', 'name')
         ]
 
-    def bin(self, annotation: Tuple[str, str], scope:str):
+    def bin(self, annotation: Tuple[str, str], scope: str):
         """Creates bins for a given group
 
         Args:

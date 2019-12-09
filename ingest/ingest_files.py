@@ -281,9 +281,9 @@ class IngestFiles:
                 **kwargs,
             )
         elif file_type == 'text/plain':
-            open_file_object.seek(0)
             csv_dialect = csv.Sniffer().sniff(open_file_object.readline())
             csv_dialect.skipinitialspace = True
+            open_file_object.seek(0)
             return pd.read_csv(file_path, dialect=csv_dialect, **kwargs)
 
         else:

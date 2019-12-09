@@ -47,7 +47,6 @@ class CellMetadata(Annotations):
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.cells = []
-        self.is_valid_file = self.validate_format()
 
     # This model pertains to columns from cell metadata files
     @dataclass

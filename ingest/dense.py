@@ -53,12 +53,7 @@ class Dense(GeneExpression, IngestFiles):
         # Set dtype for expression values to floats
         dtypes.update({cell_name: 'float' for cell_name in header[1:]})
         self.df = self.open_file(
-            self.file_path,
-            open_as='dataframe',
-            names=header,
-            skiprows=1,
-            dtype=dtypes,
-            open_file_object=open_file_object,
+            self.file_path, open_as='dataframe', names=header, skiprows=1, dtype=dtypes,
         )[0]
 
     def transform(self):

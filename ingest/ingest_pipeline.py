@@ -227,7 +227,10 @@ class IngestPipeline(object):
                 annot_name = subsampled_data[1][0]
                 annot_type = subsampled_data[1][1]
                 sample_size = subsampled_data[2]
-                query = {'study_id': ObjectId(self.study_id), 'study_file_id': ObjectId(self.study_file_id)}
+                query = {
+                    'study_id': ObjectId(self.study_id),
+                    'study_file_id': ObjectId(self.study_file_id),
+                }
                 # Query mongo for linear_id and 'name' of parent
                 # Then return 'name' and 'id' fields from query results
                 parent_data = self.db[parent_collection_name].find_one(
@@ -365,8 +368,14 @@ class IngestPipeline(object):
                         f'Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program',
                         extra=self.extra_log_params,
                     )
+                    print(f'status in cell metadata{status}')
                     return status
-            return status
+            return status if status is not None else 1
+        else:
+            self.errors_logger.error(
+                f'Cell metadata file format invalid', extra=self.extra_log_params
+            )
+            return 1
 
     @my_debug_logger()
     def ingest_cluster(self):
@@ -401,10 +410,7 @@ class IngestPipeline(object):
             subsample.prepare_cell_metadata()
             for data in subsample.subsample('study'):
                 load_status = self.load_subsample(
-                    Clusters.COLLECTION_NAME,
-                    data,
-                    subsample.set_data_array,
-                    'study',
+                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study',
                 )
                 if load_status != 0:
                     return load_status
@@ -656,6 +662,7 @@ def main() -> None:
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
             status_cell_metadata = ingest.ingest_cell_metadata()
+            print(f'status_cell_metadatais {status_cell_metadata}')
             status.append(status_cell_metadata)
             if parsed_args.bq_table is not None and status_cell_metadata == 0:
                 status_metadata_bq = ingest.upload_metadata_to_bq()
@@ -677,8 +684,8 @@ def main() -> None:
                 captured_argument = re.match("(\w*file)$", argument)
                 if captured_argument is not None:
                     study_file_id = arguments['study_file_id']
-                    matched_arugment = captured_argument.groups()[0]
-                    file_path = arguments[matched_arugment]
+                    matched_argument = captured_argument.groups()[0]
+                    file_path = arguments[matched_argument]
                     if IngestFiles.is_remote_file(file_path):
                         IngestFiles.delocalize_file(
                             study_file_id,
