@@ -73,6 +73,7 @@ class Clusters(Annotations):
         self.name = name
         self.domain_ranges = domain_ranges
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
+        self.preproccess()
 
     def transform(self):
         """ Builds cluster data model"""
@@ -122,6 +123,10 @@ class Clusters(Annotations):
                 self.study_file_id,
                 self.study_id,
                 linear_data_id,
+            )
+            self.info_logger.info(
+                f'Attempting to load cluster header : {annot_header[0]}',
+                extra={'study_id': self.study_id, 'duration': None},
             )
 
     def can_subsample(self):

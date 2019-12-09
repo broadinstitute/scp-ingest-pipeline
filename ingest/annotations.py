@@ -98,9 +98,17 @@ class Annotations(IngestFiles):
                 "numeric", axis=1, level=1, drop_level=False
             ).columns.tolist()
             # TODO perform replace
-            self.file[numeric_columns] = (
-                self.file[numeric_columns].round(3).astype(float)
-            )
+            try:
+                self.file[numeric_columns] = (
+                    self.file[numeric_columns].round(3).astype(float)
+                )
+            except Exception as e:
+                self.errors_logger.error(
+                    "There are non numeric values in numeric columns"
+                )
+                self.errors_logger.error(
+                    e, extra={"study_id": str(self.study_id), "duration": None}
+                )
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement

@@ -357,6 +357,7 @@ class IngestPipeline(object):
                     f'Attempting to load cell metadata header : {metadataModel.annot_header}',
                     extra=self.extra_log_params,
                 )
+                print(metadataModel.model)
                 status = self.load(
                     self.cell_metadata.COLLECTION_NAME,
                     metadataModel.model,
