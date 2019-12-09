@@ -33,7 +33,6 @@ class Annotations(IngestFiles):
         self.file, self.file_handle = self.open_file(
             file_path, open_as='dataframe', header=[0, 1]
         )
-        print(self.file)
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)
 
