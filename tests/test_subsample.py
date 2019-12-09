@@ -32,7 +32,7 @@ class TestSubsample(unittest.TestCase):
         self.subsample_obj = SubSample(self.CLUSTER_PATH)
 
     def test_subsample(self):
-        for data in self.subsample_obj.subsample():
+        for data in self.subsample_obj.subsample('cluster'):
             header_value = data[1]
             annot_name = data[1][0].lower()
             annot_type = data[1][1]
