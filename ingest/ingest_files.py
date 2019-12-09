@@ -212,10 +212,7 @@ class IngestFiles:
         if file_type in self.allowed_file_types:
             # Return file object and type
             if open_as is None:
-                return (
-                    file_connections.get(file_type)(open_file, **kwargs),
-                    open_file,
-                )
+                return (file_connections.get(file_type)(open_file, **kwargs), open_file)
             else:
                 return (
                     file_connections.get(open_as)(

@@ -710,7 +710,7 @@ def push_metadata_to_bq(metadata, ndjson, dataset, table):
 def write_metadata_to_bq(metadata, bq_dataset, bq_table):
     """Wrapper function to gather metadata and write to BigQuery
     """
-    bq_filename = str(metadata.study_file_id + '.json'
+    bq_filename = str(metadata.study_file_id) + '.json'
     push_status = push_metadata_to_bq(metadata, bq_filename, bq_dataset, bq_table)
     return push_status
 

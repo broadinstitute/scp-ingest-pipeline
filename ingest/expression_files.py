@@ -42,9 +42,7 @@ class GeneExpression:
         study_id: ObjectId
         gene_id: str = None
 
-    def __init__(
-        self, file_path: str, study_id: str, study_file_id: str,
-    ):
+    def __init__(self, file_path: str, study_id: str, study_file_id: str):
         self.study_id = ObjectId(study_id)
         self.study_file_id = ObjectId(study_file_id)
         self.head, self.tail = ntpath.split(file_path)

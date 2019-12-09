@@ -397,7 +397,7 @@ class IngestPipeline(object):
         """Method for subsampling cluster and metadata files"""
 
         subsample = SubSample(
-            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file,
+            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
         )
 
         for data in subsample.subsample('cluster'):
@@ -411,7 +411,7 @@ class IngestPipeline(object):
             subsample.prepare_cell_metadata()
             for data in subsample.subsample('study'):
                 load_status = self.load_subsample(
-                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study',
+                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study'
                 )
                 if load_status != 0:
                     return load_status
