@@ -218,7 +218,9 @@ class IngestFiles:
                 )
             else:
                 return (
-                    file_connections.get(open_as)(file_path, file_type, open_file_object=open_file, **kwargs),
+                    file_connections.get(open_as)(
+                        file_path, file_type, open_file_object=open_file, **kwargs
+                    ),
                     open_file,
                 )
         else:
@@ -259,6 +261,7 @@ class IngestFiles:
 
     def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
+        open_file_object = kwargs.pop('open_file_object')
         if file_type == "text/tab-separated-values":
             return pd.read_csv(
                 file_path,
@@ -278,12 +281,8 @@ class IngestFiles:
                 **kwargs,
             )
         elif file_type == 'text/plain':
-            try:
-                open_file_object = kwargs.pop('open_file_object')
-            except Exception as e:
-                self.error_logger.error(e)
             open_file_object.seek(0)
-            csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
+            csv_dialect = csv.Sniffer().sniff(open_file_object.readline())
             csv_dialect.skipinitialspace = True
             return pd.read_csv(file_path, dialect=csv_dialect, **kwargs)
 
