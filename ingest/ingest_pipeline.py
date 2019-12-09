@@ -261,8 +261,9 @@ class IngestPipeline(object):
 
     def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
-        convention = json.load(json_file.file)
+        convention_file_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        json_file = convention_file_object.open_file(self.JSON_CONVENTION)
+        convention = json.load(json_file)
         if self.kwargs['validate_convention'] is not None:
             if (
                 self.kwargs['validate_convention']
@@ -273,7 +274,7 @@ class IngestPipeline(object):
             else:
                 validate_input_metadata(self.cell_metadata, convention)
 
-        json_file.file_handle.close()
+        json_file.close()
         return not report_issues(self.cell_metadata)
 
     def upload_metadata_to_bq(self):
