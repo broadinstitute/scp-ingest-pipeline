@@ -193,7 +193,7 @@ class IngestPipeline(object):
         *set_data_array_fn_args,
         **set_data_array_fn_kwargs,
     ):
-        documents = []
+        # documents = []
         try:
             # hack to avoid inserting invalid CellMetadata object from first column
             # TODO: implement method similar to kwargs solution in ingest_expression
@@ -274,9 +274,9 @@ class IngestPipeline(object):
 
     def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        json = IngestFiles(self.JSON_CONVENTION, ['application/json'])
-        convention = json.open_file(self.JSON_CONVENTION)[0]
-        # convention = json.load(json_file.file)
+        json_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        json_file = json_object.open_file(self.JSON_CONVENTION)[0]
+        convention = json.load(json_file.file)
         if self.kwargs['validate_convention'] is not None:
             if (
                 self.kwargs['validate_convention']
