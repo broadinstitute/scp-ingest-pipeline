@@ -62,10 +62,13 @@ class DataArray:
 
     def get_data_array(self):
         if len(self.values) > self.MAX_ENTRIES:
+            print('large')
+            print(f'size of values is {len(self.values)}')
             values = self.values
-            for i in range(0, len(self.values), self.MAX_ENTRIES):
-                self.__dict__["values"]: values[i : i + self.MAX_ENTRIES]
-                self.__dict__["array_index"]: i
+            for idx, i in enumerate(range(0, len(self.values), self.MAX_ENTRIES)):
+                self.values = values[i : i + self.MAX_ENTRIES]
+                self.array_index = idx
+                print(f'length is {len(self.__dict__["values"])}')
                 yield self.__dict__
         else:
             yield self.__dict__
@@ -191,14 +194,14 @@ class IngestFiles:
 
     def open_file(self, file_path, open_as=None, start_point: int = 0, **kwargs):
         """ Opens txt (txt is expected to be tsv or csv), csv, or tsv formatted files"""
+        open_file, file_path = self.resolve_path(file_path)
         file_connections = {
             "text/csv": self.open_csv,
             "text/plain": self.open_txt,
-            "application/json": self.open_file,
+            "application/json": open_file,
             "text/tab-separated-values": self.open_tsv,
             "dataframe": self.open_pandas,
         }
-        open_file, file_path = self.resolve_path(file_path)
         if start_point != 0:
             self.amount_of_lines = 0
             for i in range(start_point):

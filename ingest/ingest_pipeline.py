@@ -208,11 +208,18 @@ class IngestPipeline(object):
             for data_array_model in set_data_array_fn(
                 linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
+                print(f"length of values field is: {len(data_array_model['values'])}")
                 documents.append(data_array_model)
+            print('done appending')
             # only insert documents if present
             if len(documents) > 0:
+                print(len(documents[0]['values']))
                 self.db['data_arrays'].insert_many(documents)
         except Exception as e:
+            print(e.details)
+            # print(e.__dict__)
+            f = open("demofile3.txt", "w")
+            f.write(str(e.details))
             self.errors_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
@@ -261,8 +268,9 @@ class IngestPipeline(object):
 
     def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
-        convention = json.load(json_file.file)
+        json = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        convention = json.open_file(self.JSON_CONVENTION)[0]
+        # convention = json.load(json_file.file)
         if self.kwargs['validate_convention'] is not None:
             if (
                 self.kwargs['validate_convention']
@@ -357,7 +365,6 @@ class IngestPipeline(object):
                     f'Attempting to load cell metadata header : {metadataModel.annot_header}',
                     extra=self.extra_log_params,
                 )
-                print(metadataModel.model)
                 status = self.load(
                     self.cell_metadata.COLLECTION_NAME,
                     metadataModel.model,
