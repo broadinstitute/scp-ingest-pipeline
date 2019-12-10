@@ -198,10 +198,10 @@ class IngestFiles:
         file_connections = {
             "text/csv": self.open_csv,
             "text/plain": self.open_txt,
-            "application/json": open_file,
             "text/tab-separated-values": self.open_tsv,
             "dataframe": self.open_pandas,
         }
+
         if start_point != 0:
             self.amount_of_lines = 0
             for i in range(start_point):
@@ -214,11 +214,10 @@ class IngestFiles:
         )
         if file_type in self.allowed_file_types:
             # Return file object and type
-            if open_as is None:
-                return (
-                    file_connections.get(file_type)(open_file, **kwargs),
-                    open_file,
-                )
+            if file_type == "application/json":
+                return open_file
+            elif open_as is None:
+                return (file_connections.get(file_type)(open_file, **kwargs), open_file)
             else:
                 return (
                     file_connections.get(open_as)(

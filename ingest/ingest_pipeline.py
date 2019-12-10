@@ -274,9 +274,9 @@ class IngestPipeline(object):
 
     def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        json_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
-        json_file = json_object.open_file(self.JSON_CONVENTION)[0]
-        convention = json.load(json_file.file)
+        convention_file_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        json_file = convention_file_object.open_file(self.JSON_CONVENTION)
+        convention = json.load(json_file)
         if self.kwargs['validate_convention'] is not None:
             if (
                 self.kwargs['validate_convention']
@@ -287,7 +287,7 @@ class IngestPipeline(object):
             else:
                 validate_input_metadata(self.cell_metadata, convention)
 
-        json_file.file_handle.close()
+        json_file.close()
         return not report_issues(self.cell_metadata)
 
     def upload_metadata_to_bq(self):
@@ -410,7 +410,7 @@ class IngestPipeline(object):
         """Method for subsampling cluster and metadata files"""
 
         subsample = SubSample(
-            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file,
+            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
         )
 
         for data in subsample.subsample('cluster'):
@@ -424,7 +424,7 @@ class IngestPipeline(object):
             subsample.prepare_cell_metadata()
             for data in subsample.subsample('study'):
                 load_status = self.load_subsample(
-                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study',
+                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study'
                 )
                 if load_status != 0:
                     return load_status

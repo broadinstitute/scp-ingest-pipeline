@@ -411,10 +411,10 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
                     pass
                 js_errors[error.message].append(row['CellID'])
             if bq_json:
-                bq_filename = metadata.study_file_id + '.json'
+                bq_filename = str(metadata.study_file_id) + '.json'
                 # add non-convention, SCP-required, metadata for BigQuery
                 row['study_accession'] = metadata.study_accession
-                row['file_id'] = metadata.study_file_id
+                row['file_id'] = str(metadata.study_file_id)
                 serialize_bq(row, bq_filename)
             try:
                 line = next(rows)
@@ -710,7 +710,7 @@ def push_metadata_to_bq(metadata, ndjson, dataset, table):
 def write_metadata_to_bq(metadata, bq_dataset, bq_table):
     """Wrapper function to gather metadata and write to BigQuery
     """
-    bq_filename = metadata.study_file_id + '.json'
+    bq_filename = str(metadata.study_file_id) + '.json'
     push_status = push_metadata_to_bq(metadata, bq_filename, bq_dataset, bq_table)
     return push_status
 
