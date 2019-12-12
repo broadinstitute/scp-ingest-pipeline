@@ -7,7 +7,7 @@ Text, CSV, and TSV files are supported.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-from collections import defaultdict
+
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict

@@ -62,13 +62,10 @@ class DataArray:
 
     def get_data_array(self):
         if len(self.values) > self.MAX_ENTRIES:
-            print('large')
-            print(f'size of values is {len(self.values)}')
             values = self.values
             for idx, i in enumerate(range(0, len(self.values), self.MAX_ENTRIES)):
                 self.values = values[i : i + self.MAX_ENTRIES]
                 self.array_index = idx
-                print(f'length is {len(self.__dict__["values"])}')
                 yield self.__dict__
         else:
             yield self.__dict__

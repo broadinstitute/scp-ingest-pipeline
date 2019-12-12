@@ -10,6 +10,7 @@ Must have python 3.6 or higher.
 import abc
 import pandas as pd  # NOqa: F821
 from bson.objectid import ObjectId
+from collections import defaultdict
 
 try:
     # Used when importing internally and in tests
