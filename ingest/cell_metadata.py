@@ -7,7 +7,7 @@ Text, CSV, and TSV files are supported.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-
+from collections import defaultdict
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
 from mypy_extensions import TypedDict
@@ -43,6 +43,8 @@ class CellMetadata(Annotations):
             self, file_path, self.ALLOWED_FILE_TYPES, study_id, study_file_id
         )
         self.cell_names = []
+        # lambda below initializes new key with nested dictionary as value and avoids KeyError
+        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.cells = []
 
