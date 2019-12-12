@@ -35,6 +35,8 @@ class Annotations(IngestFiles):
         )
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)
+        # lambda below initializes new key with nested dictionary as value and avoids KeyError
+        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     def reset_file(self):
         self.file, self.file_handle = self.open_file(

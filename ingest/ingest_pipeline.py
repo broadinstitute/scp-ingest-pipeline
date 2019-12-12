@@ -36,9 +36,8 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import ast
-
-import sys
 import json
+import sys
 import os
 import logging
 import re
@@ -193,41 +192,30 @@ class IngestPipeline(object):
         *set_data_array_fn_args,
         **set_data_array_fn_kwargs,
     ):
-        # documents = []
-        try:
-            # hack to avoid inserting invalid CellMetadata object from first column
-            # TODO: implement method similar to kwargs solution in ingest_expression
-            if (
-                collection_name == 'cell_metadata'
-                and model['name'] == 'NAME'
-                and model['annotation_type'] == 'TYPE'
-            ):
-                linear_id = ObjectId(self.study_id)
-            else:
-                linear_id = self.db[collection_name].insert_one(model).inserted_id
-            for data_array_model in set_data_array_fn(
-                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
-            ):
-                print(f"length of values field is: {len(data_array_model['values'])}")
-                print(data_array_model)
-                print("\n")
-                print("\n")
-                print("\n")
-                print("\n")
-                # self.db['data_arrays'].insert_one(data_array_model)
-                # print('done appending')
-                # only insert documents if present
-                # if len(documents) > 0:
-                #     f = open("document.txt", "w")
-                #     f.write(str(documents[0]))
-                # self.db['data_arrays'].insert_many(documents, ordered=False)
-        except Exception as e:
-            print(e.details)
-            # print(e.__dict__)
-            # f = open("demofile3.txt", "w")
-            # f.write(str(e.details))
-            self.errors_logger.error(e, extra=self.extra_log_params)
-            return 1
+        documents = []
+        # hack to avoid inserting invalid CellMetadata object from first column
+        # TODO: implement method similar to kwargs solution in ingest_expression
+        if (
+            collection_name == 'cell_metadata'
+            and model['name'] == 'NAME'
+            and model['annotation_type'] == 'TYPE'
+        ):
+            linear_id = ObjectId(self.study_id)
+        else:
+            linear_id = self.db[collection_name].insert_one(model).inserted_id
+        for data_array_model in set_data_array_fn(
+            linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
+        ):
+            documents.append(data_array_model)
+        # only insert documents if present
+        if len(documents) > 0:
+            try:
+                self.db['data_arrays'].insert_many(documents)
+            except Exception as e:
+                self.errors_logger.error(e, extra=self.extra_log_params)
+                if e.details is not None:
+                    self.errors_logger.error(e.details, extra=self.extra_log_params)
+                return 1
         return 0
 
     def load_subsample(
@@ -274,9 +262,9 @@ class IngestPipeline(object):
 
     def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        convention_file_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
-        json_file = convention_file_object.open_file(self.JSON_CONVENTION)
-        convention = json.load(json_file)
+        json_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        json_file = json_object.open_file(self.JSON_CONVENTION)[0]
+        convention = json.load(json_file.file)
         if self.kwargs['validate_convention'] is not None:
             if (
                 self.kwargs['validate_convention']
@@ -287,7 +275,7 @@ class IngestPipeline(object):
             else:
                 validate_input_metadata(self.cell_metadata, convention)
 
-        json_file.close()
+        json_file.file_handle.close()
         return not report_issues(self.cell_metadata)
 
     def upload_metadata_to_bq(self):
@@ -410,7 +398,7 @@ class IngestPipeline(object):
         """Method for subsampling cluster and metadata files"""
 
         subsample = SubSample(
-            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
+            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file,
         )
 
         for data in subsample.subsample('cluster'):
@@ -424,7 +412,7 @@ class IngestPipeline(object):
             subsample.prepare_cell_metadata()
             for data in subsample.subsample('study'):
                 load_status = self.load_subsample(
-                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study'
+                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study',
                 )
                 if load_status != 0:
                     return load_status

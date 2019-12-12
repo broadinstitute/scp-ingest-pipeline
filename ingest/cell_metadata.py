@@ -43,8 +43,6 @@ class CellMetadata(Annotations):
             self, file_path, self.ALLOWED_FILE_TYPES, study_id, study_file_id
         )
         self.cell_names = []
-        # lambda below initializes new key with nested dictionary as value and avoids KeyError
-        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.cells = []
 
