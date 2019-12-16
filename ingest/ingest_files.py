@@ -64,8 +64,10 @@ class DataArray:
     def get_data_array(self):
         if len(self.values) > self.MAX_ENTRIES:
             values = self.values
+            print(f'about to write {len(values)} values')
             for idx, i in enumerate(range(0, len(self.values), self.MAX_ENTRIES)):
                 self.values = values[i : i + self.MAX_ENTRIES]
+                print(f'just created {len(self.values)} values')
                 self.array_index = idx
                 yield copy.copy(self.__dict__)
         else:
