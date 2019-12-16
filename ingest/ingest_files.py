@@ -64,10 +64,8 @@ class DataArray:
     def get_data_array(self):
         if len(self.values) > self.MAX_ENTRIES:
             values = self.values
-            print(f'about to write {len(values)} values')
             for idx, i in enumerate(range(0, len(self.values), self.MAX_ENTRIES)):
                 self.values = values[i : i + self.MAX_ENTRIES]
-                print(f'just created {len(self.values)} values')
                 self.array_index = idx
                 yield copy.copy(self.__dict__)
         else:
@@ -122,10 +120,18 @@ class IngestFiles:
             self.set_gcs_attrs(file_path)
             source_blob = storage.Blob(bucket=self.bucket, name=self.source)
             if not source_blob.exists(self.storage_client):
+                self.error_logger.error(
+                    f'Remote file "{file_path}" not found',
+                    extra={"study_id": None, "duration": None},
+                )
                 raise OSError(f'Remote file "{file_path}" not found')
         else:
             # File is local
             if not os.path.exists(file_path):
+                self.error_logger.error(
+                    f'File "{file_path}" not found',
+                    extra={"study_id": None, "duration": None},
+                )
                 raise OSError(f'File "{file_path}" not found')
 
     def resolve_path(self, file_path):
