@@ -214,7 +214,8 @@ class IngestPipeline(object):
                 self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             self.errors_logger.error(e, extra=self.extra_log_params)
-            self.errors_logger.error(e.details, extra=self.extra_log_params)
+            if e.details is not None:
+                self.errors_logger.error(e.details, extra=self.extra_log_params)
             return 1
         return 0
 
