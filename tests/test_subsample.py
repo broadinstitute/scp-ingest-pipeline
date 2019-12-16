@@ -67,7 +67,9 @@ class TestSubsample(unittest.TestCase):
                     )
 
     def test_bin(self):
-        for bin_data in map(self.subsample_obj.bin, self.subsample_obj.columns):
+        for bin_data in map(
+            self.subsample_obj.bin, self.subsample_obj.columns, 'clusters'
+        ):
             bins = bin_data[0]
             column_name = bin_data[1]
             annot_type = bin_data[1][1]
