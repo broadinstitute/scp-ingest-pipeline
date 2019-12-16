@@ -25,9 +25,7 @@ class Dense(GeneExpression, IngestFiles):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
-        GeneExpression.__init__(
-            self, file_path, study_file_id, study_id,
-        )
+        GeneExpression.__init__(self, file_path, study_file_id, study_id)
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
@@ -58,7 +56,7 @@ class Dense(GeneExpression, IngestFiles):
             names=header,
             skiprows=1,
             dtype=dtypes,
-            open_file_object=open_file_object,
+            # chunksize=100000, Save for when we chunk data
         )[0]
 
     def transform(self):

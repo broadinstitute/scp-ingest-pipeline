@@ -135,6 +135,9 @@ class IngestPipeline(object):
         if matrix_file is None:
             self.matrix = matrix_file
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
+        if subsample:
+            self.cluster_file = cluster_file
+            self.cell_metadata_file = cell_metadata_file
 
     @my_debug_logger()
     def get_mongo_db(self):
@@ -211,6 +214,8 @@ class IngestPipeline(object):
                 self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             self.errors_logger.error(e, extra=self.extra_log_params)
+            if e.details is not None:
+                self.errors_logger.error(e.details, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -224,7 +229,10 @@ class IngestPipeline(object):
                 annot_name = subsampled_data[1][0]
                 annot_type = subsampled_data[1][1]
                 sample_size = subsampled_data[2]
-                query = {'study_id': self.study_id}
+                query = {
+                    'study_id': ObjectId(self.study_id),
+                    'study_file_id': ObjectId(self.study_file_id),
+                }
                 # Query mongo for linear_id and 'name' of parent
                 # Then return 'name' and 'id' fields from query results
                 parent_data = self.db[parent_collection_name].find_one(
@@ -235,9 +243,9 @@ class IngestPipeline(object):
                         key_value[0],  # NAMES, x, y, or z
                         parent_data['name'],  # Cluster name provided from parent
                         key_value[1],  # Subsampled data/values
-                        self.study_file_id,
-                        self.study_id,
-                        str(parent_data['_id']),
+                        ObjectId(self.study_file_id),
+                        ObjectId(self.study_id),
+                        parent_data['_id'],
                     ),
                     {
                         'subsample_annotation': f"{annot_name}--{annot_type}--{scope}",
@@ -255,8 +263,9 @@ class IngestPipeline(object):
 
     def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        json_file = IngestFiles(self.JSON_CONVENTION, ['application/json'])
-        convention = json.load(json_file.file)
+        convention_file_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        json_file = convention_file_object.open_file(self.JSON_CONVENTION)
+        convention = json.load(json_file)
         if self.kwargs['validate_convention'] is not None:
             if (
                 self.kwargs['validate_convention']
@@ -267,7 +276,7 @@ class IngestPipeline(object):
             else:
                 validate_input_metadata(self.cell_metadata, convention)
 
-        json_file.file_handle.close()
+        json_file.close()
         return not report_issues(self.cell_metadata)
 
     def upload_metadata_to_bq(self):
@@ -363,7 +372,12 @@ class IngestPipeline(object):
                         extra=self.extra_log_params,
                     )
                     return status
-            return status
+            return status if status is not None else 1
+        else:
+            self.errors_logger.error(
+                f'Cell metadata file format invalid', extra=self.extra_log_params
+            )
+            return 1
 
     @my_debug_logger()
     def ingest_cluster(self):
@@ -377,6 +391,12 @@ class IngestPipeline(object):
             )
             if status != 0:
                 return status
+        # Incorrect file format
+        else:
+            self.errors_logger.error(
+                f'Cluster file format invalid', extra=self.extra_log_params
+            )
+            return 1
         return status
 
     @my_debug_logger()
@@ -384,10 +404,10 @@ class IngestPipeline(object):
         """Method for subsampling cluster and metadata files"""
 
         subsample = SubSample(
-            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file,
+            cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
         )
 
-        for data in subsample.subsample():
+        for data in subsample.subsample('cluster'):
             load_status = self.load_subsample(
                 Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
             )
@@ -396,12 +416,9 @@ class IngestPipeline(object):
 
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
-            for doc in subsample.subsample():
-                load_status = load_status = self.load_subsample(
-                    CellMetadata.COLLECTION_NAME,
-                    data,
-                    subsample.set_data_array,
-                    'study',
+            for data in subsample.subsample('study'):
+                load_status = self.load_subsample(
+                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study'
                 )
                 if load_status != 0:
                     return load_status
@@ -674,8 +691,8 @@ def main() -> None:
                 captured_argument = re.match("(\w*file)$", argument)
                 if captured_argument is not None:
                     study_file_id = arguments['study_file_id']
-                    matched_arugment = captured_argument.groups()[0]
-                    file_path = arguments[matched_arugment]
+                    matched_argument = captured_argument.groups()[0]
+                    file_path = arguments[matched_argument]
                     if IngestFiles.is_remote_file(file_path):
                         IngestFiles.delocalize_file(
                             study_file_id,
@@ -699,29 +716,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-# Custom formatter returns a structure, than a string
-# class CustomFormatter(logging.Formatter):
-#     def format(self, record):
-#         template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-#         message = template.format(type(ex).__name__, ex.args)
-#         logmsg = super(CustomFormatter, self).format(record)
-#         return {'msg': logmsg, 'args': record.args}
-
-
-# class Logger:
-#     def __init__(self):
-#
-#         # Instantiates a client
-#         ingest_logger = google.cloud.logging.Client()
-#         # Connects the logger to the root logging handler; by default this captures
-#         # all logs at INFO level and higher
-#         handler = self.ingest_logger.get_default_handler()
-#         handler.setFormatter(CustomFormatter())
-#         ingest_logger.setup_logging(os.environ['LOG_NAME'])
-#         logger = logging.getLogger()
-#         logger.setLevel(logging.INFO)
-#         logger.addHandler(handler)
-#
-#     def get_logger(self):
-# return logger

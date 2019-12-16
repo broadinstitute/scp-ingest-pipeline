@@ -10,6 +10,7 @@ Must have python 3.6 or higher.
 import abc
 import pandas as pd  # NOqa: F821
 from bson.objectid import ObjectId
+from collections import defaultdict
 
 try:
     # Used when importing internally and in tests
@@ -35,6 +36,8 @@ class Annotations(IngestFiles):
         )
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)
+        # lambda below initializes new key with nested dictionary as value and avoids KeyError
+        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     def reset_file(self):
         self.file, self.file_handle = self.open_file(
@@ -98,9 +101,17 @@ class Annotations(IngestFiles):
                 "numeric", axis=1, level=1, drop_level=False
             ).columns.tolist()
             # TODO perform replace
-            self.file[numeric_columns] = (
-                self.file[numeric_columns].round(3).astype(float)
-            )
+            try:
+                self.file[numeric_columns] = (
+                    self.file[numeric_columns].round(3).astype(float)
+                )
+            except Exception as e:
+                self.errors_logger.error(
+                    "There are non numeric values in numeric columns"
+                )
+                self.errors_logger.error(
+                    e, extra={"study_id": str(self.study_id), "duration": None}
+                )
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement

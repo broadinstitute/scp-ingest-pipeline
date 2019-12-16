@@ -32,7 +32,7 @@ class TestSubsample(unittest.TestCase):
         self.subsample_obj = SubSample(self.CLUSTER_PATH)
 
     def test_subsample(self):
-        for data in self.subsample_obj.subsample():
+        for data in self.subsample_obj.subsample('cluster'):
             header_value = data[1]
             annot_name = data[1][0].lower()
             annot_type = data[1][1]
@@ -67,7 +67,9 @@ class TestSubsample(unittest.TestCase):
                     )
 
     def test_bin(self):
-        for bin_data in map(self.subsample_obj.bin, self.subsample_obj.columns):
+        for bin_data in map(
+            self.subsample_obj.bin, self.subsample_obj.columns, 'clusters'
+        ):
             bins = bin_data[0]
             column_name = bin_data[1]
             annot_type = bin_data[1][1]

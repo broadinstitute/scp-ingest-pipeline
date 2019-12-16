@@ -13,6 +13,7 @@ from dataclasses import dataclass
 import gzip
 import pandas as pd  # NOqa: F821
 from google.cloud import storage
+import copy
 
 # from google.cloud.logging.resource import Resource
 # import google.cloud.logging
@@ -63,10 +64,10 @@ class DataArray:
     def get_data_array(self):
         if len(self.values) > self.MAX_ENTRIES:
             values = self.values
-            for i in range(0, len(self.values), self.MAX_ENTRIES):
-                self.__dict__["values"]: values[i : i + self.MAX_ENTRIES]
-                self.__dict__["array_index"]: i
-                yield self.__dict__
+            for idx, i in enumerate(range(0, len(self.values), self.MAX_ENTRIES)):
+                self.values = values[i : i + self.MAX_ENTRIES]
+                self.array_index = idx
+                yield copy.copy(self.__dict__)
         else:
             yield self.__dict__
 
@@ -119,10 +120,18 @@ class IngestFiles:
             self.set_gcs_attrs(file_path)
             source_blob = storage.Blob(bucket=self.bucket, name=self.source)
             if not source_blob.exists(self.storage_client):
+                self.error_logger.error(
+                    f'Remote file "{file_path}" not found',
+                    extra={"study_id": None, "duration": None},
+                )
                 raise OSError(f'Remote file "{file_path}" not found')
         else:
             # File is local
             if not os.path.exists(file_path):
+                self.error_logger.error(
+                    f'File "{file_path}" not found',
+                    extra={"study_id": None, "duration": None},
+                )
                 raise OSError(f'File "{file_path}" not found')
 
     def resolve_path(self, file_path):
@@ -191,14 +200,14 @@ class IngestFiles:
 
     def open_file(self, file_path, open_as=None, start_point: int = 0, **kwargs):
         """ Opens txt (txt is expected to be tsv or csv), csv, or tsv formatted files"""
+        open_file, file_path = self.resolve_path(file_path)
         file_connections = {
             "text/csv": self.open_csv,
             "text/plain": self.open_txt,
-            "application/json": self.open_file,
             "text/tab-separated-values": self.open_tsv,
             "dataframe": self.open_pandas,
         }
-        open_file, file_path = self.resolve_path(file_path)
+
         if start_point != 0:
             self.amount_of_lines = 0
             for i in range(start_point):
@@ -211,14 +220,15 @@ class IngestFiles:
         )
         if file_type in self.allowed_file_types:
             # Return file object and type
-            if open_as is None:
-                return (
-                    file_connections.get(file_type)(open_file, **kwargs),
-                    open_file,
-                )
+            if file_type == "application/json":
+                return open_file
+            elif open_as is None:
+                return (file_connections.get(file_type)(open_file, **kwargs), open_file)
             else:
                 return (
-                    file_connections.get(open_as)(file_path, file_type, **kwargs),
+                    file_connections.get(open_as)(
+                        file_path, file_type, open_file_object=open_file, **kwargs
+                    ),
                     open_file,
                 )
         else:
@@ -259,6 +269,7 @@ class IngestFiles:
 
     def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
+        open_file_object = kwargs.pop('open_file_object')
         if file_type == "text/tab-separated-values":
             return pd.read_csv(
                 file_path,
@@ -278,13 +289,9 @@ class IngestFiles:
                 **kwargs,
             )
         elif file_type == 'text/plain':
-            try:
-                open_file_object = kwargs.pop('open_file_object')
-            except Exception as e:
-                self.error_logger.ERROR(e)
-            open_file_object.seek(0)
-            csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
+            csv_dialect = csv.Sniffer().sniff(open_file_object.readline())
             csv_dialect.skipinitialspace = True
+            open_file_object.seek(0)
             return pd.read_csv(file_path, dialect=csv_dialect, **kwargs)
 
         else:
