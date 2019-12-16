@@ -211,7 +211,6 @@ class IngestPipeline(object):
                 documents.append(data_array_model)
             # only insert documents if present
             if len(documents) > 0:
-                print('trying to insert')
                 self.db['data_arrays'].insert_many(documents)
         except Exception as e:
             self.errors_logger.error(e, extra=self.extra_log_params)
