@@ -670,7 +670,6 @@ def main() -> None:
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
             status_cell_metadata = ingest.ingest_cell_metadata()
-            print(f'status_cell_metadatais {status_cell_metadata}')
             status.append(status_cell_metadata)
             if parsed_args.bq_table is not None and status_cell_metadata == 0:
                 status_metadata_bq = ingest.upload_metadata_to_bq()
@@ -717,29 +716,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-# Custom formatter returns a structure, than a string
-# class CustomFormatter(logging.Formatter):
-#     def format(self, record):
-#         template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-#         message = template.format(type(ex).__name__, ex.args)
-#         logmsg = super(CustomFormatter, self).format(record)
-#         return {'msg': logmsg, 'args': record.args}
-
-
-# class Logger:
-#     def __init__(self):
-#
-#         # Instantiates a client
-#         ingest_logger = google.cloud.logging.Client()
-#         # Connects the logger to the root logging handler; by default this captures
-#         # all logs at INFO level and higher
-#         handler = self.ingest_logger.get_default_handler()
-#         handler.setFormatter(CustomFormatter())
-#         ingest_logger.setup_logging(os.environ['LOG_NAME'])
-#         logger = logging.getLogger()
-#         logger.setLevel(logging.INFO)
-#         logger.addHandler(handler)
-#
-#     def get_logger(self):
-# return logger

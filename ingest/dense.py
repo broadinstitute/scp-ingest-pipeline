@@ -97,7 +97,6 @@ class Dense(GeneExpression, IngestFiles):
         gene_df = self.df[self.df['GENE'] == unformatted_gene_name]
         # Get list of cell names
         cells = self.df.columns.tolist()[1:]
-        print(create_cell_data_array)
         if create_cell_data_array:
             self.info_logger.info(
                 f'Creating cell data array for gene : {gene_name}',
