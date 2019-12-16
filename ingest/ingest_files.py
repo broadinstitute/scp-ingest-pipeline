@@ -13,6 +13,7 @@ from dataclasses import dataclass
 import gzip
 import pandas as pd  # NOqa: F821
 from google.cloud import storage
+import copy
 
 # from google.cloud.logging.resource import Resource
 # import google.cloud.logging
@@ -66,7 +67,7 @@ class DataArray:
             for idx, i in enumerate(range(0, len(self.values), self.MAX_ENTRIES)):
                 self.values = values[i : i + self.MAX_ENTRIES]
                 self.array_index = idx
-                yield self.__dict__
+                yield copy.copy(self.__dict__)
         else:
             yield self.__dict__
 
