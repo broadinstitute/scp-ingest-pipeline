@@ -84,7 +84,7 @@ class TestIngestFiles(unittest.TestCase):
     @patch('ingest_files.IngestFiles.resolve_path')
     @patch('ingest_files.IngestFiles.open_txt')
     def test_open_file_txt(self, mock_open_txt, mock_resolve_path):
-        "Checks to see if wrapper function opens txt file correctly"
+        "Checks to see if wrapper function calls  open_txt file correctly"
         file_path = '../tests/data/r_format_text.txt'
         reader = open(file_path, 'rt', encoding='utf-8-sig')
         mock_resolve_path.return_value = (reader, file_path)
@@ -94,6 +94,20 @@ class TestIngestFiles(unittest.TestCase):
         ingest_file.open_file(file_path)
         mock_resolve_path.assert_called_with(file_path)
         mock_open_txt.assert_called_with(reader)
+
+    @patch('ingest_files.IngestFiles.resolve_path')
+    @patch('ingest_files.IngestFiles.open_pandas')
+    def test_open_file_pandas(self, mock_open_pandas, mock_resolve_path):
+        "Checks to see if wrapper function opens txt file correctly"
+        mock_resolve_path.return_value = (self.csv_file_reader, self.csv_file_path)
+        ingest_file = IngestFiles(
+            self.csv_file_path, ['text/csv', 'text/plain', 'text/tab-separated-values']
+        )
+        ingest_file.open_file(self.csv_file_path, open_as='dataframe')
+        mock_resolve_path.assert_called_with(self.csv_file_path)
+        mock_open_pandas.assert_called_with(
+            self.csv_file_path, "text/csv", open_file_object=self.csv_file_reader
+        )
 
     @patch('pandas.read_csv')
     def test_open_pandas_csv(self, mock_read_csv):
