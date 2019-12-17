@@ -71,7 +71,7 @@ class Clusters(Annotations):
             else '2d'
         )
         self.name = name
-        self.domain_ranges = domain_ranges
+        self.domain_ranges = domain_ranges if not (not domain_ranges) else None
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
         self.preproccess()
 
@@ -107,7 +107,9 @@ class Clusters(Annotations):
             cell_annotations=cell_annotations,
             study_file_id=self.study_file_id,
             study_id=self.study_id,
-            domain_ranges=DomainRanges(**self.domain_ranges),
+            domain_ranges=DomainRanges(**self.domain_ranges)
+            if self.domain_ranges is not None
+            else None,
         )
 
     def get_data_array_annot(self, linear_data_id):
