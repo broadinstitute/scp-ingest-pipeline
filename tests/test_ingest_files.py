@@ -14,6 +14,7 @@ python3 test_ingest_files.py -s
 import sys
 import unittest
 from unittest.mock import patch
+import csv
 
 sys.path.append("../ingest")
 from ingest_files import IngestFiles
@@ -69,7 +70,7 @@ class TestIngestFiles(unittest.TestCase):
     @patch('ingest_files.IngestFiles.resolve_path')
     @patch('ingest_files.IngestFiles.open_csv')
     def test_open_file_csv(self, mock_open_csv, mock_resolve_path):
-        "Checks to see if wrapper function opens csv file correctly"
+        "Checks to see if wrapper function calls open_csv correctly"
         file_path = '../tests/data/test_1k_cluster_data.csv'
         reader = open(file_path, 'rt', encoding='utf-8-sig')
         mock_resolve_path.return_value = (reader, file_path)
@@ -93,6 +94,21 @@ class TestIngestFiles(unittest.TestCase):
         ingest_file.open_file(file_path)
         mock_resolve_path.assert_called_with(file_path)
         mock_open_txt.assert_called_with(reader)
+
+    @patch('pandas.read_csv')
+    def test_open_pandas_csv(self, mock_read_csv):
+        ingest_file = IngestFiles(
+            self.csv_file_path, ['text/csv', 'text/plain', 'text/tab-separated-values']
+        )
+        ingest_file.open_pandas(self.csv_file_path, 'text/csv', open_file_object=None)
+        mock_read_csv.assert_called_with(
+            self.csv_file_path,
+            sep=",",
+            quotechar='"',
+            quoting=csv.QUOTE_NONNUMERIC,
+            skipinitialspace=True,
+            escapechar='\\',
+        )
 
     # def test_open_file_as_pandas_csv(self):
     #     """Checks to see if wrapper function opens csv file as a pandas dataframe
