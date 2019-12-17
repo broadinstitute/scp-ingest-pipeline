@@ -309,7 +309,7 @@ class IngestFiles:
         )
         return csv.reader(opened_file_object, dialect="csvDialect")
 
-    def open_tsv(self, opened_file_object, file_type):
+    def open_tsv(self, opened_file_object, **kwargs):
         """Opens tsv file"""
         csv.register_dialect(
             "tsvDialect",
