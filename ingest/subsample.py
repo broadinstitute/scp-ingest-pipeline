@@ -33,23 +33,9 @@ class SubSample(Annotations):
         if self.cell_metadata is not None:
             self.cell_metadata.preproccess()
             self.merge_df(
-                self.file[self.coordinates_and_cell_names], self.cell_metadata.file
+                self.file[self.coordinates_and_cell_headers], self.cell_metadata.file
             )
             self.determine_coordinates_and_cell_names()
-
-    def determine_coordinates_and_cell_names(self):
-        """Finds column names for coordinates, annotations, and cell names"""
-        self.coordinates_and_cell_names = [
-            annot[0]
-            for annot in self.file.columns
-            if annot[0].lower() in ('z', 'y', 'x', 'name')
-        ]
-        # annotation column names
-        self.columns = [
-            annot
-            for annot in self.file.columns
-            if annot[0].lower() not in ('z', 'y', 'x', 'name')
-        ]
 
     def bin(self, annotation: Tuple[str, str], scope: str):
         """Creates bins for a given group
@@ -69,7 +55,7 @@ class SubSample(Annotations):
         bin = {}
 
         # sample the annotation along with coordinates and cell names
-        columns_to_sample = copy.copy(self.coordinates_and_cell_names)
+        columns_to_sample = copy.copy(self.coordinates_and_cell_headers)
         if scope == 'cluster':
             columns_to_sample.append(annotation[0])
         if 'group' in annotation:
@@ -81,7 +67,7 @@ class SubSample(Annotations):
                 subset = self.file[self.file[annotation] == col_val]
                 bin[col_val] = subset[columns_to_sample]
         else:
-            columns = copy.copy(self.coordinates_and_cell_names)
+            columns = copy.copy(self.coordinates_and_cell_headers)
             # coordinates, cell names and annotation name
             columns.append(annotation[0])
             # Subset of df where header is [cell_names, x, y, z, <annot_name>]
@@ -99,24 +85,25 @@ class SubSample(Annotations):
             for sample_size in self.SUBSAMPLE_THRESHOLDS
             if sample_size < len(self.file.index)
         ]
-        for bins in [self.bin(col, scope) for col in self.columns]:
+        for bins in [self.bin(col, scope) for col in self.annot_column_headers]:
+            amount_of_bins = len(bins[0].keys())
             # (name of current column)
             annotation_name = bins[1]
-
             # Holds bins for annotation
             # Looks like {"Unique value #1" : dataframe, "Unique value #2": dataframe,...}
             annotation_dict = bins[0]
             for sample_size in sample_sizes:
                 group_size = len(annotation_dict.keys())
                 # Dict of values for the x, y, and z coordinates
-                points = {k: [] for k in self.coordinates_and_cell_names}
+                points = {k: [] for k in self.coordinates_and_cell_headers}
                 if scope == 'cluster':
                     points[annotation_name[0]] = []
                 num_per_group = int(sample_size / group_size)
                 cells_left = sample_size
                 # bin = ("unique value in column" : dataframe)
-                for bin in self.return_sorted_bin(annotation_dict, annotation_name):
-
+                for idx, bin in enumerate(
+                    self.return_sorted_bin(annotation_dict, annotation_name)
+                ):
                     amount_of_rows = len(bin[1].index)
                     # If the amount of sampled values is larger
                     # than the whole array, take the whole array
@@ -137,7 +124,8 @@ class SubSample(Annotations):
                     # Subtract number of cells 'subsampled' from the number of cells left
                     cells_left -= amount_picked_rows
                     # For last bin sample the number of cells left over
-                    if bin[0] == list(annotation_dict.keys())[-2]:
+                    # Subtract 2 because 0 based
+                    if idx == (amount_of_bins - 2):
                         num_per_group = cells_left
                     else:
                         group_size -= 1
