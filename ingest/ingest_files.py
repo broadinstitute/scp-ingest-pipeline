@@ -199,7 +199,7 @@ class IngestFiles:
             )
 
     def open_file(self, file_path, open_as=None, start_point: int = 0, **kwargs):
-        """ Opens txt (txt is expected to be tsv or csv), csv, or tsv formatted files"""
+        """ A wrapper function for opening txt (txt is expected to be tsv or csv), csv, or tsv formatted files"""
         open_file, file_path = self.resolve_path(file_path)
         file_connections = {
             "text/csv": self.open_csv,
@@ -261,7 +261,7 @@ class IngestFiles:
     def open_txt(self, open_file_object, **kwargs):
         """Method for opening txt files that are expected be tab
         or comma delimited"""
-        # Determined if file is tsv or csv
+        # Determine if file is tsv or csv
         csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
         csv_dialect.skipinitialspace = True
         open_file_object.seek(0)
