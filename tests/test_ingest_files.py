@@ -13,7 +13,6 @@ python3 test_ingest_files.py -s
 
 import sys
 import unittest
-import mimetypes
 from unittest.mock import patch
 
 sys.path.append("../ingest")
