@@ -110,6 +110,21 @@ class TestIngestFiles(unittest.TestCase):
             escapechar='\\',
         )
 
+    @patch('pandas.read_csv')
+    def test_open_pandas_tsv(self, mock_read_csv):
+        ingest_file = IngestFiles(
+            self.tsv_file_path, ['text/csv', 'text/plain', 'text/tab-separated-values']
+        )
+        ingest_file.open_pandas(
+            self.tsv_file_path, 'text/tab-separated-values', open_file_object=None
+        )
+        mock_read_csv.assert_called_with(
+            self.tsv_file_path,
+            sep='\t',
+            skipinitialspace=True,
+            quoting=csv.QUOTE_NONNUMERIC,
+        )
+
     # def test_open_file_as_pandas_csv(self):
     #     """Checks to see if wrapper function opens csv file as a pandas dataframe
     #     correctly"""
