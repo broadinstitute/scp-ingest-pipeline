@@ -1,6 +1,8 @@
 """Test ingest_files.py
-These tests verify:
-    - Error is thrown for a missing file
+These tests:
+    - Verify error is thrown for a missing file
+    - Test open_file, open_tsv, open_csv, open_pandas functions
+
 PREREQUISITES
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
 Note: When CI environment moves to Python 3.7, tests may break due to minor
@@ -138,11 +140,3 @@ class TestIngestFiles(unittest.TestCase):
             skipinitialspace=True,
             quoting=csv.QUOTE_NONNUMERIC,
         )
-
-    # def test_open_file_as_pandas_csv(self):
-    #     """Checks to see if wrapper function opens csv file as a pandas dataframe
-    #     correctly"""
-    #
-    # def test_open_file_as_pandas_txt(self):
-    #
-    # def test_open_file_as_pandas_tsv(self):

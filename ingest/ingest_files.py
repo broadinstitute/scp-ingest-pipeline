@@ -85,7 +85,7 @@ class IngestFiles:
         self.is_gzip_file = self.get_file_type(file_path)[1] == 'gzip'
 
         self.verify_file_exists(file_path)
-
+        # Allowed files for a given file type (expression file, cluster files, etc.)
         self.allowed_file_types = allowed_file_types
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
