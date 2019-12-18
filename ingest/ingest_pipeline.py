@@ -593,7 +593,7 @@ def bq_dataset_exists(dataset):
         bigquery_client.get_dataset(dataset_ref)
         exists = True
     except NotFound:
-        (f'Dataset {dataset} not found')
+        print(f'Dataset {dataset} not found')
     return exists
 
 
