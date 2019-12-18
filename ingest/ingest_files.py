@@ -303,7 +303,6 @@ class IngestFiles:
             "csvDialect",
             delimiter=",",
             quotechar='"',
-            quoting=csv.QUOTE_NONNUMERIC,
             skipinitialspace=True,
             escapechar='\\',
         )
@@ -311,12 +310,7 @@ class IngestFiles:
 
     def open_tsv(self, opened_file_object, **kwargs):
         """Opens tsv file"""
-        csv.register_dialect(
-            "tsvDialect",
-            delimiter="\t",
-            quoting=csv.QUOTE_NONNUMERIC,
-            skipinitialspace=True,
-        )
+        csv.register_dialect("tsvDialect", delimiter="\t", skipinitialspace=True)
         return csv.reader(opened_file_object, dialect="tsvDialect")
 
     def extract_csv_or_tsv(self, file):
