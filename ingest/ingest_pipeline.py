@@ -332,7 +332,7 @@ class IngestPipeline(object):
                     extra=self.extra_log_params,
                 )
                 return status
-        return 1
+        return status
 
     @my_debug_logger()
     def ingest_cell_metadata(self):
