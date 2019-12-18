@@ -38,6 +38,7 @@ class TestIngestFiles(unittest.TestCase):
             )
 
     def test_open_csv(self):
+        "Test open_scv() by checking if csv_reader is called with proper parameters"
         ingest_file = IngestFiles(
             self.csv_file_path, ['text/csv', 'text/plain', 'text/tab-separated-values']
         )
@@ -59,19 +60,35 @@ class TestIngestFiles(unittest.TestCase):
             'Function did not open file as tab delimited',
         )
 
+    @patch('ingest_files.IngestFiles.open_csv')
     @patch('ingest_files.IngestFiles.open_tsv')
-    def test_open_file_tsv(self, mock_open_tsv):
+    @patch('ingest_files.IngestFiles.open_txt')
+    @patch('ingest_files.IngestFiles.resolve_path')
+    def test_open_file_tsv(
+        self, mock_resolve_path, mock_open_csv, mock_open_tsv, mock_open_txt
+    ):
         """Tests if wrapper function calls open_tsv file successfully"""
+        mock_resolve_path.return_value = (self.tsv_file_reader, self.tsv_file_path)
         ingest_files = IngestFiles(
-            '../tests/data/test_convention.tsv',
-            ['text/csv', 'text/plain', 'text/tab-separated-values'],
+            self.tsv_file_path, ['text/csv', 'text/plain', 'text/tab-separated-values'],
         )
         tsv_file, open_file_object = ingest_files.open_file(ingest_files.file_path)
         mock_open_tsv.assert_called_with(open_file_object)
+        # Ensure other functions were not called
+        assert (
+            not mock_open_csv.called
+        ), 'open_csv() was called and should not have been'
+        assert (
+            not mock_open_txt.called
+        ), 'open_csv() was called and should not have been'
 
-    @patch('ingest_files.IngestFiles.resolve_path')
     @patch('ingest_files.IngestFiles.open_csv')
-    def test_open_file_csv(self, mock_open_csv, mock_resolve_path):
+    @patch('ingest_files.IngestFiles.open_tsv')
+    @patch('ingest_files.IngestFiles.open_txt')
+    @patch('ingest_files.IngestFiles.resolve_path')
+    def test_open_file_csv(
+        self, mock_resolve_path, mock_open_csv, mock_open_tsv, mock_open_txt
+    ):
         "Checks to see if wrapper function calls open_csv correctly"
         file_path = '../tests/data/test_1k_cluster_data.csv'
         reader = open(file_path, 'rt', encoding='utf-8-sig')
@@ -82,6 +99,13 @@ class TestIngestFiles(unittest.TestCase):
         ingest_file.open_file(file_path)
         mock_resolve_path.assert_called_with(file_path)
         mock_open_csv.assert_called_with(reader)
+        # Ensure other functions were not called
+        assert (
+            not mock_open_tsv.called
+        ), 'open_tsv() was called and should not have been'
+        assert (
+            not mock_open_txt.called
+        ), 'open_txt() was called and should not have been'
 
     @patch('ingest_files.IngestFiles.resolve_path')
     @patch('ingest_files.IngestFiles.open_txt')
