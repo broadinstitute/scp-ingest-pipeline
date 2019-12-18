@@ -117,18 +117,18 @@ class Dense(GeneExpression, IngestFiles):
         # Return significant data (skip if no expression was observed)
         if len(observed_values) > 0:
             self.info_logger.info(
-                f'Creating cell names data array for gene: {gene_name}',
+                f'Creating cell names data array for gene: {unformatted_gene_name}',
                 extra=self.extra_log_params,
             )
             yield from self.set_data_array_gene_cell_names(
-                gene_name, linear_data_id, observed_cells
+                unformatted_gene_name, linear_data_id, observed_cells
             )
             self.info_logger.info(
-                f'Creating gene expression data array for gene: {gene_name}',
+                f'Creating gene expression data array for gene: {unformatted_gene_name}',
                 extra=self.extra_log_params,
             )
             yield from self.set_data_array_gene_expression_values(
-                gene_name, linear_data_id, observed_values
+                unformatted_gene_name, linear_data_id, observed_values
             )
 
     def close(self):
