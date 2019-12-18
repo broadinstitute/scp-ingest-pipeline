@@ -29,6 +29,7 @@ class TestSubsample(unittest.TestCase):
     CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
 
     def setUp(self):
+        # This cluster file should be sampled at 1k
         self.subsample_obj = SubSample(self.CLUSTER_PATH)
 
     def test_subsample(self):
@@ -37,6 +38,7 @@ class TestSubsample(unittest.TestCase):
             annot_name = data[1][0].lower()
             annot_type = data[1][1]
             subsampled_data = data[0]
+            sample_size = data[2]
             if annot_type == 'group':
                 amount_of_bins = len(self.subsample_obj.file[header_value].unique())
             else:
@@ -48,7 +50,7 @@ class TestSubsample(unittest.TestCase):
                     np.concatenate(self.subsample_obj.file[key_value[0]].values),
                     amount_of_bins,
                 )
-
+                subsampled_values = key_value[1]
                 subsampled_vals_lists = np.array_split(key_value[1], amount_of_bins)
 
                 for (orig_val_list, subsampled_val_list) in zip(
@@ -65,10 +67,15 @@ class TestSubsample(unittest.TestCase):
                         all(result),
                         f"Incorrect subsampling. Values that should not have been in subsampled for {key_value[0]} in {annot_name}:  {subsampled_val_list[bad_values]}",
                     )
+                self.assertEqual(
+                    len(subsampled_values),
+                    sample_size,
+                    f'Amount of values is incorrect. Expecting a sample size of {sample_size}',
+                )
 
     def test_bin(self):
         for bin_data in map(
-            self.subsample_obj.bin, self.subsample_obj.columns, 'clusters'
+            self.subsample_obj.bin, self.subsample_obj.annot_column_headers, 'clusters'
         ):
             bins = bin_data[0]
             column_name = bin_data[1]
