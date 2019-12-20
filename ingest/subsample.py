@@ -89,15 +89,19 @@ class SubSample(Annotations):
             amount_of_bins = len(bins[0].keys())
             # (name of current column)
             annotation_name = bins[1]
+            print(annotation_name)
             # Holds bins for annotation
             # Looks like {"Unique value #1" : dataframe, "Unique value #2": dataframe,...}
             annotation_dict = bins[0]
             for sample_size in sample_sizes:
                 group_size = len(annotation_dict.keys())
+                print(f'group size is:{group_size}')
+                print(f'num per group is {int(sample_size / group_size)}')
                 # Dict of values for the x, y, and z coordinates
                 points = {k: [] for k in self.coordinates_and_cell_headers}
                 if scope == 'cluster':
                     points[annotation_name[0]] = []
+                print(f'Sample size is {sample_size}')
                 num_per_group = int(sample_size / group_size)
                 cells_left = sample_size
                 # bin = ("unique value in column" : dataframe)
@@ -127,9 +131,11 @@ class SubSample(Annotations):
                     # Subtract 2 because 0 based
                     if idx == (amount_of_bins - 2):
                         num_per_group = cells_left
+                        print(idx)
                     else:
                         group_size -= 1
-                        num_per_group = int(cells_left / group_size)
+                        if group_size > 1:
+                            num_per_group = int(cells_left / group_size)
                 # returns tuple = (subsampled values as dictionary, annotation name, sample size )
             yield (points, annotation_name, sample_size)
 
