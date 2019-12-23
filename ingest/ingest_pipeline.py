@@ -408,13 +408,12 @@ class IngestPipeline(object):
         )
 
         for data in subsample.subsample('cluster'):
-            if len(data) > 0:
-                load_status = self.load_subsample(
-                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
-                )
+            load_status = self.load_subsample(
+                Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
+            )
 
-                if load_status != 0:
-                    return load_status
+            if load_status != 0:
+                return load_status
 
         if self.cell_metadata_file is not None:
             subsample.prepare_cell_metadata()
