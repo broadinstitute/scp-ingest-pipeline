@@ -53,7 +53,6 @@ class SubSample(Annotations):
                 The second value in the tuple is structured exactly like the input value.
             """
         bin = {}
-
         # sample the annotation along with coordinates and cell names
         columns_to_sample = copy.copy(self.coordinates_and_cell_headers)
         if scope == 'cluster':
@@ -85,7 +84,10 @@ class SubSample(Annotations):
             for sample_size in self.SUBSAMPLE_THRESHOLDS
             if sample_size < len(self.file.index)
         ]
+        print(sample_sizes)
+        print(self.annot_column_headers)
         for bins in [self.bin(col, scope) for col in self.annot_column_headers]:
+
             amount_of_bins = len(bins[0].keys())
             # (name of current column)
             annotation_name = bins[1]
@@ -94,6 +96,7 @@ class SubSample(Annotations):
             # Looks like {"Unique value #1" : dataframe, "Unique value #2": dataframe,...}
             annotation_dict = bins[0]
             for sample_size in sample_sizes:
+                print(sample_size)
                 group_size = len(annotation_dict.keys())
                 print(f'group size is:{group_size}')
                 print(f'num per group is {int(sample_size / group_size)}')
@@ -137,7 +140,7 @@ class SubSample(Annotations):
                         if group_size > 1:
                             num_per_group = int(cells_left / group_size)
                 # returns tuple = (subsampled values as dictionary, annotation name, sample size )
-            yield (points, annotation_name, sample_size)
+                yield (points, annotation_name, sample_size)
 
     def return_sorted_bin(self, bin, annot_name):
         """Sorts binned groups in order of size from smallest to largest for group annotations """
