@@ -332,7 +332,7 @@ class IngestPipeline(object):
                     extra=self.extra_log_params,
                 )
                 return status
-        return 1
+        return status
 
     @my_debug_logger()
     def ingest_cell_metadata(self):
@@ -411,6 +411,7 @@ class IngestPipeline(object):
             load_status = self.load_subsample(
                 Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
             )
+
             if load_status != 0:
                 return load_status
 
@@ -593,7 +594,7 @@ def bq_dataset_exists(dataset):
         bigquery_client.get_dataset(dataset_ref)
         exists = True
     except NotFound:
-        (f'Dataset {dataset} not found')
+        print(f'Dataset {dataset} not found')
     return exists
 
 
