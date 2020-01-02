@@ -36,7 +36,9 @@ class Mtx(GeneExpression):
 
         barcodes_path = kwargs.pop("barcode_file")
         barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
-        self.barcodes_file, barcodes_local_path = barcodes_ingest_file.resolve_path(barcodes_path)
+        self.barcodes_file, barcodes_local_path = barcodes_ingest_file.resolve_path(
+            barcodes_path
+        )
 
         mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
         mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(mtx_path)
