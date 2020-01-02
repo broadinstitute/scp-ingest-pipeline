@@ -411,6 +411,7 @@ class IngestPipeline(object):
             load_status = self.load_subsample(
                 Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
             )
+
             if load_status != 0:
                 return load_status
 
