@@ -17,24 +17,39 @@ import scipy.io
 
 try:
     from expression_files import GeneExpression
+    from ingest_files import IngestFiles
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
+    from .ingest_files import IngestFiles
 
 
 class Mtx(GeneExpression):
+    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
+
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
-        self.genes_file = open(kwargs.pop("gene_file"))
-        self.barcodes_file = open(kwargs.pop("barcode_file"))
-        self.mtx_path = mtx_path
+
+        genes_path = kwargs.pop("gene_file")
+        genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
+        self.genes_file, genes_local_path = genes_ingest_file.resolve_path(genes_path)
+
+        barcodes_path = kwargs.pop("barcode_file")
+        barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
+        self.barcodes_file, barcodes_local_path = barcodes_ingest_file.resolve_path(
+            barcodes_path
+        )
+
+        mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
+        mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(mtx_path)
+
         self.matrix_params = kwargs
         self.exp_by_gene = {}
 
     def extract(self):
         """Sets relevant iterables for each file of the MTX bundle
         """
-        self.matrix_file = scipy.io.mmread(self.mtx_path)
+        self.matrix_file = scipy.io.mmread(self.mtx_local_path)
         self.genes = [g.strip() for g in self.genes_file.readlines()]
         self.cells = [c.strip() for c in self.barcodes_file.readlines()]
 

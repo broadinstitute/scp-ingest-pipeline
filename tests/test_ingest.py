@@ -246,6 +246,44 @@ class IngestTestCase(unittest.TestCase):
         expected_model = get_gene_model(mock_dir)
         self.assertEqual(model, expected_model)
 
+    def test_remote_mtx_bundles(self):
+        """Ingest Pipeline should handle MTX matrix files fetched from bucket
+        """
+
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            'gs://fake-bucket/tests/data/matrix.mtx',
+            '--matrix-file-type',
+            'mtx',
+            '--gene-file',
+            'gs://fake-bucket/tests/data/genes.tsv',
+            '--barcode-file',
+            'gs://fake-bucket/tests/data/barcodes.tsv',
+        ]
+        ingest = self.setup_ingest(args)
+
+        model = ingest.load_args[1]
+        # print(model)
+
+        mock_dir = 'matrix_mtx'
+        expected_model = get_gene_model(mock_dir)
+        self.assertEqual(model, expected_model)
+
     def test_mtx_bundle_argument_validation(self):
         """Omitting --gene-file and --barcode-file in MTX ingest should error
         """
