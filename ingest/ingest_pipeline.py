@@ -50,6 +50,12 @@ from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 from bson.objectid import ObjectId
 
+# For tracing
+from opencensus.common.transports.async_ import AsyncTransport
+from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
+from opencensus.trace.tracer import Tracer
+from opencensus.trace.samplers import AlwaysOnSampler
+
 # from google.cloud.logging.resource import Resource
 
 try:
@@ -83,6 +89,8 @@ except ImportError:
     from .dense import Dense
     from .mtx import Mtx
 
+# instantiate trace exporter
+exporter = StackdriverExporter(project_id=os.environ['GOOGLE_CLOUD_PROJECT'])
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
@@ -402,27 +410,29 @@ class IngestPipeline(object):
     @my_debug_logger()
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
-
+        tracer = Tracer(exporter=exporter, sampler=AlwaysOnSampler(),)
         subsample = SubSample(
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
         )
+        with tracer.span(name='subsample') as span_get_kpis:
+            for data in subsample.subsample('cluster'):
+                # load_status = self.load_subsample(
+                #     Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
+                # )
+                #
+                # if load_status != 0:
+                #     return load_status
+                pass
 
-        for data in subsample.subsample('cluster'):
-            load_status = self.load_subsample(
-                Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
-            )
-
-            if load_status != 0:
-                return load_status
-
-        if self.cell_metadata_file is not None:
-            subsample.prepare_cell_metadata()
-            for data in subsample.subsample('study'):
-                load_status = self.load_subsample(
-                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study'
-                )
-                if load_status != 0:
-                    return load_status
+            if self.cell_metadata_file is not None:
+                subsample.prepare_cell_metadata()
+                for data in subsample.subsample('study'):
+                    # load_status = self.load_subsample(
+                    #     Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study'
+                    # )
+                    # if load_status != 0:
+                    #     return load_status
+                    pass
         return 0
 
 
