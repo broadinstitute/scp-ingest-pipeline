@@ -395,6 +395,7 @@ class IngestPipeline(object):
                     return status
             return status if status is not None else 1
         else:
+            report_issues(self.cell_metadata)
             self.errors_logger.error(
                 f'Cell metadata file format invalid', extra=self.extra_log_params
             )
