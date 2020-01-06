@@ -14,13 +14,11 @@ FROM marketplace.gcr.io/google/ubuntu1804:latest
 
 #RUN echo "Uncomment to clear cached layers below this statement (20190708-1259)"
 
-# Install Python 3.6
-# (Auxiliary Ubuntu packages for Python assume Python 3.6;
-# configuring them for Python >= 3.7 is not straightforward.)
+# Install Python 3.7
 RUN apt-get -y update && \
   apt -y install software-properties-common dirmngr apt-transport-https lsb-release ca-certificates && \
   add-apt-repository ppa:deadsnakes/ppa && \
-  apt -y install python3.6 && \
+  apt -y install python3.7 && \
   apt -y install python3-pip
 
 # Set cleaner defaults (`alias` fails)
