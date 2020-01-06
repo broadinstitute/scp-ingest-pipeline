@@ -14,17 +14,20 @@ from typing import List  # noqa: F401
 try:
     from expression_files import GeneExpression
     from ingest_files import IngestFiles
+    from monitor import trace
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
     from .ingest_files import IngestFiles
+    from .monitor import trace
 
 
 class Dense(GeneExpression, IngestFiles):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
+        self.tracer = kwargs.pop("tracer")
         GeneExpression.__init__(self, file_path, study_file_id, study_id)
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
@@ -33,6 +36,7 @@ class Dense(GeneExpression, IngestFiles):
 
         self.preprocess()
 
+    @trace
     def preprocess(self):
         csv_file, open_file_object = self.open_file(self.file_path)
         header = next(csv_file)
@@ -59,6 +63,7 @@ class Dense(GeneExpression, IngestFiles):
             # chunksize=100000, Save for when we chunk data
         )[0]
 
+    @trace
     def transform(self):
         """Transforms dense matrix into firestore data model for genes.
         """
@@ -85,6 +90,7 @@ class Dense(GeneExpression, IngestFiles):
                 ),
             )
 
+    @trace
     def set_data_array(
         self,
         linear_data_id,

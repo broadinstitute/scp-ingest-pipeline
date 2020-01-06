@@ -14,8 +14,6 @@ except ImportError:
     from .annotations import Annotations
     from .monitor import setup_logger, log
 
-# from ingest_pipeline import log
-
 
 @dataclass
 class DomainRanges(TypedDict):

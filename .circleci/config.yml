@@ -10,7 +10,7 @@ orbs:
 jobs:
   build:
     docker:
-      - image: circleci/python:3.6.9-stretch
+      - image: circleci/python:3.7.5-stretch
 
     working_directory: ~/scp-ingest-pipeline
 

@@ -36,6 +36,7 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import ast
+from contextlib import nullcontext
 
 import sys
 import json
@@ -50,6 +51,11 @@ from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 from bson.objectid import ObjectId
 
+# For tracing
+from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
+from opencensus.trace.tracer import Tracer
+from opencensus.trace.samplers import AlwaysOnSampler
+
 # from google.cloud.logging.resource import Resource
 
 try:
@@ -62,7 +68,7 @@ try:
         report_issues,
         write_metadata_to_bq,
     )
-    from monitor import setup_logger, log
+    from monitor import setup_logger, log, trace
     from cell_metadata import CellMetadata
     from clusters import Clusters
     from dense import Dense
@@ -77,12 +83,11 @@ except ImportError:
         report_issues,
         write_metadata_to_bq,
     )
-    from .monitor import setup_logger, log
+    from .monitor import setup_logger, log, trace
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
     from .dense import Dense
     from .mtx import Mtx
-
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
@@ -124,6 +129,15 @@ class IngestPipeline(object):
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
+        if 'GOOGLE_CLOUD_PROJECT' in os.environ:
+            # instantiate trace exporter
+            exporter = StackdriverExporter(
+                project_id=os.environ['GOOGLE_CLOUD_PROJECT']
+            )
+            self.tracer = Tracer(exporter=exporter, sampler=AlwaysOnSampler())
+
+        else:
+            self.tracer = nullcontext()
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
         if ingest_cell_metadata:
@@ -177,14 +191,20 @@ class IngestPipeline(object):
             "mtx": Mtx,
             "loom": Loom,
         }
+
         return file_connections.get(file_type)(
-            file_path, self.study_id, self.study_file_id, **self.kwargs
+            file_path,
+            self.study_id,
+            self.study_file_id,
+            tracer=self.tracer,
+            **self.kwargs,
         )
 
     def close_matrix(self):
         """Closes connection to file"""
         self.matrix.close()
 
+    @trace
     def load(
         self,
         collection_name,
@@ -298,6 +318,7 @@ class IngestPipeline(object):
                 return 1
         return 0
 
+    @trace
     @my_debug_logger()
     def ingest_expression(self) -> int:
         """Ingests expression files.
@@ -403,11 +424,9 @@ class IngestPipeline(object):
     @my_debug_logger()
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
-
         subsample = SubSample(
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
         )
-
         for data in subsample.subsample('cluster'):
             load_status = self.load_subsample(
                 Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
