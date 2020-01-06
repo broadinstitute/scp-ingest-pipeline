@@ -35,4 +35,4 @@ WORKDIR /scp-ingest-pipeline
 RUN pip install -r requirements.txt
 
 WORKDIR /scp-ingest-pipeline/ingest
-CMD ["python", "ingest.py", "--help"]
+CMD ["python", "ingest_pipeline.py", "--help"]
