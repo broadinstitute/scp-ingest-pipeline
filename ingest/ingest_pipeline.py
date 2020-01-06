@@ -670,6 +670,7 @@ def validate_arguments(parsed_args):
                 f' Invalid argument: unable to connect to a BigQuery table called {parsed_args.bq_table}.'
             )
 
+
 def main() -> None:
     """This function handles the actual logic of this script.
 
