@@ -36,13 +36,13 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import ast
+import contextlib
 
 import sys
 import json
 import os
 import logging
 import re
-from contextlib import contextmanager
 
 from pymongo import MongoClient
 from google.cloud import bigquery
@@ -129,7 +129,7 @@ class IngestPipeline(object):
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
-        if os.environ['GOOGLE_CLOUD_PROJECT'] is not None:
+        if 'GOOGLE_CLOUD_PROJECT' in os.environ:
             # instantiate trace exporter
             exporter = StackdriverExporter(
                 project_id=os.environ['GOOGLE_CLOUD_PROJECT']
@@ -214,29 +214,29 @@ class IngestPipeline(object):
         **set_data_array_fn_kwargs,
     ):
         documents = []
-        # try:
-        #     # hack to avoid inserting invalid CellMetadata object from first column
-        #     # TODO: implement method similar to kwargs solution in ingest_expression
-        #     if (
-        #         collection_name == 'cell_metadata'
-        #         and model['name'] == 'NAME'
-        #         and model['annotation_type'] == 'TYPE'
-        #     ):
-        #         linear_id = ObjectId(self.study_id)
-        #     else:
-        #         linear_id = self.db[collection_name].insert_one(model).inserted_id
-        #     for data_array_model in set_data_array_fn(
-        #         linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
-        #     ):
-        #         documents.append(data_array_model)
-        #     # only insert documents if present
-        #     if len(documents) > 0:
-        #         self.db['data_arrays'].insert_many(documents)
-        # except Exception as e:
-        #     self.errors_logger.error(e, extra=self.extra_log_params)
-        #     if e.details is not None:
-        #         self.errors_logger.error(e.details, extra=self.extra_log_params)
-        #     return 1
+        try:
+            # hack to avoid inserting invalid CellMetadata object from first column
+            # TODO: implement method similar to kwargs solution in ingest_expression
+            if (
+                collection_name == 'cell_metadata'
+                and model['name'] == 'NAME'
+                and model['annotation_type'] == 'TYPE'
+            ):
+                linear_id = ObjectId(self.study_id)
+            else:
+                linear_id = self.db[collection_name].insert_one(model).inserted_id
+            for data_array_model in set_data_array_fn(
+                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
+            ):
+                documents.append(data_array_model)
+            # only insert documents if present
+            if len(documents) > 0:
+                self.db['data_arrays'].insert_many(documents)
+        except Exception as e:
+            self.errors_logger.error(e, extra=self.extra_log_params)
+            if e.details is not None:
+                self.errors_logger.error(e.details, extra=self.extra_log_params)
+            return 1
         return 0
 
     def load_subsample(

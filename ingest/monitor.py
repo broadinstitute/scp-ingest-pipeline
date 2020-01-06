@@ -1,9 +1,7 @@
 import logging
 import os
 import time
-
-# For tracing
-from opencensus.trace.tracer import Tracer
+import contextlib
 
 
 def setup_logger(logger_name, log_file, level=logging.DEBUG):
@@ -62,7 +60,7 @@ def trace(fn):
 
     def trace_fn(*args, **kwargs):
         span = args[0].tracer
-        if os.environ['GOOGLE_CLOUD_PROJECT'] is not None:
+        if 'GOOGLE_CLOUD_PROJECT' in os.environ:
             span_cm = span.span(name=f'{args[0].__class__.__name__} {fn.__name__}')
         # In the event where the environment variable is not set, use nullcontext
         # manger which does nothing
