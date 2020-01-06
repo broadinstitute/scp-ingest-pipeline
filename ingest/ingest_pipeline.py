@@ -51,10 +51,11 @@ from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 from bson.objectid import ObjectId
 
-# For tracing
+# For tracing and profiling
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
 from opencensus.trace.tracer import Tracer
 from opencensus.trace.samplers import AlwaysOnSampler
+from memory_profiler import profile
 
 # from google.cloud.logging.resource import Resource
 
@@ -668,7 +669,6 @@ def validate_arguments(parsed_args):
             raise ValueError(
                 f' Invalid argument: unable to connect to a BigQuery table called {parsed_args.bq_table}.'
             )
-
 
 def main() -> None:
     """This function handles the actual logic of this script.
