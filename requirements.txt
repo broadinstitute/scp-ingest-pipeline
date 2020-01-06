@@ -23,4 +23,10 @@ pytest-cov==2.8.1
 
 # Don't add this until we actually support Zarr
 #zarr==2.2.0
+
+#Logging
 google-cloud-logging==1.14.0
+opencensus==0.7.6
+opencensus-context==0.1.1
+opencensus-ext-stackdriver==0.7.2
+google-cloud-trace==0.23.0
