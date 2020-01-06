@@ -55,7 +55,7 @@ from bson.objectid import ObjectId
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
 from opencensus.trace.tracer import Tracer
 from opencensus.trace.samplers import AlwaysOnSampler
-from memory_profiler import profile
+# from memory_profiler import profile
 
 # from google.cloud.logging.resource import Resource
 
