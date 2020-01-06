@@ -70,7 +70,7 @@ class TestIngestFiles(unittest.TestCase):
         """Tests if wrapper function calls open_tsv file successfully"""
         mock_resolve_path.return_value = (self.tsv_file_reader, self.tsv_file_path)
         ingest_files = IngestFiles(
-            self.tsv_file_path, ['text/csv', 'text/plain', 'text/tab-separated-values'],
+            self.tsv_file_path, ['text/csv', 'text/plain', 'text/tab-separated-values']
         )
         tsv_file, open_file_object = ingest_files.open_file(ingest_files.file_path)
         mock_open_tsv.assert_called_with(open_file_object)

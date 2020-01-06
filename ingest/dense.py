@@ -14,13 +14,13 @@ from typing import List  # noqa: F401
 try:
     from expression_files import GeneExpression
     from ingest_files import IngestFiles
-    from monitor import setup_logger, log, trace
+    from monitor import trace
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
     from .ingest_files import IngestFiles
-    from .monitor import setup_logger, log, trace
+    from .monitor import trace
 
 
 class Dense(GeneExpression, IngestFiles):

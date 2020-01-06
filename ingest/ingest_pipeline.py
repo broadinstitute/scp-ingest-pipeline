@@ -52,7 +52,6 @@ from google.cloud.exceptions import NotFound
 from bson.objectid import ObjectId
 
 # For tracing
-from opencensus.common.transports.async_ import AsyncTransport
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
 from opencensus.trace.tracer import Tracer
 from opencensus.trace.samplers import AlwaysOnSampler
@@ -135,7 +134,7 @@ class IngestPipeline(object):
             exporter = StackdriverExporter(
                 project_id=os.environ['GOOGLE_CLOUD_PROJECT']
             )
-            self.tracer = Tracer(exporter=exporter, sampler=AlwaysOnSampler(),)
+            self.tracer = Tracer(exporter=exporter, sampler=AlwaysOnSampler())
 
         else:
             self.tracer = contextlib.nullcontext()
