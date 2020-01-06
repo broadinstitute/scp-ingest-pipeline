@@ -42,6 +42,7 @@ import json
 import os
 import logging
 import re
+from contextlib import contextmanager
 
 from pymongo import MongoClient
 from google.cloud import bigquery
@@ -68,7 +69,7 @@ try:
         report_issues,
         write_metadata_to_bq,
     )
-    from monitor import setup_logger, log
+    from monitor import setup_logger, log, trace
     from cell_metadata import CellMetadata
     from clusters import Clusters
     from dense import Dense
@@ -83,14 +84,11 @@ except ImportError:
         report_issues,
         write_metadata_to_bq,
     )
-    from .monitor import setup_logger, log
+    from .monitor import setup_logger, log, trace
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
     from .dense import Dense
     from .mtx import Mtx
-
-# instantiate trace exporter
-exporter = StackdriverExporter(project_id=os.environ['GOOGLE_CLOUD_PROJECT'])
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
@@ -132,6 +130,15 @@ class IngestPipeline(object):
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
+        if os.environ['GOOGLE_CLOUD_PROJECT'] is not None:
+            # instantiate trace exporter
+            exporter = StackdriverExporter(
+                project_id=os.environ['GOOGLE_CLOUD_PROJECT']
+            )
+            self.tracer = Tracer(exporter=exporter, sampler=AlwaysOnSampler(),)
+
+        else:
+            self.tracer = contextlib.nullcontext()
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
         if ingest_cell_metadata:
@@ -185,14 +192,20 @@ class IngestPipeline(object):
             "mtx": Mtx,
             "loom": Loom,
         }
+
         return file_connections.get(file_type)(
-            file_path, self.study_id, self.study_file_id, **self.kwargs
+            file_path,
+            self.study_id,
+            self.study_file_id,
+            tracer=self.tracer,
+            **self.kwargs,
         )
 
     def close_matrix(self):
         """Closes connection to file"""
         self.matrix.close()
 
+    @trace
     def load(
         self,
         collection_name,
@@ -202,29 +215,29 @@ class IngestPipeline(object):
         **set_data_array_fn_kwargs,
     ):
         documents = []
-        try:
-            # hack to avoid inserting invalid CellMetadata object from first column
-            # TODO: implement method similar to kwargs solution in ingest_expression
-            if (
-                collection_name == 'cell_metadata'
-                and model['name'] == 'NAME'
-                and model['annotation_type'] == 'TYPE'
-            ):
-                linear_id = ObjectId(self.study_id)
-            else:
-                linear_id = self.db[collection_name].insert_one(model).inserted_id
-            for data_array_model in set_data_array_fn(
-                linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
-            ):
-                documents.append(data_array_model)
-            # only insert documents if present
-            if len(documents) > 0:
-                self.db['data_arrays'].insert_many(documents)
-        except Exception as e:
-            self.errors_logger.error(e, extra=self.extra_log_params)
-            if e.details is not None:
-                self.errors_logger.error(e.details, extra=self.extra_log_params)
-            return 1
+        # try:
+        #     # hack to avoid inserting invalid CellMetadata object from first column
+        #     # TODO: implement method similar to kwargs solution in ingest_expression
+        #     if (
+        #         collection_name == 'cell_metadata'
+        #         and model['name'] == 'NAME'
+        #         and model['annotation_type'] == 'TYPE'
+        #     ):
+        #         linear_id = ObjectId(self.study_id)
+        #     else:
+        #         linear_id = self.db[collection_name].insert_one(model).inserted_id
+        #     for data_array_model in set_data_array_fn(
+        #         linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
+        #     ):
+        #         documents.append(data_array_model)
+        #     # only insert documents if present
+        #     if len(documents) > 0:
+        #         self.db['data_arrays'].insert_many(documents)
+        # except Exception as e:
+        #     self.errors_logger.error(e, extra=self.extra_log_params)
+        #     if e.details is not None:
+        #         self.errors_logger.error(e.details, extra=self.extra_log_params)
+        #     return 1
         return 0
 
     def load_subsample(
@@ -306,6 +319,7 @@ class IngestPipeline(object):
                 return 1
         return 0
 
+    @trace
     @my_debug_logger()
     def ingest_expression(self) -> int:
         """Ingests expression files.
@@ -410,29 +424,25 @@ class IngestPipeline(object):
     @my_debug_logger()
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
-        tracer = Tracer(exporter=exporter, sampler=AlwaysOnSampler(),)
         subsample = SubSample(
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
         )
-        with tracer.span(name='subsample') as span_get_kpis:
-            for data in subsample.subsample('cluster'):
-                # load_status = self.load_subsample(
-                #     Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
-                # )
-                #
-                # if load_status != 0:
-                #     return load_status
-                pass
+        for data in subsample.subsample('cluster'):
+            load_status = self.load_subsample(
+                Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
+            )
 
-            if self.cell_metadata_file is not None:
-                subsample.prepare_cell_metadata()
-                for data in subsample.subsample('study'):
-                    # load_status = self.load_subsample(
-                    #     Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study'
-                    # )
-                    # if load_status != 0:
-                    #     return load_status
-                    pass
+            if load_status != 0:
+                return load_status
+
+        if self.cell_metadata_file is not None:
+            subsample.prepare_cell_metadata()
+            for data in subsample.subsample('study'):
+                load_status = self.load_subsample(
+                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study'
+                )
+                if load_status != 0:
+                    return load_status
         return 0
 
 

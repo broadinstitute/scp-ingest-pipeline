@@ -4,6 +4,7 @@ from typing import List, Tuple  # noqa: F401
 import numpy as np
 
 try:
+    from monitor import setup_logger, log
     from annotations import Annotations
     from clusters import Clusters
     from cell_metadata import CellMetadata
@@ -12,6 +13,7 @@ except ImportError:
     from .annotations import Annotations
     from .clusters import Clusters
     from .cell_metadata import CellMetadata
+    from .monitor import setup_logger, log
 
 
 class SubSample(Annotations):

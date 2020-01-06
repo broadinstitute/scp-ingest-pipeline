@@ -17,13 +17,16 @@ import scipy.io
 
 try:
     from expression_files import GeneExpression
+    from monitor import setup_logger, log, trace
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
+    from .monitor import setup_logger, log, trace
 
 
 class Mtx(GeneExpression):
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
+        self.tracer = kwargs.pop("tracer")
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
         self.genes_file = open(kwargs.pop("gene_file"))
         self.barcodes_file = open(kwargs.pop("barcode_file"))
@@ -31,6 +34,7 @@ class Mtx(GeneExpression):
         self.matrix_params = kwargs
         self.exp_by_gene = {}
 
+    @trace
     def extract(self):
         """Sets relevant iterables for each file of the MTX bundle
         """
@@ -38,6 +42,7 @@ class Mtx(GeneExpression):
         self.genes = [g.strip() for g in self.genes_file.readlines()]
         self.cells = [c.strip() for c in self.barcodes_file.readlines()]
 
+    @trace
     def transform(self):
         """Transforms matrix gene data model
         """
@@ -77,6 +82,7 @@ class Mtx(GeneExpression):
                     ),
                 )
 
+    @trace
     def set_data_array(
         self,
         linear_data_id,
