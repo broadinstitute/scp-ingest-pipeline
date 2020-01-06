@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-import contextlib
+from contextlib import nullcontext
 
 
 def setup_logger(logger_name, log_file, level=logging.DEBUG):
@@ -65,7 +65,7 @@ def trace(fn):
         # In the event where the environment variable is not set, use nullcontext
         # manger which does nothing
         else:
-            span_cm = contextlib.nullcontext()
+            span_cm = nullcontext()
         with span_cm:
             return fn(*args, **kwargs)
 

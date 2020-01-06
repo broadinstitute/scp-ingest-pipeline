@@ -36,7 +36,7 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import ast
-import contextlib
+from contextlib import nullcontext
 
 import sys
 import json
@@ -137,7 +137,7 @@ class IngestPipeline(object):
             self.tracer = Tracer(exporter=exporter, sampler=AlwaysOnSampler())
 
         else:
-            self.tracer = contextlib.nullcontext()
+            self.tracer = nullcontext()
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
         if ingest_cell_metadata:
