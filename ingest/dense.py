@@ -10,7 +10,6 @@ Must have python 3.6 or higher.
 
 import collections
 from typing import List  # noqa: F401
-import sys
 
 try:
     from expression_files import GeneExpression
