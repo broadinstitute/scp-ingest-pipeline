@@ -35,13 +35,15 @@ class Dense(GeneExpression, IngestFiles):
         )
         self.matrix_params = kwargs
         self.gene_names = []
-        csv_file, open_file_object = self.open_file(self.file_path)
+        csv_file, self.open_file_object = self.open_file(self.file_path)
         self.header = next(csv_file)
-        self.preprocess()
 
     def validate_unique_header(self):
         if len(set(self.header)) != len(self.header):
-            raise ValueError("Duplicated header values are not allowed")
+            self.error_logger.error(
+                "Duplicated header values are not allowed", extra=self.extra_log_params
+            )
+            return False
         return True
 
     def validate_gene_keyword(self):
@@ -51,9 +53,11 @@ class Dense(GeneExpression, IngestFiles):
         else:
             # If not R formatted file then first cell must be 'GENE'
             if self.header[0].upper() != 'GENE':
-                raise ValueError(
-                    f'First cell in header must be GENE not {self.header[0]}'
+                self.error_logger.error(
+                    f'First cell in header must be GENE not {self.header[0]}',
+                    extra=self.extra_log_params,
                 )
+                return False
             return True
 
     @trace
@@ -160,6 +164,9 @@ class Dense(GeneExpression, IngestFiles):
                 unformatted_gene_name, linear_data_id, observed_values
             )
 
+    def validate_format(self):
+        return all([self.validate_unique_header(), self.validate_gene_keyword()])
+
     def close(self):
         """Closes file
 
@@ -169,4 +176,4 @@ class Dense(GeneExpression, IngestFiles):
         Returns:
             None
         """
-        self.df.close()
+        self.open_file_object.close()

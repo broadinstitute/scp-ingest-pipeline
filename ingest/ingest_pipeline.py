@@ -325,6 +325,11 @@ class IngestPipeline(object):
         """
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
+        else:
+            if not self.matrix.validate_format():
+                return 1
+            else:
+                self.matrix.preprocess()
         try:
             for idx, gene in enumerate(self.matrix.transform()):
                 self.info_logger.info(
