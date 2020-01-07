@@ -437,6 +437,7 @@ class IngestPipeline(object):
                     return load_status
         return 0
 
+
 @profile
 def main() -> None:
     """This function handles the actual logic of this script.
