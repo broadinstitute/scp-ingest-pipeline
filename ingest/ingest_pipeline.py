@@ -358,7 +358,7 @@ class IngestPipeline(object):
                         f'Loading gene name {gene.gene_name} failed. Exiting program',
                         extra=self.extra_log_params,
                     )
-                #     return status
+                    return status
             return status
         except Exception as e:
             self.errors_logger.error(e, extra=self.extra_log_params)
