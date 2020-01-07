@@ -75,16 +75,16 @@ class Dense(GeneExpression, IngestFiles):
             header = header[0:-1]
         else:
             header[0] = header[0].upper()
-            # Set dtype for expression values to floats
-            dtypes.update({cell_name: 'float' for cell_name in header[1:]})
-            self.df = self.open_file(
-                self.file_path,
-                open_as='dataframe',
-                names=header,
-                skiprows=1,
-                dtype=dtypes,
-                # chunksize=100000, Save for when we chunk data
-            )[0]
+        # Set dtype for expression values to floats
+        dtypes.update({cell_name: 'float' for cell_name in header[1:]})
+        self.df = self.open_file(
+            self.file_path,
+            open_as='dataframe',
+            names=header,
+            skiprows=1,
+            dtype=dtypes,
+            # chunksize=100000, Save for when we chunk data
+        )[0]
 
     @trace
     def transform(self):
