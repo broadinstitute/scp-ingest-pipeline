@@ -95,6 +95,11 @@ def create_parser():
     )
     parser.add_argument("--study-id", required=True, help="MongoDB identifier")
 
+    # profile_memory_text = "Whether to profile memory.  Includes \
+    #     mprofile_<YYYYMMDDHHMMSS>.dat file in user email as attachment.  \
+    #     See https://github.com/pythonprofilers/memory_profiler#time-based-memory-usage"
+    # parser.add_argument("--profile-memory", help="Whether to profile memory.  Emails")
+
     subparsers = parser.add_subparsers()
 
     # Ingest expression files subparsers

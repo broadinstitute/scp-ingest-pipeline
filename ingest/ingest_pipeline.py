@@ -52,8 +52,6 @@ from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
 from opencensus.trace.tracer import Tracer
 from opencensus.trace.samplers import AlwaysOnSampler
 
-# from memory_profiler import profile
-
 # from google.cloud.logging.resource import Resource
 
 try:
@@ -90,6 +88,7 @@ except ImportError:
     from .cli_parser import create_parser, validate_arguments
 
 
+@profile
 class IngestPipeline(object):
     # File location for metadata json convention
     JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
@@ -100,6 +99,7 @@ class IngestPipeline(object):
     info_logger = setup_logger(__name__, 'info.txt')
     my_debug_logger = log(errors_logger)
 
+    @profile
     def __init__(
         self,
         study_id: str,
@@ -165,13 +165,6 @@ class IngestPipeline(object):
             authMechanism='SCRAM-SHA-1',
         )
 
-        # TODO: Remove this block.
-        # Uncomment and run `pytest -s` to manually verify your MongoDB set-up.
-        # genes = client[db_name].genes
-        # gene = {'gene': 'HBB'}
-        # gene_mongo_id = genes.insert_one(gene).inserted_id
-        # print(f'gene_mongo_id {gene_mongo_id}')
-
         return client[db_name]
 
     def initialize_file_connection(self, file_type, file_path):
@@ -202,6 +195,7 @@ class IngestPipeline(object):
         self.matrix.close()
 
     @trace
+    @profile
     def load(
         self,
         collection_name,
@@ -317,6 +311,7 @@ class IngestPipeline(object):
 
     @trace
     @my_debug_logger()
+    @profile
     def ingest_expression(self) -> int:
         """Ingests expression files.
         """
@@ -442,7 +437,7 @@ class IngestPipeline(object):
                     return load_status
         return 0
 
-
+@profile
 def main() -> None:
     """This function handles the actual logic of this script.
 
