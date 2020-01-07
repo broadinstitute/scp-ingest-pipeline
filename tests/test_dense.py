@@ -52,7 +52,7 @@ class TestDense(unittest.TestCase):
 
     def test_duplicate_gene(self):
         expression_matrix = Dense(
-            '../tests/data/expression_matrix_duplicate_header.txt',
+            '../tests/data/expression_matrix_duplicate_gene.txt',
             '5d276a50421aa9117c982845',
             '5dd5ae25421aa910a723a337',
             tracer=None,
