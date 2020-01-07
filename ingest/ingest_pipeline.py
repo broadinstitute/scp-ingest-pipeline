@@ -43,10 +43,8 @@ import logging
 import re
 
 from pymongo import MongoClient
-from google.cloud import bigquery
 
 # import google.cloud.logging
-from google.cloud.exceptions import NotFound
 from bson.objectid import ObjectId
 
 # For tracing and profiling
@@ -443,31 +441,6 @@ class IngestPipeline(object):
                 if load_status != 0:
                     return load_status
         return 0
-
-
-def bq_dataset_exists(dataset):
-    bigquery_client = bigquery.Client()
-    dataset_ref = bigquery_client.dataset(dataset)
-    exists = False
-    try:
-        bigquery_client.get_dataset(dataset_ref)
-        exists = True
-    except NotFound:
-        print(f'Dataset {dataset} not found')
-    return exists
-
-
-def bq_table_exists(dataset, table):
-    bigquery_client = bigquery.Client()
-    dataset_ref = bigquery_client.dataset(dataset)
-    table_ref = dataset_ref.table(table)
-    exists = False
-    try:
-        bigquery_client.get_table(table_ref)
-        exists = True
-    except NotFound:
-        print(f'Dataset {table} not found')
-    return exists
 
 
 def main() -> None:

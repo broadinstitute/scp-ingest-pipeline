@@ -1,9 +1,37 @@
 import argparse
 import ast
 
+from google.cloud import bigquery
+from google.cloud.exceptions import NotFound
+
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
+
+
+def bq_dataset_exists(dataset):
+    bigquery_client = bigquery.Client()
+    dataset_ref = bigquery_client.dataset(dataset)
+    exists = False
+    try:
+        bigquery_client.get_dataset(dataset_ref)
+        exists = True
+    except NotFound:
+        print(f'Dataset {dataset} not found')
+    return exists
+
+
+def bq_table_exists(dataset, table):
+    bigquery_client = bigquery.Client()
+    dataset_ref = bigquery_client.dataset(dataset)
+    table_ref = dataset_ref.table(table)
+    exists = False
+    try:
+        bigquery_client.get_table(table_ref)
+        exists = True
+    except NotFound:
+        print(f'Dataset {table} not found')
+    return exists
 
 
 def validate_arguments(parsed_args):
