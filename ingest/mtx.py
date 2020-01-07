@@ -64,7 +64,6 @@ class Mtx(GeneExpression):
                 self.exp_by_gene[gene].expression_scores.append(exp_score)
                 # Append new cell name to 'cell_names' key in GeneModelData
                 self.exp_by_gene[gene].cell_names.append(cell_name)
-                print(self.exp_by_gene[gene])
             else:
                 self.exp_by_gene[gene] = GeneExpressionValues([cell_name], [exp_score])
                 self.info_logger.info(
