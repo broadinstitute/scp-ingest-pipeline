@@ -361,9 +361,7 @@ class IngestPipeline(object):
                 #     return status
             return status
         except Exception as e:
-            self.errors_logger.error(
-                e, extra=self.extra_log_params,
-            )
+            self.errors_logger.error(e, extra=self.extra_log_params)
             return 1
 
     @my_debug_logger()
