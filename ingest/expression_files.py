@@ -24,10 +24,6 @@ except ImportError:
     from .monitor import setup_logger, log
 
 
-error_logger = setup_logger(__name__ + "_errors", "errors.txt", level=logging.ERROR)
-my_debug_logger = log(error_logger)
-
-
 class GeneExpression:
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = "genes"

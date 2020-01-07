@@ -10,6 +10,7 @@ Must have python 3.6 or higher.
 
 import collections
 from typing import List  # noqa: F401
+import sys
 
 try:
     from expression_files import GeneExpression
@@ -33,35 +34,40 @@ class Dense(GeneExpression, IngestFiles):
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
         self.matrix_params = kwargs
-
+        self.gene_names = []
+        csv_file, open_file_object = self.open_file(self.file_path)
+        self.header = next(csv_file)
         self.preprocess()
 
     @trace
     def preprocess(self):
+        """Checks for valid header and determines if file is R-formatted."""
         csv_file, open_file_object = self.open_file(self.file_path)
-        header = next(csv_file)
         dtypes = {'GENE': object}
 
         # # Remove white spaces and quotes
-        header = [col_name.strip().strip('\"') for col_name in header]
+        header = [col_name.strip().strip('\"') for col_name in self.header]
         # See if R formatted file
         if (header[-1] == '') and (header[0].upper() != 'GENE'):
             header.insert(0, 'GENE')
             # Although the last column in the header is empty, python treats it
             # as an empty string,[ ..., ""]
             header = header[0:-1]
+        # If not R formatted file then first cell must be 'GENE'
+        elif header[0].upper() != 'GENE':
+            raise ValueError(f'First cell in header must be GENE not {header[0]}')
         else:
             header[0] = header[0].upper()
-        # Set dtype for expression values to floats
-        dtypes.update({cell_name: 'float' for cell_name in header[1:]})
-        self.df = self.open_file(
-            self.file_path,
-            open_as='dataframe',
-            names=header,
-            skiprows=1,
-            dtype=dtypes,
-            # chunksize=100000, Save for when we chunk data
-        )[0]
+            # Set dtype for expression values to floats
+            dtypes.update({cell_name: 'float' for cell_name in header[1:]})
+            self.df = self.open_file(
+                self.file_path,
+                open_as='dataframe',
+                names=header,
+                skiprows=1,
+                dtype=dtypes,
+                # chunksize=100000, Save for when we chunk data
+            )[0]
 
     @trace
     def transform(self):
@@ -74,6 +80,9 @@ class Dense(GeneExpression, IngestFiles):
             self.info_logger.info(
                 f'Transforming gene :{gene}', extra=self.extra_log_params
             )
+            if gene in self.gene_names:
+                raise ValueError(f'Duplicate gene: {gene}')
+            self.gene_names.append(gene)
             yield GeneModel(
                 # Name of gene as observed in file
                 gene,

@@ -325,35 +325,41 @@ class IngestPipeline(object):
         """
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
-        for idx, gene in enumerate(self.matrix.transform()):
-            self.info_logger.info(
-                f"Attempting to load gene: {gene.gene_model['searchable_name']}",
-                extra=self.extra_log_params,
-            )
-            if idx == 0:
-                status = self.load(
-                    self.matrix.COLLECTION_NAME,
-                    gene.gene_model,
-                    self.matrix.set_data_array,
-                    gene.gene_name,
-                    gene.gene_model['searchable_name'],
-                    {'create_cell_data_array': True},
-                )
-            else:
-                status = self.load(
-                    self.matrix.COLLECTION_NAME,
-                    gene.gene_model,
-                    self.matrix.set_data_array,
-                    gene.gene_name,
-                    gene.gene_model['searchable_name'],
-                )
-            if status != 0:
-                self.errors_logger.error(
-                    f'Loading gene name {gene.gene_name} failed. Exiting program',
+        try:
+            for idx, gene in enumerate(self.matrix.transform()):
+                self.info_logger.info(
+                    f"Attempting to load gene: {gene.gene_model['searchable_name']}",
                     extra=self.extra_log_params,
                 )
-                return status
-        return status
+                # if idx == 0:
+                #     status = self.load(
+                #         self.matrix.COLLECTION_NAME,
+                #         gene.gene_model,
+                #         self.matrix.set_data_array,
+                #         gene.gene_name,
+                #         gene.gene_model['searchable_name'],
+                #         {'create_cell_data_array': True},
+                #     )
+                # else:
+                #     status = self.load(
+                #         self.matrix.COLLECTION_NAME,
+                #         gene.gene_model,
+                #         self.matrix.set_data_array,
+                #         gene.gene_name,
+                #         gene.gene_model['searchable_name'],
+                #     )
+                # if status != 0:
+                #     self.errors_logger.error(
+                #         f'Loading gene name {gene.gene_name} failed. Exiting program',
+                #         extra=self.extra_log_params,
+                #     )
+            #     #     return status
+            # return status
+        except Exception as e:
+            self.errors_logger.error(
+                e, extra=self.extra_log_params,
+            )
+            return 1
 
     @my_debug_logger()
     def ingest_cell_metadata(self):
