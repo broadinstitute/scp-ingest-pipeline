@@ -34,7 +34,7 @@ COPY . scp-ingest-pipeline
 WORKDIR /scp-ingest-pipeline
 
 # Install Python dependencies
-RUN pip install -r requirements.txt
+RUN python3.7 -m pip install -r requirements.txt
 
 WORKDIR /scp-ingest-pipeline/ingest
 CMD ["python", "ingest_pipeline.py", "--help"]
