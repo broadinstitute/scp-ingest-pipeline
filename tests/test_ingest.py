@@ -129,7 +129,8 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)
         model = ingest.load_args[1]
-        print(model)
+        # Ensure that 'ObjectID' in model is removed
+        # print(model)
 
         # Verify gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
@@ -165,7 +166,8 @@ class IngestTestCase(unittest.TestCase):
         ingest = self.setup_ingest(args)
 
         model = ingest.load_args[1]
-        print(model)
+        # Ensure that 'ObjectID' in model is removed
+        # print(model)
 
         # Verify that the first gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
@@ -240,7 +242,7 @@ class IngestTestCase(unittest.TestCase):
         ingest = self.setup_ingest(args)
 
         model = ingest.load_args[1]
-        # print(model)
+        print(model)
 
         mock_dir = 'matrix_mtx'
         expected_model = get_gene_model(mock_dir)
