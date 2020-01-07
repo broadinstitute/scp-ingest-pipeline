@@ -39,6 +39,23 @@ class Dense(GeneExpression, IngestFiles):
         self.header = next(csv_file)
         self.preprocess()
 
+    def validate_unique_header(self):
+        if len(set(self.header)) != len(self.header):
+            raise ValueError("Duplicated header values are not allowed")
+        return True
+
+    def validate_gene_keyword(self):
+        # File is an R formatted file
+        if (self.header[-1] == '') and (self.header[0].upper() != 'GENE'):
+            pass
+        else:
+            # If not R formatted file then first cell must be 'GENE'
+            if self.header[0].upper() != 'GENE':
+                raise ValueError(
+                    f'First cell in header must be GENE not {self.header[0]}'
+                )
+            return True
+
     @trace
     def preprocess(self):
         """Checks for valid header and determines if file is R-formatted."""
@@ -53,9 +70,6 @@ class Dense(GeneExpression, IngestFiles):
             # Although the last column in the header is empty, python treats it
             # as an empty string,[ ..., ""]
             header = header[0:-1]
-        # If not R formatted file then first cell must be 'GENE'
-        elif header[0].upper() != 'GENE':
-            raise ValueError(f'First cell in header must be GENE not {header[0]}')
         else:
             header[0] = header[0].upper()
             # Set dtype for expression values to floats
