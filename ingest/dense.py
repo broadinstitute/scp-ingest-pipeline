@@ -59,7 +59,7 @@ class Dense(GeneExpression, IngestFiles):
                     extra=self.extra_log_params,
                 )
                 return False
-            return True
+        return True
 
     @trace
     def preprocess(self):
