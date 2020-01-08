@@ -38,6 +38,7 @@ class Dense(GeneExpression, IngestFiles):
         self.header = next(csv_file)
 
     def validate_unique_header(self):
+        """Validates header has no duplicate values"""
         if len(set(self.header)) != len(self.header):
             self.error_logger.error(
                 "Duplicated header values are not allowed", extra=self.extra_log_params
@@ -46,6 +47,7 @@ class Dense(GeneExpression, IngestFiles):
         return True
 
     def validate_gene_keyword(self):
+        """Validates that 'Gene' is the first value in header"""
         # File is an R formatted file
         if (self.header[-1] == '') and (self.header[0].upper() != 'GENE'):
             pass
@@ -61,7 +63,7 @@ class Dense(GeneExpression, IngestFiles):
 
     @trace
     def preprocess(self):
-        """Checks for valid header and determines if file is R-formatted."""
+        """Determines if file is R-formatted. Creates dataframe (df)"""
         csv_file, open_file_object = self.open_file(self.file_path)
         dtypes = {'GENE': object}
 
