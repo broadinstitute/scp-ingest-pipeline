@@ -129,7 +129,8 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)
         model = ingest.load_args[1]
-        print(model)
+        # Ensure that 'ObjectID' in model is removed
+        # print(model)
 
         # Verify gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
@@ -165,7 +166,8 @@ class IngestTestCase(unittest.TestCase):
         ingest = self.setup_ingest(args)
 
         model = ingest.load_args[1]
-        print(model)
+        # Ensure that 'ObjectID' in model is removed
+        # print(model)
 
         # Verify that the first gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
@@ -240,7 +242,7 @@ class IngestTestCase(unittest.TestCase):
         ingest = self.setup_ingest(args)
 
         model = ingest.load_args[1]
-        # print(model)
+        print(model)
 
         mock_dir = 'matrix_mtx'
         expected_model = get_gene_model(mock_dir)
@@ -311,6 +313,23 @@ class IngestTestCase(unittest.TestCase):
         ]
 
         self.assertRaises(ValueError, self.setup_ingest, args)
+
+        def test_bad_format_dense(self):
+            args = [
+                '--study-id',
+                '5d276a50421aa9117c982845',
+                '--study-file-id',
+                '5dd5ae25421aa910a723a337',
+                'ingest_expression',
+                '--matrix-file',
+                '../tests/data/expression_matrix_bad_missing_keyword.txt',
+                '--matrix-file-type',
+                'dense',
+            ]
+            with self.assertRaises(SystemExit) as cm:
+                self.setup_ingest(args)
+            the_exception = cm.exception
+            not self.assertEqual(the_exception.code, 0)
 
     # def test_ingest_loom(self):
     #     """Ingest Pipeline should extract and transform loom files
