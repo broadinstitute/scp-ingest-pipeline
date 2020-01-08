@@ -1,1 +1,1 @@
-{'name': 'RPLP1', 'searchable_name': 'rplp1', 'study_file_id': '5dd5ae25421aa910a723a337', 'study_id': '5d276a50421aa9117c982845', 'gene_id': 'ENSG00000137818'}
+{'name': 'RPP25L', 'searchable_name': 'rpp25l', 'study_file_id': '5dd5ae25421aa910a723a337', 'study_id': '5d276a50421aa9117c982845', 'gene_id': 'ENSG00000164967'}

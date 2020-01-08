@@ -1,1 +1,1 @@
-{'name': 'AAR2', 'searchable_name': 'aar2', 'study_file_id': '5dd5ae25421aa910a723a337', 'study_id': '5d276a50421aa9117c982845', 'gene_id': None}
+{'name': 'A1BG', 'searchable_name': 'a1bg', 'study_file_id': '5dd5ae25421aa910a723a337', 'study_id': '5d276a50421aa9117c982845', 'gene_id': None}
