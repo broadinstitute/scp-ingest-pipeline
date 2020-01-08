@@ -64,7 +64,7 @@ try:
         report_issues,
         write_metadata_to_bq,
     )
-    from monitor import setup_logger, log, trace
+    from monitor import setup_logger, log, trace, profile
     from cell_metadata import CellMetadata
     from clusters import Clusters
     from dense import Dense
@@ -80,7 +80,7 @@ except ImportError:
         report_issues,
         write_metadata_to_bq,
     )
-    from .monitor import setup_logger, log, trace
+    from .monitor import setup_logger, log, trace, profile
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
     from .dense import Dense
@@ -88,7 +88,6 @@ except ImportError:
     from .cli_parser import create_parser, validate_arguments
 
 
-@profile
 class IngestPipeline(object):
     # File location for metadata json convention
     JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
@@ -99,7 +98,8 @@ class IngestPipeline(object):
     info_logger = setup_logger(__name__, 'info.txt')
     my_debug_logger = log(errors_logger)
 
-    @profile
+    # fp = open('memory_profiler.log', 'w+')
+
     def __init__(
         self,
         study_id: str,
@@ -113,7 +113,7 @@ class IngestPipeline(object):
         ingest_cluster=False,
         **kwargs,
     ):
-        """Initializes variables in ingest service."""
+        """Initializes variables in Ingest Pipeline"""
         self.study_id = study_id
         self.study_file_id = study_file_id
         self.matrix_file = matrix_file
@@ -135,6 +135,7 @@ class IngestPipeline(object):
 
         else:
             self.tracer = nullcontext()
+        self.profile_memory = kwargs['profile_memory'] 
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
         if ingest_cell_metadata:
@@ -438,7 +439,6 @@ class IngestPipeline(object):
         return 0
 
 
-@profile
 def main() -> None:
     """This function handles the actual logic of this script.
 
@@ -472,6 +472,8 @@ def main() -> None:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
+    print('status')
+    print(status)
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
