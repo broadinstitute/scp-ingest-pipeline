@@ -72,7 +72,7 @@ class Clusters(Annotations):
         # Check if domain_ranges is an empty dictionary
         self.domain_ranges = domain_ranges if not (not domain_ranges) else None
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
-        self.preproccess()
+        self.preprocess()
 
     def transform(self):
         """ Builds cluster data model"""

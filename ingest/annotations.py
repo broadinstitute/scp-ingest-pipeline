@@ -70,7 +70,7 @@ class Annotations(IngestFiles):
         """ Does an inner join on a dataframe """
         self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
 
-    def preproccess(self):
+    def preprocess(self):
         """Ensures that:
             - Numeric columns are rounded to 3 decimals points
             - Group annotations are strings
