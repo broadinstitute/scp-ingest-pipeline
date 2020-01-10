@@ -46,7 +46,7 @@ def mock_load(self, *args, **kwargs):
     this method with expected argument values.
 
     TODO:
-    Use more realistic MongoDB mock
+    Integrate MongoDB emulator for faster, higher-coverage tests (SCP-2000)
 
     This will enable us to also verify (and thus cover) loading-code *outputs*,
     unlike here where we merely give a way to verify loading-code *inputs*.
@@ -331,7 +331,28 @@ class IngestTestCase(unittest.TestCase):
                 self.setup_ingest(args)
             not self.assertEqual(cm.exception.code, 0)
 
+    def test_good_metadata_file(self):
+        """Ingest Pipeline should succeed for properly formatted metadata file
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_cell_metadata',
+            '--cell-metadata-file',
+            '../tests/data/metadata_example.txt',
+            '--study-accession',
+            'SCP123',
+            '--ingest-cell-metadata'
+        ]
+        print('*******passing test_good_metadata_file*************')
+        self.setup_ingest(args)
+        self.assertEquals(1, 1)
+
     def test_bad_metadata_file(self):
+        """Ingest Pipeline should not succeed for misformatted metadata file
+        """
         args = [
             '--study-id',
             '5d276a50421aa9117c982845',
@@ -340,7 +361,9 @@ class IngestTestCase(unittest.TestCase):
             'ingest_cell_metadata',
             '--cell-metadata-file',
             '../tests/data/metadata_bad.txt',
-            '--study-accession SCP123',
+            '--study-accession',
+            'SCP123',
+            '--ingest-cell-metadata'
         ]
         with self.assertRaises(SystemExit) as cm:
             self.setup_ingest(args)
