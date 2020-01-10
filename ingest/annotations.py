@@ -106,10 +106,10 @@ class Annotations(IngestFiles):
                     self.file[numeric_columns].round(3).astype(float)
                 )
             except Exception as e:
-                self.errors_logger.error(
+                self.error_logger.error(
                     "There are non numeric values in numeric columns"
                 )
-                self.errors_logger.error(
+                self.error_logger.error(
                     e, extra={"study_id": str(self.study_id), "duration": None}
                 )
 
