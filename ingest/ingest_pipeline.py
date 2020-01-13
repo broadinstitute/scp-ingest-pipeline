@@ -679,21 +679,12 @@ def validate_arguments(parsed_args):
             )
 
 
-def main() -> None:
-    """This function handles the actual logic of this script.
-
-    Args:
-        None
-
-    Returns:
-        None
+def run_ingest(ingest, arguments, parsed_args):
+    """Runs Ingest Pipeline as indicated by CLI subparser arguments
     """
     status = []
     status_cell_metadata = None
-    parsed_args = create_parser().parse_args()
-    validate_arguments(parsed_args)
-    arguments = vars(parsed_args)
-    ingest = IngestPipeline(**arguments)
+
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
         status.append(ingest.ingest_expression())
@@ -712,6 +703,12 @@ def main() -> None:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
+    return status, status_cell_metadata
+
+
+def exit_pipeline(ingest, status, status_cell_metadata, arguments):
+    """Logs any errors, then exits Ingest Pipeline with standard OS code
+    """
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
@@ -742,6 +739,23 @@ def main() -> None:
                     # note that failure to load to MongoDB also triggers this error
                     sys.exit(os.EX_DATAERR)
             sys.exit(1)
+
+
+def main() -> None:
+    """This function handles the actual logic of this script.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+    parsed_args = create_parser().parse_args()
+    validate_arguments(parsed_args)
+    arguments = vars(parsed_args)
+    ingest = IngestPipeline(**arguments)
+    status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
+    exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 
 if __name__ == "__main__":
