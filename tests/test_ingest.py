@@ -402,6 +402,27 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(len(status), 1)
         self.assertEqual(status[0], None)
 
+    def test_bad_cluster_file(self):
+        """Ingest Pipeline should fail for misformatted cluster file
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_cluster',
+            '--cluster-file',
+            '../tests/data/cluster_bad.txt',
+            '--ingest-cluster',
+            '--name',
+            'cluster1'
+        ]
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+
     # def test_ingest_loom(self):
     #     """Ingest Pipeline should extract and transform loom files
     #     """
