@@ -40,7 +40,13 @@ from bson.objectid import ObjectId
 from gcp_mocks import mock_storage_client, mock_storage_blob
 
 sys.path.append('../ingest')
-from ingest_pipeline import create_parser, validate_arguments, IngestPipeline, exit_pipeline, run_ingest
+from ingest_pipeline import (
+    create_parser,
+    validate_arguments,
+    IngestPipeline,
+    exit_pipeline,
+    run_ingest,
+)
 
 
 def mock_load(self, *args, **kwargs):
@@ -338,7 +344,7 @@ class IngestTestCase(unittest.TestCase):
             '../tests/data/metadata_example.txt',
             '--study-accession',
             'SCP123',
-            '--ingest-cell-metadata'
+            '--ingest-cell-metadata',
         ]
         ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
 
@@ -363,14 +369,13 @@ class IngestTestCase(unittest.TestCase):
             '../tests/data/metadata_bad.txt',
             '--study-accession',
             'SCP123',
-            '--ingest-cell-metadata'
+            '--ingest-cell-metadata',
         ]
         ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
-
 
     # def test_ingest_loom(self):
     #     """Ingest Pipeline should extract and transform loom files
