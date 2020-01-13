@@ -37,7 +37,7 @@ from bson.objectid import ObjectId
 from gcp_mocks import mock_storage_client, mock_storage_blob
 
 sys.path.append('../ingest')
-from ingest_pipeline import create_parser, validate_arguments, IngestPipeline
+from ingest_pipeline import create_parser, validate_arguments, IngestPipeline, exit_pipeline, run_ingest
 
 
 def mock_load(self, *args, **kwargs):
@@ -89,18 +89,8 @@ class IngestTestCase(unittest.TestCase):
 
         ingest = IngestPipeline(**arguments)
 
-        if 'matrix_file' in arguments:
-            ingest.ingest_expression()
-        elif 'ingest_cell_metadata' in arguments:
-            if arguments['ingest_cell_metadata']:
-                ingest.ingest_cell_metadata()
-        elif 'ingest_cluster' in arguments:
-            if arguments['ingest_cluster']:
-                ingest.ingest_cluster()
-        elif 'subsample' in arguments:
-            if arguments['subsample']:
-                ingest.subsample()
-        return ingest
+        status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
+        return ingest, status, status_cell_metadata
 
     def test_ingest_dense_matrix(self):
         """Ingest Pipeline should extract, transform, and load dense matrices
@@ -127,7 +117,7 @@ class IngestTestCase(unittest.TestCase):
             '--matrix-file-type',
             'dense',
         ]
-        ingest = self.setup_ingest(args)
+        ingest = self.setup_ingest(args)[0]
         model = ingest.load_args[1]
         # Ensure that 'ObjectID' in model is removed
         # print(model)
@@ -163,7 +153,7 @@ class IngestTestCase(unittest.TestCase):
             '--matrix-file-type',
             'dense',
         ]
-        ingest = self.setup_ingest(args)
+        ingest = self.setup_ingest(args)[0]
 
         model = ingest.load_args[1]
         # Ensure that 'ObjectID' in model is removed
@@ -201,7 +191,7 @@ class IngestTestCase(unittest.TestCase):
             '--matrix-file-type',
             'dense',
         ]
-        ingest = self.setup_ingest(args)
+        ingest = self.setup_ingest(args)[0]
 
         model = ingest.load_args[1]
         # Verify that the first gene model looks as expected
@@ -239,7 +229,7 @@ class IngestTestCase(unittest.TestCase):
             '--barcode-file',
             '../tests/data/barcodes.tsv',
         ]
-        ingest = self.setup_ingest(args)
+        ingest = self.setup_ingest(args)[0]
 
         model = ingest.load_args[1]
         print(model)
@@ -277,7 +267,7 @@ class IngestTestCase(unittest.TestCase):
             '--barcode-file',
             'gs://fake-bucket/tests/data/barcodes.tsv',
         ]
-        ingest = self.setup_ingest(args)
+        ingest = self.setup_ingest(args)[0]
 
         model = ingest.load_args[1]
         # print(model)
