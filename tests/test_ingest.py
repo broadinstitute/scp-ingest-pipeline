@@ -14,11 +14,14 @@ EXAMPLES
 # Run all tests
 pytest
 
-# Run tests with names containing the string 'dense'
-pytest -ks 'dense'
-
-# Run all tests in a manner that shows any print() statements
+# Run all tests and see print() output
 pytest -s
+
+# Run only tests in test_ingest.py
+pytest test_ingest.py
+
+# Run only the test "test_good_metadata_file" in this test module
+pytest test_ingest.py -k 'test_good_metadata_file' -s
 
 # Run all tests, using multiple CPUs
 # Details: https://pypi.org/project/pytest-xdist/
@@ -337,9 +340,15 @@ class IngestTestCase(unittest.TestCase):
             'SCP123',
             '--ingest-cell-metadata'
         ]
-        print('*******passing test_good_metadata_file*************')
-        self.setup_ingest(args)
-        self.assertEqual(1, 1)
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
+        # TODO:
+        # After integrating MongoDB emulator (SCP-2000), refactor this test to
+        # verify that status is "0", not [None] as done below.  This peculiar
+        # expected value is tested because we intercept the load() function,
+        # because we lack a MongoDB emulator.
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], None)
 
     def test_bad_metadata_file(self):
         """Ingest Pipeline should not succeed for misformatted metadata file
@@ -360,7 +369,7 @@ class IngestTestCase(unittest.TestCase):
 
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
-        self.assertNotEqual(cm.exception.code, 0)
+        self.assertEqual(cm.exception.code, 1)
 
 
     # def test_ingest_loom(self):
