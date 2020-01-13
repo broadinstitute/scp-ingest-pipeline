@@ -107,10 +107,11 @@ class Annotations(IngestFiles):
                 )
             except Exception as e:
                 self.error_logger.error(
-                    "There are non numeric values in numeric columns"
+                    "There are non-numeric values in numeric columns",
+                    extra=self.extra_log_params
                 )
                 self.error_logger.error(
-                    e, extra={"study_id": str(self.study_id), "duration": None}
+                    e, extra=self.extra_log_params
                 )
 
     def store_validation_issue(self, type, category, msg, associated_info=None):

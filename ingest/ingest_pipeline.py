@@ -364,7 +364,7 @@ class IngestPipeline(object):
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
 
-    @my_debug_logger()
+    # @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         if self.cell_metadata.validate_format():

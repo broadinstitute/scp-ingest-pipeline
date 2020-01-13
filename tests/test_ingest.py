@@ -348,7 +348,7 @@ class IngestTestCase(unittest.TestCase):
         ]
         print('*******passing test_good_metadata_file*************')
         self.setup_ingest(args)
-        self.assertEquals(1, 1)
+        self.assertEqual(1, 1)
 
     def test_bad_metadata_file(self):
         """Ingest Pipeline should not succeed for misformatted metadata file
