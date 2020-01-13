@@ -90,7 +90,8 @@ class IngestTestCase(unittest.TestCase):
         ingest = IngestPipeline(**arguments)
 
         status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
-        return ingest, status, status_cell_metadata
+
+        return ingest, arguments, status, status_cell_metadata
 
     def test_ingest_dense_matrix(self):
         """Ingest Pipeline should extract, transform, and load dense matrices
@@ -355,8 +356,10 @@ class IngestTestCase(unittest.TestCase):
             'SCP123',
             '--ingest-cell-metadata'
         ]
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
         with self.assertRaises(SystemExit) as cm:
-            self.setup_ingest(args)
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertNotEqual(cm.exception.code, 0)
 
 
