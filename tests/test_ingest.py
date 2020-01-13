@@ -377,6 +377,31 @@ class IngestTestCase(unittest.TestCase):
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
+    def test_good_cluster_file(self):
+        """Ingest Pipeline should succeed for properly formatted cluster file
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_cluster',
+            '--cluster-file',
+            '../tests/data/cluster_example.txt',
+            '--ingest-cluster',
+            '--name',
+            'cluster1'
+        ]
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
+        # TODO:
+        # After integrating MongoDB emulator (SCP-2000), refactor this test to
+        # verify that status is "0", not [None] as done below.  This peculiar
+        # expected value is tested because we intercept the load() function,
+        # because we lack a MongoDB emulator.
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], None)
+
     # def test_ingest_loom(self):
     #     """Ingest Pipeline should extract and transform loom files
     #     """
