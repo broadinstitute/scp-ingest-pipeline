@@ -390,7 +390,7 @@ class IngestTestCase(unittest.TestCase):
             '../tests/data/cluster_example.txt',
             '--ingest-cluster',
             '--name',
-            'cluster1'
+            'cluster1',
         ]
         ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
 
@@ -415,7 +415,7 @@ class IngestTestCase(unittest.TestCase):
             '../tests/data/cluster_bad.txt',
             '--ingest-cluster',
             '--name',
-            'cluster1'
+            'cluster1',
         ]
         ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
 

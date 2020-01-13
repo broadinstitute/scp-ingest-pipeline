@@ -54,7 +54,7 @@ class Clusters(Annotations):
         name: str,
         *,
         domain_ranges: Dict = None,
-        **kwargs
+        **kwargs,
     ):
         Annotations.__init__(
             self, file_path, self.ALLOWED_FILE_TYPES, study_id, study_file_id
