@@ -22,6 +22,7 @@ import urllib.parse as encoder
 import re
 import os
 import numbers
+import time
 
 import colorama
 from colorama import Fore
@@ -497,7 +498,10 @@ def retrieve_ontology(ontology_url):
     """Retrieve an ontology listing from EBI OLS
     returns JSON payload of ontology, or None if unsuccessful
     """
-    response = requests.get(ontology_url)
+    # add timeout to prevent request from hanging indefinitely
+    response = requests.get(ontology_url, timeout=60)
+    # inserting sleep to avoid 'Connection timed out' error with too many concurrent requests
+    time.sleep(0.25)
     if response.status_code == 200:
         return response.json()
     else:
@@ -524,7 +528,10 @@ def retrieve_ontology_term(convention_url, ontology_id):
         base_term_uri = metadata_ontology['config']['baseUris'][0]
         query_iri = encode_term_iri(term_id, base_term_uri)
         term_url = convention_ontology['_links']['terms']['href'] + '/' + query_iri
-        response = requests.get(term_url)
+        # add timeout to prevent request from hanging indefinitely
+        response = requests.get(term_url, timeout=60)
+        # inserting sleep to avoid 'Connection timed out' error with too many concurrent requests
+        time.sleep(0.25)
         if response.status_code == 200:
             return response.json()
         else:
