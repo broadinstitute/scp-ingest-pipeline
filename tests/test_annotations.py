@@ -41,7 +41,7 @@ class TestAnnotations(unittest.TestCase):
     def test_round(self):
         # Pick a random number between 1 and amount of lines in file
         ran_num = random.randint(1, 2000)
-        self.df.preproccess()
+        self.df.preprocess()
         for column in self.df.file.columns:
             annot_type = column[1]
             if annot_type == 'numeric':
@@ -52,7 +52,7 @@ class TestAnnotations(unittest.TestCase):
                 ), "Numbers did not round to 3 or less decimals places"
 
     def test_group_annotations(self):
-        self.df.preproccess()
+        self.df.preprocess()
         for column in self.df.file.columns:
             annot_type = column[1]
             if annot_type == 'group':
@@ -61,12 +61,12 @@ class TestAnnotations(unittest.TestCase):
                 ), "Group annotations must be string values"
 
     def test_merge_df(self):
-        self.df.preproccess()
+        self.df.preprocess()
         cell_metadata_df = Annotations(
             self.CELL_METADATA_PATH,
             ['text/csv', 'text/plain', 'text/tab-separated-values'],
         )
-        cell_metadata_df.preproccess()
+        cell_metadata_df.preprocess()
         cell_names_cell_metadata_df = np.asarray(cell_metadata_df.file['NAME'])
         cell_names_cluster_df = np.asarray(self.df.file['NAME'])
 

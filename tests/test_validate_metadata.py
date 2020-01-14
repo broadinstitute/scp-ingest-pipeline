@@ -49,7 +49,7 @@ class TestValidateMetadata(unittest.TestCase):
             study_accession='SCP1',
         )
         metadata.validate_format()
-        print(f"Format is corrrect {metadata.validate_format()}")
+        print(f"Format is correct {metadata.validate_format()}")
         return (metadata, convention)
 
     def teardown_metadata(self, metadata):

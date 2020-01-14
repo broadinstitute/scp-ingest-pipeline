@@ -97,11 +97,9 @@ class IngestPipeline(object):
     # File location for metadata json convention
     JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
     logger = logging.getLogger(__name__)
-    errors_logger = setup_logger(
-        __name__ + '_errors', 'errors.txt', level=logging.ERROR
-    )
+    error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
     info_logger = setup_logger(__name__, 'info.txt')
-    my_debug_logger = log(errors_logger)
+    my_debug_logger = log(error_logger)
 
     def __init__(
         self,
@@ -233,9 +231,9 @@ class IngestPipeline(object):
             if len(documents) > 0:
                 self.db['data_arrays'].insert_many(documents)
         except Exception as e:
-            self.errors_logger.error(e, extra=self.extra_log_params)
+            self.error_logger.error(e, extra=self.extra_log_params)
             if e.details is not None:
-                self.errors_logger.error(e.details, extra=self.extra_log_params)
+                self.error_logger.error(e.details, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -277,7 +275,7 @@ class IngestPipeline(object):
 
         except Exception as e:
             # TODO: Log this error
-            self.errors_logger.error(e, extra=self.extra_log_params)
+            self.error_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -314,7 +312,7 @@ class IngestPipeline(object):
                 )
                 return write_status
             else:
-                self.errors_logger.error('Erroneous call to upload_metadata_to_bq')
+                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
@@ -354,17 +352,17 @@ class IngestPipeline(object):
                         gene.gene_model['searchable_name'],
                     )
                 if status != 0:
-                    self.errors_logger.error(
+                    self.error_logger.error(
                         f'Loading gene name {gene.gene_name} failed. Exiting program',
                         extra=self.extra_log_params,
                     )
                     return status
             return status
         except Exception as e:
-            self.errors_logger.error(e, extra=self.extra_log_params)
+            self.error_logger.error(e, extra=self.extra_log_params)
             return 1
 
-    @my_debug_logger()
+    # @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         if self.cell_metadata.validate_format():
@@ -384,7 +382,7 @@ class IngestPipeline(object):
                         return 1
 
             self.cell_metadata.reset_file()
-            self.cell_metadata.preproccess()
+            self.cell_metadata.preprocess()
             for metadataModel in self.cell_metadata.transform():
                 self.info_logger.info(
                     f'Attempting to load cell metadata header : {metadataModel.annot_header}',
@@ -397,7 +395,7 @@ class IngestPipeline(object):
                     metadataModel.annot_header,
                 )
                 if status != 0:
-                    self.errors_logger.error(
+                    self.error_logger.error(
                         f'Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program',
                         extra=self.extra_log_params,
                     )
@@ -405,7 +403,7 @@ class IngestPipeline(object):
             return status if status is not None else 1
         else:
             report_issues(self.cell_metadata)
-            self.errors_logger.error(
+            self.error_logger.error(
                 f'Cell metadata file format invalid', extra=self.extra_log_params
             )
             return 1
@@ -424,7 +422,7 @@ class IngestPipeline(object):
                 return status
         # Incorrect file format
         else:
-            self.errors_logger.error(
+            self.error_logger.error(
                 f'Cluster file format invalid', extra=self.extra_log_params
             )
             return 1
@@ -679,21 +677,12 @@ def validate_arguments(parsed_args):
             )
 
 
-def main() -> None:
-    """This function handles the actual logic of this script.
-
-    Args:
-        None
-
-    Returns:
-        None
+def run_ingest(ingest, arguments, parsed_args):
+    """Runs Ingest Pipeline as indicated by CLI subparser arguments
     """
     status = []
     status_cell_metadata = None
-    parsed_args = create_parser().parse_args()
-    validate_arguments(parsed_args)
-    arguments = vars(parsed_args)
-    ingest = IngestPipeline(**arguments)
+
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
         status.append(ingest.ingest_expression())
@@ -712,6 +701,12 @@ def main() -> None:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
+    return status, status_cell_metadata
+
+
+def exit_pipeline(ingest, status, status_cell_metadata, arguments):
+    """Logs any errors, then exits Ingest Pipeline with standard OS code
+    """
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
@@ -742,6 +737,23 @@ def main() -> None:
                     # note that failure to load to MongoDB also triggers this error
                     sys.exit(os.EX_DATAERR)
             sys.exit(1)
+
+
+def main() -> None:
+    """This function handles the actual logic of this script.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+    parsed_args = create_parser().parse_args()
+    validate_arguments(parsed_args)
+    arguments = vars(parsed_args)
+    ingest = IngestPipeline(**arguments)
+    status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
+    exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 
 if __name__ == "__main__":
