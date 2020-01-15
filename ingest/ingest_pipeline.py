@@ -133,7 +133,7 @@ class IngestPipeline(object):
 
         else:
             self.tracer = nullcontext()
-        self.profile_memory = kwargs['profile_memory'] 
+        self.profile_memory = kwargs['profile_memory']
         if matrix_file is not None:
             self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
         if ingest_cell_metadata:

@@ -99,9 +99,9 @@ def create_parser():
         mprofile_<YYYYMMDDHHMMSS>.dat file locally.  \
         Use locally for optimization work. \
         See https://github.com/pythonprofilers/memory_profiler#time-based-memory-usage"
-    parser.add_argument("--profile-memory",
-                        action="store_true",
-                        help=profile_memory_text)
+    parser.add_argument(
+        "--profile-memory", action="store_true", help=profile_memory_text
+    )
 
     subparsers = parser.add_subparsers()
 

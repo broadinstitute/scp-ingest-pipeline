@@ -74,6 +74,7 @@ def trace(fn):
 
     return trace_fn
 
+
 fp = open('profile.log', 'w+')
 
 
@@ -96,5 +97,5 @@ def profile(fn):
     #         print('val.__repr__')
     #         print(val.__repr__)
     #         return fn(*args, **kwargs)
-        
+
     # return profile_fn
