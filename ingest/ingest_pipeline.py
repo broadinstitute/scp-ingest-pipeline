@@ -447,7 +447,7 @@ class IngestPipeline(object):
 
 
 def run_ingest(ingest, arguments, parsed_args):
-    """Runs Ingest Pipeline as indicated by CLI subparser arguments
+    """Runs Ingest Pipeline as indicated by CLI or importing (test) module
     """
     status = []
     status_cell_metadata = None
@@ -509,7 +509,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
 
 
 def main() -> None:
-    """This function handles the actual logic of this script.
+    """Enables running Ingest Pipeline via CLI
 
     Args:
         None
