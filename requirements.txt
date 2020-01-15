@@ -31,6 +31,4 @@ opencensus-context==0.1.1
 opencensus-ext-stackdriver==0.7.2
 google-cloud-trace==0.23.0
 
-# Profiling.  As of 2020-01-06, PyPI has memory_profiler 0.55, which is
-# a year older than 0.56 and lacks significant features.
-git+git://github.com/pythonprofilers/memory_profiler@v0.56#egg=memory-profiler
+memory-profiler==0.57.0
