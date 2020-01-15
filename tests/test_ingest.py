@@ -14,11 +14,14 @@ EXAMPLES
 # Run all tests
 pytest
 
-# Run tests with names containing the string 'dense'
-pytest -ks 'dense'
-
-# Run all tests in a manner that shows any print() statements
+# Run all tests and see print() output
 pytest -s
+
+# Run only tests in test_ingest.py
+pytest test_ingest.py
+
+# Run only the test "test_good_metadata_file" in this test module
+pytest test_ingest.py -k 'test_good_metadata_file' -s
 
 # Run all tests, using multiple CPUs
 # Details: https://pypi.org/project/pytest-xdist/
@@ -37,7 +40,13 @@ from bson.objectid import ObjectId
 from gcp_mocks import mock_storage_client, mock_storage_blob
 
 sys.path.append('../ingest')
-from ingest_pipeline import create_parser, validate_arguments, IngestPipeline
+from ingest_pipeline import (
+    create_parser,
+    validate_arguments,
+    IngestPipeline,
+    exit_pipeline,
+    run_ingest,
+)
 
 
 def mock_load(self, *args, **kwargs):
@@ -46,7 +55,7 @@ def mock_load(self, *args, **kwargs):
     this method with expected argument values.
 
     TODO:
-    Use more realistic MongoDB mock
+    Integrate MongoDB emulator for faster, higher-coverage tests (SCP-2000)
 
     This will enable us to also verify (and thus cover) loading-code *outputs*,
     unlike here where we merely give a way to verify loading-code *inputs*.
@@ -89,18 +98,9 @@ class IngestTestCase(unittest.TestCase):
 
         ingest = IngestPipeline(**arguments)
 
-        if 'matrix_file' in arguments:
-            ingest.ingest_expression()
-        elif 'ingest_cell_metadata' in arguments:
-            if arguments['ingest_cell_metadata']:
-                ingest.ingest_cell_metadata()
-        elif 'ingest_cluster' in arguments:
-            if arguments['ingest_cluster']:
-                ingest.ingest_cluster()
-        elif 'subsample' in arguments:
-            if arguments['subsample']:
-                ingest.subsample()
-        return ingest
+        status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
+
+        return ingest, arguments, status, status_cell_metadata
 
     def test_ingest_dense_matrix(self):
         """Ingest Pipeline should extract, transform, and load dense matrices
@@ -127,9 +127,10 @@ class IngestTestCase(unittest.TestCase):
             '--matrix-file-type',
             'dense',
         ]
-        ingest = self.setup_ingest(args)
+        ingest = self.setup_ingest(args)[0]
         model = ingest.load_args[1]
-        print(model)
+        # Ensure that 'ObjectID' in model is removed
+        # print(model)
 
         # Verify gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
@@ -162,10 +163,11 @@ class IngestTestCase(unittest.TestCase):
             '--matrix-file-type',
             'dense',
         ]
-        ingest = self.setup_ingest(args)
+        ingest = self.setup_ingest(args)[0]
 
         model = ingest.load_args[1]
-        print(model)
+        # Ensure that 'ObjectID' in model is removed
+        # print(model)
 
         # Verify that the first gene model looks as expected
         mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
@@ -199,7 +201,7 @@ class IngestTestCase(unittest.TestCase):
             '--matrix-file-type',
             'dense',
         ]
-        ingest = self.setup_ingest(args)
+        ingest = self.setup_ingest(args)[0]
 
         model = ingest.load_args[1]
         # Verify that the first gene model looks as expected
@@ -237,10 +239,10 @@ class IngestTestCase(unittest.TestCase):
             '--barcode-file',
             '../tests/data/barcodes.tsv',
         ]
-        ingest = self.setup_ingest(args)
+        ingest = self.setup_ingest(args)[0]
 
         model = ingest.load_args[1]
-        # print(model)
+        print(model)
 
         mock_dir = 'matrix_mtx'
         expected_model = get_gene_model(mock_dir)
@@ -275,7 +277,7 @@ class IngestTestCase(unittest.TestCase):
             '--barcode-file',
             'gs://fake-bucket/tests/data/barcodes.tsv',
         ]
-        ingest = self.setup_ingest(args)
+        ingest = self.setup_ingest(args)[0]
 
         model = ingest.load_args[1]
         # print(model)
@@ -311,6 +313,115 @@ class IngestTestCase(unittest.TestCase):
         ]
 
         self.assertRaises(ValueError, self.setup_ingest, args)
+
+        # TODO: This test does not run.  De-indent and fix.
+        def test_bad_format_dense(self):
+            args = [
+                '--study-id',
+                '5d276a50421aa9117c982845',
+                '--study-file-id',
+                '5dd5ae25421aa910a723a337',
+                'ingest_expression',
+                '--matrix-file',
+                '../tests/data/expression_matrix_bad_missing_keyword.txt',
+                '--matrix-file-type',
+                'dense',
+            ]
+            with self.assertRaises(SystemExit) as cm:
+                self.setup_ingest(args)
+            not self.assertEqual(cm.exception.code, 0)
+
+    def test_good_metadata_file(self):
+        """Ingest Pipeline should succeed for properly formatted metadata file
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_cell_metadata',
+            '--cell-metadata-file',
+            '../tests/data/metadata_example.txt',
+            '--study-accession',
+            'SCP123',
+            '--ingest-cell-metadata',
+        ]
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
+        # TODO:
+        # After integrating MongoDB emulator (SCP-2000), refactor this test to
+        # verify that status is "0", not [None] as done below.  This peculiar
+        # expected value is tested because we intercept the load() function,
+        # because we lack a MongoDB emulator.
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], None)
+
+    def test_bad_metadata_file(self):
+        """Ingest Pipeline should not succeed for misformatted metadata file
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_cell_metadata',
+            '--cell-metadata-file',
+            '../tests/data/metadata_bad.txt',
+            '--study-accession',
+            'SCP123',
+            '--ingest-cell-metadata',
+        ]
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+
+    def test_good_cluster_file(self):
+        """Ingest Pipeline should succeed for properly formatted cluster file
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_cluster',
+            '--cluster-file',
+            '../tests/data/cluster_example.txt',
+            '--ingest-cluster',
+            '--name',
+            'cluster1',
+        ]
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
+        # TODO:
+        # After integrating MongoDB emulator (SCP-2000), refactor this test to
+        # verify that status is "0", not [None] as done below.  This peculiar
+        # expected value is tested because we intercept the load() function,
+        # because we lack a MongoDB emulator.
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], None)
+
+    def test_bad_cluster_file(self):
+        """Ingest Pipeline should fail for misformatted cluster file
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_cluster',
+            '--cluster-file',
+            '../tests/data/cluster_bad.txt',
+            '--ingest-cluster',
+            '--name',
+            'cluster1',
+        ]
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
 
     # def test_ingest_loom(self):
     #     """Ingest Pipeline should extract and transform loom files

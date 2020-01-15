@@ -31,7 +31,7 @@ python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --name custer1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo Sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from contextlib import nullcontext
@@ -92,11 +92,9 @@ class IngestPipeline(object):
     # File location for metadata json convention
     JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
     logger = logging.getLogger(__name__)
-    errors_logger = setup_logger(
-        __name__ + '_errors', 'errors.txt', level=logging.ERROR
-    )
+    error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
     info_logger = setup_logger(__name__, 'info.txt')
-    my_debug_logger = log(errors_logger)
+    my_debug_logger = log(error_logger)
 
     # fp = open('memory_profiler.log', 'w+')
 
@@ -225,9 +223,9 @@ class IngestPipeline(object):
             if len(documents) > 0:
                 self.db['data_arrays'].insert_many(documents)
         except Exception as e:
-            self.errors_logger.error(e, extra=self.extra_log_params)
+            self.error_logger.error(e, extra=self.extra_log_params)
             if e.details is not None:
-                self.errors_logger.error(e.details, extra=self.extra_log_params)
+                self.error_logger.error(e.details, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -269,7 +267,7 @@ class IngestPipeline(object):
 
         except Exception as e:
             # TODO: Log this error
-            self.errors_logger.error(e, extra=self.extra_log_params)
+            self.error_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -306,7 +304,7 @@ class IngestPipeline(object):
                 )
                 return write_status
             else:
-                self.errors_logger.error('Erroneous call to upload_metadata_to_bq')
+                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
@@ -318,37 +316,46 @@ class IngestPipeline(object):
         """
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
-        for idx, gene in enumerate(self.matrix.transform()):
-            self.info_logger.info(
-                f"Attempting to load gene: {gene.gene_model['searchable_name']}",
-                extra=self.extra_log_params,
-            )
-            if idx == 0:
-                status = self.load(
-                    self.matrix.COLLECTION_NAME,
-                    gene.gene_model,
-                    self.matrix.set_data_array,
-                    gene.gene_name,
-                    gene.gene_model['searchable_name'],
-                    {'create_cell_data_array': True},
-                )
+        else:
+            if not self.matrix.validate_format():
+                return 1
             else:
-                status = self.load(
-                    self.matrix.COLLECTION_NAME,
-                    gene.gene_model,
-                    self.matrix.set_data_array,
-                    gene.gene_name,
-                    gene.gene_model['searchable_name'],
-                )
-            if status != 0:
-                self.errors_logger.error(
-                    f'Loading gene name {gene.gene_name} failed. Exiting program',
+                self.matrix.preprocess()
+        try:
+            for idx, gene in enumerate(self.matrix.transform()):
+                self.info_logger.info(
+                    f"Attempting to load gene: {gene.gene_model['searchable_name']}",
                     extra=self.extra_log_params,
                 )
-                return status
-        return status
+                if idx == 0:
+                    status = self.load(
+                        self.matrix.COLLECTION_NAME,
+                        gene.gene_model,
+                        self.matrix.set_data_array,
+                        gene.gene_name,
+                        gene.gene_model['searchable_name'],
+                        {'create_cell_data_array': True},
+                    )
+                else:
+                    status = self.load(
+                        self.matrix.COLLECTION_NAME,
+                        gene.gene_model,
+                        self.matrix.set_data_array,
+                        gene.gene_name,
+                        gene.gene_model['searchable_name'],
+                    )
+                if status != 0:
+                    self.error_logger.error(
+                        f'Loading gene name {gene.gene_name} failed. Exiting program',
+                        extra=self.extra_log_params,
+                    )
+                    return status
+            return status
+        except Exception as e:
+            self.error_logger.error(e, extra=self.extra_log_params)
+            return 1
 
-    @my_debug_logger()
+    # @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         if self.cell_metadata.validate_format():
@@ -368,7 +375,7 @@ class IngestPipeline(object):
                         return 1
 
             self.cell_metadata.reset_file()
-            self.cell_metadata.preproccess()
+            self.cell_metadata.preprocess()
             for metadataModel in self.cell_metadata.transform():
                 self.info_logger.info(
                     f'Attempting to load cell metadata header : {metadataModel.annot_header}',
@@ -381,7 +388,7 @@ class IngestPipeline(object):
                     metadataModel.annot_header,
                 )
                 if status != 0:
-                    self.errors_logger.error(
+                    self.error_logger.error(
                         f'Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program',
                         extra=self.extra_log_params,
                     )
@@ -389,7 +396,7 @@ class IngestPipeline(object):
             return status if status is not None else 1
         else:
             report_issues(self.cell_metadata)
-            self.errors_logger.error(
+            self.error_logger.error(
                 f'Cell metadata file format invalid', extra=self.extra_log_params
             )
             return 1
@@ -408,7 +415,7 @@ class IngestPipeline(object):
                 return status
         # Incorrect file format
         else:
-            self.errors_logger.error(
+            self.error_logger.error(
                 f'Cluster file format invalid', extra=self.extra_log_params
             )
             return 1
@@ -439,21 +446,12 @@ class IngestPipeline(object):
         return 0
 
 
-def main() -> None:
-    """This function handles the actual logic of this script.
-
-    Args:
-        None
-
-    Returns:
-        None
+def run_ingest(ingest, arguments, parsed_args):
+    """Runs Ingest Pipeline as indicated by CLI subparser arguments
     """
     status = []
     status_cell_metadata = None
-    parsed_args = create_parser().parse_args()
-    validate_arguments(parsed_args)
-    arguments = vars(parsed_args)
-    ingest = IngestPipeline(**arguments)
+
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
         status.append(ingest.ingest_expression())
@@ -472,8 +470,12 @@ def main() -> None:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
-    print('status')
-    print(status)
+    return status, status_cell_metadata
+
+
+def exit_pipeline(ingest, status, status_cell_metadata, arguments):
+    """Logs any errors, then exits Ingest Pipeline with standard OS code
+    """
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
@@ -504,6 +506,23 @@ def main() -> None:
                     # note that failure to load to MongoDB also triggers this error
                     sys.exit(os.EX_DATAERR)
             sys.exit(1)
+
+
+def main() -> None:
+    """This function handles the actual logic of this script.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+    parsed_args = create_parser().parse_args()
+    validate_arguments(parsed_args)
+    arguments = vars(parsed_args)
+    ingest = IngestPipeline(**arguments)
+    status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
+    exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 
 if __name__ == "__main__":

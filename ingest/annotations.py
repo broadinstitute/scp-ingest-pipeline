@@ -70,7 +70,7 @@ class Annotations(IngestFiles):
         """ Does an inner join on a dataframe """
         self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
 
-    def preproccess(self):
+    def preprocess(self):
         """Ensures that:
             - Numeric columns are rounded to 3 decimals points
             - Group annotations are strings
@@ -106,12 +106,11 @@ class Annotations(IngestFiles):
                     self.file[numeric_columns].round(3).astype(float)
                 )
             except Exception as e:
-                self.errors_logger.error(
-                    "There are non numeric values in numeric columns"
+                self.error_logger.error(
+                    "There are non-numeric values in numeric columns",
+                    extra=self.extra_log_params,
                 )
-                self.errors_logger.error(
-                    e, extra={"study_id": str(self.study_id), "duration": None}
-                )
+                self.error_logger.error(e, extra=self.extra_log_params)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement

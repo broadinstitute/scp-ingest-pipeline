@@ -33,17 +33,42 @@ class Dense(GeneExpression, IngestFiles):
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
         self.matrix_params = kwargs
+        self.gene_names = []
+        csv_file, self.open_file_object = self.open_file(self.file_path)
+        self.header = next(csv_file)
 
-        self.preprocess()
+    def validate_unique_header(self):
+        """Validates header has no duplicate values"""
+        if len(set(self.header)) != len(self.header):
+            self.error_logger.error(
+                "Duplicated header values are not allowed", extra=self.extra_log_params
+            )
+            return False
+        return True
+
+    def validate_gene_keyword(self):
+        """Validates that 'Gene' is the first value in header"""
+        # File is an R formatted file
+        if (self.header[-1] == '') and (self.header[0].upper() != 'GENE'):
+            pass
+        else:
+            # If not R formatted file then first cell must be 'GENE'
+            if self.header[0].upper() != 'GENE':
+                self.error_logger.error(
+                    f'First cell in header must be GENE not {self.header[0]}',
+                    extra=self.extra_log_params,
+                )
+                return False
+        return True
 
     @trace
     def preprocess(self):
+        """Determines if file is R-formatted. Creates dataframe (df)"""
         csv_file, open_file_object = self.open_file(self.file_path)
-        header = next(csv_file)
         dtypes = {'GENE': object}
 
         # # Remove white spaces and quotes
-        header = [col_name.strip().strip('\"') for col_name in header]
+        header = [col_name.strip().strip('\"') for col_name in self.header]
         # See if R formatted file
         if (header[-1] == '') and (header[0].upper() != 'GENE'):
             header.insert(0, 'GENE')
@@ -74,6 +99,9 @@ class Dense(GeneExpression, IngestFiles):
             self.info_logger.info(
                 f'Transforming gene :{gene}', extra=self.extra_log_params
             )
+            if gene in self.gene_names:
+                raise ValueError(f'Duplicate gene: {gene}')
+            self.gene_names.append(gene)
             yield GeneModel(
                 # Name of gene as observed in file
                 gene,
@@ -137,6 +165,9 @@ class Dense(GeneExpression, IngestFiles):
                 unformatted_gene_name, linear_data_id, observed_values
             )
 
+    def validate_format(self):
+        return all([self.validate_unique_header(), self.validate_gene_keyword()])
+
     def close(self):
         """Closes file
 
@@ -146,4 +177,4 @@ class Dense(GeneExpression, IngestFiles):
         Returns:
             None
         """
-        self.df.close()
+        self.open_file_object.close()
