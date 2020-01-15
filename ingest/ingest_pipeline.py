@@ -191,12 +191,12 @@ class IngestPipeline(object):
         """Closes connection to file"""
         self.matrix.close()
 
-    @profile
+    # @profile
     def insert_many(self, documents):
         self.db['data_arrays'].insert_many(documents)
 
     @trace
-    @profile
+    # @profile
     def load(
         self,
         collection_name,
@@ -312,7 +312,7 @@ class IngestPipeline(object):
 
     @trace
     @my_debug_logger()
-    @profile
+    # @profile
     def ingest_expression(self) -> int:
         """Ingests expression files.
         """
