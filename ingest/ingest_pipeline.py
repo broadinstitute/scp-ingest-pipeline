@@ -47,7 +47,7 @@ from pymongo import MongoClient
 # import google.cloud.logging
 from bson.objectid import ObjectId
 
-# For tracing and profiling
+# For tracing
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
 from opencensus.trace.tracer import Tracer
 from opencensus.trace.samplers import AlwaysOnSampler
