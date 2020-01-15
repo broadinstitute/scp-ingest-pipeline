@@ -64,7 +64,7 @@ try:
         report_issues,
         write_metadata_to_bq,
     )
-    from monitor import setup_logger, log, trace, profile
+    from monitor import setup_logger, log, trace
     from cell_metadata import CellMetadata
     from clusters import Clusters
     from dense import Dense
@@ -80,7 +80,7 @@ except ImportError:
         report_issues,
         write_metadata_to_bq,
     )
-    from .monitor import setup_logger, log, trace, profile
+    from .monitor import setup_logger, log, trace
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
     from .dense import Dense
@@ -95,8 +95,6 @@ class IngestPipeline(object):
     error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
     info_logger = setup_logger(__name__, 'info.txt')
     my_debug_logger = log(error_logger)
-
-    # fp = open('memory_profiler.log', 'w+')
 
     def __init__(
         self,
@@ -193,6 +191,10 @@ class IngestPipeline(object):
         """Closes connection to file"""
         self.matrix.close()
 
+    @profile
+    def insert_many(self, documents):
+        self.db['data_arrays'].insert_many(documents)
+
     @trace
     @profile
     def load(
@@ -214,14 +216,14 @@ class IngestPipeline(object):
             ):
                 linear_id = ObjectId(self.study_id)
             else:
-                linear_id = self.db[collection_name].insert_one(model).inserted_id
+                linear_id = self.insert_one(collection_name, model)
             for data_array_model in set_data_array_fn(
                 linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
                 documents.append(data_array_model)
             # only insert documents if present
             if len(documents) > 0:
-                self.db['data_arrays'].insert_many(documents)
+                self.insert_many(documents)
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
             if e.details is not None:

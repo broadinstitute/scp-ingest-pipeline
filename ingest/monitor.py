@@ -1,10 +1,7 @@
 import logging
 import os
 import time
-from functools import wraps
 from contextlib import nullcontext
-
-import memory_profiler
 
 
 def setup_logger(logger_name, log_file, level=logging.DEBUG):
@@ -73,29 +70,3 @@ def trace(fn):
             return fn(*args, **kwargs)
 
     return trace_fn
-
-
-fp = open('profile.log', 'w+')
-
-
-def profile(fn):
-    """Profiles memory usage in functions that apply this as a decorator
-    """
-    memory_profiler.profile(func=fn, stream=fp)
-    return fn
-    # @wraps(fn)
-    # def profile_fn(*args, **kwargs):
-    #     inner_self = args[0].__dict__
-    #     print('inner_self')
-    #     print(inner_self)
-    #     if not inner_self['profile_memory']:
-    #         return fn(*args, **kwargs)
-    #     else:
-    #         val = memory_profiler.profile(stream=fp)
-    #         print('val')
-    #         print(val)
-    #         print('val.__repr__')
-    #         print(val.__repr__)
-    #         return fn(*args, **kwargs)
-
-    # return profile_fn
