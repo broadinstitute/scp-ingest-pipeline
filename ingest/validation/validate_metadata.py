@@ -8,7 +8,8 @@ participating under the convention.
 
 EXAMPLE
 # Using JSON file for Alexandria metadata convention TSV, validate input TSV
-$ python3 validate_metadata.py ../../tests/data/AMC_v0.8.json ../../tests/data/metadata_valid.tsv
+$ python3 validate_metadata.py ../../tests/data/AMC_v1.1.3.json ../../tests/data/valid_no_array_v1.1.3.tsv \
+          --study-accession SCP123 --study-id 5dfa6718421aa90fea085476 --study-file-id 5e27451e2209c211b1e7c9cc
 
 """
 
@@ -23,6 +24,7 @@ import re
 import os
 import numbers
 import time
+import backoff
 
 import colorama
 from colorama import Fore
@@ -46,6 +48,9 @@ logger = logging.getLogger(__name__)
 # Ensures normal color for print() output, unless explicitly changed
 colorama.init(autoreset=True)
 
+# Configure maximum number of seconds to spend & total attempts at external HTTP requests to services, e.g. OLS
+MAX_HTTP_REQUEST_TIME = 120
+MAX_HTTP_ATTEMPTS = 8
 
 def create_parser():
     """Parse command line values for validate_metadata
@@ -493,27 +498,44 @@ def exit_if_errors(metadata):
         exit(1)
     return errors
 
+def backoff_hdlr(details):
+    """Handler function to log backoff attempts when querying OLS"""
+    logger.debug("Backing off {wait:0.1f} seconds afters {tries} tries "
+           "calling function {target} with args {args} and kwargs "
+           "{kwargs}".format(**details))
 
+# Decorator to attach exponential backoff to external HTTP requests
+@backoff.on_exception(backoff.expo,
+                      requests.exceptions.RequestException,
+                      max_time=MAX_HTTP_REQUEST_TIME,
+                      max_tries=MAX_HTTP_ATTEMPTS,
+                      on_backoff=backoff_hdlr,
+                      logger="logger")
 def retrieve_ontology(ontology_url):
     """Retrieve an ontology listing from EBI OLS
     returns JSON payload of ontology, or None if unsuccessful
     """
     # add timeout to prevent request from hanging indefinitely
     response = requests.get(ontology_url, timeout=60)
-    # inserting sleep to avoid 'Connection timed out' error with too many concurrent requests
+    # inserting sleep to minimize 'Connection timed out' error with too many concurrent requests
     time.sleep(0.25)
     if response.status_code == 200:
         return response.json()
     else:
         return None
 
-
+# Decorator to attach exponential backoff to external HTTP requests
+@backoff.on_exception(backoff.expo,
+                      requests.exceptions.RequestException,
+                      max_time=MAX_HTTP_REQUEST_TIME,
+                      max_tries=MAX_HTTP_ATTEMPTS,
+                      on_backoff=backoff_hdlr,
+                      logger="logger")
 def retrieve_ontology_term(convention_url, ontology_id):
     """Retrieve an individual term from an ontology
     returns JSON payload of ontology, or None if unsuccessful
     """
     OLS_BASE_URL = 'https://www.ebi.ac.uk/ols/api/ontologies/'
-    convention_ontology = retrieve_ontology(convention_url)
     # separate ontology shortname from term ID number
     # valid separators are underscore and colon (used by HCA)
     try:
@@ -524,13 +546,23 @@ def retrieve_ontology_term(convention_url, ontology_id):
         return None
     metadata_url = OLS_BASE_URL + ontology_shortname
     metadata_ontology = retrieve_ontology(metadata_url)
+    # check if the ontology parsed from the term is the same ontology defined in the convention
+    # if so, skip the extra call to OLS; otherwise, retrieve the convention-defined ontology for term lookups
+    if metadata_ontology is not None:
+        reference_url = metadata_ontology['_links']['self']['href']
+        if reference_url.lower() == convention_url.lower():
+            convention_ontology = metadata_ontology.copy()
+        else:
+            convention_ontology = retrieve_ontology(convention_url)
+    else:
+        convention_ontology = None # we did not get a metadata_ontology, so abort the check
     if convention_ontology and metadata_ontology:
         base_term_uri = metadata_ontology['config']['baseUris'][0]
         query_iri = encode_term_iri(term_id, base_term_uri)
         term_url = convention_ontology['_links']['terms']['href'] + '/' + query_iri
         # add timeout to prevent request from hanging indefinitely
         response = requests.get(term_url, timeout=60)
-        # inserting sleep to avoid 'Connection timed out' error with too many concurrent requests
+        # inserting sleep to minimize 'Connection timed out' error with too many concurrent requests
         time.sleep(0.25)
         if response.status_code == 200:
             return response.json()
@@ -627,6 +659,16 @@ def validate_collected_ontology_data(metadata, convention):
                     f'\"{ontology_id}\" - no cross-check for data entry error possible'
                 )
                 metadata.store_validation_issue('warn', 'ontology', error_msg)
+        except requests.exceptions.RequestException as err:
+            error_msg = f'External service outage connecting to {ontology_url} when querying {ontology_id}:{ontology_label}: {err}'
+            logger.error(error_msg)
+            metadata.store_validation_issue(
+                'error',
+                'ontology',
+                error_msg
+            )
+            # immediately return as validation cannot continue
+            return
     return
 
 

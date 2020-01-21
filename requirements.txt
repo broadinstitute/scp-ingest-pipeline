@@ -11,6 +11,7 @@ dataclasses==0.6
 loompy==2.0.15
 colorama==0.4.1
 pymongo==3.9.0
+backoff==1.10.0
 
 # Dev dependencies
 pytest==5.0.1
