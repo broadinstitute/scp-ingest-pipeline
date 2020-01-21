@@ -93,7 +93,6 @@ class Dense(GeneExpression, IngestFiles):
     def transform(self):
         """Transforms dense matrix into gene data model.
         """
-        gene_models = {}
         # Holds gene name and gene model for a single gene
         GeneModel = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
         for gene in self.df['GENE']:
@@ -122,19 +121,6 @@ class Dense(GeneExpression, IngestFiles):
                     }
                 ),
             )
-            gene_models[gene] = self.Model(
-                {
-                    'name': formatted_gene_name,
-                    'searchable_name': formatted_gene_name.lower(),
-                    'study_file_id': self.study_file_id,
-                    'study_id': self.study_id,
-                    '_id': id,
-                    'gene_id': self.matrix_params['gene_id']
-                    if 'gene_id' in self.matrix_params
-                    else None,
-                }
-            )
-        print(gene_models)
 
     @trace
     def set_data_array(
