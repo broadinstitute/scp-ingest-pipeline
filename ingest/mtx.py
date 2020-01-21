@@ -14,6 +14,7 @@ Must have python 3.6 or higher.
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import collections
 import scipy.io
+from bson.objectid import ObjectId
 import copy
 
 try:
@@ -69,7 +70,6 @@ class Mtx(GeneExpression):
         GeneExpressionValues = collections.namedtuple(
             'GeneExpressionValues', ['expression_scores', 'cell_names']
         )
-        models = {}
         for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(
             self.matrix_file.row, self.matrix_file.col, self.matrix_file.data
         ):
@@ -88,15 +88,6 @@ class Mtx(GeneExpression):
                 self.info_logger.info(
                     f'Creating model for {gene} ', extra=self.extra_log_params
                 )
-                models[gene] = self.Model(
-                    {
-                        'name': gene,
-                        'searchable_name': gene.lower(),
-                        'study_file_id': self.study_file_id,
-                        'study_id': self.study_id,
-                        'gene_id': gene_id,
-                    }
-                )
                 yield GeneModelData(
                     gene,
                     self.Model(
@@ -106,10 +97,10 @@ class Mtx(GeneExpression):
                             'study_file_id': self.study_file_id,
                             'study_id': self.study_id,
                             'gene_id': gene_id,
+                            '_id': ObjectId(),
                         }
                     ),
                 )
-                print(models)
 
     @trace
     def set_data_array(
