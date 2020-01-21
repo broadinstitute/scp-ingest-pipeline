@@ -191,8 +191,9 @@ class IngestPipeline(object):
         self.matrix.close()
 
     # @profile
-    def insert_many(self, documents):
-        self.db['data_arrays'].insert_many(documents)
+    # TODO: Make @profile conditional (SCP-2081)
+    def insert_many(self, collection_name, documents):
+        self.db[collection_name].insert_many(documents)
 
     @trace
     # @profile
@@ -222,7 +223,7 @@ class IngestPipeline(object):
                 documents.append(data_array_model)
             # only insert documents if present
             if len(documents) > 0:
-                self.insert_many(documents)
+                self.insert_many('data_arrays', documents)
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
             if e.details is not None:
