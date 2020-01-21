@@ -336,7 +336,7 @@ class IngestPipeline(object):
             return False, bwe.details
 
         except Exception as e:
-            elf.errors_logger.error(e, extra=self.extra_log_params)
+            self.errors_logger.error(e, extra=self.extra_log_params)
             return False, None
 
     @trace
