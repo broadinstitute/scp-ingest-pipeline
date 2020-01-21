@@ -1,5 +1,6 @@
 import unittest
 import sys
+from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_models
 
 sys.path.append("../ingest")
 from dense import Dense
@@ -81,3 +82,21 @@ class TestDense(unittest.TestCase):
             tracer=None,
         )
         self.assertTrue(expression_matrix.validate_format())
+
+    def test_transform_fn(self):
+        """ Tests to ensure transform function is creating
+        gene data model correctly"""
+
+        expression_matrix = Dense(
+            '../tests/data/dense_matrix_19_genes_1000_cells.txt',
+            '5d276a50421aa9117c982845',
+            '5dd5ae25421aa910a723a337',
+            tracer=None,
+        )
+        expression_matrix.preprocess()
+        for gene_model in expression_matrix.transform():
+            # _id is a unique identifier and can not be predicted
+            # so we exclude it from the comparison
+            del gene_model.gene_model['_id']
+            del gene_models[gene_model.gene_name]['_id']
+            self.assertEqual(gene_model.gene_model, gene_models[gene_model.gene_name])

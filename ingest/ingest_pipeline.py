@@ -44,7 +44,8 @@ import os
 import logging
 import re
 
-from pymongo import MongoClient
+from pymongo import MongoClient, InsertOne
+from pymongo.errors import BulkWriteError
 from google.cloud import bigquery
 
 # import google.cloud.logging
@@ -318,11 +319,33 @@ class IngestPipeline(object):
                 return 1
         return 0
 
+    def load_expression_file(self, models, is_gene_model=False):
+        collection_name = self.matrix.COLLECTION_NAME
+        try:
+            if is_gene_model:
+                # bulk_write_results describes the type and count of operations performed.
+                bulk_write_results = self.db[collection_name].bulk_write(models)
+                # Succesfully wrote documents
+                return True, bulk_write_results
+            else:
+                bulk_write_results = self.db['data_arrays'].bulk_write(models)
+                # Succesfully wrote documents
+                return True, bulk_write_results
+        except BulkWriteError as bwe:
+            self.errors_logger.error(bwe.details, extra=self.extra_log_params)
+            return False, bwe.details
+
+        except Exception as e:
+            elf.errors_logger.error(e, extra=self.extra_log_params)
+            return False, None
+
     @trace
     @my_debug_logger()
     def ingest_expression(self) -> int:
         """Ingests expression files.
         """
+        gene_documents = []
+        data_array_documents = []
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
         else:
@@ -336,30 +359,46 @@ class IngestPipeline(object):
                     f"Attempting to load gene: {gene.gene_model['searchable_name']}",
                     extra=self.extra_log_params,
                 )
-        #         if idx == 0:
-        #             status = self.load(
-        #                 self.matrix.COLLECTION_NAME,
-        #                 gene.gene_model,
-        #                 self.matrix.set_data_array,
-        #                 gene.gene_name,
-        #                 gene.gene_model['searchable_name'],
-        #                 {'create_cell_data_array': True},
-        #             )
-        #         else:
-        #             status = self.load(
-        #                 self.matrix.COLLECTION_NAME,
-        #                 gene.gene_model,
-        #                 self.matrix.set_data_array,
-        #                 gene.gene_name,
-        #                 gene.gene_model['searchable_name'],
-        #             )
-        #         if status != 0:
-        #             self.errors_logger.error(
-        #                 f'Loading gene name {gene.gene_name} failed. Exiting program',
-        #                 extra=self.extra_log_params,
-        #             )
-        #             return status
-        #     return status
+                gene_documents.append(InsertOne(gene.gene_model))
+                if idx == 0:
+                    for data_array_document in self.matrix.set_data_array(
+                        gene.gene_model['_id'],
+                        gene.gene_name,
+                        gene.gene_model['searchable_name'],
+                        {'create_cell_data_array': True},
+                    ):
+                        data_array_documents.append(InsertOne(data_array_document))
+                else:
+                    for data_array_document in self.matrix.set_data_array(
+                        gene.gene_model['_id'],
+                        gene.gene_name,
+                        gene.gene_model['searchable_name'],
+                    ):
+                        data_array_documents.append(InsertOne(data_array_document))
+            load_gene_status, load_gene_results = self.load_expression_file(
+                gene_documents, is_gene_model=True
+            )
+            load_data_array_status, load_data_array_results = self.load_expression_file(
+                data_array_documents
+            )
+            # check load status
+            if load_gene_status and load_data_array_status:
+                # load_<   >_results describes the type and count of operations performed.
+                self.info_logger.info(
+                    f"Bulk Write Results for gene models: {load_gene_results.bulk_api_result}",
+                    extra=self.extra_log_params,
+                )
+                self.info_logger.info(
+                    f"Bulk Write Results for gene data arrays: {load_data_array_results.bulk_api_result}",
+                    extra=self.extra_log_params,
+                )
+                return 0
+            else:
+                self.errors_logger.error(
+                    f'Loading expression data failed. Exiting program',
+                    extra=self.extra_log_params,
+                )
+                return 1
         except Exception as e:
             self.errors_logger.error(e, extra=self.extra_log_params)
             return 1
