@@ -498,7 +498,7 @@ def exit_if_errors(metadata):
         exit(1)
     return errors
 
-def backoff_hdlr(details):
+def backoff_handler(details):
     """Handler function to log backoff attempts when querying OLS"""
     logger.debug("Backing off {wait:0.1f} seconds afters {tries} tries "
            "calling function {target} with args {args} and kwargs "
@@ -509,7 +509,7 @@ def backoff_hdlr(details):
                       requests.exceptions.RequestException,
                       max_time=MAX_HTTP_REQUEST_TIME,
                       max_tries=MAX_HTTP_ATTEMPTS,
-                      on_backoff=backoff_hdlr,
+                      on_backoff=backoff_handler,
                       logger="logger")
 def retrieve_ontology(ontology_url):
     """Retrieve an ontology listing from EBI OLS
@@ -529,7 +529,7 @@ def retrieve_ontology(ontology_url):
                       requests.exceptions.RequestException,
                       max_time=MAX_HTTP_REQUEST_TIME,
                       max_tries=MAX_HTTP_ATTEMPTS,
-                      on_backoff=backoff_hdlr,
+                      on_backoff=backoff_handler,
                       logger="logger")
 def retrieve_ontology_term(convention_url, ontology_id, ontologies):
     """Retrieve an individual term from an ontology
@@ -546,7 +546,7 @@ def retrieve_ontology_term(convention_url, ontology_id, ontologies):
     except (ValueError, TypeError):
         return None
     # check if we have already retrieved this ontology reference
-    if ontology_shortname not in ontologies.keys():
+    if ontology_shortname not in ontologies:
         metadata_url = OLS_BASE_URL + ontology_shortname
         ontologies[ontology_shortname] = retrieve_ontology(metadata_url)
     metadata_ontology = ontologies[ontology_shortname]
