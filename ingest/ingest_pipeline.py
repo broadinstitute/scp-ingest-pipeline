@@ -45,7 +45,6 @@ import re
 
 from pymongo import MongoClient, InsertOne
 from pymongo.errors import BulkWriteError
-from google.cloud import bigquery
 
 # import google.cloud.logging
 from bson.objectid import ObjectId
