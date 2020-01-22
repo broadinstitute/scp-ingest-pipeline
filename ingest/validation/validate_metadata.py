@@ -531,9 +531,10 @@ def retrieve_ontology(ontology_url):
                       max_tries=MAX_HTTP_ATTEMPTS,
                       on_backoff=backoff_hdlr,
                       logger="logger")
-def retrieve_ontology_term(convention_url, ontology_id):
+def retrieve_ontology_term(convention_url, ontology_id, ontologies):
     """Retrieve an individual term from an ontology
     returns JSON payload of ontology, or None if unsuccessful
+    Will store any retrieved ontologies for faster validation of downstream terms
     """
     OLS_BASE_URL = 'https://www.ebi.ac.uk/ols/api/ontologies/'
     # separate ontology shortname from term ID number
@@ -544,8 +545,11 @@ def retrieve_ontology_term(convention_url, ontology_id):
     # when ontologyID value is empty string -> TypeError
     except (ValueError, TypeError):
         return None
-    metadata_url = OLS_BASE_URL + ontology_shortname
-    metadata_ontology = retrieve_ontology(metadata_url)
+    # check if we have already retrieved this ontology reference
+    if ontology_shortname not in ontologies.keys():
+        metadata_url = OLS_BASE_URL + ontology_shortname
+        ontologies[ontology_shortname] = retrieve_ontology(metadata_url)
+    metadata_ontology = ontologies[ontology_shortname]
     # check if the ontology parsed from the term is the same ontology defined in the convention
     # if so, skip the extra call to OLS; otherwise, retrieve the convention-defined ontology for term lookups
     if metadata_ontology is not None:
@@ -553,7 +557,9 @@ def retrieve_ontology_term(convention_url, ontology_id):
         if reference_url.lower() == convention_url.lower():
             convention_ontology = metadata_ontology.copy()
         else:
+            convention_shortname = extract_terminal_pathname(convention_url)
             convention_ontology = retrieve_ontology(convention_url)
+            ontologies[convention_shortname] = convention_ontology
     else:
         convention_ontology = None # we did not get a metadata_ontology, so abort the check
     if convention_ontology and metadata_ontology:
@@ -585,6 +591,11 @@ def encode_term_iri(term_id, base_uri):
     encoded_iri = encoder.quote_plus(encoder.quote_plus(query_uri))
     return encoded_iri
 
+def extract_terminal_pathname(url):
+    """Extract the last path segment from a URL
+    """
+    return list(filter(None, url.split("/"))).pop()
+
 
 def validate_collected_ontology_data(metadata, convention):
     """Evaluate collected ontology_id, ontology_label info in
@@ -593,11 +604,13 @@ def validate_collected_ontology_data(metadata, convention):
     matches ontology_label from EBI OLS lookup
     """
     logger.debug('Begin: validate_collected_ontology_data')
+    # container to store references to retrieved ontologies for faster validation
+    stored_ontologies = {}
     for entry in metadata.ontology.keys():
         ontology_url = convention['properties'][entry]['ontology']
         try:
             for ontology_id, ontology_label in metadata.ontology[entry].keys():
-                matching_term = retrieve_ontology_term(ontology_url, ontology_id)
+                matching_term = retrieve_ontology_term(ontology_url, ontology_id, stored_ontologies)
                 if matching_term:
                     if matching_term['label'] != ontology_label:
                         try:
@@ -645,7 +658,7 @@ def validate_collected_ontology_data(metadata, convention):
         # handle case where no ontology_label provided
         except (TypeError, ValueError):
             for ontology_id in metadata.ontology[entry].keys():
-                matching_term = retrieve_ontology_term(ontology_url, ontology_id)
+                matching_term = retrieve_ontology_term(ontology_url, ontology_id, stored_ontologies)
                 if not matching_term:
                     error_msg = f'{entry}: No match found in EBI OLS for provided ontology ID: {ontology_id}'
                     metadata.store_validation_issue(
