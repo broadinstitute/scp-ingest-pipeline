@@ -6,7 +6,6 @@ gene_models = {
         'searchable_name': 'a1bg',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461ae7a6766f12a8fbdb'),
         'gene_id': None,
     },
     'A1CF': {
@@ -14,7 +13,6 @@ gene_models = {
         'searchable_name': 'a1cf',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461ae7a6766f12a8fbdc'),
         'gene_id': None,
     },
     'A2ML1': {
@@ -22,7 +20,6 @@ gene_models = {
         'searchable_name': 'a2ml1',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461ae7a6766f12a8fbdd'),
         'gene_id': None,
     },
     'A3GALT2': {
@@ -30,7 +27,6 @@ gene_models = {
         'searchable_name': 'a3galt2',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461ae7a6766f12a8fbde'),
         'gene_id': None,
     },
     'A4GALT': {
@@ -38,7 +34,6 @@ gene_models = {
         'searchable_name': 'a4galt',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461ae7a6766f12a8fbdf'),
         'gene_id': None,
     },
     'A4GNT': {
@@ -46,7 +41,6 @@ gene_models = {
         'searchable_name': 'a4gnt',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461ae7a6766f12a8fbe0'),
         'gene_id': None,
     },
     'AAAS': {
@@ -54,7 +48,6 @@ gene_models = {
         'searchable_name': 'aaas',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461ae7a6766f12a8fbe1'),
         'gene_id': None,
     },
     'AACS': {
@@ -62,7 +55,6 @@ gene_models = {
         'searchable_name': 'aacs',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461ae7a6766f12a8fbe2'),
         'gene_id': None,
     },
     'AADACL2': {
@@ -70,7 +62,6 @@ gene_models = {
         'searchable_name': 'aadacl2',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461ae7a6766f12a8fbe3'),
         'gene_id': None,
     },
     'AADACL3': {
@@ -78,7 +69,6 @@ gene_models = {
         'searchable_name': 'aadacl3',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461ae7a6766f12a8fbe4'),
         'gene_id': None,
     },
     'AADACL4': {
@@ -86,7 +76,6 @@ gene_models = {
         'searchable_name': 'aadacl4',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461ae7a6766f12a8fbe5'),
         'gene_id': None,
     },
     'AADAT': {
@@ -94,7 +83,6 @@ gene_models = {
         'searchable_name': 'aadat',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461be7a6766f12a8fbe6'),
         'gene_id': None,
     },
     'AAED1': {
@@ -102,7 +90,6 @@ gene_models = {
         'searchable_name': 'aaed1',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461be7a6766f12a8fbe7'),
         'gene_id': None,
     },
     'AAGAB': {
@@ -110,7 +97,6 @@ gene_models = {
         'searchable_name': 'aagab',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461be7a6766f12a8fbe8'),
         'gene_id': None,
     },
     'AAK1': {
@@ -118,7 +104,6 @@ gene_models = {
         'searchable_name': 'aak1',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461be7a6766f12a8fbe9'),
         'gene_id': None,
     },
     'AAMDC': {
@@ -126,7 +111,6 @@ gene_models = {
         'searchable_name': 'aamdc',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461be7a6766f12a8fbea'),
         'gene_id': None,
     },
     'AAMP': {
@@ -134,7 +118,6 @@ gene_models = {
         'searchable_name': 'aamp',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461be7a6766f12a8fbeb'),
         'gene_id': None,
     },
     'AANAT': {
@@ -142,7 +125,6 @@ gene_models = {
         'searchable_name': 'aanat',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461be7a6766f12a8fbec'),
         'gene_id': None,
     },
     'AAR2': {
@@ -150,7 +132,6 @@ gene_models = {
         'searchable_name': 'aar2',
         'study_file_id': ObjectId('5dd5ae25421aa910a723a337'),
         'study_id': ObjectId('5d276a50421aa9117c982845'),
-        '_id': ObjectId('5e27461be7a6766f12a8fbed'),
         'gene_id': None,
     },
 }
