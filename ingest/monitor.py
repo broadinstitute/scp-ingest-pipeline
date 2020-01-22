@@ -63,7 +63,7 @@ def trace(fn):
         if 'GOOGLE_CLOUD_PROJECT' in os.environ:
             span_cm = span.span(name=f'{args[0].__class__.__name__} {fn.__name__}')
         # In the event where the environment variable is not set, use nullcontext
-        # manger which does nothing
+        # manager which does nothing
         else:
             span_cm = nullcontext()
         with span_cm:

@@ -47,6 +47,7 @@ class CellMetadata(Annotations):
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.cells = []
+        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
 
     # This model pertains to columns from cell metadata files
     @dataclass

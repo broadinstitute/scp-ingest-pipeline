@@ -26,12 +26,12 @@ class SubSample(Annotations):
             self.cell_metadata = Annotations(
                 cell_metadata_file, CellMetadata.ALLOWED_FILE_TYPES
             )
-        self.preproccess()
+        self.preprocess()
 
     def prepare_cell_metadata(self):
         """ Does an inner join on cell and cluster file """
         if self.cell_metadata is not None:
-            self.cell_metadata.preproccess()
+            self.cell_metadata.preprocess()
             self.merge_df(
                 self.file[self.coordinates_and_cell_headers], self.cell_metadata.file
             )

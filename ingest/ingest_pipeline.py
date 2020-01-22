@@ -33,12 +33,11 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 # Ingest mtx files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
-import argparse
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-import ast
 from contextlib import nullcontext
 
 import sys
+import inspect
 import json
 import os
 import logging
@@ -49,7 +48,6 @@ from pymongo.errors import BulkWriteError
 from google.cloud import bigquery
 
 # import google.cloud.logging
-from google.cloud.exceptions import NotFound
 from bson.objectid import ObjectId
 
 # For tracing
@@ -74,6 +72,7 @@ try:
     from clusters import Clusters
     from dense import Dense
     from mtx import Mtx
+    from cli_parser import create_parser, validate_arguments
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
@@ -89,20 +88,16 @@ except ImportError:
     from .clusters import Clusters
     from .dense import Dense
     from .mtx import Mtx
-
-# Ingest file types
-EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
+    from .cli_parser import create_parser, validate_arguments
 
 
 class IngestPipeline(object):
     # File location for metadata json convention
     JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
     logger = logging.getLogger(__name__)
-    errors_logger = setup_logger(
-        __name__ + '_errors', 'errors.txt', level=logging.ERROR
-    )
+    error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
     info_logger = setup_logger(__name__, 'info.txt')
-    my_debug_logger = log(errors_logger)
+    my_debug_logger = log(error_logger)
 
     def __init__(
         self,
@@ -117,7 +112,7 @@ class IngestPipeline(object):
         ingest_cluster=False,
         **kwargs,
     ):
-        """Initializes variables in ingest service."""
+        """Initializes variables in Ingest Pipeline"""
         self.study_id = study_id
         self.study_file_id = study_file_id
         self.matrix_file = matrix_file
@@ -169,13 +164,6 @@ class IngestPipeline(object):
             authMechanism='SCRAM-SHA-1',
         )
 
-        # TODO: Remove this block.
-        # Uncomment and run `pytest -s` to manually verify your MongoDB set-up.
-        # genes = client[db_name].genes
-        # gene = {'gene': 'HBB'}
-        # gene_mongo_id = genes.insert_one(gene).inserted_id
-        # print(f'gene_mongo_id {gene_mongo_id}')
-
         return client[db_name]
 
     def initialize_file_connection(self, file_type, file_path):
@@ -205,7 +193,13 @@ class IngestPipeline(object):
         """Closes connection to file"""
         self.matrix.close()
 
+    # @profile
+    # TODO: Make @profile conditional (SCP-2081)
+    def insert_many(self, collection_name, documents):
+        self.db[collection_name].insert_many(documents)
+
     @trace
+    # @profile
     def load(
         self,
         collection_name,
@@ -232,11 +226,11 @@ class IngestPipeline(object):
                 documents.append(data_array_model)
             # only insert documents if present
             if len(documents) > 0:
-                self.db['data_arrays'].insert_many(documents)
+                self.insert_many('data_arrays', documents)
         except Exception as e:
-            self.errors_logger.error(e, extra=self.extra_log_params)
+            self.error_logger.error(e, extra=self.extra_log_params)
             if e.details is not None:
-                self.errors_logger.error(e.details, extra=self.extra_log_params)
+                self.error_logger.error(e.details, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -278,7 +272,7 @@ class IngestPipeline(object):
 
         except Exception as e:
             # TODO: Log this error
-            self.errors_logger.error(e, extra=self.extra_log_params)
+            self.error_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -315,32 +309,37 @@ class IngestPipeline(object):
                 )
                 return write_status
             else:
-                self.errors_logger.error('Erroneous call to upload_metadata_to_bq')
+                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
     def load_expression_file(self, models, is_gene_model=False):
         collection_name = self.matrix.COLLECTION_NAME
+        # Creates operations to bulk write function
+        bulk_operations = list(map(lambda model: InsertOne(model), models))
         try:
             if is_gene_model:
                 # bulk_write_results describes the type and count of operations performed.
-                bulk_write_results = self.db[collection_name].bulk_write(models)
+                bulk_write_results = self.db[collection_name].bulk_write(
+                    bulk_operations
+                )
                 # Succesfully wrote documents
                 return True, bulk_write_results
             else:
-                bulk_write_results = self.db['data_arrays'].bulk_write(models)
+                bulk_write_results = self.db['data_arrays'].bulk_write(bulk_operations)
                 # Succesfully wrote documents
                 return True, bulk_write_results
         except BulkWriteError as bwe:
-            self.errors_logger.error(bwe.details, extra=self.extra_log_params)
+            self.error_logger.error(bwe.details, extra=self.extra_log_params)
             return False, bwe.details
 
         except Exception as e:
-            self.errors_logger.error(e, extra=self.extra_log_params)
+            self.error_logger.error(e, extra=self.extra_log_params)
             return False, None
 
     @trace
     @my_debug_logger()
+    # @profile
     def ingest_expression(self) -> int:
         """Ingests expression files.
         """
@@ -359,7 +358,7 @@ class IngestPipeline(object):
                     f"Attempting to load gene: {gene.gene_model['searchable_name']}",
                     extra=self.extra_log_params,
                 )
-                gene_documents.append(InsertOne(gene.gene_model))
+                gene_documents.append(gene.gene_model)
                 if idx == 0:
                     for data_array_document in self.matrix.set_data_array(
                         gene.gene_model['_id'],
@@ -367,14 +366,14 @@ class IngestPipeline(object):
                         gene.gene_model['searchable_name'],
                         {'create_cell_data_array': True},
                     ):
-                        data_array_documents.append(InsertOne(data_array_document))
+                        data_array_documents.append(data_array_document)
                 else:
                     for data_array_document in self.matrix.set_data_array(
                         gene.gene_model['_id'],
                         gene.gene_name,
                         gene.gene_model['searchable_name'],
                     ):
-                        data_array_documents.append(InsertOne(data_array_document))
+                        data_array_documents.append(data_array_document)
             load_gene_status, load_gene_results = self.load_expression_file(
                 gene_documents, is_gene_model=True
             )
@@ -394,16 +393,16 @@ class IngestPipeline(object):
                 )
                 return 0
             else:
-                self.errors_logger.error(
+                self.error_logger.error(
                     f'Loading expression data failed. Exiting program',
                     extra=self.extra_log_params,
                 )
                 return 1
         except Exception as e:
-            self.errors_logger.error(e, extra=self.extra_log_params)
+            self.error_logger.error(e, extra=self.extra_log_params)
             return 1
 
-    @my_debug_logger()
+    # @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         if self.cell_metadata.validate_format():
@@ -423,7 +422,7 @@ class IngestPipeline(object):
                         return 1
 
             self.cell_metadata.reset_file()
-            self.cell_metadata.preproccess()
+            self.cell_metadata.preprocess()
             for metadataModel in self.cell_metadata.transform():
                 self.info_logger.info(
                     f'Attempting to load cell metadata header : {metadataModel.annot_header}',
@@ -436,7 +435,7 @@ class IngestPipeline(object):
                     metadataModel.annot_header,
                 )
                 if status != 0:
-                    self.errors_logger.error(
+                    self.error_logger.error(
                         f'Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program',
                         extra=self.extra_log_params,
                     )
@@ -444,7 +443,7 @@ class IngestPipeline(object):
             return status if status is not None else 1
         else:
             report_issues(self.cell_metadata)
-            self.errors_logger.error(
+            self.error_logger.error(
                 f'Cell metadata file format invalid', extra=self.extra_log_params
             )
             return 1
@@ -463,7 +462,7 @@ class IngestPipeline(object):
                 return status
         # Incorrect file format
         else:
-            self.errors_logger.error(
+            self.error_logger.error(
                 f'Cluster file format invalid', extra=self.extra_log_params
             )
             return 1
@@ -494,245 +493,12 @@ class IngestPipeline(object):
         return 0
 
 
-def create_parser():
-    """Creates parser for input arguments.
-
-    Structuring the argument parsing code like this eases automated testing.
-
-    Args:
-        None
-
-    Returns:
-        parser: ArgumentParser object
-    """
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-
-    parser.add_argument(
-        "--study-file-id",
-        required=True,
-        help="Single study accession associated with ingest files",
-    )
-    parser.add_argument("--study-id", required=True, help="MongoDB identifier")
-
-    subparsers = parser.add_subparsers()
-
-    # Ingest expression files subparsers
-    parser_ingest_expression = subparsers.add_parser(
-        "ingest_expression",
-        help="Indicates that expression" " files are being ingested",
-    )
-
-    parser_ingest_expression.add_argument(
-        "--matrix-file",
-        required=True,
-        help="Absolute or relative path to "
-        "expression file. For 10x data this is "
-        "the .mtx file",
-    )
-
-    matrix_file_type_txt = "Type of expression file that is ingested. If mtx \
-        files are being ingested, .genes.tsv and .barcodes.tsv files must be \
-        included using --barcode-file <barcode file path> and --gene-file \
-        <gene file path>. See --help for more information"
-
-    parser_ingest_expression.add_argument(
-        "--taxon-name",
-        help="Scientific name of taxon associated with file.  E.g. 'Homo sapiens'",
-    )
-    parser_ingest_expression.add_argument(
-        "--taxon-common-name",
-        help="Common name of taxon associated with file.  E.g. 'human'",
-    )
-    parser_ingest_expression.add_argument(
-        "--ncbi-taxid",
-        help="NCBI Taxonomy ID of taxon associated with file.  E.g. 9606",
-    )
-    parser_ingest_expression.add_argument(
-        "--genome-assembly-accession",
-        help="Genome assembly accession for file.  E.g. 'GCA_000001405.15'",
-    )
-    parser_ingest_expression.add_argument(
-        "--genome-annotation",
-        help="Genomic annotation for expression files.  E.g. 'Ensembl 94'",
-    )
-
-    parser_ingest_expression.add_argument(
-        "--matrix-file-type",
-        choices=EXPRESSION_FILE_TYPES,
-        type=str.lower,
-        required=True,
-        help=matrix_file_type_txt,
-    )
-
-    # Gene and Barcode arguments for MTX bundle
-    parser_ingest_expression.add_argument(
-        "--barcode-file", help="Path to .barcodes.tsv files"
-    )
-    parser_ingest_expression.add_argument("--gene-file", help="Path to .genes.tsv file")
-
-    # Parser ingesting cell metadata files
-    parser_cell_metadata = subparsers.add_parser(
-        "ingest_cell_metadata",
-        help="Indicates that cell metadata files are being " "ingested",
-    )
-    parser_cell_metadata.add_argument(
-        "--cell-metadata-file",
-        required=True,
-        help="Absolute or relative path to cell metadata file.",
-    )
-    parser_cell_metadata.add_argument(
-        "--study-accession",
-        required=True,
-        help="Single study accession associated with ingest files.",
-    )
-    parser_cell_metadata.add_argument(
-        "--bq-dataset", help="BigQuery dataset identifer for ingest job."
-    )
-    parser_cell_metadata.add_argument(
-        "--bq-table", help="BigQuery table identifer for ingest job."
-    )
-    parser_cell_metadata.add_argument(
-        "--ingest-cell-metadata",
-        required=True,
-        action="store_true",
-        help="Indicates that ingest of cell metadata should be invoked",
-    )
-    parser_cell_metadata.add_argument(
-        "--validate-convention",
-        action="store_true",
-        help="Indicates that metadata file should be validated against convention",
-    )
-
-    # Parser ingesting cluster files
-    parser_cluster = subparsers.add_parser(
-        "ingest_cluster", help="Indicates that cluster file is being ingested"
-    )
-    parser_cluster.add_argument(
-        "--cluster-file",
-        required=True,
-        help="Absolute or relative path to cluster file.",
-    )
-    parser_cluster.add_argument(
-        "--ingest-cluster",
-        required=True,
-        action="store_true",
-        help="Indicates that ingest of cluster file should be invoked",
-    )
-    parser_cluster.add_argument(
-        "--name", required=True, help="Name of cluster from input form"
-    )
-    parser_cluster.add_argument(
-        "--domain-ranges",
-        type=ast.literal_eval,
-        help="Optional paramater taken from UI",
-    )
-
-    # Parser ingesting cluster files
-    parser_subsample = subparsers.add_parser(
-        "ingest_subsample", help="Indicates that subsampling will be initialized"
-    )
-    parser_subsample.add_argument(
-        "--subsample",
-        required=True,
-        action="store_true",
-        help="Indicates that subsampliing functionality should be invoked",
-    )
-    parser_subsample.add_argument(
-        "--name", required=True, help="Name of cluster from input form"
-    )
-    parser_subsample.add_argument(
-        "--cluster-file",
-        required=True,
-        help="Absolute or relative path to cluster file.",
-    )
-    parser_subsample.add_argument(
-        "--cell-metadata-file", help="Absolute or relative path to cell metadata file."
-    )
-
-    return parser
-
-
-def bq_dataset_exists(dataset):
-    bigquery_client = bigquery.Client()
-    dataset_ref = bigquery_client.dataset(dataset)
-    exists = False
-    try:
-        bigquery_client.get_dataset(dataset_ref)
-        exists = True
-    except NotFound:
-        print(f'Dataset {dataset} not found')
-    return exists
-
-
-def bq_table_exists(dataset, table):
-    bigquery_client = bigquery.Client()
-    dataset_ref = bigquery_client.dataset(dataset)
-    table_ref = dataset_ref.table(table)
-    exists = False
-    try:
-        bigquery_client.get_table(table_ref)
-        exists = True
-    except NotFound:
-        print(f'Dataset {table} not found')
-    return exists
-
-
-def validate_arguments(parsed_args):
-    """Verify parsed input arguments
-
-    Args:
-        parsed_args: Parsed input arguments
-
-    Returns:
-        None
-    """
-
-    if ("matrix_file" in parsed_args and parsed_args.matrix_file_type == "mtx") and (
-        parsed_args.gene_file is None or parsed_args.barcode_file is None
-    ):
-        raise ValueError(
-            " Missing arguments: --gene-file and --barcode-file. Mtx files "
-            "must include .genes.tsv, and .barcodes.tsv files. See --help for "
-            "more information"
-        )
-    if "ingest_cell_metadata" in parsed_args:
-        if (parsed_args.bq_dataset is not None and parsed_args.bq_table is None) or (
-            parsed_args.bq_dataset is None and parsed_args.bq_table is not None
-        ):
-            raise ValueError(
-                'Missing argument: --bq_dataset and --bq_table are both required for BigQuery upload.'
-            )
-        if parsed_args.bq_dataset is not None and not bq_dataset_exists(
-            parsed_args.bq_dataset
-        ):
-            raise ValueError(
-                f' Invalid argument: unable to connect to a BigQuery dataset called {parsed_args.bq_dataset}.'
-            )
-        if parsed_args.bq_table is not None and not bq_table_exists(
-            parsed_args.bq_dataset, parsed_args.bq_table
-        ):
-            raise ValueError(
-                f' Invalid argument: unable to connect to a BigQuery table called {parsed_args.bq_table}.'
-            )
-
-
-def main() -> None:
-    """This function handles the actual logic of this script.
-
-    Args:
-        None
-
-    Returns:
-        None
+def run_ingest(ingest, arguments, parsed_args):
+    """Runs Ingest Pipeline as indicated by CLI or importing (test) module
     """
     status = []
     status_cell_metadata = None
-    parsed_args = create_parser().parse_args()
-    validate_arguments(parsed_args)
-    arguments = vars(parsed_args)
-    ingest = IngestPipeline(**arguments)
+
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
         status.append(ingest.ingest_expression())
@@ -751,6 +517,12 @@ def main() -> None:
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
+    return status, status_cell_metadata
+
+
+def exit_pipeline(ingest, status, status_cell_metadata, arguments):
+    """Logs any errors, then exits Ingest Pipeline with standard OS code
+    """
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
@@ -781,6 +553,23 @@ def main() -> None:
                     # note that failure to load to MongoDB also triggers this error
                     sys.exit(os.EX_DATAERR)
             sys.exit(1)
+
+
+def main() -> None:
+    """Enables running Ingest Pipeline via CLI
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+    parsed_args = create_parser().parse_args()
+    validate_arguments(parsed_args)
+    arguments = vars(parsed_args)
+    ingest = IngestPipeline(**arguments)
+    status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
+    exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 
 if __name__ == "__main__":
