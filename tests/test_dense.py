@@ -98,5 +98,4 @@ class TestDense(unittest.TestCase):
             # _id is a unique identifier and can not be predicted
             # so we exclude it from the comparison
             del gene_model.gene_model['_id']
-            del gene_models[gene_model.gene_name]['_id']
             self.assertEqual(gene_model.gene_model, gene_models[gene_model.gene_name])
