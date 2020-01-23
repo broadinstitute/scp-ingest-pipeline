@@ -500,11 +500,11 @@ def exit_if_errors(metadata):
 
 def backoff_handler(details):
     """Handler function to log backoff attempts when querying OLS"""
-    logger.debug("Backing off {wait:0.1f} seconds afters {tries} tries "
+    logger.debug("Backing off {wait:0.1f} seconds after {tries} tries "
            "calling function {target} with args {args} and kwargs "
            "{kwargs}".format(**details))
 
-# Decorator to attach exponential backoff to external HTTP requests
+# Attach exponential backoff to external HTTP requests
 @backoff.on_exception(backoff.expo,
                       requests.exceptions.RequestException,
                       max_time=MAX_HTTP_REQUEST_TIME,
@@ -524,7 +524,7 @@ def retrieve_ontology(ontology_url):
     else:
         return None
 
-# Decorator to attach exponential backoff to external HTTP requests
+# Attach exponential backoff to external HTTP requests
 @backoff.on_exception(backoff.expo,
                       requests.exceptions.RequestException,
                       max_time=MAX_HTTP_REQUEST_TIME,
