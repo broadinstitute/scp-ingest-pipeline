@@ -52,6 +52,7 @@ colorama.init(autoreset=True)
 MAX_HTTP_REQUEST_TIME = 120
 MAX_HTTP_ATTEMPTS = 8
 
+
 def create_parser():
     """Parse command line values for validate_metadata
     """
@@ -498,19 +499,25 @@ def exit_if_errors(metadata):
         exit(1)
     return errors
 
+
 def backoff_handler(details):
     """Handler function to log backoff attempts when querying OLS"""
-    logger.debug("Backing off {wait:0.1f} seconds after {tries} tries "
-           "calling function {target} with args {args} and kwargs "
-           "{kwargs}".format(**details))
+    logger.debug(
+        "Backing off {wait:0.1f} seconds after {tries} tries "
+        "calling function {target} with args {args} and kwargs "
+        "{kwargs}".format(**details)
+    )
+
 
 # Attach exponential backoff to external HTTP requests
-@backoff.on_exception(backoff.expo,
-                      requests.exceptions.RequestException,
-                      max_time=MAX_HTTP_REQUEST_TIME,
-                      max_tries=MAX_HTTP_ATTEMPTS,
-                      on_backoff=backoff_handler,
-                      logger="logger")
+@backoff.on_exception(
+    backoff.expo,
+    requests.exceptions.RequestException,
+    max_time=MAX_HTTP_REQUEST_TIME,
+    max_tries=MAX_HTTP_ATTEMPTS,
+    on_backoff=backoff_handler,
+    logger="logger",
+)
 def retrieve_ontology(ontology_url):
     """Retrieve an ontology listing from EBI OLS
     returns JSON payload of ontology, or None if unsuccessful
@@ -524,13 +531,16 @@ def retrieve_ontology(ontology_url):
     else:
         return None
 
+
 # Attach exponential backoff to external HTTP requests
-@backoff.on_exception(backoff.expo,
-                      requests.exceptions.RequestException,
-                      max_time=MAX_HTTP_REQUEST_TIME,
-                      max_tries=MAX_HTTP_ATTEMPTS,
-                      on_backoff=backoff_handler,
-                      logger="logger")
+@backoff.on_exception(
+    backoff.expo,
+    requests.exceptions.RequestException,
+    max_time=MAX_HTTP_REQUEST_TIME,
+    max_tries=MAX_HTTP_ATTEMPTS,
+    on_backoff=backoff_handler,
+    logger="logger",
+)
 def retrieve_ontology_term(convention_url, ontology_id, ontologies):
     """Retrieve an individual term from an ontology
     returns JSON payload of ontology, or None if unsuccessful
@@ -561,7 +571,9 @@ def retrieve_ontology_term(convention_url, ontology_id, ontologies):
             convention_ontology = retrieve_ontology(convention_url)
             ontologies[convention_shortname] = convention_ontology
     else:
-        convention_ontology = None # we did not get a metadata_ontology, so abort the check
+        convention_ontology = (
+            None
+        )  # we did not get a metadata_ontology, so abort the check
     if convention_ontology and metadata_ontology:
         base_term_uri = metadata_ontology['config']['baseUris'][0]
         query_iri = encode_term_iri(term_id, base_term_uri)
@@ -591,6 +603,7 @@ def encode_term_iri(term_id, base_uri):
     encoded_iri = encoder.quote_plus(encoder.quote_plus(query_uri))
     return encoded_iri
 
+
 def extract_terminal_pathname(url):
     """Extract the last path segment from a URL
     """
@@ -610,7 +623,9 @@ def validate_collected_ontology_data(metadata, convention):
         ontology_url = convention['properties'][entry]['ontology']
         try:
             for ontology_id, ontology_label in metadata.ontology[entry].keys():
-                matching_term = retrieve_ontology_term(ontology_url, ontology_id, stored_ontologies)
+                matching_term = retrieve_ontology_term(
+                    ontology_url, ontology_id, stored_ontologies
+                )
                 if matching_term:
                     if matching_term['label'] != ontology_label:
                         try:
@@ -658,7 +673,9 @@ def validate_collected_ontology_data(metadata, convention):
         # handle case where no ontology_label provided
         except (TypeError, ValueError):
             for ontology_id in metadata.ontology[entry].keys():
-                matching_term = retrieve_ontology_term(ontology_url, ontology_id, stored_ontologies)
+                matching_term = retrieve_ontology_term(
+                    ontology_url, ontology_id, stored_ontologies
+                )
                 if not matching_term:
                     error_msg = f'{entry}: No match found in EBI OLS for provided ontology ID: {ontology_id}'
                     metadata.store_validation_issue(
@@ -675,11 +692,7 @@ def validate_collected_ontology_data(metadata, convention):
         except requests.exceptions.RequestException as err:
             error_msg = f'External service outage connecting to {ontology_url} when querying {ontology_id}:{ontology_label}: {err}'
             logger.error(error_msg)
-            metadata.store_validation_issue(
-                'error',
-                'ontology',
-                error_msg
-            )
+            metadata.store_validation_issue('error', 'ontology', error_msg)
             # immediately return as validation cannot continue
             return
     return

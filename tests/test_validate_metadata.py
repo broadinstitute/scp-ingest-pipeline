@@ -34,12 +34,14 @@ from validate_metadata import (
     validate_collected_ontology_data,
     validate_input_metadata,
     retrieve_ontology,
-    MAX_HTTP_ATTEMPTS
+    MAX_HTTP_ATTEMPTS,
 )
+
 
 # do not attempt a request, but instead throw a request exception
 def mocked_requests_get(*args, **kwargs):
     raise requests.exceptions.RequestException
+
 
 class TestValidateMetadata(unittest.TestCase):
     def setup_metadata(self, args):
@@ -267,8 +269,11 @@ class TestValidateMetadata(unittest.TestCase):
         """errors in retrieving data from external resources should attempt MAX_HTTP_ATTEMPTS times and throw an exception
         """
         request_url = 'https://www.ebi.ac.uk/ols/api/ontologies/'
-        self.assertRaises(requests.exceptions.RequestException, retrieve_ontology, request_url)
+        self.assertRaises(
+            requests.exceptions.RequestException, retrieve_ontology, request_url
+        )
         self.assertEqual(mocked_requests_get.call_count, MAX_HTTP_ATTEMPTS)
+
 
 if __name__ == '__main__':
     unittest.main()

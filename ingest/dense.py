@@ -10,6 +10,7 @@ Must have python 3.6 or higher.
 
 import collections
 from typing import List  # noqa: F401
+from bson.objectid import ObjectId
 
 try:
     from expression_files import GeneExpression
@@ -90,7 +91,7 @@ class Dense(GeneExpression, IngestFiles):
 
     @trace
     def transform(self):
-        """Transforms dense matrix into firestore data model for genes.
+        """Transforms dense matrix into gene data model.
         """
         # Holds gene name and gene model for a single gene
         GeneModel = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
@@ -102,6 +103,8 @@ class Dense(GeneExpression, IngestFiles):
             if gene in self.gene_names:
                 raise ValueError(f'Duplicate gene: {gene}')
             self.gene_names.append(gene)
+            id = ObjectId()
+
             yield GeneModel(
                 # Name of gene as observed in file
                 gene,
@@ -111,6 +114,7 @@ class Dense(GeneExpression, IngestFiles):
                         'searchable_name': formatted_gene_name.lower(),
                         'study_file_id': self.study_file_id,
                         'study_id': self.study_id,
+                        '_id': id,
                         'gene_id': self.matrix_params['gene_id']
                         if 'gene_id' in self.matrix_params
                         else None,

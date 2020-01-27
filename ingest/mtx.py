@@ -14,6 +14,8 @@ Must have python 3.6 or higher.
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import collections
 import scipy.io
+from bson.objectid import ObjectId
+import copy
 
 try:
     from expression_files import GeneExpression
@@ -74,13 +76,15 @@ class Mtx(GeneExpression):
             gene_id, gene = self.genes[int(raw_gene_idx)].split('\t')
             cell_name = self.cells[int(raw_barcode_idx)]
             exp_score = round(float(raw_exp_score), 3)
-            if gene in self.exp_by_gene:
+            if gene in self.exp_by_gene.keys():
                 # Append new score to 'expression_scores' key in GeneModelData
                 self.exp_by_gene[gene].expression_scores.append(exp_score)
                 # Append new cell name to 'cell_names' key in GeneModelData
                 self.exp_by_gene[gene].cell_names.append(cell_name)
             else:
-                self.exp_by_gene[gene] = GeneExpressionValues([cell_name], [exp_score])
+                self.exp_by_gene[gene] = copy.copy(
+                    GeneExpressionValues([exp_score], [cell_name])
+                )
                 self.info_logger.info(
                     f'Creating model for {gene} ', extra=self.extra_log_params
                 )
@@ -93,6 +97,7 @@ class Mtx(GeneExpression):
                             'study_file_id': self.study_file_id,
                             'study_id': self.study_id,
                             'gene_id': gene_id,
+                            '_id': ObjectId(),
                         }
                     ),
                 )

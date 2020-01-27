@@ -35,6 +35,7 @@ class GeneExpression:
         searchable_name: str
         study_file_id: ObjectId
         study_id: ObjectId
+        _id: ObjectId
         gene_id: str = None
 
     def __init__(self, file_path: str, study_id: str, study_file_id: str):
