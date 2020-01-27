@@ -176,13 +176,7 @@ class IngestTestCase(unittest.TestCase):
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
             self.assertEqual(model, gene_models[model['name']])
-        # print(model)
-
-        # Verify that the first gene model looks as expected
-        # mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-        # expected_model = get_gene_model(mock_dir)
-
-        # self.assertEqual(model, expected_model)
+        # print(models)
 
     def test_ingest_local_compressed_dense_matrix(self):
         """Ingest Pipeline should extract and transform local dense matrices
@@ -217,11 +211,6 @@ class IngestTestCase(unittest.TestCase):
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
             self.assertEqual(model, gene_models[model['name']])
-        # Verify that the first gene model looks as expected
-        # mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-        # expected_model = get_gene_model(mock_dir)
-        #
-        # self.assertEqual(model, expected_model)
 
     def test_ingest_mtx_matrix(self):
         """Ingest Pipeline should extract and transform MTX matrix bundles
@@ -258,10 +247,7 @@ class IngestTestCase(unittest.TestCase):
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
-        print(model)
-
-        # mock_dir = 'matrix_mtx'
-        # expected_model = get_gene_model(mock_dir)
+        # print(model)
         self.assertEqual(models, expected_model)
 
     def test_remote_mtx_bundles(self):
@@ -299,9 +285,6 @@ class IngestTestCase(unittest.TestCase):
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
-
-        # mock_dir = 'matrix_mtx'
-        # expected_model = get_gene_model(mock_dir)
         self.assertEqual(models, expected_model)
 
     def test_mtx_bundle_argument_validation(self):
