@@ -37,9 +37,11 @@ from validate_metadata import (
     MAX_HTTP_ATTEMPTS,
 )
 
+
 # do not attempt a request, but instead throw a request exception
 def mocked_requests_get(*args, **kwargs):
     raise requests.exceptions.RequestException
+
 
 class TestValidateMetadata(unittest.TestCase):
     def setup_metadata(self, args):
