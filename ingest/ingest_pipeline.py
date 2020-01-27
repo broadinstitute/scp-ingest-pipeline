@@ -22,7 +22,7 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --study-accession SCP123 --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
 
 # Ingest dense file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_1000_cells.txt --matrix-file-type dense
 
 # Ingest loom file
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
@@ -232,6 +232,30 @@ class IngestPipeline(object):
             return 1
         return 0
 
+    def load_expression_file(self, models, is_gene_model=False):
+        collection_name = self.matrix.COLLECTION_NAME
+        # Creates operations to perform for bulk write
+        bulk_operations = list(map(lambda model: InsertOne(model), models))
+        try:
+            if is_gene_model:
+                # bulk_write_results describes the type and count of operations performed.
+                bulk_write_results = self.db[collection_name].bulk_write(
+                    bulk_operations
+                )
+                # Succesfully wrote documents
+                return True, bulk_write_results
+            else:
+                bulk_write_results = self.db['data_arrays'].bulk_write(bulk_operations)
+                # Succesfully wrote documents
+                return True, bulk_write_results
+        except BulkWriteError as bwe:
+            self.error_logger.error(bwe.details, extra=self.extra_log_params)
+            return False, bwe.details
+
+        except Exception as e:
+            self.error_logger.error(e, extra=self.extra_log_params)
+            return False, None
+
     def load_subsample(
         self, parent_collection_name, subsampled_data, set_data_array_fn, scope
     ):
@@ -310,30 +334,6 @@ class IngestPipeline(object):
                 self.error_logger.error('Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
-
-    def load_expression_file(self, models, is_gene_model=False):
-        collection_name = self.matrix.COLLECTION_NAME
-        # Creates operations to bulk write function
-        bulk_operations = list(map(lambda model: InsertOne(model), models))
-        try:
-            if is_gene_model:
-                # bulk_write_results describes the type and count of operations performed.
-                bulk_write_results = self.db[collection_name].bulk_write(
-                    bulk_operations
-                )
-                # Succesfully wrote documents
-                return True, bulk_write_results
-            else:
-                bulk_write_results = self.db['data_arrays'].bulk_write(bulk_operations)
-                # Succesfully wrote documents
-                return True, bulk_write_results
-        except BulkWriteError as bwe:
-            self.error_logger.error(bwe.details, extra=self.extra_log_params)
-            return False, bwe.details
-
-        except Exception as e:
-            self.error_logger.error(e, extra=self.extra_log_params)
-            return False, None
 
     @trace
     @my_debug_logger()
