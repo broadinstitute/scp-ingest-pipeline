@@ -41,11 +41,10 @@ except ImportError:
     from ..cell_metadata import CellMetadata
     from .monitor import setup_logger
 
-# ToDo set up parameters to adjust log levels
-#  logging.basicConfig(level=logging.INFO, filename='app.log', filemode='w',
-#   format='%(name)s - %(levelname)s - %(message)s')
-logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+
+info_logger = setup_logger(__name__, "info.txt")
+
+error_logger = setup_logger(__name__ + "_errors", "errors.txt", level=logging.ERROR, format='')
 
 # Ensures normal color for print() output, unless explicitly changed
 colorama.init(autoreset=True)
@@ -58,7 +57,6 @@ MAX_HTTP_ATTEMPTS = 8
 def create_parser():
     """Parse command line values for validate_metadata
     """
-    logger.debug('Begin: create_parser')
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -128,7 +126,6 @@ def validate_schema(json, metadata):
 def is_array_metadata(convention, metadatum):
     """Check if metadata is array type from metadata convention
     """
-    logger.debug('Begin: is_array_metadata')
     try:
         type_lookup = convention['properties'][metadatum]['type']
         if type_lookup == 'array':
@@ -142,7 +139,6 @@ def is_array_metadata(convention, metadatum):
 def is_ontology_metadata(convention, metadatum):
     """Check if metadata is ontology from metadata convention
     """
-    logger.debug('Begin: is_ontology_metadata')
     try:
         return bool(convention['properties'][metadatum]['ontology'])
     except KeyError:
@@ -152,7 +148,6 @@ def is_ontology_metadata(convention, metadatum):
 def lookup_metadata_type(convention, metadatum):
     """Look up metadata type from metadata convention
     """
-    logger.debug('Begin: lookup_metadata_type')
     try:
         if is_array_metadata(convention, metadatum):
             type_lookup = convention['properties'][metadatum]['items']['type']
@@ -193,7 +188,6 @@ def validate_cells_unique(metadata):
 def collect_cell_for_ontology(metadatum, row_data, metadata, array=False):
     """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
     """
-    logger.debug('Begin: collect_cell_for_ontology')
     if metadatum.endswith('__unit'):
         ontology_label = metadatum + '_label'
     else:
@@ -221,7 +215,6 @@ def collect_cell_for_ontology(metadatum, row_data, metadata, array=False):
 def collect_ontology_data(row_data, metadata, convention):
     """Collect unique ontology IDs for ontology validation
     """
-    logger.debug('Begin: collect_ontology_data')
     for entry in row_data.keys():
         if is_ontology_metadata(convention, entry):
             if is_array_metadata(convention, entry):
@@ -377,7 +370,6 @@ def process_metadata_row(metadata, convention, line):
     """Process metadata row by row
     returns processed row of convention data as dict
     """
-    logger.debug('Begin: process_metadata_row')
     # extract first row of metadata from pandas array as python list
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     # if input was TSV metadata file, SCP format requires 'NAME' for the first
@@ -399,7 +391,6 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
     """Evaluate metadata input against metadata convention using JSON schema
     returns False if input convention is invalid JSON schema
     """
-    logger.debug('Begin: collect_jsonschema_errors')
     # this function seems overloaded with its three tasks
     # schema validation, non-ontology errors, ontology info collection
     # the latter two should be done together in the same pass thru the file
@@ -442,7 +433,8 @@ def record_issue(errfile, warnfile, issue_type, msg, error_logger):
 
     if issue_type == 'error':
         errfile.write(msg + '\n')
-        error_logger.error(msg, extra={'study_id': None, 'duration': None})
+        # error_logger.error(msg, extra={'study_id': None, 'duration': None})
+        error_logger.error(msg)
         color = Fore.RED
     elif issue_type == 'warn':
         warnfile.write(msg + '\n')
@@ -457,16 +449,6 @@ def report_issues(metadata):
     """Report issues in CellMetadata.issues dictionary
     returns True if errors are reported, False if no errors to report
     """
-    logger.debug('Begin: report_issues')
-
-    info_logger = setup_logger(__name__, "info.txt")
-
-    error_logger = logging.getLogger(__name__ + '_errors')
-    formatter = logging.Formatter('')
-    handler = logging.FileHandler('errors.txt')
-    handler.setFormatter(formatter)
-    error_logger.setLevel(logging.ERROR)
-    error_logger.addHandler(handler)
 
     info_logger.info(
         f'Checking for validation issues',
@@ -504,8 +486,6 @@ def exit_if_errors(metadata):
     """Determine if CellMetadata.issues has errors
     Exit with error code 1 if errors are reported, return False if no errors
     """
-    logger.debug('Begin: exit_if_errors')
-
     errors = False
     for error_type in metadata.issues.keys():
         for error_category, category_dict in metadata.issues[error_type].items():
@@ -633,7 +613,6 @@ def validate_collected_ontology_data(metadata, convention):
     validity of ontology_id and cross-check that input ontology_label
     matches ontology_label from EBI OLS lookup
     """
-    logger.debug('Begin: validate_collected_ontology_data')
     # container to store references to retrieved ontologies for faster validation
     stored_ontologies = {}
     for entry in metadata.ontology.keys():

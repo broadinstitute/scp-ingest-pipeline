@@ -4,15 +4,19 @@ import time
 from contextlib import nullcontext
 
 
-def setup_logger(logger_name, log_file, level=logging.DEBUG):
+def setup_logger(logger_name, log_file, level=logging.DEBUG, format='default'):
     logger = logging.getLogger(logger_name)
-    formatter = logging.Formatter(
-        '[%(asctime)s] %(levelname)s [%(study_id)s.%(name)s.%(funcName)s:%(lineno)d:%(duration)s] %(message)s'
-    )
+    if format == 'default':
+        formatter = logging.Formatter(
+            '[%(asctime)s] %(levelname)s [%(study_id)s.%(name)s.%(funcName)s:%(lineno)d:%(duration)s] %(message)s'
+        )
+    else:
+        formatter = logging.Formatter(format)
     handler = logging.FileHandler(log_file)
     handler.setFormatter(formatter)
     logger.setLevel(level)
     logger.addHandler(handler)
+    logger.propagate = False
     return logger
 
 
