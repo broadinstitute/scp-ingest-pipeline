@@ -426,14 +426,13 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
         return False
 
 
-def record_issue(errfile, warnfile, issue_type, msg, error_logger):
+def record_issue(errfile, warnfile, issue_type, msg):
     """print issue to console with coloring and
     writes issues to appropriate issue file
     """
 
     if issue_type == 'error':
         errfile.write(msg + '\n')
-        # error_logger.error(msg, extra={'study_id': None, 'duration': None})
         error_logger.error(msg)
         color = Fore.RED
     elif issue_type == 'warn':
@@ -463,7 +462,7 @@ def report_issues(metadata):
         for issue_category, category_dict in metadata.issues[issue_type].items():
             if category_dict:
                 category_header = f'\n*** {issue_category} {issue_type} list:'
-                record_issue(error_file, warn_file, issue_type, category_header, error_logger)
+                record_issue(error_file, warn_file, issue_type, category_header)
                 if issue_type == 'error':
                     has_errors = True
                 elif issue_type == 'warn':
@@ -471,12 +470,12 @@ def report_issues(metadata):
                 for issue_text, cells in category_dict.items():
                     if cells:
                         issue_msg = f'{issue_text} [ Error count: {len(cells)} ]'
-                        record_issue(error_file, warn_file, issue_type, issue_msg, error_logger)
+                        record_issue(error_file, warn_file, issue_type, issue_msg)
                     else:
-                        record_issue(error_file, warn_file, issue_type, issue_text, error_logger)
+                        record_issue(error_file, warn_file, issue_type, issue_text)
     if not has_errors and not has_warnings:
         no_issues = 'No errors or warnings detected for input metadata file'
-        record_issue(error_file, warn_file, None, no_issues, error_logger)
+        record_issue(error_file, warn_file, None, no_issues)
     error_file.close()
     warn_file.close()
     return has_errors
