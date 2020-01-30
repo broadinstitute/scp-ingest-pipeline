@@ -44,7 +44,9 @@ except ImportError:
 
 info_logger = setup_logger(__name__, "info.txt")
 
-error_logger = setup_logger(__name__ + "_errors", "errors.txt", level=logging.ERROR, format='')
+error_logger = setup_logger(
+    __name__ + "_errors", "errors.txt", level=logging.ERROR, format=''
+)
 
 # Ensures normal color for print() output, unless explicitly changed
 colorama.init(autoreset=True)
@@ -498,10 +500,11 @@ def exit_if_errors(metadata):
 
 def backoff_handler(details):
     """Handler function to log backoff attempts when querying OLS"""
-    logger.debug(
+    info_logger.debug(
         "Backing off {wait:0.1f} seconds after {tries} tries "
         "calling function {target} with args {args} and kwargs "
-        "{kwargs}".format(**details)
+        "{kwargs}".format(**details),
+        extra={'study_id': None, 'duration': None},
     )
 
 
@@ -512,7 +515,7 @@ def backoff_handler(details):
     max_time=MAX_HTTP_REQUEST_TIME,
     max_tries=MAX_HTTP_ATTEMPTS,
     on_backoff=backoff_handler,
-    logger="logger",
+    logger="info_logger",
 )
 def retrieve_ontology(ontology_url):
     """Retrieve an ontology listing from EBI OLS
@@ -535,7 +538,7 @@ def retrieve_ontology(ontology_url):
     max_time=MAX_HTTP_REQUEST_TIME,
     max_tries=MAX_HTTP_ATTEMPTS,
     on_backoff=backoff_handler,
-    logger="logger",
+    logger="info_logger",
 )
 def retrieve_ontology_term(convention_url, ontology_id, ontologies):
     """Retrieve an individual term from an ontology
@@ -583,11 +586,15 @@ def retrieve_ontology_term(convention_url, ontology_id, ontologies):
         else:
             return None
     elif not metadata_ontology:
-        print(
-            f'No result from EBI OLS for provided ontology shortname \"{ontology_shortname}\"'
-        )
+        error_msg = f'No result from EBI OLS for provided ontology shortname \"{ontology_shortname}\"'
+        print(error_msg)
+        info_logger.info(error_msg, extra={'study_id': None, 'duration': None})
     else:
-        print(f'encountered issue retrieving {convention_url} or {ontology_shortname}')
+        error_msg = (
+            f'encountered issue retrieving {convention_url} or {ontology_shortname}'
+        )
+        print(error_msg)
+        info_logger.info(error_msg, extra={'study_id': None, 'duration': None})
         return None
 
 
@@ -686,7 +693,7 @@ def validate_collected_ontology_data(metadata, convention):
                 metadata.store_validation_issue('warn', 'ontology', error_msg)
         except requests.exceptions.RequestException as err:
             error_msg = f'External service outage connecting to {ontology_url} when querying {ontology_id}:{ontology_label}: {err}'
-            logger.error(error_msg)
+            error_logger.error(error_msg)
             metadata.store_validation_issue('error', 'ontology', error_msg)
             # immediately return as validation cannot continue
             return
@@ -761,16 +768,23 @@ def push_metadata_to_bq(metadata, ndjson, dataset, table):
                 source_file, table_ref, job_config=job_config
             )
         job.result()  # Waits for table load to complete.
-        print(f'Metadata uploaded to BigQuery. ({job.output_rows} rows)')
+        info_msg = f'Metadata uploaded to BigQuery. ({job.output_rows} rows)'
+        print(info_msg)
+        info_logger.info(
+            info_msg, extra={'study_id': metadata.study_id, 'duration': None}
+        )
     # Unable to intentionally trigger a failed BigQuery upload
     # please add print statement below to error logging so
     # error handling can be updated when better understood
     except Exception as e:
         print(e)
+        info_logger.info(e, extra={'study_id': metadata.study_id, 'duration': None})
         return 1
     if job.output_rows != len(metadata.cells):
-        print(
-            f'BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells'
+        info_msg = f'BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells'
+        print(info_msg)
+        info_logger.info(
+            info_msg, extra={'study_id': metadata.study_id, 'duration': None}
         )
         return 1
     os.remove(ndjson)
