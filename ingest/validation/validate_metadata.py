@@ -398,6 +398,11 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
     # the latter two should be done together in the same pass thru the file
     js_errors = defaultdict(list)
     schema = validate_schema(convention, metadata)
+    # truncate jsonfile so appends invoked below are added to an empty file
+    if bq_json:
+        bq_filename = str(metadata.study_file_id) + '.json'
+        with open(bq_filename, 'w') as jsonfile:
+            pass
     if schema:
         compare_type_annots_to_convention(metadata, convention)
         rows = metadata.yield_by_row()
@@ -413,7 +418,6 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
                     pass
                 js_errors[error.message].append(row['CellID'])
             if bq_json:
-                bq_filename = str(metadata.study_file_id) + '.json'
                 # add non-convention, SCP-required, metadata for BigQuery
                 row['study_accession'] = metadata.study_accession
                 row['file_id'] = str(metadata.study_file_id)
