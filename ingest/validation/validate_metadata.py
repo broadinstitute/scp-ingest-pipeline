@@ -401,8 +401,8 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
     # truncate jsonfile so appends invoked below are added to an empty file
     if bq_json:
         bq_filename = str(metadata.study_file_id) + '.json'
-        with open(bq_filename, 'w') as jsonfile:
-            pass
+        fh = open(bq_filename, 'w')
+        fh.close()
     if schema:
         compare_type_annots_to_convention(metadata, convention)
         rows = metadata.yield_by_row()
