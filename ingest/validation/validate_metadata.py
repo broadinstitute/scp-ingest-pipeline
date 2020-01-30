@@ -785,11 +785,9 @@ def push_metadata_to_bq(metadata, ndjson, dataset, table):
         info_logger.info(e, extra={'study_id': metadata.study_id, 'duration': None})
         return 1
     if job.output_rows != len(metadata.cells):
-        info_msg = f'BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells'
-        print(info_msg)
-        info_logger.info(
-            info_msg, extra={'study_id': metadata.study_id, 'duration': None}
-        )
+        error_msg = f'BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells'
+        print(error_msg)
+        error_logger.error(error_msg)
         return 1
     os.remove(ndjson)
     return 0
