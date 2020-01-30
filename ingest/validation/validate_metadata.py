@@ -35,9 +35,11 @@ sys.path.append('..')
 try:
     # Used when importing internally and in tests
     from cell_metadata import CellMetadata
+    from monitor import setup_logger
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from ..cell_metadata import CellMetadata
+    from .monitor import setup_logger
 
 # ToDo set up parameters to adjust log levels
 #  logging.basicConfig(level=logging.INFO, filename='app.log', filemode='w',
@@ -433,13 +435,14 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
         return False
 
 
-def record_issue(errfile, warnfile, issue_type, msg):
+def record_issue(errfile, warnfile, issue_type, msg, error_logger):
     """print issue to console with coloring and
     writes issues to appropriate issue file
     """
 
     if issue_type == 'error':
         errfile.write(msg + '\n')
+        error_logger.error(msg, extra={'study_id': None, 'duration': None})
         color = Fore.RED
     elif issue_type == 'warn':
         warnfile.write(msg + '\n')
@@ -456,6 +459,20 @@ def report_issues(metadata):
     """
     logger.debug('Begin: report_issues')
 
+    info_logger = setup_logger(__name__, "info.txt")
+
+    error_logger = logging.getLogger(__name__ + '_errors')
+    formatter = logging.Formatter('')
+    handler = logging.FileHandler('errors.txt')
+    handler.setFormatter(formatter)
+    error_logger.setLevel(logging.ERROR)
+    error_logger.addHandler(handler)
+
+    info_logger.info(
+        f'Checking for validation issues',
+        extra={'study_id': metadata.study_id, 'duration': None},
+    )
+
     error_file = open('scp_validation_errors.txt', 'w')
     warn_file = open('scp_validation_warnings.txt', 'w')
     has_errors = False
@@ -464,7 +481,7 @@ def report_issues(metadata):
         for issue_category, category_dict in metadata.issues[issue_type].items():
             if category_dict:
                 category_header = f'\n*** {issue_category} {issue_type} list:'
-                record_issue(error_file, warn_file, issue_type, category_header)
+                record_issue(error_file, warn_file, issue_type, category_header, error_logger)
                 if issue_type == 'error':
                     has_errors = True
                 elif issue_type == 'warn':
@@ -472,12 +489,12 @@ def report_issues(metadata):
                 for issue_text, cells in category_dict.items():
                     if cells:
                         issue_msg = f'{issue_text} [ Error count: {len(cells)} ]'
-                        record_issue(error_file, warn_file, issue_type, issue_msg)
+                        record_issue(error_file, warn_file, issue_type, issue_msg, error_logger)
                     else:
-                        record_issue(error_file, warn_file, issue_type, issue_text)
+                        record_issue(error_file, warn_file, issue_type, issue_text, error_logger)
     if not has_errors and not has_warnings:
         no_issues = 'No errors or warnings detected for input metadata file'
-        record_issue(error_file, warn_file, None, no_issues)
+        record_issue(error_file, warn_file, None, no_issues, error_logger)
     error_file.close()
     warn_file.close()
     return has_errors
