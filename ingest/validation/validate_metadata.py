@@ -401,7 +401,7 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
 
     if bq_json:
         bq_filename = str(metadata.study_file_id) + '.json'
-        # truncate jsonfile so data from serialize_bq starts with an empty file
+        # truncate JSON file so data from serialize_bq starts with an empty file
         fh = open(bq_filename, 'w')
         fh.close()
     if schema:
