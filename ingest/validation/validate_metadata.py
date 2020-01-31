@@ -398,9 +398,10 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
     # the latter two should be done together in the same pass thru the file
     js_errors = defaultdict(list)
     schema = validate_schema(convention, metadata)
-    # truncate jsonfile so appends invoked below are added to an empty file
+
     if bq_json:
         bq_filename = str(metadata.study_file_id) + '.json'
+        # truncate jsonfile so data from serialize_bq starts with an empty file
         fh = open(bq_filename, 'w')
         fh.close()
     if schema:
