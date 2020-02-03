@@ -35,15 +35,18 @@ sys.path.append('..')
 try:
     # Used when importing internally and in tests
     from cell_metadata import CellMetadata
+    from monitor import setup_logger
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from ..cell_metadata import CellMetadata
+    from .monitor import setup_logger
 
-# ToDo set up parameters to adjust log levels
-#  logging.basicConfig(level=logging.INFO, filename='app.log', filemode='w',
-#   format='%(name)s - %(levelname)s - %(message)s')
-logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+
+info_logger = setup_logger(__name__, "info.txt")
+
+error_logger = setup_logger(
+    __name__ + "_errors", "errors.txt", level=logging.ERROR, format=''
+)
 
 # Ensures normal color for print() output, unless explicitly changed
 colorama.init(autoreset=True)
@@ -56,7 +59,6 @@ MAX_HTTP_ATTEMPTS = 8
 def create_parser():
     """Parse command line values for validate_metadata
     """
-    logger.debug('Begin: create_parser')
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -126,7 +128,6 @@ def validate_schema(json, metadata):
 def is_array_metadata(convention, metadatum):
     """Check if metadata is array type from metadata convention
     """
-    logger.debug('Begin: is_array_metadata')
     try:
         type_lookup = convention['properties'][metadatum]['type']
         if type_lookup == 'array':
@@ -140,7 +141,6 @@ def is_array_metadata(convention, metadatum):
 def is_ontology_metadata(convention, metadatum):
     """Check if metadata is ontology from metadata convention
     """
-    logger.debug('Begin: is_ontology_metadata')
     try:
         return bool(convention['properties'][metadatum]['ontology'])
     except KeyError:
@@ -150,7 +150,6 @@ def is_ontology_metadata(convention, metadatum):
 def lookup_metadata_type(convention, metadatum):
     """Look up metadata type from metadata convention
     """
-    logger.debug('Begin: lookup_metadata_type')
     try:
         if is_array_metadata(convention, metadatum):
             type_lookup = convention['properties'][metadatum]['items']['type']
@@ -191,7 +190,6 @@ def validate_cells_unique(metadata):
 def collect_cell_for_ontology(metadatum, row_data, metadata, array=False):
     """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
     """
-    logger.debug('Begin: collect_cell_for_ontology')
     if metadatum.endswith('__unit'):
         ontology_label = metadatum + '_label'
     else:
@@ -219,7 +217,6 @@ def collect_cell_for_ontology(metadatum, row_data, metadata, array=False):
 def collect_ontology_data(row_data, metadata, convention):
     """Collect unique ontology IDs for ontology validation
     """
-    logger.debug('Begin: collect_ontology_data')
     for entry in row_data.keys():
         if is_ontology_metadata(convention, entry):
             if is_array_metadata(convention, entry):
@@ -375,7 +372,6 @@ def process_metadata_row(metadata, convention, line):
     """Process metadata row by row
     returns processed row of convention data as dict
     """
-    logger.debug('Begin: process_metadata_row')
     # extract first row of metadata from pandas array as python list
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     # if input was TSV metadata file, SCP format requires 'NAME' for the first
@@ -397,12 +393,17 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
     """Evaluate metadata input against metadata convention using JSON schema
     returns False if input convention is invalid JSON schema
     """
-    logger.debug('Begin: collect_jsonschema_errors')
     # this function seems overloaded with its three tasks
     # schema validation, non-ontology errors, ontology info collection
     # the latter two should be done together in the same pass thru the file
     js_errors = defaultdict(list)
     schema = validate_schema(convention, metadata)
+
+    if bq_json:
+        bq_filename = str(metadata.study_file_id) + '.json'
+        # truncate JSON file so data from serialize_bq starts with an empty file
+        fh = open(bq_filename, 'w')
+        fh.close()
     if schema:
         compare_type_annots_to_convention(metadata, convention)
         rows = metadata.yield_by_row()
@@ -418,7 +419,6 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
                     pass
                 js_errors[error.message].append(row['CellID'])
             if bq_json:
-                bq_filename = str(metadata.study_file_id) + '.json'
                 # add non-convention, SCP-required, metadata for BigQuery
                 row['study_accession'] = metadata.study_accession
                 row['file_id'] = str(metadata.study_file_id)
@@ -440,6 +440,7 @@ def record_issue(errfile, warnfile, issue_type, msg):
 
     if issue_type == 'error':
         errfile.write(msg + '\n')
+        error_logger.error(msg)
         color = Fore.RED
     elif issue_type == 'warn':
         warnfile.write(msg + '\n')
@@ -454,7 +455,11 @@ def report_issues(metadata):
     """Report issues in CellMetadata.issues dictionary
     returns True if errors are reported, False if no errors to report
     """
-    logger.debug('Begin: report_issues')
+
+    info_logger.info(
+        f'Checking for validation issues',
+        extra={'study_id': metadata.study_id, 'duration': None},
+    )
 
     error_file = open('scp_validation_errors.txt', 'w')
     warn_file = open('scp_validation_warnings.txt', 'w')
@@ -487,8 +492,6 @@ def exit_if_errors(metadata):
     """Determine if CellMetadata.issues has errors
     Exit with error code 1 if errors are reported, return False if no errors
     """
-    logger.debug('Begin: exit_if_errors')
-
     errors = False
     for error_type in metadata.issues.keys():
         for error_category, category_dict in metadata.issues[error_type].items():
@@ -502,10 +505,11 @@ def exit_if_errors(metadata):
 
 def backoff_handler(details):
     """Handler function to log backoff attempts when querying OLS"""
-    logger.debug(
+    info_logger.debug(
         "Backing off {wait:0.1f} seconds after {tries} tries "
         "calling function {target} with args {args} and kwargs "
-        "{kwargs}".format(**details)
+        "{kwargs}".format(**details),
+        extra={'study_id': None, 'duration': None},
     )
 
 
@@ -516,7 +520,7 @@ def backoff_handler(details):
     max_time=MAX_HTTP_REQUEST_TIME,
     max_tries=MAX_HTTP_ATTEMPTS,
     on_backoff=backoff_handler,
-    logger="logger",
+    logger="info_logger",
 )
 def retrieve_ontology(ontology_url):
     """Retrieve an ontology listing from EBI OLS
@@ -539,7 +543,7 @@ def retrieve_ontology(ontology_url):
     max_time=MAX_HTTP_REQUEST_TIME,
     max_tries=MAX_HTTP_ATTEMPTS,
     on_backoff=backoff_handler,
-    logger="logger",
+    logger="info_logger",
 )
 def retrieve_ontology_term(convention_url, ontology_id, ontologies):
     """Retrieve an individual term from an ontology
@@ -587,11 +591,15 @@ def retrieve_ontology_term(convention_url, ontology_id, ontologies):
         else:
             return None
     elif not metadata_ontology:
-        print(
-            f'No result from EBI OLS for provided ontology shortname \"{ontology_shortname}\"'
-        )
+        error_msg = f'No result from EBI OLS for provided ontology shortname \"{ontology_shortname}\"'
+        print(error_msg)
+        info_logger.info(error_msg, extra={'study_id': None, 'duration': None})
     else:
-        print(f'encountered issue retrieving {convention_url} or {ontology_shortname}')
+        error_msg = (
+            f'encountered issue retrieving {convention_url} or {ontology_shortname}'
+        )
+        print(error_msg)
+        info_logger.info(error_msg, extra={'study_id': None, 'duration': None})
         return None
 
 
@@ -616,7 +624,6 @@ def validate_collected_ontology_data(metadata, convention):
     validity of ontology_id and cross-check that input ontology_label
     matches ontology_label from EBI OLS lookup
     """
-    logger.debug('Begin: validate_collected_ontology_data')
     # container to store references to retrieved ontologies for faster validation
     stored_ontologies = {}
     for entry in metadata.ontology.keys():
@@ -691,7 +698,7 @@ def validate_collected_ontology_data(metadata, convention):
                 metadata.store_validation_issue('warn', 'ontology', error_msg)
         except requests.exceptions.RequestException as err:
             error_msg = f'External service outage connecting to {ontology_url} when querying {ontology_id}:{ontology_label}: {err}'
-            logger.error(error_msg)
+            error_logger.error(error_msg)
             metadata.store_validation_issue('error', 'ontology', error_msg)
             # immediately return as validation cannot continue
             return
@@ -766,17 +773,22 @@ def push_metadata_to_bq(metadata, ndjson, dataset, table):
                 source_file, table_ref, job_config=job_config
             )
         job.result()  # Waits for table load to complete.
-        print(f'Metadata uploaded to BigQuery. ({job.output_rows} rows)')
+        info_msg = f'Metadata uploaded to BigQuery. ({job.output_rows} rows)'
+        print(info_msg)
+        info_logger.info(
+            info_msg, extra={'study_id': metadata.study_id, 'duration': None}
+        )
     # Unable to intentionally trigger a failed BigQuery upload
     # please add print statement below to error logging so
     # error handling can be updated when better understood
     except Exception as e:
         print(e)
+        info_logger.info(e, extra={'study_id': metadata.study_id, 'duration': None})
         return 1
     if job.output_rows != len(metadata.cells):
-        print(
-            f'BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells'
-        )
+        error_msg = f'BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells'
+        print(error_msg)
+        error_logger.error(error_msg)
         return 1
     os.remove(ndjson)
     return 0
