@@ -312,6 +312,17 @@ def cast_string_type(value):
     else:
         return value
 
+def regularize_ontologyID(value):
+    """Regularize ontologyIDs for storage with underscore format
+    """
+    try:
+        ontology_shortname, term_id = re.split('[_:]', value)
+        value = ontology_shortname + '_' + term_id
+        return value
+    # when ontolgyID is malformed and has no separator -> ValueError
+    # when ontologyID value is empty string -> TypeError
+    except (ValueError, TypeError):
+        return value
 
 def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metadata):
     """for metadatum, lookup expected type by metadata convention
@@ -332,6 +343,8 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
             # files that support array-based metadata navtively (eg. loom,
             # anndata etc) splitting on pipe may become problematic
             for element in value.split('|'):
+                if 'ontology' in convention['properties'][metadatum]:
+                    element = regularize_ontologyID(element)
                 cast_element = metadata_types.get(
                     lookup_metadata_type(convention, metadatum)
                 )(element)
@@ -349,8 +362,14 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         # metadata is being cast - the value needs to be passed as an array,
         # it is already boolean via Pandas' inference processes
         except AttributeError:
-            cast_metadata[metadatum] = [value]
+            if 'ontology' in convention['properties'][metadatum]:
+                value = regularize_ontologyID(value)
+            cast_metadata[metadatum] = [metadata_types.get(
+                lookup_metadata_type(convention, metadatum)
+            )(value)]
     else:
+        if 'ontology' in convention['properties'][metadatum]:
+            value = regularize_ontologyID(value)
         try:
             cast_value = metadata_types.get(
                 lookup_metadata_type(convention, metadatum)
