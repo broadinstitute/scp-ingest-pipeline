@@ -227,13 +227,12 @@ class IngestPipeline(object):
                 self.insert_many('data_arrays', documents)
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
-            self.error_logger.error(
-                'Unable to access to MongoDB?', extra=self.extra_log_params
-            )
             try:
                 self.error_logger.error(e.details, extra=self.extra_log_params)
             except AttributeError as e:
-                self.error_logger.error(e, extra=self.extra_log_params)
+                self.error_logger.error(
+                'Check access to MongoDB', extra=self.extra_log_params
+            )
             return 1
         return 0
 
