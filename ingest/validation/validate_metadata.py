@@ -307,7 +307,7 @@ def cast_integer_type(value):
     """Cast metadata value as integer
     """
     if value_is_nan(value):
-    # nan indicates missing data, has no valid integer value for casting
+        # nan indicates missing data, has no valid integer value for casting
         return value
     else:
         return int(value)
@@ -323,8 +323,8 @@ def cast_string_type(value):
     """Cast string type per convention where Pandas autodetected a number
     """
     if value_is_nan(value):
-    # nan indicates missing data; by type, nan is a numpy float
-    # so a separate type check is needed for proper handling
+        # nan indicates missing data; by type, nan is a numpy float
+        # so a separate type check is needed for proper handling
         return value
     elif isinstance(value, numbers.Number):
         return str(value)
