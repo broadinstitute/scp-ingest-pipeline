@@ -30,6 +30,7 @@ import colorama
 from colorama import Fore
 import jsonschema
 from google.cloud import bigquery
+import numpy as np
 
 sys.path.append('..')
 try:
@@ -291,11 +292,20 @@ def cast_boolean_type(value):
     else:
         raise ValueError(f'cannot cast {value} as boolean')
 
+def value_is_nan(value):
+    try:
+        return np.isnan(value)
+    except TypeError:
+        return False
+
 
 def cast_integer_type(value):
     """Cast metadata value as integer
     """
-    return int(value)
+    if value_is_nan(value):
+        return value
+    else:
+        return int(value)
 
 
 def cast_float_type(value):
@@ -307,7 +317,9 @@ def cast_float_type(value):
 def cast_string_type(value):
     """Cast string type per convention where Pandas autodetected a number
     """
-    if isinstance(value, numbers.Number):
+    if value_is_nan(value):
+        return value
+    elif isinstance(value, numbers.Number):
         return str(value)
     else:
         return value
@@ -343,8 +355,12 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
             # files that support array-based metadata navtively (eg. loom,
             # anndata etc) splitting on pipe may become problematic
             for element in value.split('|'):
-                if 'ontology' in convention['properties'][metadatum]:
-                    element = regularize_ontologyID(element)
+                try:
+                    if 'ontology' in convention['properties'][metadatum]:
+                        element = regularize_ontologyID(element)
+                except KeyError:
+                # non-metadata convention metadata will trigger this exception
+                    pass
                 cast_element = metadata_types.get(
                     lookup_metadata_type(convention, metadatum)
                 )(element)
@@ -362,14 +378,22 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         # metadata is being cast - the value needs to be passed as an array,
         # it is already boolean via Pandas' inference processes
         except AttributeError:
-            if 'ontology' in convention['properties'][metadatum]:
-                value = regularize_ontologyID(value)
+            try:
+                if 'ontology' in convention['properties'][metadatum]:
+                    value = regularize_ontologyID(value)
+            except KeyError:
+                # non-metadata convention metadata will trigger this exception
+                    pass
             cast_metadata[metadatum] = [metadata_types.get(
                 lookup_metadata_type(convention, metadatum)
             )(value)]
     else:
-        if 'ontology' in convention['properties'][metadatum]:
-            value = regularize_ontologyID(value)
+        try:
+            if 'ontology' in convention['properties'][metadatum]:
+                value = regularize_ontologyID(value)
+        except KeyError:
+            # non-metadata convention metadata will trigger this exception
+                pass
         try:
             cast_value = metadata_types.get(
                 lookup_metadata_type(convention, metadatum)
