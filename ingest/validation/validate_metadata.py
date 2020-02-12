@@ -292,7 +292,11 @@ def cast_boolean_type(value):
     else:
         raise ValueError(f'cannot cast {value} as boolean')
 
+
 def value_is_nan(value):
+    """Check if value is nan
+    nan is a special dataframe value to indicate missing data
+    """
     try:
         return np.isnan(value)
     except TypeError:
@@ -303,6 +307,7 @@ def cast_integer_type(value):
     """Cast metadata value as integer
     """
     if value_is_nan(value):
+    # nan indicates missing data, has no valid integer value for casting
         return value
     else:
         return int(value)
@@ -318,11 +323,14 @@ def cast_string_type(value):
     """Cast string type per convention where Pandas autodetected a number
     """
     if value_is_nan(value):
+    # nan indicates missing data; by type, nan is a numpy float
+    # so a separate type check is needed for proper handling
         return value
     elif isinstance(value, numbers.Number):
         return str(value)
     else:
         return value
+
 
 def regularize_ontologyID(value):
     """Regularize ontologyIDs for storage with underscore format
@@ -335,6 +343,7 @@ def regularize_ontologyID(value):
     # when ontologyID value is empty string -> TypeError
     except (ValueError, TypeError):
         return value
+
 
 def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metadata):
     """for metadatum, lookup expected type by metadata convention
@@ -359,7 +368,7 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
                     if 'ontology' in convention['properties'][metadatum]:
                         element = regularize_ontologyID(element)
                 except KeyError:
-                # non-metadata convention metadata will trigger this exception
+                    # non-metadata convention metadata will trigger this exception
                     pass
                 cast_element = metadata_types.get(
                     lookup_metadata_type(convention, metadatum)
@@ -383,17 +392,17 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
                     value = regularize_ontologyID(value)
             except KeyError:
                 # non-metadata convention metadata will trigger this exception
-                    pass
-            cast_metadata[metadatum] = [metadata_types.get(
-                lookup_metadata_type(convention, metadatum)
-            )(value)]
+                pass
+            cast_metadata[metadatum] = [
+                metadata_types.get(lookup_metadata_type(convention, metadatum))(value)
+            ]
     else:
         try:
             if 'ontology' in convention['properties'][metadatum]:
                 value = regularize_ontologyID(value)
         except KeyError:
             # non-metadata convention metadata will trigger this exception
-                pass
+            pass
         try:
             cast_value = metadata_types.get(
                 lookup_metadata_type(convention, metadatum)
