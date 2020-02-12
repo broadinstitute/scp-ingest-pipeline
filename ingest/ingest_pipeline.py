@@ -231,8 +231,8 @@ class IngestPipeline(object):
                 self.error_logger.error(e.details, extra=self.extra_log_params)
             except AttributeError as e:
                 self.error_logger.error(
-                'Check access to MongoDB', extra=self.extra_log_params
-            )
+                    'Check access to MongoDB', extra=self.extra_log_params
+                )
             return 1
         return 0
 
