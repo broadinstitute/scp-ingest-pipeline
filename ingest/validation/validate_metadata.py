@@ -336,12 +336,10 @@ def regularize_ontology_id(value):
     """Regularize ontology_ids for storage with underscore format
     """
     try:
-        ontology_shortname, term_id = re.split('[_:]', value)
-        value = ontology_shortname + '_' + term_id
-        return value
-    # when ontology_id is malformed and has no separator -> ValueError
-    # when ontology_id value is empty string -> TypeError
-    except (ValueError, TypeError):
+        return value.replace(":", "_")
+    except AttributeError:
+        # when expected value is not actually an ontology ID
+        # return the bad value for JSON schema validation
         return value
 
 

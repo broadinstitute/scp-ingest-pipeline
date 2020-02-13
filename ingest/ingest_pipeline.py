@@ -227,11 +227,12 @@ class IngestPipeline(object):
                 self.insert_many('data_arrays', documents)
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
-            try:
+            if hasattr(e, 'details') and e.details is not None:
                 self.error_logger.error(e.details, extra=self.extra_log_params)
-            except AttributeError:
+            else:
                 self.error_logger.error(
-                    'Check access to MongoDB', extra=self.extra_log_params
+                    'Error loading data to MongoDB (no details available) - check MongoDB access',
+                    extra=self.extra_log_params,
                 )
             return 1
         return 0
