@@ -332,15 +332,15 @@ def cast_string_type(value):
         return value
 
 
-def regularize_ontologyID(value):
-    """Regularize ontologyIDs for storage with underscore format
+def regularize_ontology_id(value):
+    """Regularize ontology_ids for storage with underscore format
     """
     try:
         ontology_shortname, term_id = re.split('[_:]', value)
         value = ontology_shortname + '_' + term_id
         return value
-    # when ontolgyID is malformed and has no separator -> ValueError
-    # when ontologyID value is empty string -> TypeError
+    # when ontology_id is malformed and has no separator -> ValueError
+    # when ontology_id value is empty string -> TypeError
     except (ValueError, TypeError):
         return value
 
@@ -366,9 +366,9 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
             for element in value.split('|'):
                 try:
                     if 'ontology' in convention['properties'][metadatum]:
-                        element = regularize_ontologyID(element)
+                        element = regularize_ontology_id(element)
                 except KeyError:
-                    # non-metadata convention metadata will trigger this exception
+                    # unconventional metadata will trigger this exception
                     pass
                 cast_element = metadata_types.get(
                     lookup_metadata_type(convention, metadatum)
@@ -389,9 +389,9 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         except AttributeError:
             try:
                 if 'ontology' in convention['properties'][metadatum]:
-                    value = regularize_ontologyID(value)
+                    value = regularize_ontology_id(value)
             except KeyError:
-                # non-metadata convention metadata will trigger this exception
+                # unconventional metadata will trigger this exception
                 pass
             cast_metadata[metadatum] = [
                 metadata_types.get(lookup_metadata_type(convention, metadatum))(value)
@@ -399,9 +399,9 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
     else:
         try:
             if 'ontology' in convention['properties'][metadatum]:
-                value = regularize_ontologyID(value)
+                value = regularize_ontology_id(value)
         except KeyError:
-            # non-metadata convention metadata will trigger this exception
+            # unconventional metadata will trigger this exception
             pass
         try:
             cast_value = metadata_types.get(
@@ -607,9 +607,9 @@ def retrieve_ontology_term(convention_url, ontology_id, ontologies):
     # valid separators are underscore and colon (used by HCA)
     try:
         ontology_shortname, term_id = re.split('[_:]', ontology_id)
-    # when ontolgyID is malformed and has no separator -> ValueError
-    # when ontologyID value is empty string -> TypeError
     except (ValueError, TypeError):
+        # when ontology_id is malformed and has no separator -> ValueError
+        # when ontology_id value is empty string -> TypeError
         return None
     # check if we have already retrieved this ontology reference
     if ontology_shortname not in ontologies:
