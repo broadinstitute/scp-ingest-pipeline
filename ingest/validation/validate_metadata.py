@@ -30,6 +30,7 @@ import colorama
 from colorama import Fore
 import jsonschema
 from google.cloud import bigquery
+import numpy as np
 
 sys.path.append('..')
 try:
@@ -292,10 +293,24 @@ def cast_boolean_type(value):
         raise ValueError(f'cannot cast {value} as boolean')
 
 
+def value_is_nan(value):
+    """Check if value is nan
+    nan is a special dataframe value to indicate missing data
+    """
+    try:
+        return np.isnan(value)
+    except TypeError:
+        return False
+
+
 def cast_integer_type(value):
     """Cast metadata value as integer
     """
-    return int(value)
+    if value_is_nan(value):
+        # nan indicates missing data, has no valid integer value for casting
+        return value
+    else:
+        return int(value)
 
 
 def cast_float_type(value):
@@ -307,9 +322,24 @@ def cast_float_type(value):
 def cast_string_type(value):
     """Cast string type per convention where Pandas autodetected a number
     """
-    if isinstance(value, numbers.Number):
+    if value_is_nan(value):
+        # nan indicates missing data; by type, nan is a numpy float
+        # so a separate type check is needed for proper handling
+        return value
+    elif isinstance(value, numbers.Number):
         return str(value)
     else:
+        return value
+
+
+def regularize_ontology_id(value):
+    """Regularize ontology_ids for storage with underscore format
+    """
+    try:
+        return value.replace(":", "_")
+    except AttributeError:
+        # when expected value is not actually an ontology ID
+        # return the bad value for JSON schema validation
         return value
 
 
@@ -332,6 +362,12 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
             # files that support array-based metadata navtively (eg. loom,
             # anndata etc) splitting on pipe may become problematic
             for element in value.split('|'):
+                try:
+                    if 'ontology' in convention['properties'][metadatum]:
+                        element = regularize_ontology_id(element)
+                except KeyError:
+                    # unconventional metadata will trigger this exception
+                    pass
                 cast_element = metadata_types.get(
                     lookup_metadata_type(convention, metadatum)
                 )(element)
@@ -349,8 +385,22 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         # metadata is being cast - the value needs to be passed as an array,
         # it is already boolean via Pandas' inference processes
         except AttributeError:
-            cast_metadata[metadatum] = [value]
+            try:
+                if 'ontology' in convention['properties'][metadatum]:
+                    value = regularize_ontology_id(value)
+            except KeyError:
+                # unconventional metadata will trigger this exception
+                pass
+            cast_metadata[metadatum] = [
+                metadata_types.get(lookup_metadata_type(convention, metadatum))(value)
+            ]
     else:
+        try:
+            if 'ontology' in convention['properties'][metadatum]:
+                value = regularize_ontology_id(value)
+        except KeyError:
+            # unconventional metadata will trigger this exception
+            pass
         try:
             cast_value = metadata_types.get(
                 lookup_metadata_type(convention, metadatum)
@@ -555,9 +605,9 @@ def retrieve_ontology_term(convention_url, ontology_id, ontologies):
     # valid separators are underscore and colon (used by HCA)
     try:
         ontology_shortname, term_id = re.split('[_:]', ontology_id)
-    # when ontolgyID is malformed and has no separator -> ValueError
-    # when ontologyID value is empty string -> TypeError
     except (ValueError, TypeError):
+        # when ontology_id is malformed and has no separator -> ValueError
+        # when ontology_id value is empty string -> TypeError
         return None
     # check if we have already retrieved this ontology reference
     if ontology_shortname not in ontologies:
