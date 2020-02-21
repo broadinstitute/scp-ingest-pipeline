@@ -454,7 +454,6 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
         # truncate JSON file so data from serialize_bq starts with an empty file
         fh = open(bq_filename, 'w')
         fh.close()
-
     if schema:
         compare_type_annots_to_convention(metadata, convention)
         rows = metadata.yield_by_row()
@@ -473,7 +472,6 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
                 # add non-convention, SCP-required, metadata for BigQuery
                 row['study_accession'] = metadata.study_accession
                 row['file_id'] = str(metadata.study_file_id)
-                # copy row object here, modify to add columns
                 serialize_bq(row, bq_filename)
             try:
                 line = next(rows)
@@ -786,10 +784,15 @@ def serialize_bq(bq_dict, filename='bq.json'):
 
 def calculate_organism_age_in_seconds(organism_age, organism_age_unit_label):
     multipliers = {
+      'microsecond': 0.000001,
+      'millisecond': 0.001,
+      'second': 1,
       'minute': 60,
       'hour': 3600,
       'day': 86400,
-      'year': 31557600 # (day x365.25 to fuzzy-account for leap-years)
+      'week': 604800,
+      'month': 2626560, #(day * 30.4 to fuzzy-account for different months)
+      'year': 31557600 # (day * 365.25 to fuzzy-account for leap-years)
     }
     multiplier = multipliers[organism_age_unit_label]
     return organism_age * multiplier
