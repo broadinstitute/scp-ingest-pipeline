@@ -773,9 +773,29 @@ def serialize_bq(bq_dict, filename='bq.json'):
     """Write metadata collected for validation to json file
     BigQuery requires newline delimited json objects
     """
-    data = json.dumps(bq_dict)
+    bq_dict_copy = bq_dict.copy()
+    if ('organism_age' in bq_dict and 'organism_age__unit_label' in bq_dict):
+        bq_dict_copy['organism_age__seconds'] = calculate_organism_age_in_seconds(bq_dict['organism_age'], bq_dict['organism_age__unit_label'])
+
+    data = json.dumps(bq_dict_copy)
     with open(filename, 'a') as jsonfile:
         jsonfile.write(data + '\n')
+
+
+def calculate_organism_age_in_seconds(organism_age, organism_age_unit_label):
+    multipliers = {
+      'microsecond': 0.000001,
+      'millisecond': 0.001,
+      'second': 1,
+      'minute': 60,
+      'hour': 3600,
+      'day': 86400,
+      'week': 604800,
+      'month': 2626560, #(day * 30.4 to fuzzy-account for different months)
+      'year': 31557600 # (day * 365.25 to fuzzy-account for leap-years)
+    }
+    multiplier = multipliers[organism_age_unit_label]
+    return organism_age * multiplier
 
 
 def serialize_issues(metadata):
