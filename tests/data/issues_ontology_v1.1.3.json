@@ -1,13 +1,7 @@
 {
   "error": {
     "convention": {
-      "cell_type: nan is not of type 'string'": [
-        "BM01_16dpp_AAGCAGTGGTAT"
-      ],
-      "geographical_region: nan is not of type 'string'": [
-        "BM01_16dpp_AAGCAGTGGTAT"
-      ],
-      "geographical_region__ontology_label: nan is not of type 'string'": [
+      "'cell_type' is a dependency of 'cell_type__ontology_label'": [
         "BM01_16dpp_AAGCAGTGGTAT"
       ],
       "library_preparation_protocol: 'EFO0008919' does not match '^[A-Za-z]+[_:][0-9]'": [
@@ -15,26 +9,20 @@
       ]
     },
     "ontology": {
-      "cell_type: No match found in EBI OLS for provided ontology ID: nan": [
-        "BM01_16dpp_AAGCAGTGGTAT"
-      ],
-      "cell_type: No match found in EBI OLS for provided ontology ID: CELL_0000066": [
-        "BM01_16dpp_CTAAGCAGTGGT"
-      ],
       "species: input ontology_label \"homo sapien\" does not match EBI OLS lookup \"Homo sapiens\",": [
         "BM01_16dpp_CGGTAAACCATT"
-      ],
-      "geographical_region: No match found in EBI OLS for provided ontology ID: nan": [
-        "BM01_16dpp_AAGCAGTGGTAT"
-      ],
-      "geographical_region: No match found in EBI OLS for provided ontology ID: NCBITaxon_9606": [
-        "BM01_16dpp_TAAGCAGTGGTA"
       ],
       "library_preparation_protocol: No match found in EBI OLS for provided ontology ID: EFO0008919": [
         "BM01_16dpp_AAGCAGTGGTAT"
       ],
       "organ: No match found in EBI OLS for provided ontology ID: UBERON_1001913": [
         "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "cell_type: No match found in EBI OLS for provided ontology ID: CELL_0000066": [
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ],
+      "geographical_region: No match found in EBI OLS for provided ontology ID: NCBITaxon_9606": [
+        "BM01_16dpp_TAAGCAGTGGTA"
       ]
     }
   }
