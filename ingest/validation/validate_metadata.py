@@ -433,6 +433,12 @@ def process_metadata_row(metadata, convention, line):
     row_info = dict(zip(metadata_names, line))
     processed_row = {}
     for k, v in row_info.items():
+        try:
+            value_is_nan = np.isnan(v)
+        except TypeError:
+            value_is_nan = False
+        if k not in convention['required'] and value_is_nan:
+            continue
         processed_row.update(
             cast_metadata_type(k, v, row_info['CellID'], convention, metadata)
         )
@@ -678,8 +684,9 @@ def validate_collected_ontology_data(metadata, convention):
     stored_ontologies = {}
     for entry in metadata.ontology.keys():
         ontology_url = convention['properties'][entry]['ontology']
-        try:
-            for ontology_id, ontology_label in metadata.ontology[entry].keys():
+        for ontology_info in metadata.ontology[entry].keys():
+            try:
+                ontology_id, ontology_label = ontology_info
                 matching_term = retrieve_ontology_term(
                     ontology_url, ontology_id, stored_ontologies
                 )
@@ -727,31 +734,32 @@ def validate_collected_ontology_data(metadata, convention):
                             error_msg,
                             metadata.ontology[entry][(ontology_label)],
                         )
-        # handle case where no ontology_label provided
-        except (TypeError, ValueError):
-            for ontology_id in metadata.ontology[entry].keys():
-                matching_term = retrieve_ontology_term(
-                    ontology_url, ontology_id, stored_ontologies
-                )
-                if not matching_term:
-                    error_msg = f'{entry}: No match found in EBI OLS for provided ontology ID: {ontology_id}'
-                    metadata.store_validation_issue(
-                        'error',
-                        'ontology',
-                        error_msg,
-                        metadata.ontology[entry][(ontology_id)],
+            # handle case where no ontology_label provided
+            except (TypeError, ValueError):
+                ontology_id = ontology_info
+                try:
+                    matching_term = retrieve_ontology_term(
+                        ontology_url, ontology_id, stored_ontologies
                     )
-                error_msg = (
-                    f'{entry}: no ontology label supplied in metadata file for '
-                    f'\"{ontology_id}\" - no cross-check for data entry error possible'
-                )
-                metadata.store_validation_issue('warn', 'ontology', error_msg)
-        except requests.exceptions.RequestException as err:
-            error_msg = f'External service outage connecting to {ontology_url} when querying {ontology_id}:{ontology_label}: {err}'
-            error_logger.error(error_msg)
-            metadata.store_validation_issue('error', 'ontology', error_msg)
-            # immediately return as validation cannot continue
-            return
+                    if not matching_term:
+                        error_msg = f'{entry}: No match found in EBI OLS for provided ontology ID: {ontology_id}'
+                        metadata.store_validation_issue(
+                            'error',
+                            'ontology',
+                            error_msg,
+                            metadata.ontology[entry][(ontology_id)],
+                        )
+                    error_msg = (
+                        f'{entry}: no ontology label supplied in metadata file for '
+                        f'\"{ontology_id}\" - no cross-check for data entry error possible'
+                    )
+                    metadata.store_validation_issue('warn', 'ontology', error_msg)
+                except requests.exceptions.RequestException as err:
+                    error_msg = f'External service outage connecting to {ontology_url} when querying {ontology_id}:{ontology_label}: {err}'
+                    error_logger.error(error_msg)
+                    metadata.store_validation_issue('error', 'ontology', error_msg)
+                    # immediately return as validation cannot continue
+                    return
     return
 
 
@@ -774,8 +782,10 @@ def serialize_bq(bq_dict, filename='bq.json'):
     BigQuery requires newline delimited json objects
     """
     bq_dict_copy = bq_dict.copy()
-    if ('organism_age' in bq_dict and 'organism_age__unit_label' in bq_dict):
-        bq_dict_copy['organism_age__seconds'] = calculate_organism_age_in_seconds(bq_dict['organism_age'], bq_dict['organism_age__unit_label'])
+    if 'organism_age' in bq_dict and 'organism_age__unit_label' in bq_dict:
+        bq_dict_copy['organism_age__seconds'] = calculate_organism_age_in_seconds(
+            bq_dict['organism_age'], bq_dict['organism_age__unit_label']
+        )
 
     data = json.dumps(bq_dict_copy)
     with open(filename, 'a') as jsonfile:
@@ -784,15 +794,15 @@ def serialize_bq(bq_dict, filename='bq.json'):
 
 def calculate_organism_age_in_seconds(organism_age, organism_age_unit_label):
     multipliers = {
-      'microsecond': 0.000001,
-      'millisecond': 0.001,
-      'second': 1,
-      'minute': 60,
-      'hour': 3600,
-      'day': 86400,
-      'week': 604800,
-      'month': 2626560, #(day * 30.4 to fuzzy-account for different months)
-      'year': 31557600 # (day * 365.25 to fuzzy-account for leap-years)
+        'microsecond': 0.000001,
+        'millisecond': 0.001,
+        'second': 1,
+        'minute': 60,
+        'hour': 3600,
+        'day': 86400,
+        'week': 604800,
+        'month': 2626560,  # (day * 30.4 to fuzzy-account for different months)
+        'year': 31557600,  # (day * 365.25 to fuzzy-account for leap-years)
     }
     multiplier = multipliers[organism_age_unit_label]
     return organism_age * multiplier
