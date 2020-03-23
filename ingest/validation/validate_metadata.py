@@ -95,10 +95,12 @@ def create_parser():
         default='6d276a50421aa9117c982846',
     )
     parser.add_argument(
-        '--study-file-id', help='MongoDB file identifier', default='abc123'
+        '--study-file-id',
+        help='MongoDB file identifier',
+        default='6e1f79a57b2f1516a39d03a7',
     )
     parser.add_argument(
-        '--study-accession', help='SCP study accession', default='SCP888'
+        '--study-accession', help='SCP study accession', default='SCPdev'
     )
     parser.add_argument(
         '--bq-dataset', help='BigQuery dataset identifier', default='cell_metadata'
@@ -200,7 +202,7 @@ def collect_cell_for_ontology(metadatum, row_data, metadata, array=False):
             ontology_dict = dict(zip(row_data[metadatum], row_data[ontology_label]))
             for id, label in ontology_dict.items():
                 metadata.ontology[metadatum][(id, label)].append(row_data['CellID'])
-        except TypeError:
+        except (TypeError, KeyError):
             for id in row_data[metadatum]:
                 metadata.ontology[metadatum][(id)].append(row_data['CellID'])
     else:
