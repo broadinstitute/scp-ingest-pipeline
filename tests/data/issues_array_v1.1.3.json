@@ -17,14 +17,17 @@
       ]
     },
     "convention": {
-      "ethnicity__ontology_label: nan is not of type 'string'": [
+      "organ: nan is not of type 'string'": [
         "BM01_16dpp_TAAGCAGTGGTA"
       ],
       "'disease__time_since_onset' is a dependency of 'disease__time_since_onset__unit'": [
         "BM01_16dpp_CGGTAAACCATT",
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "ethnicity: nan is not of type 'string'": [
+      "'ethnicity' is a dependency of 'ethnicity__ontology_label'": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "organ__ontology_label: nan is not of type 'string'": [
         "BM01_16dpp_CCGAATTCACCG"
       ],
       "disease__time_since_onset__unit: values for each unit metadata required to be uniform": null
@@ -33,10 +36,10 @@
       "donor : only alphanumeric characters and underscore allowed in metadata name": null
     },
     "ontology": {
-      "ethnicity: input ontology_label \"nan\" does not match EBI OLS lookup \"European\",": [
+      "organ: No match found in EBI OLS for provided ontology ID: nan": [
         "BM01_16dpp_TAAGCAGTGGTA"
       ],
-      "ethnicity: No match found in EBI OLS for provided ontology ID: nan": [
+      "organ: input ontology_label \"nan\" does not match EBI OLS lookup \"milk\",": [
         "BM01_16dpp_CCGAATTCACCG"
       ]
     }
@@ -44,7 +47,8 @@
   "warn": {
     "ontology": {
       "disease__time_since_onset__unit: no ontology label supplied in metadata file for \"UO_0000035\" - no cross-check for data entry error possible": null,
-      "disease__time_since_onset__unit: no ontology label supplied in metadata file for \"UO_0000033\" - no cross-check for data entry error possible": null
+      "disease__time_since_onset__unit: no ontology label supplied in metadata file for \"UO_0000033\" - no cross-check for data entry error possible": null,
+      "ethnicity: no ontology label supplied in metadata file for \"HANCESTRO_0005\" - no cross-check for data entry error possible": null
     }
   }
 }
