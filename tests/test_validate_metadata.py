@@ -181,7 +181,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_ontology_v1.1.3.tsv'
+        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_ontology_v1.1.4.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -199,7 +199,7 @@ class TestValidateMetadata(unittest.TestCase):
         #     with species ontologyID of 'NCBITaxon_9606'
         #   invalid ontologyID of 'NCBITaxon_9606' for geographical_region
         #   invalid ontologyID UBERON_1000331 for organ__ontology_label
-        reference_file = open('../tests/data/issues_ontology_v1.1.3.json')
+        reference_file = open('../tests/data/issues_ontology_v1.1.4.json')
         reference_issues = json.load(reference_file)
 
         self.assertEqual(
