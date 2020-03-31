@@ -109,7 +109,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Metadata convention should be valid jsonschema
         """
 
-        args = '../tests/data/AMC_invalid.json ../tests/data/valid_no_array_v1.1.3.tsv'
+        args = '../tests/data/AMC_invalid.json ../tests/data/valid_no_array_v1.1.4.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertIsNone(
             validate_schema(convention, metadata),
@@ -121,7 +121,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Non-ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.1.3.tsv'
+        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.1.4.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -166,7 +166,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.1.3.tsv'
+        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.1.4.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'

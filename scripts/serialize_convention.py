@@ -7,7 +7,7 @@ for studies participating under the convention.
 
 EXAMPLE
 # Generate json file for Alexandria from the Alexandria metadata convention tsv
-# Expects tsv file in schema/<project>_convention/snapshot/<version>
+# Expects tsv file in scp-ingest-pipeline/schema/<project>_convention/snapshot/<version>
 $ python serialize_convention.py alexandria 1.1.4
 
 """
