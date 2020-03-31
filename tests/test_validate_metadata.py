@@ -73,7 +73,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Header rows of metadata file should conform to standard
         """
 
-        args = '../tests/data/AMC_v1.1.3.json ../tests/data/error_headers_v1.1.3.tsv'
+        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/error_headers_v1.1.3.tsv'
         metadata = self.setup_metadata(args)[0]
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
@@ -121,8 +121,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Non-ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
-        args = '../tests/data/AMC_v1.1.3.json ../tests/data/valid_no_array_v1.1.3.tsv'
+        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -136,7 +135,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
         """
-        args = '../tests/data/AMC_v1.1.3.json ../tests/data/invalid_metadata_v1.1.3.tsv'
+        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_metadata_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -167,8 +166,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
-        args = '../tests/data/AMC_v1.1.3.json ../tests/data/valid_no_array_v1.1.3.tsv'
+        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -183,8 +181,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        # is compatible with v1.1.2 but not v1.1.3 (missing sampleID and donorID)
-        args = '../tests/data/AMC_v1.1.3.json ../tests/data/invalid_ontology_v1.1.3.tsv'
+        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_ontology_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -216,7 +213,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_valid_array_content(self):
         """array-based metadata should conform to convention requirements
         """
-        args = '../tests/data/AMC_v1.1.3.json ../tests/data/valid_array_v1.1.3.tsv'
+        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -240,7 +237,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_array_content(self):
         """array-based metadata should conform to convention requirements
         """
-        args = '../tests/data/AMC_v1.1.3.json ../tests/data/invalid_array_v1.1.3.tsv'
+        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_array_v1.1.3.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
