@@ -30,24 +30,25 @@ class TestValidateMetadata(unittest.TestCase):
     def setup_metadata(self, args):
         args_list = args.split(" ")
         args = create_parser().parse_args(args_list)
-        input_convention = args.input_convention
-        label = args.label
         project = args.project
-        return (input_convention, label, project)
+        version = args.version
+        return (project, version)
 
     def test_serialize_convention(self):
         """Verify known good input generates the expected metadata convention json
         """
 
-        args = "test ../tests/data/test_convention.tsv"
-        input_convention, label, project = self.setup_metadata(args)
+        args = 'test 1.0.0'
+        project, version = self.setup_metadata(args)
         self.maxDiff = None
-        schema_info = build_schema_info(project)
-        convention = serialize_convention(schema_info, input_convention)
-        write_schema(convention, input_convention, label, ".")
-        with open("test_convention.json", "r") as result:
+        input_tsv = '../tests/data/test_convention.tsv'
+        output_fullpath = 'output_convention.json'
+        schema_info = build_schema_info(project, version)
+        convention = serialize_convention(schema_info, input_tsv)
+        write_schema(convention, output_fullpath)
+        with open("output_convention.json", "r") as result:
             generated_convention = json.load(result)
-        os.remove("test_convention.json")
+        os.remove("output_convention.json")
 
         with open("../tests/data/test_convention.json", "r") as reference_file:
             reference_convention = json.load(reference_file)

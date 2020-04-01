@@ -7,10 +7,8 @@ for studies participating under the convention.
 
 EXAMPLE
 # Generate json file for Alexandria from the Alexandria metadata convention tsv
-$ python serialize_convention.py project metadata_convention.tsv
-
-# if using the test data in this repo and wanted output in current working dir
-$ python serialize_convention.py -p . Alexandria ../tests/data/AMC_v0.8.tsv
+# Expects tsv file in scp-ingest-pipeline/schema/<project>_convention/snapshot/<version>
+$ python serialize_convention.py alexandria 1.1.4
 
 """
 
@@ -34,23 +32,15 @@ def create_parser():
     )
     # add arguments
     parser.add_argument(
-        '--label',
-        '-l',
-        help='Label to insert into the file name '
-        + 'for the Metadata convention json file [optional]',
-    ),
-    parser.add_argument('--output-path', '-p', help='Path for output file')
-    parser.add_argument(
-        'project',
-        help='One-word project name that the metadata ' + 'convention belongs to',
+        'project', help='One-word project name that metadata convention belongs to'
     )
-    parser.add_argument('input_convention', help='Metadata convention tsv file')
+    parser.add_argument('version', help='semantic version number for convention')
     return parser
 
 
 def add_dependency(key, value, dict):
     """
-    Add dependency to appopriate dictionary
+    Add dependency to appropriate dictionary
 
     ToDo: check if defaultdict would eliminate this function
     """
@@ -72,7 +62,7 @@ def build_array_object(row):
         dict[row['class']] = row['controlled_list_entries']
     elif row['class'] == 'ontology':
         dict['type'] = row['type']
-        ontology_format = r'^[A-Za-z]+[_:][0-9]'
+        ontology_format = r'^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'
         dict['pattern'] = ontology_format
     else:
         dict['type'] = row['type']
@@ -104,7 +94,7 @@ def build_single_object(row, dict):
         dict['type'] = row['type']
 
 
-def build_schema_info(project):
+def build_schema_info(project, version):
     """
     generate dictionary of schema info for the project
     """
@@ -112,11 +102,11 @@ def build_schema_info(project):
     info['$schema'] = 'https://json-schema.org/draft-07/schema#'
     # $id below is a placeholder, not functional yet
     info['$id'] = (
-        'https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schemas/'
-        '%s.schema.json' % (project)
+        f'https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schema/'
+        f'{version}/{project}_convention_schema.json'
     )
-    info['title'] = project + ' Metadata Convention'
-    info['description'] = 'Metadata convention for the ' '%s project' % (project)
+    info['title'] = project + ' metadata convention'
+    info['description'] = 'metadata convention for the ' '%s project' % (project)
     return info
 
 
@@ -151,23 +141,21 @@ def write_json_schema(filename, object):
         jsonfile.write(object)
 
 
-def generate_output_name(inputname, label, path=''):
+def set_file_names(project, version):
     """
-    Build output filename from inputname
+    Infer input tsv file location from project, version info
+    If input tsv doesn't exist, exit
+    If output file already exists, exit
     """
-    head, tail = os.path.split(inputname)
-    name, suffix = os.path.splitext(tail)
-    if label:
-        labeledName = '.'.join([name, label, 'json'])
-    else:
-        labeledName = '.'.join([name, 'json'])
-    if path:
-        outputname = '/'.join([path, labeledName])
-    elif head:
-        outputname = '/'.join([head, labeledName])
-    else:
-        outputname = labeledName
-    return outputname
+    inputname = f'../schema/{project}_convention/snapshot/{version}/{project}_convention_schema.tsv'
+    outputname = f'../schema/{project}_convention/snapshot/{version}/{project}_convention_schema.json'
+    if not os.path.exists(inputname):
+        print(f'{inputname} does not exist, please check your tsv file and try again')
+        exit(1)
+    if os.path.exists(outputname):
+        print(f'{outputname} already exists, please delete file and try again')
+        exit(1)
+    return inputname, outputname
 
 
 def retrieve_ontology(ontology_url):
@@ -182,7 +170,7 @@ def retrieve_ontology(ontology_url):
         return None
 
 
-def serialize_convention(convention, input_convention):
+def serialize_convention(convention, input_tsv):
     """
     Build convention as a Python dictionary
     """
@@ -191,7 +179,7 @@ def serialize_convention(convention, input_convention):
     required = []
     dependencies = {}
 
-    with open(input_convention) as tsvfile:
+    with open(input_tsv) as tsvfile:
         reader = csv.DictReader(tsvfile, dialect='excel-tab')
 
         for row in reader:
@@ -246,18 +234,16 @@ def serialize_convention(convention, input_convention):
     return convention
 
 
-def write_schema(dict, inputname, label, filepath=''):
-    filename = generate_output_name(inputname, label, filepath)
-    dump_json(dict, filename)
-    write_json_schema(filename, clean_json(filename))
+def write_schema(dict, filepath):
+    dump_json(dict, filepath)
+    write_json_schema(filepath, clean_json(filepath))
 
 
 if __name__ == '__main__':
     args = create_parser().parse_args()
-    input_convention = args.input_convention
-    label = args.label
-    output_path = args.output_path
     project = args.project
-    schema_info = build_schema_info(project)
-    convention = serialize_convention(schema_info, input_convention)
-    write_schema(convention, input_convention, label, output_path)
+    version = args.version
+    input_tsv, output_fullpath = set_file_names(project, version)
+    schema_info = build_schema_info(project, version)
+    convention = serialize_convention(schema_info, input_tsv)
+    write_schema(convention, output_fullpath)

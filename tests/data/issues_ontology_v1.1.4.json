@@ -18,6 +18,12 @@
       "organ: No match found in EBI OLS for provided ontology ID: UBERON_1001913": [
         "BM01_16dpp_CCGAATTCACCG"
       ],
+      "race: No match found in EBI OLS for provided ontology ID: NCIT_C-43862": [
+        "BM01_16dpp_AAGCAGTGGTAT"
+      ],
+      "race: No match found in EBI OLS for provided ontology ID: NC-IT_C126538": [
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ],
       "cell_type: No match found in EBI OLS for provided ontology ID: CELL_0000066": [
         "BM01_16dpp_CTAAGCAGTGGT"
       ],
