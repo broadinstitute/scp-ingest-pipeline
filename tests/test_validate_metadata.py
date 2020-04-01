@@ -217,7 +217,7 @@ class TestValidateMetadata(unittest.TestCase):
         #   invalid ontologyID UBERON_1000331 for organ__ontology_label
         reference_file = open('../tests/data/issues_ontology_v1.1.4.json')
         reference_issues = json.load(reference_file)
-        print(dict(metadata.issues))
+
         self.assertEqual(
             metadata.issues,
             reference_issues,

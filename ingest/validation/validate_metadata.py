@@ -633,10 +633,9 @@ def retrieve_ontology_term(convention_urls, ontology_id, ontologies):
             # store all convention ontologies for lookup later
             for convention_url in convention_urls:
                 convention_shortname = extract_terminal_pathname(convention_url)
-                remote_ontology = retrieve_ontology(convention_url)
-                ontologies[convention_shortname] = remote_ontology
-            # use the ontology that matches the short name for convention_ontology
-            convention_ontology = ontologies[ontology_shortname]
+                convention_ontology = retrieve_ontology(convention_url)
+                ontologies[convention_shortname] = convention_ontology
+
     else:
         convention_ontology = (
             None
