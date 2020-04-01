@@ -141,7 +141,7 @@ def write_json_schema(filename, object):
         jsonfile.write(object)
 
 
-def check_if_old_output(project, version):
+def set_file_names(project, version):
     """
     Infer input tsv file location from project, version info
     If input tsv doesn't exist, exit
@@ -243,7 +243,7 @@ if __name__ == '__main__':
     args = create_parser().parse_args()
     project = args.project
     version = args.version
-    input_tsv, output_fullpath = check_if_old_output(project, version)
+    input_tsv, output_fullpath = set_file_names(project, version)
     schema_info = build_schema_info(project, version)
     convention = serialize_convention(schema_info, input_tsv)
     write_schema(convention, output_fullpath)
