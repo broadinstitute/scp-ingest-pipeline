@@ -177,6 +177,22 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.teardown_metadata(metadata)
 
+    def test_valid_multiple_ontologies_content(self):
+        """Ontology metadata should conform to convention requirements
+           Specifically tests that a term can be found in one of two accepted ontologies (e.g. disease in MONDO or PATO)
+        """
+        # Note: this input metadata file does not have array-based metadata
+        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.1.5.tsv'
+        metadata, convention = self.setup_metadata(args)
+        self.assertTrue(
+            metadata.validate_format(), 'Valid metadata headers should not elicit error'
+        )
+        validate_input_metadata(metadata, convention)
+        self.assertFalse(
+            report_issues(metadata), 'Valid ontology content should not elicit error'
+        )
+        self.teardown_metadata(metadata)
+
     def test_invalid_ontology_content(self):
         """Ontology metadata should conform to convention requirements
         """
