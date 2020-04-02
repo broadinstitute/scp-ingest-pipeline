@@ -103,7 +103,7 @@ def build_schema_info(project, version):
     # $id below is a placeholder, not functional yet
     info['$id'] = (
         f'https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schema/'
-        f'{version}/{project}_convention_schema.json'
+        f'{project}_convention/{version}/{project}_convention_schema.json'
     )
     info['title'] = project + ' metadata convention'
     info['description'] = 'metadata convention for the ' '%s project' % (project)
@@ -200,8 +200,6 @@ def serialize_convention(convention, input_tsv):
                 add_dependency(row['dependent'], row['attribute'], dependencies)
 
             # build dictionary for each attribute
-            if row['default']:
-                entry['default'] = row['default']
             if row['attribute_description']:
                 entry['description'] = row['attribute_description']
 

@@ -108,7 +108,11 @@ def create_parser():
     parser.add_argument(
         '--bq-table', help='BigQuery table identifier', default='alexandria_convention'
     )
-    parser.add_argument('convention', help='Metadata convention JSON file ')
+    parser.add_argument(
+        '--convention',
+        help='Metadata convention JSON file',
+        default='../../schema/alexandria_convention/alexandria_convention_schema.json',
+    )
     parser.add_argument('input_metadata', help='Metadata TSV file')
     return parser
 
