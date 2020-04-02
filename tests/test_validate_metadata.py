@@ -73,7 +73,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Header rows of metadata file should conform to standard
         """
 
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/error_headers_v1.2.0.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/error_headers_v2.0.0.tsv'
         metadata = self.setup_metadata(args)[0]
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
@@ -109,7 +109,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Metadata convention should be valid jsonschema
         """
 
-        args = '--convention ../tests/data/AMC_invalid.json ../tests/data/valid_no_array_v1.2.0.tsv'
+        args = '--convention ../tests/data/AMC_invalid.json ../tests/data/valid_no_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertIsNone(
             validate_schema(convention, metadata),
@@ -121,7 +121,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Non-ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.2.0.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -135,7 +135,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
         """
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_metadata_v1.2.0.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_metadata_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -150,9 +150,8 @@ class TestValidateMetadata(unittest.TestCase):
         #   missing required property 'sex'
         #   missing dependency for non-required property 'ethinicity'
         #   missing value for non-required property 'is_living'
-        #   value provided not in enumerated list for 'sample_type'
         #   value provided not a number for 'organism_age'
-        reference_file = open('../tests/data/issues_metadata_v1.2.0.json')
+        reference_file = open('../tests/data/issues_metadata_v2.0.0.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
@@ -166,7 +165,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.2.0.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -181,7 +180,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_ontology_v1.2.0.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_ontology_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -199,7 +198,7 @@ class TestValidateMetadata(unittest.TestCase):
         #     with species ontologyID of 'NCBITaxon_9606'
         #   invalid ontologyID of 'NCBITaxon_9606' for geographical_region
         #   invalid ontologyID UBERON_1000331 for organ__ontology_label
-        reference_file = open('../tests/data/issues_ontology_v1.1.4.json')
+        reference_file = open('../tests/data/issues_ontology_v2.0.0.json')
         reference_issues = json.load(reference_file)
 
         self.assertEqual(
@@ -213,7 +212,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_valid_array_content(self):
         """array-based metadata should conform to convention requirements
         """
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_array_v1.2.0.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -224,7 +223,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         # valid array data emits one warning message for disease__time_since_onset__unit
         # because no ontology label supplied in metadata file for the unit ontology
-        reference_file = open('../tests/data/issues_warn_v1.1.2.json')
+        reference_file = open('../tests/data/issues_warn_v2.0.0.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
@@ -237,7 +236,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_array_content(self):
         """array-based metadata should conform to convention requirements
         """
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_array_v1.2.0.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -246,12 +245,12 @@ class TestValidateMetadata(unittest.TestCase):
         # reference errors tests for:
         # conflict between convention type and input metadata type annotation
         #     group instead of numeric: organism_age
-        #     numeric instead of group: sample_type
+        #     numeric instead of group: biosample_type
         # invalid array-based metadata type: disease__time_since_onset
         # invalid boolean value: disease__treated
         # non-uniform unit values: organism_age__unit
         # missing ontology ID or label for non-required metadata: ethnicity
-        reference_file = open('../tests/data/issues_array_v1.1.3.json')
+        reference_file = open('../tests/data/issues_array_v2.0.0.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(

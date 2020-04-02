@@ -1,6 +1,6 @@
 attribute	required	type	array	class	ontology	ontology_root	controlled_list_entries	dependency	dependency_condition	dependent	attribute_description
 biosample_id	Yes	string									Biosample ID
-biosample_type	Yes	string		enum			"[""CellLine"",""DerivedType_Organoid"",""DerivedType_InVitroDifferentiated"",""DerivedType_InducedPluripotentStemCell"",""PrimaryBioSample_BodyFluid"",""PrimaryBioSample_CellFreeDNA"",""PrimaryBioSample_PrimaryCell"",""PrimaryBioSample_PrimaryCulture"",""PrimaryBioSample_Stool"",""PrimaryBioSample_Tissue""]"				Type of Biosample
+biosample_type	Yes	string		enum			"[""CellLine"",""DerivedType_Organoid"",""DerivedType_InVitroDifferentiated"",""DerivedType_InducedPluripotentStemCell"",""PrimaryBioSample"",""PrimaryBioSample_BodyFluid"",""PrimaryBioSample_CellFreeDNA"",""PrimaryBioSample_PrimaryCell"",""PrimaryBioSample_PrimaryCulture"",""PrimaryBioSample_Stool"",""PrimaryBioSample_Tissue""]"				Type of Biosample
 CellID	Yes	string									Cell ID
 disease	Yes	string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/mondo	MONDO_0000001					The disease state(s) of the individual donating the sample at the time of donation
 disease__ontology_label	Yes	string	TRUE	ontology_label				disease			disease__ontology_label
@@ -66,7 +66,6 @@ primer		string		enum			"[""poly-dT"",""random""]"				Primer used for cDNA synthe
 race		string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/ncit	NCIT:C17049			species == NCBITaxon_9606		An arbitrary classification of a taxonomic group that is a division of a species
 race__ontology_label		string	TRUE	ontology_label				race			race__ontology_label
 read_length		string									the read structure of the sequencing run
-sample_type		string		enum			"[""cell line"", ""organoid"", ""direct from donor - fresh"", ""direct from donor - frozen"", ""cultured primary cells""]"				one of: cell line, organoid, direct from donor (fresh), direct from donor (frozen), cultured primary cells
 sequencing_instrument_manufacturer_model		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/efo	EFO_0003739					name of sequencing instrument manufacturer
 sequencing_instrument_manufacturer_model__ontology_label		string		ontology_label				sequencing_instrument_manufacturer_model			sequencing_instrument_manufacturer_model__ontology_label
 small_molecule_perturbation		string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/chebi	CHEBI_24431					a small molecule added to a cell culture (ex. A drug) growth factor (and if it is recombinant, concentration), gene)

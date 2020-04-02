@@ -643,8 +643,8 @@ def retrieve_ontology_term(convention_url, ontology_id, ontologies):
             ontologies[convention_shortname] = convention_ontology
     else:
         convention_ontology = (
-            None
-        )  # we did not get a metadata_ontology, so abort the check
+            None  # we did not get a metadata_ontology, so abort the check
+        )
     if convention_ontology and metadata_ontology:
         base_term_uri = metadata_ontology['config']['baseUris'][0]
         query_iri = encode_term_iri(term_id, base_term_uri)

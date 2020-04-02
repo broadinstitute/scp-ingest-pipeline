@@ -1,8 +1,8 @@
 {
   "error": {
     "type": {
-      "sample_type: \"numeric\" annotation in metadata file conflicts with metadata convention. Convention expects \"group\" values.": null,
       "organism_age: \"group\" annotation in metadata file conflicts with metadata convention. Convention expects \"numeric\" values.": null,
+      "biosample_type: \"numeric\" annotation in metadata file conflicts with metadata convention. Convention expects \"group\" values.": null,
       "disease__treated: 'F' in 'F' does not match expected 'boolean' type": [
         "BM01_16dpp_TAAGCAGTGGTA"
       ],

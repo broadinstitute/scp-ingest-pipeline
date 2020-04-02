@@ -91,7 +91,9 @@ except ImportError:
 
 class IngestPipeline(object):
     # File location for metadata json convention
-    JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
+    JSON_CONVENTION = (
+        '../schema/alexandria_convention/alexandria_convention_schema.json'
+    )
     logger = logging.getLogger(__name__)
     error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
     info_logger = setup_logger(__name__, 'info.txt')
