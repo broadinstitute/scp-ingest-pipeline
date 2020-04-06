@@ -17,9 +17,9 @@
 * Copy the new convention JSON and TSV files to the * &lt;project&gt;_convention directory  
   
 
-* Copy new metadata schema to appropriate EXTERNAL_JSON_CONVENTION location 
+* Copy new metadata schema to appropriate EXTERNAL_JSON_CONVENTION location (use syntax below to disable public file cacheing)
 ```
-gs://broad-singlecellportal-public/schema/<project>_convention/<version>/<project>_convention_schema.json
+gsutil -h "Cache-Control:no-cache,max-age=0" cp alexandria_convention_schema.json gs://broad-singlecellportal-public/schema/<project>_convention/<version>/<project>_convention_schema.json
 ```  
   
 * Update EXTERNAL_JSON_CONVENTION in ingest_pipeline.py

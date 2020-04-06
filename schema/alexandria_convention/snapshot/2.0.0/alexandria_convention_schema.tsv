@@ -2,7 +2,7 @@ attribute	required	type	array	class	ontology	ontology_root	controlled_list_entri
 biosample_id	Yes	string									Biosample ID
 biosample_type	Yes	string		enum			"[""CellLine"",""DerivedType_Organoid"",""DerivedType_InVitroDifferentiated"",""DerivedType_InducedPluripotentStemCell"",""PrimaryBioSample"",""PrimaryBioSample_BodyFluid"",""PrimaryBioSample_CellFreeDNA"",""PrimaryBioSample_PrimaryCell"",""PrimaryBioSample_PrimaryCulture"",""PrimaryBioSample_Stool"",""PrimaryBioSample_Tissue""]"				Type of Biosample
 CellID	Yes	string									Cell ID
-disease	Yes	string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/mondo	MONDO_0000001					The disease state(s) of the individual donating the sample at the time of donation
+disease	Yes	string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/mondo,https://www.ebi.ac.uk/ols/api/ontologies/pato	MONDO_0000001					The disease state(s) of the individual donating the sample at the time of donation
 disease__ontology_label	Yes	string	TRUE	ontology_label				disease			disease__ontology_label
 donor_id	Yes	string									Donor ID
 library_preparation_protocol	Yes	string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/efo	OBI_0000711					The single cell RNA-sequencing protocol used for Library preparation

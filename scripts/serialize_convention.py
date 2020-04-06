@@ -204,12 +204,17 @@ def serialize_convention(convention, input_tsv):
                 entry['description'] = row['attribute_description']
 
             # handle properties unique to the ontology class of attributes
+            # must allow for multiple ontologies, comma-delimited
             if row['class'] == 'ontology':
-                ontology = retrieve_ontology(row['ontology'])
-                if ontology:
-                    print("Valid ontology URL", row['ontology'])
-                else:
-                    print("Invalid ontology URL", row['ontology'])
+                ontology_urls = row['ontology'].split(',')
+                if len(ontology_urls) > 1:
+                    print(f"Checking {len(ontology_urls)} urls for {row['attribute']}")
+                for url in ontology_urls:
+                    ontology = retrieve_ontology(url)
+                    if ontology:
+                        print("Valid ontology URL", url)
+                    else:
+                        print("Invalid ontology URL", url)
                 entry[row['class']] = row['ontology']
 
             # handle arrays of values
