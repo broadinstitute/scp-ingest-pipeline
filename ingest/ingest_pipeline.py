@@ -94,6 +94,7 @@ class IngestPipeline(object):
     JSON_CONVENTION = (
         '../schema/alexandria_convention/alexandria_convention_schema.json'
     )
+    EXTERNAL_JSON_CONVENTION = 'gs://broad-singlecellportal-public/schema/alexandria_convention/2.0.0/alexandria_convention_schema.json'
     logger = logging.getLogger(__name__)
     error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
     info_logger = setup_logger(__name__, 'info.txt')

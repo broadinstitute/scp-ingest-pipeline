@@ -8,13 +8,13 @@ participating under the convention.
 
 EXAMPLE
 # Using JSON file for latest Alexandria metadata convention in repo, validate input TSV
-$ python3 validate_metadata.py  ../../tests/data/valid_no_array_v1.2.0.tsv
+$ python3 validate_metadata.py  ../../tests/data/valid_no_array_v2.0.0.tsv
 
 # generate an issues.json file to compare with references files for test
-$ python3 validate_metadata.py --issues-json ../../tests/data/valid_no_array_v1.2.0.tsv
+$ python3 validate_metadata.py --issues-json ../../tests/data/valid_no_array_v2.0.0.tsv
 
 # use a different metadata convention for validation
-$ python3 validate_metadata.py --convention <path to convention json> ../../tests/data/valid_no_array_v1.2.0.tsv
+$ python3 validate_metadata.py --convention <path to convention json> ../../tests/data/valid_no_array_v2.0.0.tsv
 
 """
 

@@ -21,6 +21,7 @@ import os
 from bson.objectid import ObjectId
 import requests
 from unittest.mock import patch
+from google.cloud import storage
 
 sys.path.append('../ingest')
 sys.path.append('../ingest/validation')
@@ -36,6 +37,8 @@ from validate_metadata import (
     retrieve_ontology,
     MAX_HTTP_ATTEMPTS,
 )
+
+from ingest_pipeline import IngestPipeline
 
 
 # do not attempt a request, but instead throw a request exception
@@ -66,6 +69,8 @@ class TestValidateMetadata(unittest.TestCase):
         try:
             os.remove('scp_validation_errors.txt')
             os.remove('scp_validation_warnings.txt')
+            os.remove('errors.txt')
+            os.remove('info.txt')
         except OSError:
             print('no file to remove')
 
@@ -232,6 +237,52 @@ class TestValidateMetadata(unittest.TestCase):
             'Metadata validation issues do not match reference issues',
         )
         self.teardown_metadata(metadata)
+
+    def test_external_metadata_convention(self):
+        """
+        check that extermal_metadata_convention has been staged to gs://broad-singlecellportal-public
+        """
+        # obtain local and external convention info from IngestPipeline object
+        ingest_object = IngestPipeline(
+            ObjectId('aaaaaaaaaaaaaaaaaaaaaaaa'), ObjectId('aaaaaaaaaaaaaaaaaaaaaaaa')
+        )
+        external_convention_gsurl = ingest_object.EXTERNAL_JSON_CONVENTION
+        # local_convention_object = IngestFiles(IngestPipeline.JSON_CONVENTION, ['application/json'])
+        # json_file_1 = local_convention_object.open_file(self.JSON_CONVENTION)
+        # print(f'local convention file from test IngestFile call {json_file_1}')
+        with open(ingest_object.JSON_CONVENTION) as f:
+            local_convention = json.load(f)
+
+        storage_client = storage.Client()
+
+        path_segments = external_convention_gsurl[5:].split("/")
+        bucket_name = path_segments[0]
+        bucket = storage_client.get_bucket(bucket_name)
+        source = "/".join(path_segments[1:])
+        localized_external_filename = f'external_{path_segments[-1]}'
+        blob = bucket.blob(source)
+
+        # check external convention JSON file exists in google bucket
+        self.assertTrue(
+            blob.exists(),
+            f'External convention JSON file missing at {external_convention_gsurl}',
+        )
+
+        # download external convention JSON file and check content matches local convention
+        blob.download_to_filename(localized_external_filename)
+        localized_external_convention = open(localized_external_filename)
+        external_convention = json.load(localized_external_convention)
+        self.assertEqual(
+            local_convention,
+            external_convention,
+            f'Content of JSON_CONVENTION and EXTERNAL_JSON_CONVENTION declared in ingest_pipeline.py does not match',
+        )
+
+        # clean up downloaded external convention file
+        try:
+            os.remove(localized_external_filename)
+        except OSError:
+            print('no file to remove')
 
     def test_invalid_array_content(self):
         """array-based metadata should conform to convention requirements
