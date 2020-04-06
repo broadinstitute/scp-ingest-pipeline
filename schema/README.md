@@ -24,6 +24,11 @@ gsutil -h "Cache-Control:no-cache,max-age=0" cp alexandria_convention_schema.jso
   
 * Update EXTERNAL_JSON_CONVENTION in ingest_pipeline.py
 
+* Test by running:
+```
+pytest -k test_external_metadata_convention
+```  
+
 Notes:
 * Tests in test_validate_metadata.py use current metadata convention (except for invalid metadata convention test)
 
