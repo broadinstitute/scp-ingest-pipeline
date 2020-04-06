@@ -21,7 +21,6 @@ import os
 from bson.objectid import ObjectId
 import requests
 from unittest.mock import patch
-from google.cloud import storage
 
 sys.path.append('../ingest')
 sys.path.append('../ingest/validation')
@@ -263,29 +262,36 @@ class TestValidateMetadata(unittest.TestCase):
             ObjectId('aaaaaaaaaaaaaaaaaaaaaaaa'), ObjectId('aaaaaaaaaaaaaaaaaaaaaaaa')
         )
         external_convention_gsurl = ingest_object.EXTERNAL_JSON_CONVENTION
+
         # local_convention_object = IngestFiles(IngestPipeline.JSON_CONVENTION, ['application/json'])
         # json_file_1 = local_convention_object.open_file(self.JSON_CONVENTION)
         # print(f'local convention file from test IngestFile call {json_file_1}')
         with open(ingest_object.JSON_CONVENTION) as f:
             local_convention = json.load(f)
 
-        storage_client = storage.Client()
+        # obtain EXTERNAL_JSON_CONVENTION
+        get_external = False
+        external_convention_path = external_convention_gsurl[5:]
+        # https://storage.cloud.google.com
+        response = requests.get(
+            'https://storage.googleapis.com/' + external_convention_path,
+            allow_redirects=True,
+        )
+        if response.status_code == 200:
+            get_external = True
 
-        path_segments = external_convention_gsurl[5:].split("/")
-        bucket_name = path_segments[0]
-        bucket = storage_client.get_bucket(bucket_name)
-        source = "/".join(path_segments[1:])
-        localized_external_filename = f'external_{path_segments[-1]}'
-        blob = bucket.blob(source)
-
-        # check external convention JSON file exists in google bucket
+        # check if able to request external convention JSON file in google bucket
         self.assertTrue(
-            blob.exists(),
-            f'External convention JSON file missing at {external_convention_gsurl}',
+            get_external,
+            f'Issue getting External convention JSON file from {external_convention_gsurl}',
         )
 
-        # download external convention JSON file and check content matches local convention
-        blob.download_to_filename(localized_external_filename)
+        # check external convention JSON file content matches local convention
+        path_segments = external_convention_gsurl[5:].split("/")
+        localized_external_filename = f'external_{path_segments[-1]}'
+
+        with open(localized_external_filename, 'wb') as f:
+            f.write(response.content)
         localized_external_convention = open(localized_external_filename)
         external_convention = json.load(localized_external_convention)
         self.assertEqual(
