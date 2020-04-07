@@ -272,7 +272,6 @@ class TestValidateMetadata(unittest.TestCase):
         # obtain EXTERNAL_JSON_CONVENTION
         get_external = False
         external_convention_path = external_convention_gsurl[5:]
-        # https://storage.cloud.google.com
         response = requests.get(
             'https://storage.googleapis.com/' + external_convention_path,
             allow_redirects=True,
