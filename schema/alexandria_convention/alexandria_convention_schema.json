@@ -1,5 +1,5 @@
 {
-    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schema/1.1.5/alexandria_convention_schema.json",
+    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schema/alexandria_convention/2.0.0/alexandria_convention_schema.json",
     "$schema": "https://json-schema.org/draft-07/schema#",
     "dependencies": {
         "cell_type__ontology_label": [
@@ -177,6 +177,12 @@
             "type": "string"
         },
         "biosample_id": {
+            "description": "Biosample ID",
+            "type": "string"
+        },
+        "biosample_type": {
+            "description": "Type of Biosample",
+            "enum": ["CellLine","DerivedType_Organoid","DerivedType_InVitroDifferentiated","DerivedType_InducedPluripotentStemCell","PrimaryBioSample","PrimaryBioSample_BodyFluid","PrimaryBioSample_CellFreeDNA","PrimaryBioSample_PrimaryCell","PrimaryBioSample_PrimaryCulture","PrimaryBioSample_Stool","PrimaryBioSample_Tissue"],
             "type": "string"
         },
         "bmi": {
@@ -219,7 +225,6 @@
             "type": "string"
         },
         "disease": {
-            "default": "MONDO_0000001",
             "description": "The disease state(s) of the individual donating the sample at the time of donation",
             "items": {
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
@@ -502,6 +507,11 @@
             "description": "true if the sequence library has paired end data (false for 10x)",
             "type": "boolean"
         },
+        "preservation_method": {
+            "description": "Method used for sample preservation",
+            "enum": ["Cryopreservation","FFPE","Fresh","Frozen","OCT-embedded","Snap","Frozen"],
+            "type": "string"
+        },
         "primer": {
             "description": "Primer used for cDNA synthesis from RNA",
             "enum": ["poly-dT","random"],
@@ -528,11 +538,6 @@
             "description": "the read structure of the sequencing run",
             "type": "string"
         },
-        "sample_type": {
-            "description": "one of: cell line, organoid, direct from donor (fresh), direct from donor (frozen), cultured primary cells",
-            "enum": ["cell line", "organoid", "direct from donor - fresh", "direct from donor - frozen", "cultured primary cells"],
-            "type": "string"
-        },
         "sequencing_instrument_manufacturer_model": {
             "description": "name of sequencing instrument manufacturer",
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/efo",
@@ -544,7 +549,6 @@
             "type": "string"
         },
         "sex": {
-            "default": "unknown",
             "description": "Biological sex",
             "enum": ["male", "female", "mixed", "unknown"],
             "type": "string"
@@ -676,20 +680,19 @@
         }
     },
     "required": [
-        "species",
-        "species__ontology_label",
-        "sex",
-        "is_living",
         "biosample_id",
-        "organ",
-        "organ__ontology_label",
-        "sample_type",
+        "biosample_type",
+        "CellID",
         "disease",
         "disease__ontology_label",
+        "donor_id",
         "library_preparation_protocol",
         "library_preparation_protocol__ontology_label",
-        "CellID",
-        "donor_id"
+        "organ",
+        "organ__ontology_label",
+        "sex",
+        "species",
+        "species__ontology_label"
     ],
     "title": "alexandria metadata convention"
 }

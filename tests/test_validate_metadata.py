@@ -37,6 +37,8 @@ from validate_metadata import (
     MAX_HTTP_ATTEMPTS,
 )
 
+from ingest_pipeline import IngestPipeline
+
 
 # do not attempt a request, but instead throw a request exception
 def mocked_requests_get(*args, **kwargs):
@@ -66,6 +68,8 @@ class TestValidateMetadata(unittest.TestCase):
         try:
             os.remove('scp_validation_errors.txt')
             os.remove('scp_validation_warnings.txt')
+            os.remove('errors.txt')
+            os.remove('info.txt')
         except OSError:
             print('no file to remove')
 
@@ -73,7 +77,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Header rows of metadata file should conform to standard
         """
 
-        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/error_headers_v1.1.3.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/error_headers_v2.0.0.tsv'
         metadata = self.setup_metadata(args)[0]
         self.assertFalse(metadata.validate_header_keyword())
         self.assertIn(
@@ -109,7 +113,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Metadata convention should be valid jsonschema
         """
 
-        args = '../tests/data/AMC_invalid.json ../tests/data/valid_no_array_v1.1.4.tsv'
+        args = '--convention ../tests/data/AMC_invalid.json ../tests/data/valid_no_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertIsNone(
             validate_schema(convention, metadata),
@@ -121,7 +125,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Non-ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.1.4.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -135,7 +139,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements
         """
-        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_metadata_v1.1.3.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_metadata_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -150,9 +154,8 @@ class TestValidateMetadata(unittest.TestCase):
         #   missing required property 'sex'
         #   missing dependency for non-required property 'ethinicity'
         #   missing value for non-required property 'is_living'
-        #   value provided not in enumerated list for 'sample_type'
         #   value provided not a number for 'organism_age'
-        reference_file = open('../tests/data/issues_metadata_v1.1.3.json')
+        reference_file = open('../tests/data/issues_metadata_v2.0.0.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
@@ -166,7 +169,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.1.4.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -182,7 +185,7 @@ class TestValidateMetadata(unittest.TestCase):
            Specifically tests that a term can be found in one of two accepted ontologies (e.g. disease in MONDO or PATO)
         """
         # Note: this input metadata file does not have array-based metadata
-        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v1.1.5.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -197,7 +200,7 @@ class TestValidateMetadata(unittest.TestCase):
         """Ontology metadata should conform to convention requirements
         """
         # Note: this input metadata file does not have array-based metadata
-        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_ontology_v1.1.4.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_ontology_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.maxDiff = None
         self.assertTrue(
@@ -215,7 +218,7 @@ class TestValidateMetadata(unittest.TestCase):
         #     with species ontologyID of 'NCBITaxon_9606'
         #   invalid ontologyID of 'NCBITaxon_9606' for geographical_region
         #   invalid ontologyID UBERON_1000331 for organ__ontology_label
-        reference_file = open('../tests/data/issues_ontology_v1.1.4.json')
+        reference_file = open('../tests/data/issues_ontology_v2.0.0.json')
         reference_issues = json.load(reference_file)
 
         self.assertEqual(
@@ -229,7 +232,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_valid_array_content(self):
         """array-based metadata should conform to convention requirements
         """
-        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_array_v1.1.3.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -240,7 +243,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         # valid array data emits one warning message for disease__time_since_onset__unit
         # because no ontology label supplied in metadata file for the unit ontology
-        reference_file = open('../tests/data/issues_warn_v1.1.2.json')
+        reference_file = open('../tests/data/issues_warn_v2.0.0.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
@@ -250,10 +253,62 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.teardown_metadata(metadata)
 
+    def test_external_metadata_convention(self):
+        """
+        check that extermal_metadata_convention has been staged to gs://broad-singlecellportal-public
+        """
+        # obtain local and external convention info from IngestPipeline object
+        ingest_object = IngestPipeline(
+            ObjectId('aaaaaaaaaaaaaaaaaaaaaaaa'), ObjectId('aaaaaaaaaaaaaaaaaaaaaaaa')
+        )
+        external_convention_gsurl = ingest_object.EXTERNAL_JSON_CONVENTION
+
+        # local_convention_object = IngestFiles(IngestPipeline.JSON_CONVENTION, ['application/json'])
+        # json_file_1 = local_convention_object.open_file(self.JSON_CONVENTION)
+        # print(f'local convention file from test IngestFile call {json_file_1}')
+        with open(ingest_object.JSON_CONVENTION) as f:
+            local_convention = json.load(f)
+
+        # obtain EXTERNAL_JSON_CONVENTION
+        get_external = False
+        external_convention_path = external_convention_gsurl[5:]
+        response = requests.get(
+            'https://storage.googleapis.com/' + external_convention_path,
+            allow_redirects=True,
+        )
+        if response.status_code == 200:
+            get_external = True
+
+        # check if able to request external convention JSON file in google bucket
+        self.assertTrue(
+            get_external,
+            f'Issue getting External convention JSON file from {external_convention_gsurl}',
+        )
+
+        # check external convention JSON file content matches local convention
+        path_segments = external_convention_gsurl[5:].split("/")
+        localized_external_filename = f'external_{path_segments[-1]}'
+
+        with open(localized_external_filename, 'wb') as f:
+            f.write(response.content)
+        localized_external_convention = open(localized_external_filename)
+        external_convention = json.load(localized_external_convention)
+        self.assertEqual(
+            local_convention,
+            external_convention,
+            f'Content of JSON_CONVENTION and EXTERNAL_JSON_CONVENTION declared in ingest_pipeline.py does not match',
+        )
+
+        # clean up downloaded external convention file
+        try:
+            os.remove(localized_external_filename)
+        except OSError:
+            print('no file to remove')
+
     def test_invalid_array_content(self):
         """array-based metadata should conform to convention requirements
         """
-        args = '../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_array_v1.1.3.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -262,12 +317,12 @@ class TestValidateMetadata(unittest.TestCase):
         # reference errors tests for:
         # conflict between convention type and input metadata type annotation
         #     group instead of numeric: organism_age
-        #     numeric instead of group: sample_type
+        #     numeric instead of group: biosample_type
         # invalid array-based metadata type: disease__time_since_onset
         # invalid boolean value: disease__treated
         # non-uniform unit values: organism_age__unit
         # missing ontology ID or label for non-required metadata: ethnicity
-        reference_file = open('../tests/data/issues_array_v1.1.3.json')
+        reference_file = open('../tests/data/issues_array_v2.0.0.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(

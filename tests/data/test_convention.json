@@ -1,5 +1,5 @@
 {
-    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schema/1.0.0/test_convention_schema.json",
+    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schema/test_convention/1.0.0/test_convention_schema.json",
     "$schema": "https://json-schema.org/draft-07/schema#",
     "dependencies": {
         "cell_type__ontology_label": [
@@ -49,7 +49,6 @@
             "type": "string"
         },
         "disease": {
-            "default": "MONDO_0000001",
             "description": "The disease state(s) of the individual donating the sample at the time of donation",
             "items": {
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
@@ -94,7 +93,6 @@
             "type": "string"
         },
         "sex": {
-            "default": "unknown",
             "description": "Biological sex",
             "enum": ["male", "female", "mixed", "unknown"],
             "type": "string"
