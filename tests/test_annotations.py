@@ -4,6 +4,7 @@ These tests verify:
     - Group type annotations that have numeric-like values are being treated as strings
     - Numeric columns are rounded to 3 decimals points
     - Filtering cell names (given from cluster file) in metadata correctly
+    - Labels are treated as strings
 
 PREREQUISITES
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
@@ -12,18 +13,18 @@ Note: When CI environment moves to Python 3.7, tests may break due to minor
 differences in how the reference issues are serialized
 
 # Run all tests in a manner that shows report_issues output
-python3 test_ingest_files.py -s
+python3 test_annotations.py -s
 """
 
 
+import random
 import sys
 import unittest
 from decimal import Decimal
+
 import numpy as np
-import random
 
 sys.path.append("../ingest")
-
 from annotations import Annotations
 
 
@@ -35,7 +36,8 @@ class TestAnnotations(unittest.TestCase):
 
     def setUp(self):
         self.df = Annotations(
-            self.CLUSTER_PATH, ['text/csv', 'text/plain', 'text/tab-separated-values']
+            self.CLUSTER_PATH, ['text/csv', 'text/plain',
+                                'text/tab-separated-values']
         )
 
     def test_round(self):
@@ -54,6 +56,9 @@ class TestAnnotations(unittest.TestCase):
     def test_group_annotations(self):
         self.df.preprocess()
         for column in self.df.file.columns:
+            # Ensure labels are strings
+            header = column[0]
+            assert(isinstance(header, str))
             annot_type = column[1]
             if annot_type == 'group':
                 assert (
@@ -75,7 +80,8 @@ class TestAnnotations(unittest.TestCase):
             np.isin(cell_names_cluster_df, cell_names_cell_metadata_df)
         ]
         # Perform merge
-        self.df.merge_df(self.df.file[['NAME', 'X', 'Y', 'Z']], cell_metadata_df.file)
+        self.df.merge_df(
+            self.df.file[['NAME', 'X', 'Y', 'Z']], cell_metadata_df.file)
 
         # Ensure ONLY common cell names found in cell metadata file and cluster file
         # are in the newly merged df

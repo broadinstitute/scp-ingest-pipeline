@@ -8,9 +8,10 @@ Must have python 3.6 or higher.
 """
 
 import abc
+from collections import defaultdict
+
 import pandas as pd  # NOqa: F821
 from bson.objectid import ObjectId
-from collections import defaultdict
 
 try:
     # Used when importing internally and in tests
@@ -37,7 +38,8 @@ class Annotations(IngestFiles):
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
-        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        self.issues = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(list)))
 
     def reset_file(self):
         self.file, self.file_handle = self.open_file(
@@ -72,12 +74,15 @@ class Annotations(IngestFiles):
 
     def preprocess(self):
         """Ensures that:
+            - Labels are treated as strings
             - Numeric columns are rounded to 3 decimals points
             - Group annotations are strings
             - 'NAME' in first header row is capitalized
             - 'TYPE' in second header row is capitalized
         """
-        headers = self.file.columns.get_level_values(0)
+        headers = [str(header)
+                   for header in self.file.columns.get_level_values(0)]
+        print(headers)
         annot_types = self.file.columns.get_level_values(1)
         # Lowercase second level. Example: NUMeric -> numeric
         self.file.rename(
@@ -86,7 +91,8 @@ class Annotations(IngestFiles):
         name = list(headers)[0]
         type = list(annot_types)[0].lower()
         # Uppercase NAME and TYPE
-        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
+        self.file.rename(columns={name: name.upper(),
+                                  type: type.upper()}, inplace=True)
         # Make sure group annotations are treated as strings
         # only run this assignment if group annotations are present
         if 'group' in list(annot_types):
