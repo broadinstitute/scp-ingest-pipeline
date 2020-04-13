@@ -38,8 +38,7 @@ class Annotations(IngestFiles):
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
-        self.issues = defaultdict(
-            lambda: defaultdict(lambda: defaultdict(list)))
+        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     def reset_file(self):
         self.file, self.file_handle = self.open_file(
@@ -80,8 +79,7 @@ class Annotations(IngestFiles):
             - 'NAME' in first header row is capitalized
             - 'TYPE' in second header row is capitalized
         """
-        headers = [str(header)
-                   for header in self.file.columns.get_level_values(0)]
+        headers = [str(header) for header in self.file.columns.get_level_values(0)]
         print(headers)
         annot_types = self.file.columns.get_level_values(1)
         # Lowercase second level. Example: NUMeric -> numeric
@@ -91,8 +89,7 @@ class Annotations(IngestFiles):
         name = list(headers)[0]
         type = list(annot_types)[0].lower()
         # Uppercase NAME and TYPE
-        self.file.rename(columns={name: name.upper(),
-                                  type: type.upper()}, inplace=True)
+        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
         # Make sure group annotations are treated as strings
         # only run this assignment if group annotations are present
         if 'group' in list(annot_types):

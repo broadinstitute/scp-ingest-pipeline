@@ -36,8 +36,7 @@ class TestAnnotations(unittest.TestCase):
 
     def setUp(self):
         self.df = Annotations(
-            self.CLUSTER_PATH, ['text/csv', 'text/plain',
-                                'text/tab-separated-values']
+            self.CLUSTER_PATH, ['text/csv', 'text/plain', 'text/tab-separated-values']
         )
 
     def test_round(self):
@@ -58,7 +57,7 @@ class TestAnnotations(unittest.TestCase):
         for column in self.df.file.columns:
             # Ensure labels are strings
             header = column[0]
-            assert(isinstance(header, str))
+            assert isinstance(header, str)
             annot_type = column[1]
             if annot_type == 'group':
                 assert (
@@ -80,8 +79,7 @@ class TestAnnotations(unittest.TestCase):
             np.isin(cell_names_cluster_df, cell_names_cell_metadata_df)
         ]
         # Perform merge
-        self.df.merge_df(
-            self.df.file[['NAME', 'X', 'Y', 'Z']], cell_metadata_df.file)
+        self.df.merge_df(self.df.file[['NAME', 'X', 'Y', 'Z']], cell_metadata_df.file)
 
         # Ensure ONLY common cell names found in cell metadata file and cluster file
         # are in the newly merged df
