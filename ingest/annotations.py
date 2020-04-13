@@ -79,8 +79,8 @@ class Annotations(IngestFiles):
             - 'NAME' in first header row is capitalized
             - 'TYPE' in second header row is capitalized
         """
+        # Grab column names and convert to string
         headers = [str(header) for header in self.file.columns.get_level_values(0)]
-        print(headers)
         annot_types = self.file.columns.get_level_values(1)
         # Lowercase second level. Example: NUMeric -> numeric
         self.file.rename(
