@@ -48,7 +48,7 @@ try:
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from ..cell_metadata import CellMetadata
-    from .monitor import setup_logger
+    from ..monitor import setup_logger
 
 
 info_logger = setup_logger(__name__, "info.txt")
