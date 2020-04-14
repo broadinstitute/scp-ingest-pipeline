@@ -21,6 +21,7 @@ import os
 from bson.objectid import ObjectId
 import requests
 from unittest.mock import patch
+import io
 
 sys.path.append('../ingest')
 sys.path.append('../ingest/validation')
@@ -52,12 +53,14 @@ class TestValidateMetadata(unittest.TestCase):
         with open(args.convention) as f:
             convention = json.load(f)
         filetsv = args.input_metadata
+        # set ObjectIDs to be recognizably artificial
+        artificial_study_file_id = 'addedfeed000000000000000'
         metadata = CellMetadata(
             filetsv,
-            ObjectId('5d276a50421aa9117c982845'),
-            ObjectId('5dd5ae25421aa910a723a337'),
-            'SCP1',
-            study_accession='SCP1',
+            ObjectId('dec0dedfeed1111111111111'),
+            ObjectId(artificial_study_file_id),
+            'SCPtest',
+            study_accession='SCPtest',
         )
         metadata.validate_format()
         print(f"Format is correct {metadata.validate_format()}")
@@ -253,6 +256,27 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.teardown_metadata(metadata)
 
+    def test_bigquery_json_content(self):
+        """generated newline delimited JSON for BigQuery upload should match expected output
+        """
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v2.0.0.tsv'
+        metadata, convention = self.setup_metadata(args)
+        validate_input_metadata(metadata, convention, bq_json=True)
+
+        generated_bq_json = str(metadata.study_file_id) + '.json'
+        reference_bq_json = '../tests/data/bq_test.json'
+        self.assertListEqual(
+            list(io.open(generated_bq_json)), list(io.open(reference_bq_json))
+        )
+
+        self.teardown_metadata(metadata)
+
+        # clean up downloaded generated BigQuery upload file
+        try:
+            os.remove('addedfeed000000000000000.json')
+        except OSError:
+            print('no file to remove')
+
     def test_external_metadata_convention(self):
         """
         check that extermal_metadata_convention has been staged to gs://broad-singlecellportal-public
@@ -286,7 +310,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
 
         # check external convention JSON file content matches local convention
-        path_segments = external_convention_gsurl[5:].split("/")
+        path_segments = external_convention_gsurl[5:].split('/')
         localized_external_filename = f'external_{path_segments[-1]}'
 
         with open(localized_external_filename, 'wb') as f:
