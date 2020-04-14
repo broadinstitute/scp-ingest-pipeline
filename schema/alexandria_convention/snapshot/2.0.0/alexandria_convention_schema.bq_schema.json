@@ -440,7 +440,7 @@
         "type": "string"
     },
     {
-        "mode": "REQUIRED",
+        "mode": "NULLABLE",
         "name": "metadata_convention_version",
         "type": "string"
     },

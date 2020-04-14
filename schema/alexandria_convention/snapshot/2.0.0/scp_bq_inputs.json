@@ -9,7 +9,7 @@
   ],
   "metadata_convention_version": [
     "string",
-    "REQUIRED"
+    "NULLABLE"
   ],
   "organism_age__seconds": [
     "float",
