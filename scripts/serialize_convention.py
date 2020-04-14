@@ -4,11 +4,14 @@ DESCRIPTION
 This CLI takes a tsv metadata convention and creates a JSON Schema representation.
 The JSON schema represents the rules that should be enforced on metadata files
 for studies participating under the convention.
+This CLI also generates a JSON file representing the BigQuery schema and incorporates
+info specifying the non-convention, SCP-added BigQuery terms (scp_bq_inputs.json)
 
 EXAMPLE
-# Generate json file for Alexandria from the Alexandria metadata convention tsv
-# Expects tsv file in scp-ingest-pipeline/schema/<project>_convention/snapshot/<version>
-$ python serialize_convention.py alexandria 1.1.4
+# Generate JSON file for Alexandria from the Alexandria metadata convention TSV
+# Expects TSV and scp_bq_inputs.json files in location under
+# scp-ingest-pipeline/schema/<project>_convention/snapshot/<version>
+$ python serialize_convention.py alexandria 2.0.0
 
 """
 
@@ -19,12 +22,19 @@ import json
 import re
 import requests
 
+from convention_to_bq_schema import (
+    load_scp_inputs,
+    build_bq_schema,
+    add_scp_fields_to_schema,
+    write_bq_schema,
+)
+
 
 def create_parser():
     """
     Command Line parser for serialize_convention
 
-    Input: metadata convention tsv file
+    Input: metadata convention TSV file
     """
     # create the argument parser
     parser = argparse.ArgumentParser(
@@ -143,19 +153,36 @@ def write_json_schema(filename, object):
 
 def set_file_names(project, version):
     """
-    Infer input tsv file location from project, version info
+    Infer input tsv and scp_bq_inputs.json file locations from project, version info
     If input tsv doesn't exist, exit
-    If output file already exists, exit
+    If scp_bq_inputs.json doesn't exist, exit
+    If metadata convention file already exists, exit
     """
     inputname = f'../schema/{project}_convention/snapshot/{version}/{project}_convention_schema.tsv'
-    outputname = f'../schema/{project}_convention/snapshot/{version}/{project}_convention_schema.json'
+    convention_filename = f'../schema/{project}_convention/snapshot/{version}/{project}_convention_schema.json'
+    bq_schema_filename = f'../schema/{project}_convention/snapshot/{version}/{project}_convention_schema.bq_schema.json'
+    scp_bq_inputs = (
+        f'../schema/{project}_convention/snapshot/{version}/scp_bq_inputs.json'
+    )
     if not os.path.exists(inputname):
-        print(f'{inputname} does not exist, please check your tsv file and try again')
+        print(f'{inputname} does not exist, please check your TSV file and try again')
         exit(1)
-    if os.path.exists(outputname):
-        print(f'{outputname} already exists, please delete file and try again')
+    if not os.path.exists(scp_bq_inputs):
+        print(
+            f'{scp_bq_inputs} does not exist, please check your JSON file and try again'
+        )
         exit(1)
-    return inputname, outputname
+    if os.path.exists(convention_filename):
+        print(f'{convention_filename} already exists, please delete file and try again')
+        exit(1)
+    if os.path.exists(bq_schema_filename):
+        print(f'{bq_schema_filename} already exists, please delete file and try again')
+        exit(1)
+    filenames = {}
+    filenames['input'] = inputname
+    filenames['convention_filename'] = convention_filename
+    filenames['scp_bq_inputs'] = scp_bq_inputs
+    return filenames
 
 
 def retrieve_ontology(ontology_url):
@@ -237,16 +264,25 @@ def serialize_convention(convention, input_tsv):
     return convention
 
 
-def write_schema(dict, filepath):
+def write_convention_schema(dict, filepath):
     dump_json(dict, filepath)
     write_json_schema(filepath, clean_json(filepath))
+
+
+def generate_bq_schema(filenames):
+    scp_bq_input = load_scp_inputs(filenames['scp_bq_inputs'])
+    schema = build_bq_schema(filenames['input'])
+    schema = add_scp_fields_to_schema(schema, scp_bq_input)
+    write_bq_schema(schema, filenames['convention_filename'])
 
 
 if __name__ == '__main__':
     args = create_parser().parse_args()
     project = args.project
     version = args.version
-    input_tsv, output_fullpath = set_file_names(project, version)
+    filenames = set_file_names(project, version)
     schema_info = build_schema_info(project, version)
-    convention = serialize_convention(schema_info, input_tsv)
-    write_schema(convention, output_fullpath)
+    convention = serialize_convention(schema_info, filenames['input'])
+    write_convention_schema(convention, filenames['convention_filename'])
+    generate_bq_schema(filenames)
+    print(f"Metadata convention written to {filenames['convention_filename']}")

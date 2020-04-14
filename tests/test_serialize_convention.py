@@ -22,7 +22,7 @@ from serialize_convention import (
     create_parser,
     build_schema_info,
     serialize_convention,
-    write_schema,
+    write_convention_schema,
 )
 
 
@@ -45,7 +45,7 @@ class TestValidateMetadata(unittest.TestCase):
         output_fullpath = 'output_convention.json'
         schema_info = build_schema_info(project, version)
         convention = serialize_convention(schema_info, input_tsv)
-        write_schema(convention, output_fullpath)
+        write_convention_schema(convention, output_fullpath)
         with open("output_convention.json", "r") as result:
             generated_convention = json.load(result)
         os.remove("output_convention.json")
