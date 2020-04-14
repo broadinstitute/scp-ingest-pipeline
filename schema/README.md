@@ -2,12 +2,16 @@
 
 * &lt;project&gt;_convention_schema.tsv - human-readable file used to generate the JSON document
 * &lt;project&gt;_convention_schema.json - used by ingest pipeline for metadata validation
+* scp_bq_inputs.json - file indicating non-metadata convention terms added to BigQuery for SCP use
+* &lt;project&gt;_convention_schema.bq_schema.json - representation of BigQuery schema
 
 # To update an existing metadata convention
 
 * Create a new snapshot directory under schema/&lt;project&gt;_convention/snapshot using semantic versioning conventions  
 
 * Make desired metadata convention updates to a copy of &lt;project&gt;_convention_schema.tsv file in the snapshot directory  
+
+* copy scp_bq_inputs.json from previous snapshot directory, update with new SCP-internal terms if appropriate
 
 * In the scripts `scp-ingest-pipeline` directory, run
   ```
