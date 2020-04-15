@@ -1,5 +1,5 @@
 {
-    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schemas/test.schema.json",
+    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata_schemas/test_convention/1.0.0/json",
     "$schema": "https://json-schema.org/draft-07/schema#",
     "dependencies": {
         "cell_type__ontology_label": [
@@ -33,7 +33,7 @@
             "vaccination"
         ]
     },
-    "description": "Metadata convention for the test project",
+    "description": "metadata convention for the test project",
     "properties": {
         "CellID": {
             "type": "string"
@@ -49,10 +49,9 @@
             "type": "string"
         },
         "disease": {
-            "default": "MONDO_0000001",
             "description": "The disease state(s) of the individual donating the sample at the time of donation",
             "items": {
-                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/mondo",
@@ -94,7 +93,6 @@
             "type": "string"
         },
         "sex": {
-            "default": "unknown",
             "description": "Biological sex",
             "enum": ["male", "female", "mixed", "unknown"],
             "type": "string"
@@ -112,7 +110,7 @@
         "vaccination": {
             "description": "Any known vaccines administered to the donor organism. NOT a full vaccine history",
             "items": {
-                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/vo",
@@ -142,5 +140,5 @@
         "disease__ontology_label",
         "CellID"
     ],
-    "title": "test Metadata Convention"
+    "title": "test metadata convention"
 }

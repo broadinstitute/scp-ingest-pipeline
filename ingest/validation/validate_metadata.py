@@ -7,9 +7,17 @@ represents the rules that should be enforced on metadata files for studies
 participating under the convention.
 
 EXAMPLE
-# Using JSON file for Alexandria metadata convention TSV, validate input TSV
-$ python3 validate_metadata.py ../../tests/data/AMC_v1.1.3.json ../../tests/data/valid_no_array_v1.1.3.tsv \
-          --study-accession SCP123 --study-id 5dfa6718421aa90fea085476 --study-file-id 5e27451e2209c211b1e7c9cc
+# Using JSON file for latest Alexandria metadata convention in repo, validate input TSV
+$ python3 validate_metadata.py  ../../tests/data/valid_no_array_v2.0.0.tsv
+
+# generate an issues.json file to compare with reference test files
+$ python3 validate_metadata.py --issues-json ../../tests/data/valid_no_array_v2.0.0.tsv
+
+# generate a BigQuery upload file to compare with reference test files
+$ python3 validate_metadata.py --bq-json ../../tests/data/valid_no_array_v2.0.0.tsv
+
+# use a different metadata convention for validation
+$ python3 validate_metadata.py --convention <path to convention json> ../../tests/data/valid_no_array_v2.0.0.tsv
 
 """
 
@@ -40,7 +48,7 @@ try:
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from ..cell_metadata import CellMetadata
-    from .monitor import setup_logger
+    from ..monitor import setup_logger
 
 
 info_logger = setup_logger(__name__, "info.txt")
@@ -89,18 +97,19 @@ def create_parser():
     # test BigQuery upload functions
     parser.add_argument('--upload', action='store_true')
     # validate_metadata.py CLI only for dev, bogus defaults below shouldn't propagate
+    # make bogus defaults obviously artificial for ease of detection
     parser.add_argument(
         '--study-id',
         help='MongoDB study identifier',
-        default='6d276a50421aa9117c982846',
+        default='dec0dedfeed1111111111111',
     )
     parser.add_argument(
         '--study-file-id',
         help='MongoDB file identifier',
-        default='6e1f79a57b2f1516a39d03a7',
+        default='addedfeed000000000000000',
     )
     parser.add_argument(
-        '--study-accession', help='SCP study accession', default='SCPdev'
+        '--study-accession', help='SCP study accession', default='SCPtest'
     )
     parser.add_argument(
         '--bq-dataset', help='BigQuery dataset identifier', default='cell_metadata'
@@ -108,7 +117,11 @@ def create_parser():
     parser.add_argument(
         '--bq-table', help='BigQuery table identifier', default='alexandria_convention'
     )
-    parser.add_argument('convention', help='Metadata convention JSON file ')
+    parser.add_argument(
+        '--convention',
+        help='Metadata convention JSON file',
+        default='../../schema/alexandria_convention/alexandria_convention_schema.json',
+    )
     parser.add_argument('input_metadata', help='Metadata TSV file')
     return parser
 
@@ -480,6 +493,8 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
                 # add non-convention, SCP-required, metadata for BigQuery
                 row['study_accession'] = metadata.study_accession
                 row['file_id'] = str(metadata.study_file_id)
+                # extract convention version from URI in convention JSON file
+                row['metadata_convention_version'] = convention['$id'].split("/")[-2]
                 serialize_bq(row, bq_filename)
             try:
                 line = next(rows)
@@ -603,7 +618,7 @@ def retrieve_ontology(ontology_url):
     on_backoff=backoff_handler,
     logger="info_logger",
 )
-def retrieve_ontology_term(convention_url, ontology_id, ontologies):
+def retrieve_ontology_term(convention_urls, ontology_id, ontologies):
     """Retrieve an individual term from an ontology
     returns JSON payload of ontology, or None if unsuccessful
     Will store any retrieved ontologies for faster validation of downstream terms
@@ -626,16 +641,22 @@ def retrieve_ontology_term(convention_url, ontology_id, ontologies):
     # if so, skip the extra call to OLS; otherwise, retrieve the convention-defined ontology for term lookups
     if metadata_ontology is not None:
         reference_url = metadata_ontology['_links']['self']['href']
-        if reference_url.lower() == convention_url.lower():
+        matches = [
+            url for url in convention_urls if url.lower() == reference_url.lower()
+        ]
+        if matches:
             convention_ontology = metadata_ontology.copy()
         else:
-            convention_shortname = extract_terminal_pathname(convention_url)
-            convention_ontology = retrieve_ontology(convention_url)
-            ontologies[convention_shortname] = convention_ontology
+            # store all convention ontologies for lookup later
+            for convention_url in convention_urls:
+                convention_shortname = extract_terminal_pathname(convention_url)
+                convention_ontology = retrieve_ontology(convention_url)
+                ontologies[convention_shortname] = convention_ontology
+
     else:
         convention_ontology = (
-            None
-        )  # we did not get a metadata_ontology, so abort the check
+            None  # we did not get a metadata_ontology, so abort the check
+        )
     if convention_ontology and metadata_ontology:
         base_term_uri = metadata_ontology['config']['baseUris'][0]
         query_iri = encode_term_iri(term_id, base_term_uri)
@@ -654,7 +675,7 @@ def retrieve_ontology_term(convention_url, ontology_id, ontologies):
         info_logger.info(error_msg, extra={'study_id': None, 'duration': None})
     else:
         error_msg = (
-            f'encountered issue retrieving {convention_url} or {ontology_shortname}'
+            f'encountered issue retrieving {convention_urls} or {ontology_shortname}'
         )
         print(error_msg)
         info_logger.info(error_msg, extra={'study_id': None, 'duration': None})
@@ -685,12 +706,13 @@ def validate_collected_ontology_data(metadata, convention):
     # container to store references to retrieved ontologies for faster validation
     stored_ontologies = {}
     for entry in metadata.ontology.keys():
-        ontology_url = convention['properties'][entry]['ontology']
+        # split on comma in case this property from the convention supports multiple ontologies
+        ontology_urls = convention['properties'][entry]['ontology'].split(',')
         for ontology_info in metadata.ontology[entry].keys():
             try:
                 ontology_id, ontology_label = ontology_info
                 matching_term = retrieve_ontology_term(
-                    ontology_url, ontology_id, stored_ontologies
+                    ontology_urls, ontology_id, stored_ontologies
                 )
                 if matching_term:
                     if matching_term['label'] != ontology_label:
@@ -741,7 +763,7 @@ def validate_collected_ontology_data(metadata, convention):
                 ontology_id = ontology_info
                 try:
                     matching_term = retrieve_ontology_term(
-                        ontology_url, ontology_id, stored_ontologies
+                        ontology_urls, ontology_id, stored_ontologies
                     )
                     if not matching_term:
                         error_msg = f'{entry}: No match found in EBI OLS for provided ontology ID: {ontology_id}'
@@ -757,7 +779,7 @@ def validate_collected_ontology_data(metadata, convention):
                     )
                     metadata.store_validation_issue('warn', 'ontology', error_msg)
                 except requests.exceptions.RequestException as err:
-                    error_msg = f'External service outage connecting to {ontology_url} when querying {ontology_id}:{ontology_label}: {err}'
+                    error_msg = f'External service outage connecting to {ontology_urls} when querying {ontology_id}:{ontology_label}: {err}'
                     error_logger.error(error_msg)
                     metadata.store_validation_issue('error', 'ontology', error_msg)
                     # immediately return as validation cannot continue

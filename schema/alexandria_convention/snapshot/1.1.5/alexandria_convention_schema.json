@@ -1,5 +1,5 @@
 {
-    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schemas/Alexandria.schema.json",
+    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata_schemas/alexandria_convention/1.1.5/json",
     "$schema": "https://json-schema.org/draft-07/schema#",
     "dependencies": {
         "cell_type__ontology_label": [
@@ -170,7 +170,7 @@
             "vaccination__time_since__unit"
         ]
     },
-    "description": "Metadata convention for the Alexandria project",
+    "description": "metadata convention for the alexandria project",
     "properties": {
         "CellID": {
             "description": "Cell ID",
@@ -222,16 +222,16 @@
             "default": "MONDO_0000001",
             "description": "The disease state(s) of the individual donating the sample at the time of donation",
             "items": {
-                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/mondo",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/mondo,https://www.ebi.ac.uk/ols/api/ontologies/pato",
             "type": "array"
         },
         "disease__intracellular_pathogen": {
             "description": "If evidence of a pathogen is detected in this cell",
             "items": {
-                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/mondo",
@@ -337,7 +337,7 @@
             "dependency_condition": "species == NCBITaxon_9606",
             "description": "The ethnicity or ethnicities of the human donor if known",
             "items": {
-                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/hancestro",
@@ -353,7 +353,7 @@
         "gene_perturbation": {
             "description": "A perturbation to a gene done to a cell culture",
             "items": {
-                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ogg",
@@ -396,7 +396,7 @@
             "dependency_condition": "sample_type in cell line, organoid, cultured primary cells",
             "description": "a growth factor added to a cell culture media",
             "items": {
-                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/pr",
@@ -511,7 +511,7 @@
             "dependency_condition": "species == NCBITaxon_9606",
             "description": "An arbitrary classification of a taxonomic group that is a division of a species",
             "items": {
-                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ncit",
@@ -552,7 +552,7 @@
         "small_molecule_perturbation": {
             "description": "a small molecule added to a cell culture (ex. A drug) growth factor (and if it is recombinant, concentration), gene)",
             "items": {
-                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/chebi",
@@ -622,7 +622,7 @@
         "vaccination": {
             "description": "Any known vaccines administered to the donor organism. NOT a full vaccine history",
             "items": {
-                "pattern": "^[A-Za-z]+[_:][0-9]",
+                "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/vo",
@@ -691,5 +691,5 @@
         "CellID",
         "donor_id"
     ],
-    "title": "Alexandria Metadata Convention"
+    "title": "alexandria metadata convention"
 }
