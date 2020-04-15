@@ -19,7 +19,8 @@ RUN apt-get -y update && \
   apt -y install software-properties-common && \
   add-apt-repository ppa:deadsnakes/ppa && \
   apt -y install python3-pip && \
-  apt -y install python3.7
+  apt -y install python3.7 && \
+  apt -y install python3.7-dev
 
 RUN python3.7 -m pip install pip
 
