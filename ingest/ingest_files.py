@@ -3,17 +3,18 @@
 DESCRIPTION
 Module provides extract capabilities for text, CSV, and TSV file types
 """
+import copy
 import csv
+import gzip
 import logging
 import mimetypes
 import os
 import re
-from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
-import gzip
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+
 import pandas as pd  # NOqa: F821
 from google.cloud import storage
-import copy
 
 # from google.cloud.logging.resource import Resource
 # import google.cloud.logging
@@ -65,7 +66,7 @@ class DataArray:
         if len(self.values) > self.MAX_ENTRIES:
             values = self.values
             for idx, i in enumerate(range(0, len(self.values), self.MAX_ENTRIES)):
-                self.values = values[i : i + self.MAX_ENTRIES]
+                self.values = values[i: i + self.MAX_ENTRIES]
                 self.array_index = idx
                 yield copy.copy(self.__dict__)
         else:
@@ -75,7 +76,8 @@ class DataArray:
 class IngestFiles:
     # General logger for class
     info_logger = setup_logger(__name__, "info.txt")
-    error_logger = setup_logger(__name__ + "_errors", "errors.txt", level=logging.ERROR)
+    error_logger = setup_logger(
+        __name__ + "_errors", "errors.txt", level=logging.ERROR)
 
     def __init__(self, file_path, allowed_file_types):
         self.file_path = file_path
@@ -270,30 +272,11 @@ class IngestFiles:
     def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
         open_file_object = kwargs.pop('open_file_object')
-        if file_type == "text/tab-separated-values":
-            return pd.read_csv(
-                file_path,
-                sep="\t",
-                skipinitialspace=True,
-                quoting=csv.QUOTE_NONNUMERIC,
-                **kwargs,
-            )
-        elif file_type == "text/csv":
-            return pd.read_csv(
-                file_path,
-                sep=",",
-                quotechar='"',
-                quoting=csv.QUOTE_NONNUMERIC,
-                skipinitialspace=True,
-                escapechar='\\',
-                **kwargs,
-            )
-        elif file_type == 'text/plain':
+        if (file_type == "text/tab-separated-values" or file_type == "text/csv" or file_type == 'text/plain'):
             csv_dialect = csv.Sniffer().sniff(open_file_object.readline())
             csv_dialect.skipinitialspace = True
             open_file_object.seek(0)
             return pd.read_csv(file_path, dialect=csv_dialect, **kwargs)
-
         else:
             raise ValueError("File must be tab or comma delimited")
 
@@ -310,7 +293,8 @@ class IngestFiles:
 
     def open_tsv(self, opened_file_object, **kwargs):
         """Opens tsv file"""
-        csv.register_dialect("tsvDialect", delimiter="\t", skipinitialspace=True)
+        csv.register_dialect("tsvDialect", delimiter="\t",
+                             skipinitialspace=True)
         return csv.reader(opened_file_object, dialect="tsvDialect")
 
     def extract_csv_or_tsv(self, file):
