@@ -10,8 +10,11 @@ EXAMPLE
 # Using JSON file for latest Alexandria metadata convention in repo, validate input TSV
 $ python3 validate_metadata.py  ../../tests/data/valid_no_array_v2.0.0.tsv
 
-# generate an issues.json file to compare with references files for test
+# generate an issues.json file to compare with reference test files
 $ python3 validate_metadata.py --issues-json ../../tests/data/valid_no_array_v2.0.0.tsv
+
+# generate a BigQuery upload file to compare with reference test files
+$ python3 validate_metadata.py --bq-json ../../tests/data/valid_no_array_v2.0.0.tsv
 
 # use a different metadata convention for validation
 $ python3 validate_metadata.py --convention <path to convention json> ../../tests/data/valid_no_array_v2.0.0.tsv
@@ -45,7 +48,7 @@ try:
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from ..cell_metadata import CellMetadata
-    from .monitor import setup_logger
+    from ..monitor import setup_logger
 
 
 info_logger = setup_logger(__name__, "info.txt")
@@ -94,18 +97,19 @@ def create_parser():
     # test BigQuery upload functions
     parser.add_argument('--upload', action='store_true')
     # validate_metadata.py CLI only for dev, bogus defaults below shouldn't propagate
+    # make bogus defaults obviously artificial for ease of detection
     parser.add_argument(
         '--study-id',
         help='MongoDB study identifier',
-        default='6d276a50421aa9117c982846',
+        default='dec0dedfeed1111111111111',
     )
     parser.add_argument(
         '--study-file-id',
         help='MongoDB file identifier',
-        default='6e1f79a57b2f1516a39d03a7',
+        default='addedfeed000000000000000',
     )
     parser.add_argument(
-        '--study-accession', help='SCP study accession', default='SCPdev'
+        '--study-accession', help='SCP study accession', default='SCPtest'
     )
     parser.add_argument(
         '--bq-dataset', help='BigQuery dataset identifier', default='cell_metadata'
@@ -489,6 +493,8 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
                 # add non-convention, SCP-required, metadata for BigQuery
                 row['study_accession'] = metadata.study_accession
                 row['file_id'] = str(metadata.study_file_id)
+                # extract convention version from URI in convention JSON file
+                row['metadata_convention_version'] = convention['$id'].split("/")[-2]
                 serialize_bq(row, bq_filename)
             try:
                 line = next(rows)

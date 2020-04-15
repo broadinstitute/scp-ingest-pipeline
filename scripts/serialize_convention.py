@@ -110,10 +110,9 @@ def build_schema_info(project, version):
     """
     info = {}
     info['$schema'] = 'https://json-schema.org/draft-07/schema#'
-    # $id below is a placeholder, not functional yet
     info['$id'] = (
-        f'https://singlecell.broadinstitute.org/single_cell/api/v1/metadata-schema/'
-        f'{project}_convention/{version}/{project}_convention_schema.json'
+        f'https://singlecell.broadinstitute.org/single_cell/api/v1/metadata_schemas/'
+        f'{project}_convention/{version}/json'
     )
     info['title'] = project + ' metadata convention'
     info['description'] = 'metadata convention for the ' '%s project' % (project)
