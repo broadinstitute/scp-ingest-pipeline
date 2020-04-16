@@ -8,9 +8,10 @@ Must have python 3.6 or higher.
 """
 
 import abc
+from collections import defaultdict
+
 import pandas as pd  # NOqa: F821
 from bson.objectid import ObjectId
-from collections import defaultdict
 
 try:
     # Used when importing internally and in tests
@@ -72,12 +73,14 @@ class Annotations(IngestFiles):
 
     def preprocess(self):
         """Ensures that:
+            - Labels are treated as strings
             - Numeric columns are rounded to 3 decimals points
             - Group annotations are strings
             - 'NAME' in first header row is capitalized
             - 'TYPE' in second header row is capitalized
         """
-        headers = self.file.columns.get_level_values(0)
+        # Grab column names and convert to strings
+        headers = [str(header) for header in self.file.columns.get_level_values(0)]
         annot_types = self.file.columns.get_level_values(1)
         # Lowercase second level. Example: NUMeric -> numeric
         self.file.rename(
@@ -89,7 +92,7 @@ class Annotations(IngestFiles):
         self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
         # Make sure group annotations are treated as strings
         # only run this assignment if group annotations are present
-        if 'group' in list(annot_types):
+        if 'group' in annot_types:
             group_columns = self.file.xs(
                 "group", axis=1, level=1, drop_level=False
             ).columns.tolist()

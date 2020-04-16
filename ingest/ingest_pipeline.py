@@ -33,25 +33,23 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 # Ingest mtx files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
-from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-from contextlib import nullcontext
-
-import sys
 import json
-import os
 import logging
+import os
 import re
-
-from pymongo import MongoClient, InsertOne
-from pymongo.errors import BulkWriteError
+import sys
+from contextlib import nullcontext
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
 # import google.cloud.logging
 from bson.objectid import ObjectId
 
 # For tracing
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
-from opencensus.trace.tracer import Tracer
 from opencensus.trace.samplers import AlwaysOnSampler
+from opencensus.trace.tracer import Tracer
+from pymongo import InsertOne, MongoClient
+from pymongo.errors import BulkWriteError
 
 # from google.cloud.logging.resource import Resource
 
@@ -230,13 +228,8 @@ class IngestPipeline(object):
                 self.insert_many('data_arrays', documents)
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
-            if hasattr(e, 'details') and e.details is not None:
+            if e.details is not None:
                 self.error_logger.error(e.details, extra=self.extra_log_params)
-            else:
-                self.error_logger.error(
-                    'Error loading data to MongoDB (no details available) - check MongoDB access',
-                    extra=self.extra_log_params,
-                )
             return 1
         return 0
 
@@ -286,7 +279,8 @@ class IngestPipeline(object):
                 for model in set_data_array_fn(
                     (
                         key_value[0],  # NAMES, x, y, or z
-                        parent_data['name'],  # Cluster name provided from parent
+                        # Cluster name provided from parent
+                        parent_data['name'],
                         key_value[1],  # Subsampled data/values
                         ObjectId(self.study_file_id),
                         ObjectId(self.study_id),
