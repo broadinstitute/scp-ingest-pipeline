@@ -272,7 +272,7 @@ class IngestFiles:
     def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
         open_file_object = kwargs.pop('open_file_object')
-        if (file_type == "text/tab-separated-values" or file_type == "text/csv" or file_type == 'text/plain'):
+        if file_type in self.allowed_file_types:
             csv_dialect = csv.Sniffer().sniff(open_file_object.readline())
             csv_dialect.skipinitialspace = True
             open_file_object.seek(0)
