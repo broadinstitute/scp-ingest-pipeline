@@ -38,9 +38,6 @@
     "ontology": {
       "organ: No match found in EBI OLS for provided ontology ID: nan": [
         "BM01_16dpp_TAAGCAGTGGTA"
-      ],
-      "organ: input ontology_label \"nan\" does not match EBI OLS lookup \"milk\",": [
-        "BM01_16dpp_CCGAATTCACCG"
       ]
     }
   },
@@ -48,6 +45,7 @@
     "ontology": {
       "disease__time_since_onset__unit: no ontology label supplied in metadata file for \"UO_0000035\" - no cross-check for data entry error possible": null,
       "disease__time_since_onset__unit: no ontology label supplied in metadata file for \"UO_0000033\" - no cross-check for data entry error possible": null,
+      "organ: no ontology label supplied in metadata file for \"UBERON_0001913\" - no cross-check for data entry error possible": null,
       "ethnicity: no ontology label supplied in metadata file for \"HANCESTRO_0005\" - no cross-check for data entry error possible": null
     }
   }
