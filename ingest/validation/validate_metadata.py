@@ -203,30 +203,48 @@ def validate_cells_unique(metadata):
     return valid
 
 
-def collect_cell_for_ontology(metadatum, row_data, metadata, array=False):
+def collect_cell_for_ontology(metadatum, row, metadata, array=False):
     """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
     """
     if metadatum.endswith('__unit'):
         ontology_label = metadatum + '_label'
     else:
         ontology_label = metadatum + '__ontology_label'
+    cell_id = row['CellID']
     if array:
+        # Catch unusual edge case where ontology_label column provided but empty
+        # np.isnan does not support string values and generates a TypeError
         try:
-            ontology_dict = dict(zip(row_data[metadatum], row_data[ontology_label]))
-            for id, label in ontology_dict.items():
-                metadata.ontology[metadatum][(id, label)].append(row_data['CellID'])
+            np.isnan(row[ontology_label])
+            for id in row[metadatum]:
+                metadata.ontology[metadatum][(id)].append(cell_id)
         except (TypeError, KeyError):
-            for id in row_data[metadatum]:
-                metadata.ontology[metadatum][(id)].append(row_data['CellID'])
+            # Not all ontology data will have user-provided ontology_label
+            # where provided, collect to provide cross-validation
+            try:
+                ontology_dict = dict(zip(row[metadatum], row[ontology_label]))
+                for id, label in ontology_dict.items():
+                    metadata.ontology[metadatum][(id, label)].append(cell_id)
+            # where ontology_label not provided, collect ontology id for validation
+            except (TypeError, KeyError):
+                for id in row[metadatum]:
+                    metadata.ontology[metadatum][(id)].append(cell_id)
     else:
+        # Catch unusual edge case where ontology_label column provided but empty
+        # np.isnan does not support string values and generates a TypeError
         try:
-            metadata.ontology[metadatum][
-                (row_data[metadatum], row_data[ontology_label])
-            ].append(row_data['CellID'])
-        except KeyError:
-            metadata.ontology[metadatum][(row_data[metadatum])].append(
-                row_data['CellID']
-            )
+            np.isnan(row[ontology_label])
+            metadata.ontology[metadatum][(row[metadatum])].append(cell_id)
+        except (TypeError, KeyError):
+            # Not all ontology data will have user-provided ontology_label
+            # where provided, collect to provide cross-validation
+            try:
+                metadata.ontology[metadatum][
+                    (row[metadatum], row[ontology_label])
+                ].append(cell_id)
+            # where ontology_label not provided, collect ontology id for validation
+            except KeyError:
+                metadata.ontology[metadatum][(row[metadatum])].append(cell_id)
     return
 
 
@@ -794,7 +812,9 @@ def confirm_uniform_units(metadata, convention):
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     for name in metadata_names:
         if name.endswith('__unit'):
-            if metadata.file[name].nunique(dropna=False).values[0] != 1:
+            # existence of unit metadata is enforced by jsonschema
+            # any empty cells in a unit column are okay to be empty
+            if metadata.file[name].nunique(dropna=True).values[0] != 1:
                 error_msg = (
                     f'{name}: values for each unit metadata required to be uniform'
                 )

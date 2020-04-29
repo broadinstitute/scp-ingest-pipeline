@@ -66,7 +66,7 @@ class DataArray:
         if len(self.values) > self.MAX_ENTRIES:
             values = self.values
             for idx, i in enumerate(range(0, len(self.values), self.MAX_ENTRIES)):
-                self.values = values[i: i + self.MAX_ENTRIES]
+                self.values = values[i : i + self.MAX_ENTRIES]
                 self.array_index = idx
                 yield copy.copy(self.__dict__)
         else:
@@ -76,8 +76,7 @@ class DataArray:
 class IngestFiles:
     # General logger for class
     info_logger = setup_logger(__name__, "info.txt")
-    error_logger = setup_logger(
-        __name__ + "_errors", "errors.txt", level=logging.ERROR)
+    error_logger = setup_logger(__name__ + "_errors", "errors.txt", level=logging.ERROR)
 
     def __init__(self, file_path, allowed_file_types):
         self.file_path = file_path
@@ -300,8 +299,7 @@ class IngestFiles:
 
     def open_tsv(self, opened_file_object, **kwargs):
         """Opens tsv file"""
-        csv.register_dialect("tsvDialect", delimiter="\t",
-                             skipinitialspace=True)
+        csv.register_dialect("tsvDialect", delimiter="\t", skipinitialspace=True)
         return csv.reader(opened_file_object, dialect="tsvDialect")
 
     def extract_csv_or_tsv(self, file):
