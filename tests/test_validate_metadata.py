@@ -264,6 +264,7 @@ class TestValidateMetadata(unittest.TestCase):
         validate_input_metadata(metadata, convention, bq_json=True)
 
         generated_bq_json = str(metadata.study_file_id) + '.json'
+        # This reference file needs updating with every new metadata convention version
         reference_bq_json = '../tests/data/bq_test.json'
         self.assertListEqual(
             list(io.open(generated_bq_json)), list(io.open(reference_bq_json))

@@ -96,7 +96,7 @@ def build_single_object(row, dict):
     # include syntax constraint for ontologies
     # ontologies whose short names include underscore or colon will fail to validate
     elif row['class'] == 'ontology':
-        ontology_format = r'^[A-Za-z]+[_:][0-9]'
+        ontology_format = r'^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'
         dict['pattern'] = ontology_format
         dict['type'] = row['type']
 

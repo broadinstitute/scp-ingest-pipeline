@@ -41,7 +41,7 @@
         "cell_type": {
             "description": "Cell type name determined via unsupervised clustering and marker genes",
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/cl",
-            "pattern": "^[A-Za-z]+[_:][0-9]",
+            "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
             "type": "string"
         },
         "cell_type__ontology_label": {
@@ -85,7 +85,7 @@
         "organism_age__unit": {
             "description": "organism_age__unit",
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
-            "pattern": "^[A-Za-z]+[_:][0-9]",
+            "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
             "type": "string"
         },
         "organism_age__unit_label": {
@@ -100,7 +100,7 @@
         "species": {
             "description": "The scientific binomial name for the species of the organism.",
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ncbitaxon",
-            "pattern": "^[A-Za-z]+[_:][0-9]",
+            "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
             "type": "string"
         },
         "species__ontology_label": {
