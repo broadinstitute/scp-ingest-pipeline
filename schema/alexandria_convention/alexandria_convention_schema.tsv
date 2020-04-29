@@ -60,7 +60,7 @@ organism_age		number								organism_age__unit	Age of the organism at time of sa
 organism_age__unit		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	UO_0000003		organism_age			organism_age__unit
 organism_age__unit_label		string		unit_label				organism_age__unit			organism_age__unit_label
 paired_ends		boolean									true if the sequence library has paired end data (false for 10x)
-preservation_method		string		enum			"[""Cryopreservation"",""FFPE"",""Fresh"",""Frozen"",""OCT-embedded"",""Snap"",""Frozen""]"				Method used for sample preservation
+preservation_method		string		enum			"[""Cryopreservation"",""FFPE"",""Fresh"",""Frozen"",""OCT-embedded"",""Snap Frozen""]"				Method used for sample preservation
 primer		string		enum			"[""poly-dT"",""random""]"				Primer used for cDNA synthesis from RNA
 race		string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/ncit	NCIT:C17049			species == NCBITaxon_9606		An arbitrary classification of a taxonomic group that is a division of a species
 race__ontology_label		string	TRUE	ontology_label				race			race__ontology_label
