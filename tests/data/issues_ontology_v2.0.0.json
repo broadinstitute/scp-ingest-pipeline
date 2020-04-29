@@ -4,7 +4,7 @@
       "'cell_type' is a dependency of 'cell_type__ontology_label'": [
         "BM01_16dpp_AAGCAGTGGTAT"
       ],
-      "library_preparation_protocol: 'EFO0008919' does not match '^[A-Za-z]+[_:][0-9]'": [
+      "library_preparation_protocol: 'EFO0008919' does not match '^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'": [
         "BM01_16dpp_AAGCAGTGGTAT"
       ]
     },
