@@ -273,10 +273,17 @@ class IngestFiles:
         """Opens file as a dataframe """
         open_file_object = kwargs.pop('open_file_object')
         if file_type in self.allowed_file_types:
-            csv_dialect = csv.Sniffer().sniff(open_file_object.readline())
-            csv_dialect.skipinitialspace = True
+            # Determine delimiter based on file type
+            if file_type == "text/tab-separated-values":
+                delimiter = "\t"
+            elif file_type == "text/csv":
+                delimiter = ","
+            else:
+                delimiter = None
+            dialect = csv.Sniffer().sniff(open_file_object.readline(), delimiters=delimiter)
+            dialect.skipinitialspace = True
             open_file_object.seek(0)
-            return pd.read_csv(file_path, dialect=csv_dialect, **kwargs)
+            return pd.read_csv(file_path, dialect=dialect, **kwargs)
         else:
             raise ValueError("File must be tab or comma delimited")
 
