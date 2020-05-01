@@ -10,6 +10,7 @@ Must have python 3.6 or higher.
 
 import collections
 from typing import List  # noqa: F401
+
 from bson.objectid import ObjectId
 
 try:
@@ -25,7 +26,8 @@ except ImportError:
 
 
 class Dense(GeneExpression, IngestFiles):
-    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
+    ALLOWED_FILE_TYPES = ["text/csv",
+                          "text/plain", "text/tab-separated-values"]
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
         self.tracer = kwargs.pop("tracer")
@@ -65,6 +67,9 @@ class Dense(GeneExpression, IngestFiles):
     @trace
     def preprocess(self):
         """Determines if file is R-formatted. Creates dataframe (df)"""
+        def memory_usage(df):
+            return(round(df.memory_usage(deep=True).sum() / 1024 ** 2, 2))
+
         csv_file, open_file_object = self.open_file(self.file_path)
         dtypes = {'GENE': object}
 
@@ -79,7 +84,7 @@ class Dense(GeneExpression, IngestFiles):
         else:
             header[0] = header[0].upper()
         # Set dtype for expression values to floats
-        dtypes.update({cell_name: 'float' for cell_name in header[1:]})
+        dtypes.update({cell_name: 'float16' for cell_name in header[1:]})
         self.df = self.open_file(
             self.file_path,
             open_as='dataframe',
@@ -88,6 +93,7 @@ class Dense(GeneExpression, IngestFiles):
             dtype=dtypes,
             # chunksize=100000, Save for when we chunk data
         )[0]
+        print('Memory used:', memory_usage(self.df), 'Mb')
 
     @trace
     def transform(self):
@@ -144,7 +150,8 @@ class Dense(GeneExpression, IngestFiles):
 
         # Get row of expression values for gene
         # Round expression values to 3 decimal points
-        cells_and_expression_vals = gene_df[cells].round(3).to_dict('records')[0]
+        cells_and_expression_vals = gene_df[cells].round(3).to_dict('records')[
+            0]
         # Filter out expression values = 0
         cells_and_expression_vals = dict(
             filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items())
