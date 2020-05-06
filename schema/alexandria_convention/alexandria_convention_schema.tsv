@@ -15,6 +15,7 @@ species__ontology_label	Yes	string		ontology_label				species			species__ontolog
 bmi		number									BMI of organism
 cell_type		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/cl	CL_0000548					Cell type name determined via unsupervised clustering and marker genes
 cell_type__ontology_label		string		ontology_label				cell_type			cell_type__ontology_label
+cell_type__custom		string		enum			"[""Astrocyte"", ""Bergmann"", ""Choroid"", ""Endothelial_mural"", ""Endothelial_stalk"", ""Ependymal"", ""Fibroblast"", ""Golgi"", ""Granule"", ""MLI1"", ""MLI2"", ""Macrophage"", ""Microglia"", ""ODC"", ""OPC"", ""PLI"", ""Purkinje"", ""UBC""]"				cell_type__custom
 culture_duration		number							sample_type in cell line, organoid, cultured primary cells	culture_duration__unit	length of time cells have been in culture
 culture_duration__unit		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	UO_0000003		culture_duration			culture_duration__unit
 culture_duration__unit_label		string		unit_label				culture_duration__unit			culture_duration__unit_label
@@ -56,6 +57,8 @@ mhc_genotype		string									MHC genotype for humans and other species
 mouse_strain		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/ncit	"NCIT_C14420 "			species == NCBITaxon_10090		Mouse strain of the donor organism (ex. C57BL/6, BALB/c, 129, undetermined)
 mouse_strain__ontology_label		string		ontology_label				mouse_strain			mouse_strain__ontology_label
 number_of_reads		number									Number of reads mapped to that cell
+organ_region		string	TRUE	ontology	https://api.brain-map.org/api/v2/structure_graph_download/1.json						organ_region
+organ_region__ontology_label		string	TRUE	ontology_label				organ_region			organ_region__ontology_label
 organism_age		number								organism_age__unit	Age of the organism at time of sample collection.
 organism_age__unit		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	UO_0000003		organism_age			organism_age__unit
 organism_age__unit_label		string		unit_label				organism_age__unit			organism_age__unit_label
@@ -85,5 +88,3 @@ vaccination__route		string	TRUE	enum			"[""intradermal"", ""intranasal"", ""intr
 vaccination__time_since		number	TRUE					vaccination		vaccination__time_since__unit	Amount of time since vaccine was administered
 vaccination__time_since__unit		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	UO_0000003		vaccination__time_since			Time since each vaccine in the vaccination field was administered
 vaccination__time_since__unit_label		string		unit_label				vaccination__time_since__unit			vaccination__time_since__unit_label
-organ_region		string	TRUE	ontology	https://api.brain-map.org/api/v2/structure_graph_download/1.json						organ_region
-organ_region__ontology_label		string	TRUE	ontology_label				organ_region			organ_region__ontology_label

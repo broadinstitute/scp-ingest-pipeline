@@ -81,6 +81,11 @@
     },
     {
         "mode": "NULLABLE",
+        "name": "cell_type__custom",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
         "name": "culture_duration",
         "type": "FLOAT"
     },
@@ -285,6 +290,16 @@
         "type": "FLOAT"
     },
     {
+        "mode": "REPEATED",
+        "name": "organ_region",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "organ_region__ontology_label",
+        "type": "STRING"
+    },
+    {
         "mode": "NULLABLE",
         "name": "organism_age",
         "type": "FLOAT"
@@ -427,16 +442,6 @@
     {
         "mode": "NULLABLE",
         "name": "vaccination__time_since__unit_label",
-        "type": "STRING"
-    },
-    {
-        "mode": "REPEATED",
-        "name": "organ_region",
-        "type": "STRING"
-    },
-    {
-        "mode": "REPEATED",
-        "name": "organ_region__ontology_label",
         "type": "STRING"
     },
     {
