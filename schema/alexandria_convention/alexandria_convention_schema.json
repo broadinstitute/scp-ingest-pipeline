@@ -1,5 +1,5 @@
 {
-    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata_schemas/alexandria_convention/2.0.1/json",
+    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata_schemas/alexandria_convention/2.1.0/json",
     "$schema": "https://json-schema.org/draft-07/schema#",
     "dependencies": {
         "cell_type__ontology_label": [
@@ -106,6 +106,9 @@
         ],
         "organ__ontology_label": [
             "organ"
+        ],
+        "organ_region__ontology_label": [
+            "organ_region"
         ],
         "organism_age": [
             "organism_age__unit"
@@ -488,6 +491,21 @@
         "organ__ontology_label": {
             "description": "organ__ontology_label",
             "type": "string"
+        },
+        "organ_region": {
+            "description": "organ_region",
+            "items": {
+                "type": "string"
+            },
+            "ontology": "https://api.brain-map.org/api/v2/structure_graph_download/1.json",
+            "type": "array"
+        },
+        "organ_region__ontology_label": {
+            "description": "organ_region__ontology_label",
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
         },
         "organism_age": {
             "description": "Age of the organism at time of sample collection.",
