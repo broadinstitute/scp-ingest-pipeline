@@ -724,6 +724,9 @@ def validate_collected_ontology_data(metadata, convention):
     # container to store references to retrieved ontologies for faster validation
     stored_ontologies = {}
     for entry in metadata.ontology.keys():
+        # provision to skip validation of non-EBI OLS metadata for now
+        if entry == 'organ_region':
+            continue
         # split on comma in case this property from the convention supports multiple ontologies
         ontology_urls = convention['properties'][entry]['ontology'].split(',')
         for ontology_info in metadata.ontology[entry].keys():
