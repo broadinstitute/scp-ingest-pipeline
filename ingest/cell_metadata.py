@@ -7,13 +7,14 @@ Text, CSV, and TSV files are supported.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-from collections import defaultdict
-from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-from dataclasses import dataclass
-from mypy_extensions import TypedDict
-from bson.objectid import ObjectId
-import ntpath
 import collections
+import ntpath
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+
+from bson.objectid import ObjectId
+from mypy_extensions import TypedDict
 
 try:
     # Used when importing internally and in tests
@@ -26,7 +27,8 @@ except ImportError:
 
 
 class CellMetadata(Annotations):
-    ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
+    ALLOWED_FILE_TYPES = ['text/csv',
+                          'text/plain', 'text/tab-separated-values']
     COLLECTION_NAME = 'cell_metadata'
 
     def __init__(
@@ -44,7 +46,8 @@ class CellMetadata(Annotations):
         )
         self.cell_names = []
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
-        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        self.issues = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.cells = []
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
@@ -59,6 +62,33 @@ class CellMetadata(Annotations):
         study_id: ObjectId
         # unique values from "group" type annotations
         values: List
+
+    def validate(self):
+        """ Runs all validation checks
+        """
+        return all([is_valid_format])
+
+    def is_valid_format(self):
+        """Validates format by calling all format validation methods"""
+        return all([self.validate_header_for_coordinate_values(), self.validate_format()])
+
+    def validate_header_for_coordinate_values(self):
+        """Cell metadata files should not have coordinates in header
+        :return: boolean True if coordinates are not in header, otherwise False
+        """
+        lower_cased_headers = list(
+            map(lambda header: header.lower(), self.headers))
+        valid = not any([coordinate in ('x', 'y', 'z')
+                     for coordinate in lower_cased_headers])
+        print(valid)
+        if valid:
+            return True
+        else:
+            msg = (
+                f'Header names can not be coordinate values x, y, or z (case insensitive)'
+            )
+            self.store_validation_issue('error', 'format', msg)
+            return False
 
     def transform(self):
         """ Builds cell metadata model"""
