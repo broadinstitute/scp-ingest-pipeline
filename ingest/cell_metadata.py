@@ -84,7 +84,7 @@ class CellMetadata(Annotations):
         if valid:
             return True
         else:
-            msg = f'Header names can not be coordinate values x, y, or z (case insensitive)'
+            msg = 'Header names can not be coordinate values x, y, or z (case insensitive)'
             self.store_validation_issue('error', 'format', msg)
             return False
 

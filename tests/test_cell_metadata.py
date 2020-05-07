@@ -8,7 +8,7 @@ from cell_metadata import CellMetadata
 class TestCellMetadata(unittest.TestCase):
     def test_validate_header_for_coordinate_values_false(self):
         """Ensures validate_header_for_coordinate_values returns false when
-        coordintate value is in metadata file
+        coordinate value is in metadata file
          """
         cm = CellMetadata(
             '../tests/data/metadata_bad_contains_coordinates.txt',
@@ -21,7 +21,7 @@ class TestCellMetadata(unittest.TestCase):
 
     def test_validate_header_for_coordinate_values_true(self):
         """Ensures validate_header_for_coordinate_values returns true when
-        coordintate value is not in metadata file
+        coordinate value is not in metadata file
          """
         cm = CellMetadata(
             '../tests/data/metadata_example.txt',

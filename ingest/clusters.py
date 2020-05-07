@@ -96,7 +96,7 @@ class Clusters(Annotations):
         for coordinate in ('x', 'y'):
             if coordinate not in lower_cased_headers:
                 msg = (
-                    f"Header must have coordinate values 'x' and 'y' (case insensitive)"
+                    "Header must have coordinate values 'x' and 'y' (case insensitive)"
                 )
                 self.store_validation_issue('error', 'format', msg)
                 return False

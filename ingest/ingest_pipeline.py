@@ -406,7 +406,6 @@ class IngestPipeline(object):
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         if self.cell_metadata.validate():
-            pass
             self.info_logger.info(
                 f'Cell metadata file format valid', extra=self.extra_log_params
             )
