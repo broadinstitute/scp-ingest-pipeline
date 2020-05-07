@@ -4,8 +4,8 @@ import unittest
 sys.path.append("../ingest")
 from cell_metadata import CellMetadata
 
-class TestCellMetadata(unittest.TestCase):
 
+class TestCellMetadata(unittest.TestCase):
     def test_validate_header_for_coordinate_values_false(self):
         """Ensures validate_header_for_coordinate_values returns false when
         coordintate value is in metadata file
