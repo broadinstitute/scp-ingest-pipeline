@@ -88,10 +88,7 @@ except ImportError:
 
 class IngestPipeline(object):
     # File location for metadata json convention
-    JSON_CONVENTION = (
-        '../schema/alexandria_convention/alexandria_convention_schema.json'
-    )
-    EXTERNAL_JSON_CONVENTION = 'gs://broad-singlecellportal-public/schema/alexandria_convention/2.0.1/alexandria_convention_schema.json'
+    JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
     logger = logging.getLogger(__name__)
     error_logger = setup_logger(
         __name__ + '_errors', 'errors.txt', level=logging.ERROR)
@@ -194,13 +191,13 @@ class IngestPipeline(object):
         """Closes connection to file"""
         self.matrix.close()
 
-    @profile
+    # @profile
     # TODO: Make @profile conditional (SCP-2081)
     def insert_many(self, collection_name, documents):
         self.db[collection_name].insert_many(documents)
 
     @trace
-    @profile
+    # @profile
     def load(
         self,
         collection_name,
@@ -236,9 +233,13 @@ class IngestPipeline(object):
             return 1
         return 0
 
+    # @profile
     def load_expression_file(self, models, is_gene_model=False):
         collection_name = self.matrix.COLLECTION_NAME
         # Creates operations to perform for bulk write
+        all_objects = muppy.get_objects()
+        sum1 = summary.summarize(all_objects)
+        summary.print_(f'second all objects {sum1}')
         bulk_operations = list(map(lambda model: InsertOne(model), models))
         try:
             if is_gene_model:
@@ -344,9 +345,8 @@ class IngestPipeline(object):
                 return 1
         return 0
 
-    @trace
-    @my_debug_logger()
-    @profile
+    # @trace
+    # @my_debug_logger()
     def ingest_expression(self) -> int:
         """Ingests expression files.
         """
@@ -412,7 +412,7 @@ class IngestPipeline(object):
     # @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        if self.cell_metadata.validate_format():
+        if self.cell_metadata.validate():
             self.info_logger.info(
                 f'Cell metadata file format valid', extra=self.extra_log_params
             )
@@ -458,7 +458,7 @@ class IngestPipeline(object):
     @my_debug_logger()
     def ingest_cluster(self):
         """Ingests cluster files."""
-        if self.cluster.validate_format():
+        if self.cluster.validate():
             annotation_model = self.cluster.transform()
             status = self.load(
                 self.cluster.COLLECTION_NAME,

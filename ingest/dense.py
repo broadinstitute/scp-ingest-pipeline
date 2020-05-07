@@ -9,9 +9,11 @@ Must have python 3.6 or higher.
 """
 
 import collections
+from contextlib import nullcontext
 from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
+from pympler import muppy, summary
 
 try:
     from expression_files import GeneExpression
@@ -91,42 +93,51 @@ class Dense(GeneExpression, IngestFiles):
             names=header,
             skiprows=1,
             dtype=dtypes,
-            # chunksize=100000, Save for when we chunk data
+            chunksize=100000,
         )[0]
-        print('Memory used:', memory_usage(self.df), 'Mb')
+        # print('Memory used:', memory_usage(self.df), 'Mb')
+        all_objects = muppy.get_objects()
+        sum1 = summary.summarize(all_objects)
+        summary.print_(sum1)
 
-    @trace
+    # @trace
+    # @profile
     def transform(self):
         """Transforms dense matrix into gene data model.
         """
         # Holds gene name and gene model for a single gene
         GeneModel = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
-        for gene in self.df['GENE']:
-            formatted_gene_name = gene.strip().strip('\"')
-            self.info_logger.info(
-                f'Transforming gene :{gene}', extra=self.extra_log_params
-            )
-            if gene in self.gene_names:
-                raise ValueError(f'Duplicate gene: {gene}')
-            self.gene_names.append(gene)
-            id = ObjectId()
+        for chunk in self.df:
+            # for gene in self.df['GENE']:
+            for index, gene in chunk.iterrows():
+                print(type(gene[1:]))
+                formatted_gene_name = gene[0].strip().strip('\"')
+                print(formatted_gene_name)
 
-            yield GeneModel(
-                # Name of gene as observed in file
-                gene,
-                self.Model(
-                    {
-                        'name': formatted_gene_name,
-                        'searchable_name': formatted_gene_name.lower(),
-                        'study_file_id': self.study_file_id,
-                        'study_id': self.study_id,
-                        '_id': id,
-                        'gene_id': self.matrix_params['gene_id']
-                        if 'gene_id' in self.matrix_params
-                        else None,
-                    }
-                ),
-            )
+            # self.info_logger.info(
+            #     f'Transforming gene :{gene}', extra=self.extra_log_params
+            # )
+            # if gene in self.gene_names:
+            #     raise ValueError(f'Duplicate gene: {gene}')
+            # self.gene_names.append(gene)
+            # id = ObjectId()
+            #
+            # yield GeneModel(
+            #     # Name of gene as observed in file
+            #     gene,
+            #     self.Model(
+            #         {
+            #             'name': formatted_gene_name,
+            #             'searchable_name': formatted_gene_name.lower(),
+            #             'study_file_id': self.study_file_id,
+            #             'study_id': self.study_id,
+            #             '_id': id,
+            #             'gene_id': self.matrix_params['gene_id']
+            #             if 'gene_id' in self.matrix_params
+            #             else None,
+            #         }
+            #     ),
+            # )
 
     @trace
     def set_data_array(

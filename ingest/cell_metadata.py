@@ -63,10 +63,11 @@ class CellMetadata(Annotations):
         # unique values from "group" type annotations
         values: List
 
+    # Will evolve to do cross file validation
     def validate(self):
         """ Runs all validation checks
         """
-        return all([is_valid_format])
+        return all([self.is_valid_format()])
 
     def is_valid_format(self):
         """Validates format by calling all format validation methods"""
@@ -76,11 +77,9 @@ class CellMetadata(Annotations):
         """Cell metadata files should not have coordinates in header
         :return: boolean True if coordinates are not in header, otherwise False
         """
-        lower_cased_headers = list(
-            map(lambda header: header.lower(), self.headers))
+        lower_cased_headers = [header.lower() for header in self.headers]
         valid = not any([coordinate in ('x', 'y', 'z')
                      for coordinate in lower_cased_headers])
-        print(valid)
         if valid:
             return True
         else:

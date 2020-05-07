@@ -38,7 +38,8 @@ class Annotations(IngestFiles):
         self.headers = self.file.columns.get_level_values(0)
         self.annot_types = self.file.columns.get_level_values(1)
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
-        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        self.issues = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(list)))
 
     def reset_file(self):
         self.file, self.file_handle = self.open_file(
@@ -80,7 +81,8 @@ class Annotations(IngestFiles):
             - 'TYPE' in second header row is capitalized
         """
         # Grab column names and convert to strings
-        headers = [str(header) for header in self.file.columns.get_level_values(0)]
+        headers = [str(header)
+                   for header in self.file.columns.get_level_values(0)]
         annot_types = self.file.columns.get_level_values(1)
         # Lowercase second level. Example: NUMeric -> numeric
         self.file.rename(
@@ -89,7 +91,8 @@ class Annotations(IngestFiles):
         name = list(headers)[0]
         type = list(annot_types)[0].lower()
         # Uppercase NAME and TYPE
-        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
+        self.file.rename(columns={name: name.upper(),
+                                  type: type.upper()}, inplace=True)
         # Make sure group annotations are treated as strings
         # only run this assignment if group annotations are present
         if 'group' in annot_types:
@@ -240,9 +243,9 @@ class Annotations(IngestFiles):
         return valid
 
     def validate_format(self):
-        """Check all metadata file format criteria for file validity
+        """Check common format criteria for annotation files
         """
-        self.is_valid_file = all(
+        return all(
             [
                 self.validate_header_keyword(),
                 self.validate_type_keyword(),
@@ -251,4 +254,3 @@ class Annotations(IngestFiles):
                 self.validate_against_header_count(),
             ]
         )
-        return self.is_valid_file
