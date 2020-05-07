@@ -38,8 +38,6 @@ from validate_metadata import (
     MAX_HTTP_ATTEMPTS,
 )
 
-from ingest_pipeline import IngestPipeline
-
 
 # do not attempt a request, but instead throw a request exception
 def mocked_requests_get(*args, **kwargs):
