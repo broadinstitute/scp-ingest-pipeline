@@ -378,6 +378,28 @@ class IngestTestCase(unittest.TestCase):
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
+    def test_bad_metadata_file_contains_coordinates(self):
+        """Ingest Pipeline should not succeed for metadata file containing
+        coordinates
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_cell_metadata',
+            '--cell-metadata-file',
+            '../tests/data/metadata_bad_contains_coordinates.txt',
+            '--study-accession',
+            'SCP123',
+            '--ingest-cell-metadata',
+        ]
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+
     def test_good_cluster_file(self):
         """Ingest Pipeline should succeed for properly formatted cluster file
         """
@@ -414,6 +436,27 @@ class IngestTestCase(unittest.TestCase):
             'ingest_cluster',
             '--cluster-file',
             '../tests/data/cluster_bad.txt',
+            '--ingest-cluster',
+            '--name',
+            'cluster1',
+        ]
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+
+    def test_bad_cluster_missing_coordinate_file(self):
+        """Ingest Pipeline should fail for missing coordinate in cluster file
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_cluster',
+            '--cluster-file',
+            '../tests/data/cluster_bad_missing_coordinate.txt',
             '--ingest-cluster',
             '--name',
             'cluster1',

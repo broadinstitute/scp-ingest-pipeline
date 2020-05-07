@@ -1,26 +1,17 @@
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
 
 sys.path.append("../ingest")
 from cell_metadata import CellMetadata
 
-
 class TestCellMetadata(unittest.TestCase):
-    def setUp(self):
-        # This cluster file should be sampled at 1k
-        self.cm = CellMetadata(
-            '../tests/data/metadata_example.txt',
-            '5d276a50421aa9117c982845',
-            '5dd5ae25421aa910a723a337',
-            study_accession='SCP2',
-            tracer=None,
-        )
 
-    def test_validate_gene_keyword_false(self):
-        "Validates validate_gene_keyword() returns false correctly"
+    def test_validate_header_for_coordinate_values_false(self):
+        """Ensures validate_header_for_coordinate_values returns false when
+        coordintate value is in metadata file
+         """
         cm = CellMetadata(
-            '../tests/data/metadata_bad.txt',
+            '../tests/data/metadata_bad_contains_coordinates.txt',
             '5d276a50421aa9117c982845',
             '5dd5ae25421aa910a723a337',
             study_accession='SCP2',
@@ -28,26 +19,15 @@ class TestCellMetadata(unittest.TestCase):
         )
         self.assertFalse(cm.validate_header_for_coordinate_values())
 
-    def test_validate_gene_keyword_true(self):
-        "Validates validate_gene_keyword() returns false correctly"
-        self.assertTrue(self.cm.validate_header_for_coordinate_values())
-
-    @patch(
-        "cell_metadata.validate_header_for_coordinate_values",
-        MagicMock(return_value="True"),
-    )
-    @patch("annotations.validate_format", side_effect=False)
-    def test_is_valid_format_false(
-        self, mock_validate_format, mock_validate_header_for_coordinate_values
-    ):
-        "Checks to see if is_valid_format returns false"
-        self.assertFalse(self.cm.is_valid_format())
-
-    @patch(
-        "CellMetadata.validate_header_for_coordinate_values",
-        MagicMock(return_value="True"),
-    )
-    @patch("Annotations.validate_format", side_effect=True)
-    def test_is_valid_format_true(self):
-        "Validates validate_gene_keyword() returns true correctly"
-        self.assertTrue(self.cm.is_valid_format())
+    def test_validate_header_for_coordinate_values_true(self):
+        """Ensures validate_header_for_coordinate_values returns true when
+        coordintate value is not in metadata file
+         """
+        cm = CellMetadata(
+            '../tests/data/metadata_example.txt',
+            '5d276a50421aa9117c982845',
+            '5dd5ae25421aa910a723a337',
+            study_accession='SCP2',
+            tracer=None,
+        )
+        self.assertTrue(cm.validate_header_for_coordinate_values())
