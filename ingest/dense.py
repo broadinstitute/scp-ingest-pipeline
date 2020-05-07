@@ -26,8 +26,7 @@ except ImportError:
 
 
 class Dense(GeneExpression, IngestFiles):
-    ALLOWED_FILE_TYPES = ["text/csv",
-                          "text/plain", "text/tab-separated-values"]
+    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
         self.tracer = kwargs.pop("tracer")
@@ -146,8 +145,7 @@ class Dense(GeneExpression, IngestFiles):
 
         # Get row of expression values for gene
         # Round expression values to 3 decimal points
-        cells_and_expression_vals = gene_df[cells].round(3).to_dict('records')[
-            0]
+        cells_and_expression_vals = gene_df[cells].round(3).to_dict('records')[0]
         # Filter out expression values = 0
         cells_and_expression_vals = dict(
             filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items())

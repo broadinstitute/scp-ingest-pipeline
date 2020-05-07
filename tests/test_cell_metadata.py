@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 sys.path.append("../ingest")
 from cell_metadata import CellMetadata
-from annotations import Annotations
 
 
 class TestCellMetadata(unittest.TestCase):
@@ -42,7 +41,7 @@ class TestCellMetadata(unittest.TestCase):
         self, mock_validate_format, mock_validate_header_for_coordinate_values
     ):
         "Checks to see if is_valid_format returns false"
-        assertFalse(self.cm.is_valid_format())
+        self.assertFalse(self.cm.is_valid_format())
 
     @patch(
         "CellMetadata.validate_header_for_coordinate_values",
