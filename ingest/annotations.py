@@ -240,9 +240,9 @@ class Annotations(IngestFiles):
         return valid
 
     def validate_format(self):
-        """Check all metadata file format criteria for file validity
+        """Check common format criteria for annotation files
         """
-        self.is_valid_file = all(
+        return all(
             [
                 self.validate_header_keyword(),
                 self.validate_type_keyword(),
@@ -251,4 +251,3 @@ class Annotations(IngestFiles):
                 self.validate_against_header_count(),
             ]
         )
-        return self.is_valid_file

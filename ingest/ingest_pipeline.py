@@ -233,6 +233,7 @@ class IngestPipeline(object):
             return 1
         return 0
 
+    # @profile
     def load_expression_file(self, models, is_gene_model=False):
         collection_name = self.matrix.COLLECTION_NAME
         # Creates operations to perform for bulk write
@@ -337,9 +338,8 @@ class IngestPipeline(object):
                 return 1
         return 0
 
-    @trace
-    @my_debug_logger()
-    # @profile
+    # @trace
+    # @my_debug_logger()
     def ingest_expression(self) -> int:
         """Ingests expression files.
         """
@@ -405,7 +405,7 @@ class IngestPipeline(object):
     # @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        if self.cell_metadata.validate_format():
+        if self.cell_metadata.validate():
             self.info_logger.info(
                 f'Cell metadata file format valid', extra=self.extra_log_params
             )
@@ -451,7 +451,7 @@ class IngestPipeline(object):
     @my_debug_logger()
     def ingest_cluster(self):
         """Ingests cluster files."""
-        if self.cluster.validate_format():
+        if self.cluster.validate():
             annotation_model = self.cluster.transform()
             status = self.load(
                 self.cluster.COLLECTION_NAME,

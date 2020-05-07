@@ -1,8 +1,9 @@
-from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-from dataclasses import dataclass
-from mypy_extensions import TypedDict
 import logging
+from dataclasses import dataclass
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+
 from bson.objectid import ObjectId
+from mypy_extensions import TypedDict
 
 try:
     from ingest_files import DataArray
@@ -74,6 +75,32 @@ class Clusters(Annotations):
         self.domain_ranges = domain_ranges if not (not domain_ranges) else None
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
         self.preprocess()
+
+    # Will evolve to do cross file validation
+    def validate(self):
+        """ Runs all validation checks
+        """
+        return all([self.is_valid_format()])
+
+    def is_valid_format(self):
+        """Validates format by calling all format validation methods"""
+        return all(
+            [self.validate_header_for_coordinate_values(), self.validate_format()]
+        )
+
+    def validate_header_for_coordinate_values(self):
+        """Cluster files must have coordinates 'x' and 'y' in header
+        :return: boolean True if coordinates are in header, otherwise False
+        """
+        lower_cased_headers = [header.lower() for header in self.headers]
+        for coordinate in ('x', 'y'):
+            if coordinate not in lower_cased_headers:
+                msg = (
+                    "Header must have coordinate values 'x' and 'y' (case insensitive)"
+                )
+                self.store_validation_issue('error', 'format', msg)
+                return False
+        return True
 
     def transform(self):
         """ Builds cluster data model"""

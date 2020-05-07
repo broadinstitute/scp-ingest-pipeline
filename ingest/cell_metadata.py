@@ -7,13 +7,14 @@ Text, CSV, and TSV files are supported.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-from collections import defaultdict
-from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-from dataclasses import dataclass
-from mypy_extensions import TypedDict
-from bson.objectid import ObjectId
-import ntpath
 import collections
+import ntpath
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+
+from bson.objectid import ObjectId
+from mypy_extensions import TypedDict
 
 try:
     # Used when importing internally and in tests
@@ -35,7 +36,7 @@ class CellMetadata(Annotations):
         study_id: ObjectId,
         study_file_id: ObjectId,
         *args,
-        **kwargs
+        **kwargs,
     ):
 
         self.study_accession = kwargs.pop("study_accession")
@@ -59,6 +60,33 @@ class CellMetadata(Annotations):
         study_id: ObjectId
         # unique values from "group" type annotations
         values: List
+
+    # Will evolve to do cross file validation
+    def validate(self):
+        """ Runs all validation checks
+        """
+        return all([self.is_valid_format()])
+
+    def is_valid_format(self):
+        """Validates format by calling all format validation methods"""
+        return all(
+            [self.validate_header_for_coordinate_values(), self.validate_format()]
+        )
+
+    def validate_header_for_coordinate_values(self):
+        """Cell metadata files should not have coordinates in header
+        :return: boolean True if coordinates are not in header, otherwise False
+        """
+        lower_cased_headers = [header.lower() for header in self.headers]
+        valid = not any(
+            [coordinate in ('x', 'y', 'z') for coordinate in lower_cased_headers]
+        )
+        if valid:
+            return True
+        else:
+            msg = 'Header names can not be coordinate values x, y, or z (case insensitive)'
+            self.store_validation_issue('error', 'format', msg)
+            return False
 
     def transform(self):
         """ Builds cell metadata model"""

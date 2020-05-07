@@ -10,6 +10,7 @@ Must have python 3.6 or higher.
 
 import collections
 from typing import List  # noqa: F401
+
 from bson.objectid import ObjectId
 
 try:
