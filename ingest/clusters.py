@@ -1,8 +1,9 @@
-from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-from dataclasses import dataclass
-from mypy_extensions import TypedDict
 import logging
+from dataclasses import dataclass
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+
 from bson.objectid import ObjectId
+from mypy_extensions import TypedDict
 
 try:
     from ingest_files import DataArray
@@ -23,7 +24,8 @@ class DomainRanges(TypedDict):
 
 
 class Clusters(Annotations):
-    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
+    ALLOWED_FILE_TYPES = ["text/csv",
+                          "text/plain", "text/tab-separated-values"]
     LINEAR_DATA_TYPE = 'ClusterGroup'
     COLLECTION_NAME = 'cluster_groups'
     errors_logger = setup_logger(
@@ -83,7 +85,9 @@ class Clusters(Annotations):
 
     def is_valid_format(self):
         """Validates format by calling all format validation methods"""
-        return all([self.validate_header_for_coordinate_values(), self.validate_format()])
+        return all(
+            [self.validate_header_for_coordinate_values(), self.validate_format()]
+        )
 
     def validate_header_for_coordinate_values(self):
         """Cluster files must have coordinates 'x' and 'y' in header

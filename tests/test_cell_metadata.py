@@ -14,7 +14,7 @@ class TestCellMetadata(unittest.TestCase):
             '../tests/data/metadata_example.txt',
             '5d276a50421aa9117c982845',
             '5dd5ae25421aa910a723a337',
-            study_accession= 'SCP2',
+            study_accession='SCP2',
             tracer=None,
         )
 
@@ -24,7 +24,7 @@ class TestCellMetadata(unittest.TestCase):
             '../tests/data/metadata_bad.txt',
             '5d276a50421aa9117c982845',
             '5dd5ae25421aa910a723a337',
-            study_accession= 'SCP2',
+            study_accession='SCP2',
             tracer=None,
         )
         self.assertFalse(cm.validate_header_for_coordinate_values())
@@ -33,13 +33,21 @@ class TestCellMetadata(unittest.TestCase):
         "Validates validate_gene_keyword() returns false correctly"
         self.assertTrue(self.cm.validate_header_for_coordinate_values())
 
-    @patch("cell_metadata.validate_header_for_coordinate_values", MagicMock(return_value="True"))
+    @patch(
+        "cell_metadata.validate_header_for_coordinate_values",
+        MagicMock(return_value="True"),
+    )
     @patch("annotations.validate_format", side_effect=False)
-    def test_is_valid_format_false(self, mock_validate_format, mock_validate_header_for_coordinate_values):
+    def test_is_valid_format_false(
+        self, mock_validate_format, mock_validate_header_for_coordinate_values
+    ):
         "Checks to see if is_valid_format returns false"
         assertFalse(self.cm.is_valid_format())
 
-    @patch("CellMetadata.validate_header_for_coordinate_values", MagicMock(return_value="True"))
+    @patch(
+        "CellMetadata.validate_header_for_coordinate_values",
+        MagicMock(return_value="True"),
+    )
     @patch("Annotations.validate_format", side_effect=True)
     def test_is_valid_format_true(self):
         "Validates validate_gene_keyword() returns true correctly"

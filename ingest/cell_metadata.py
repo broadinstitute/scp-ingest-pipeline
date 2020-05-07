@@ -27,8 +27,7 @@ except ImportError:
 
 
 class CellMetadata(Annotations):
-    ALLOWED_FILE_TYPES = ['text/csv',
-                          'text/plain', 'text/tab-separated-values']
+    ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
     COLLECTION_NAME = 'cell_metadata'
 
     def __init__(
@@ -37,7 +36,7 @@ class CellMetadata(Annotations):
         study_id: ObjectId,
         study_file_id: ObjectId,
         *args,
-        **kwargs
+        **kwargs,
     ):
 
         self.study_accession = kwargs.pop("study_accession")
@@ -46,8 +45,7 @@ class CellMetadata(Annotations):
         )
         self.cell_names = []
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
-        self.issues = defaultdict(
-            lambda: defaultdict(lambda: defaultdict(list)))
+        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.cells = []
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
@@ -71,21 +69,22 @@ class CellMetadata(Annotations):
 
     def is_valid_format(self):
         """Validates format by calling all format validation methods"""
-        return all([self.validate_header_for_coordinate_values(), self.validate_format()])
+        return all(
+            [self.validate_header_for_coordinate_values(), self.validate_format()]
+        )
 
     def validate_header_for_coordinate_values(self):
         """Cell metadata files should not have coordinates in header
         :return: boolean True if coordinates are not in header, otherwise False
         """
         lower_cased_headers = [header.lower() for header in self.headers]
-        valid = not any([coordinate in ('x', 'y', 'z')
-                     for coordinate in lower_cased_headers])
+        valid = not any(
+            [coordinate in ('x', 'y', 'z') for coordinate in lower_cased_headers]
+        )
         if valid:
             return True
         else:
-            msg = (
-                f'Header names can not be coordinate values x, y, or z (case insensitive)'
-            )
+            msg = f'Header names can not be coordinate values x, y, or z (case insensitive)'
             self.store_validation_issue('error', 'format', msg)
             return False
 

@@ -279,7 +279,9 @@ class IngestFiles:
                 delimiter = ","
             else:
                 delimiter = None
-            dialect = csv.Sniffer().sniff(open_file_object.readline(), delimiters=delimiter)
+            dialect = csv.Sniffer().sniff(
+                open_file_object.readline(), delimiters=delimiter
+            )
             dialect.skipinitialspace = True
             open_file_object.seek(0)
             return pd.read_csv(file_path, dialect=dialect, **kwargs)
