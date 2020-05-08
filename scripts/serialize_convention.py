@@ -70,6 +70,9 @@ def build_array_object(row):
     if row['class'] == 'enum':
         dict['type'] = row['type']
         dict[row['class']] = row['controlled_list_entries']
+    # create exception for organ_region which does not use standard ontology_format
+    elif row['class'] == 'ontology' and row['attribute'] == 'organ_region':
+        dict['type'] = row['type']
     elif row['class'] == 'ontology':
         dict['type'] = row['type']
         ontology_format = r'^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'

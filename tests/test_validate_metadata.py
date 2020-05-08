@@ -38,8 +38,6 @@ from validate_metadata import (
     MAX_HTTP_ATTEMPTS,
 )
 
-from ingest_pipeline import IngestPipeline
-
 
 # do not attempt a request, but instead throw a request exception
 def mocked_requests_get(*args, **kwargs):
@@ -275,58 +273,6 @@ class TestValidateMetadata(unittest.TestCase):
         # clean up downloaded generated BigQuery upload file
         try:
             os.remove('addedfeed000000000000000.json')
-        except OSError:
-            print('no file to remove')
-
-    def test_external_metadata_convention(self):
-        """
-        check that extermal_metadata_convention has been staged to gs://broad-singlecellportal-public
-        """
-        # obtain local and external convention info from IngestPipeline object
-        ingest_object = IngestPipeline(
-            ObjectId('aaaaaaaaaaaaaaaaaaaaaaaa'), ObjectId('aaaaaaaaaaaaaaaaaaaaaaaa')
-        )
-        external_convention_gsurl = ingest_object.EXTERNAL_JSON_CONVENTION
-
-        # local_convention_object = IngestFiles(IngestPipeline.JSON_CONVENTION, ['application/json'])
-        # json_file_1 = local_convention_object.open_file(self.JSON_CONVENTION)
-        # print(f'local convention file from test IngestFile call {json_file_1}')
-        with open(ingest_object.JSON_CONVENTION) as f:
-            local_convention = json.load(f)
-
-        # obtain EXTERNAL_JSON_CONVENTION
-        get_external = False
-        external_convention_path = external_convention_gsurl[5:]
-        response = requests.get(
-            'https://storage.googleapis.com/' + external_convention_path,
-            allow_redirects=True,
-        )
-        if response.status_code == 200:
-            get_external = True
-
-        # check if able to request external convention JSON file in google bucket
-        self.assertTrue(
-            get_external,
-            f'Issue getting External convention JSON file from {external_convention_gsurl}',
-        )
-
-        # check external convention JSON file content matches local convention
-        path_segments = external_convention_gsurl[5:].split('/')
-        localized_external_filename = f'external_{path_segments[-1]}'
-
-        with open(localized_external_filename, 'wb') as f:
-            f.write(response.content)
-        localized_external_convention = open(localized_external_filename)
-        external_convention = json.load(localized_external_convention)
-        self.assertEqual(
-            local_convention,
-            external_convention,
-            f'Content of JSON_CONVENTION and EXTERNAL_JSON_CONVENTION declared in ingest_pipeline.py does not match',
-        )
-
-        # clean up downloaded external convention file
-        try:
-            os.remove(localized_external_filename)
         except OSError:
             print('no file to remove')
 

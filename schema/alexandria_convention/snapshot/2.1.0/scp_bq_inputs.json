@@ -1,0 +1,18 @@
+{
+  "study_accession": [
+    "string",
+    "REQUIRED"
+  ],
+  "file_id": [
+    "string",
+    "REQUIRED"
+  ],
+  "metadata_convention_version": [
+    "string",
+    "NULLABLE"
+  ],
+  "organism_age__seconds": [
+    "float",
+    "NULLABLE"
+  ]
+}
