@@ -33,6 +33,7 @@ import os
 import numbers
 import time
 import backoff
+import pandas as pd
 
 import colorama
 from colorama import Fore
@@ -726,12 +727,23 @@ def validate_collected_ontology_data(metadata, convention):
     for entry in metadata.ontology.keys():
         # provision to skip validation of non-EBI OLS metadata for now
         if entry == 'organ_region':
-            continue
+            # ToDo replace with link via raw.githubusercontent.com
+            organ_region_ontology = (
+                '../../schema/organ_region/mouse_brain_atlas/MouseBrainAtlas.csv'
+            )
+            with open(organ_region_ontology) as f:
+                region_ontology = pd.read_csv(f, header=0)
+            print(region_ontology['acronym'])
         # split on comma in case this property from the convention supports multiple ontologies
         ontology_urls = convention['properties'][entry]['ontology'].split(',')
         for ontology_info in metadata.ontology[entry].keys():
             try:
                 ontology_id, ontology_label = ontology_info
+                if entry == 'organ_region':
+                    print(
+                        f'do check for organ_region here with ontology_id, ontology_label: {ontology_id}, {ontology_label}'
+                    )
+                    continue
                 matching_term = retrieve_ontology_term(
                     ontology_urls, ontology_id, stored_ontologies
                 )
@@ -782,6 +794,11 @@ def validate_collected_ontology_data(metadata, convention):
             # handle case where no ontology_label provided
             except (TypeError, ValueError):
                 ontology_id = ontology_info
+                if entry == 'organ_region':
+                    print(
+                        f'do check for organ_region here with only ontology_id, {ontology_id}'
+                    )
+                    continue
                 try:
                     matching_term = retrieve_ontology_term(
                         ontology_urls, ontology_id, stored_ontologies
