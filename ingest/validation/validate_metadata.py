@@ -727,18 +727,20 @@ def validate_collected_ontology_data(metadata, convention):
     for entry in metadata.ontology.keys():
         # provision to skip validation of non-EBI OLS metadata for now
         if entry == 'organ_region':
-            # ToDo replace with link via raw.githubusercontent.com
-            organ_region_ontology = (
-                '../../schema/organ_region/mouse_brain_atlas/MouseBrainAtlas.csv'
-            )
-            with open(organ_region_ontology) as f:
-                region_ontology = pd.read_csv(f, header=0)
-            # print(region_ontology['acronym'])
+            MBA_url = 'https://raw.githubusercontent.com/broadinstitute/scp-ingest-pipeline/jlc_validate_organ_region/schema/organ_region/mouse_brain_atlas/MouseBrainAtlas.csv'
+            try:
+                region_ontology = pd.read_csv(MBA_url, header=0)
+            except:
+                error_msg = f'Unable to access organ_region ontology file'
+                error_logger.error(error_msg)
+                metadata.store_validation_issue('warn', 'ontology', error_msg)
+                exit(1)
+
         # split on comma in case this property from the convention supports multiple ontologies
         ontology_urls = convention['properties'][entry]['ontology'].split(',')
         for ontology_info in metadata.ontology[entry].keys():
             if entry == 'organ_region':
-                validate_organ_region_metadata(ontology_info, region_ontology)
+                validate_organ_region_metadata(ontology_info, region_ontology, metadata)
                 continue
             try:
                 ontology_id, ontology_label = ontology_info
@@ -818,7 +820,7 @@ def validate_collected_ontology_data(metadata, convention):
     return
 
 
-def validate_organ_region_metadata(ontology_info, region_ontology):
+def validate_organ_region_metadata(ontology_info, region_ontology, metadata):
     """
     Validation for nonEBI-OLS ontology, Mouse Brain Atlas
     """
@@ -829,11 +831,9 @@ def validate_organ_region_metadata(ontology_info, region_ontology):
         ontology_label = None
     else:
         error_msg = f'Unable to recognize provided ontology info {ontology_info}'
-        error_logger.error(error_msg)
-    MBA_id = parse_organ_region_ontology_id(ontology_id)
+    MBA_id = parse_organ_region_ontology_id(ontology_id, metadata)
     if not MBA_id:
         error_msg = f'Invalid ontology id provided for organ_region {ontology_id}'
-        error_logger.error(error_msg)
         metadata.store_validation_issue('error', 'ontology', error_msg)
     else:
         MBA_id_exists = (region_ontology['id'] == MBA_id).any()
@@ -841,7 +841,6 @@ def validate_organ_region_metadata(ontology_info, region_ontology):
             error_msg = (
                 f'Ontology id {ontology_id} not found in Mouse Brain Atlas ontology'
             )
-            error_logger.error(error_msg)
             metadata.store_validation_issue('error', 'ontology', error_msg)
         else:
             MBA_id_label = region_ontology['name'][
@@ -849,15 +848,13 @@ def validate_organ_region_metadata(ontology_info, region_ontology):
             ].item()
             if ontology_label is None:
                 error_msg = f'No ontology label provided for {ontology_id}, no cross-check possible'
-                error_logger.error(error_msg)
                 metadata.store_validation_issue('warn', 'ontology', error_msg)
             elif not MBA_id_label == ontology_label:
                 error_msg = f'Ontology label provided, "{ontology_label}" does not match label found in Mouse Brain Atlas ontology, "{MBA_id_label}" for ontology id "{ontology_id}"'
-                error_logger.error(error_msg)
                 metadata.store_validation_issue('error', 'ontology', error_msg)
 
 
-def parse_organ_region_ontology_id(ontology_id):
+def parse_organ_region_ontology_id(ontology_id, metadata):
     """
     Check identifier
     """
@@ -868,7 +865,6 @@ def parse_organ_region_ontology_id(ontology_id):
             return MBA_id
         else:
             error_msg = f'Invalid ontology code for organ_region: {ontology_shortname}'
-            error_logger.error(error_msg)
             metadata.store_validation_issue('error', 'ontology', error_msg)
             return None
     except (ValueError, TypeError):
