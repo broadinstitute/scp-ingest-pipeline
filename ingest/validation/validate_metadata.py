@@ -733,17 +733,15 @@ def validate_collected_ontology_data(metadata, convention):
             )
             with open(organ_region_ontology) as f:
                 region_ontology = pd.read_csv(f, header=0)
-            print(region_ontology['acronym'])
+            # print(region_ontology['acronym'])
         # split on comma in case this property from the convention supports multiple ontologies
         ontology_urls = convention['properties'][entry]['ontology'].split(',')
         for ontology_info in metadata.ontology[entry].keys():
+            if entry == 'organ_region':
+                validate_organ_region_metadata(ontology_info, region_ontology)
+                continue
             try:
                 ontology_id, ontology_label = ontology_info
-                if entry == 'organ_region':
-                    print(
-                        f'do check for organ_region here with ontology_id, ontology_label: {ontology_id}, {ontology_label}'
-                    )
-                    continue
                 matching_term = retrieve_ontology_term(
                     ontology_urls, ontology_id, stored_ontologies
                 )
@@ -794,11 +792,6 @@ def validate_collected_ontology_data(metadata, convention):
             # handle case where no ontology_label provided
             except (TypeError, ValueError):
                 ontology_id = ontology_info
-                if entry == 'organ_region':
-                    print(
-                        f'do check for organ_region here with only ontology_id, {ontology_id}'
-                    )
-                    continue
                 try:
                     matching_term = retrieve_ontology_term(
                         ontology_urls, ontology_id, stored_ontologies
@@ -823,6 +816,66 @@ def validate_collected_ontology_data(metadata, convention):
                     # immediately return as validation cannot continue
                     return
     return
+
+
+def validate_organ_region_metadata(ontology_info, region_ontology):
+    """
+    Validation for nonEBI-OLS ontology, Mouse Brain Atlas
+    """
+    if isinstance(ontology_info, tuple):
+        ontology_id, ontology_label = ontology_info
+    elif isinstance(ontology_info, str):
+        ontology_id = ontology_info
+        ontology_label = None
+    else:
+        error_msg = f'Unable to recognize provided ontology info {ontology_info}'
+        error_logger.error(error_msg)
+    MBA_id = parse_organ_region_ontology_id(ontology_id)
+    if not MBA_id:
+        error_msg = f'Invalid ontology id provided for organ_region {ontology_id}'
+        error_logger.error(error_msg)
+        metadata.store_validation_issue('error', 'ontology', error_msg)
+    else:
+        MBA_id_exists = (region_ontology['id'] == MBA_id).any()
+        if not MBA_id_exists:
+            error_msg = (
+                f'Ontology id {ontology_id} not found in Mouse Brain Atlas ontology'
+            )
+            error_logger.error(error_msg)
+            metadata.store_validation_issue('error', 'ontology', error_msg)
+        else:
+            MBA_id_label = region_ontology['name'][
+                region_ontology['id'] == MBA_id
+            ].item()
+            if ontology_label is None:
+                error_msg = f'No ontology label provided for {ontology_id}, no cross-check possible'
+                error_logger.error(error_msg)
+                metadata.store_validation_issue('warn', 'ontology', error_msg)
+            elif not MBA_id_label == ontology_label:
+                error_msg = f'Ontology label provided, "{ontology_label}" does not match label found in Mouse Brain Atlas ontology, "{MBA_id_label}" for ontology id "{ontology_id}"'
+                error_logger.error(error_msg)
+                metadata.store_validation_issue('error', 'ontology', error_msg)
+
+
+def parse_organ_region_ontology_id(ontology_id):
+    """
+    Check identifier
+    """
+    try:
+        ontology_shortname, term_id = re.split('[_:]', ontology_id)
+        if ontology_shortname == "MBA":
+            MBA_id = int(term_id)
+            return MBA_id
+        else:
+            error_msg = f'Invalid ontology code for organ_region: {ontology_shortname}'
+            error_logger.error(error_msg)
+            metadata.store_validation_issue('error', 'ontology', error_msg)
+            return None
+    except (ValueError, TypeError):
+        # when ontology_id is malformed and has no separator -> ValueError
+        # when ontology_id value is empty string -> TypeError
+        # when term_id cannot be coerced to int -> ValueError
+        return None
 
 
 def confirm_uniform_units(metadata, convention):
