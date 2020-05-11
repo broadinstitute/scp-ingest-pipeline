@@ -1,0 +1,19 @@
+{
+  "error": {
+    "convention": {
+      "'organ_region' is a dependency of 'organ_region__ontology_label'": [
+        "VIIIb_F002_CTTCCTTGTGCATCTA"
+      ]
+    },
+    "ontology": {
+      "Ontology id MBA_999999999 not found in Mouse Brain Atlas ontology": null,
+      "Ontology label provided, \"Crus 1, urkinje layer\" does not match label found in Mouse Brain Atlas ontology, \"Crus 1, Purkinje layer\" for ontology id \"MBA_000010676\"": null,
+      "Ontology label provided, \"Paraflocculus, granular layer\" does not match label found in Mouse Brain Atlas ontology, \"Copula pyramidis, molecular layer\" for ontology id \"MBA_000010686\"": null
+    }
+  },
+  "warn": {
+    "ontology": {
+      "No ontology label provided for MBA_484682508, no cross-check possible": null
+    }
+  }
+}

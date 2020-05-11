@@ -276,6 +276,36 @@ class TestValidateMetadata(unittest.TestCase):
         except OSError:
             print('no file to remove')
 
+    def test_invalid_MBA_content(self):
+        """Mouse Brain Atlas metadata should validate against MBA ontology file
+        """
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_MBA_v2.1.0.tsv'
+        metadata, convention = self.setup_metadata(args)
+        print(dir(metadata))
+        self.maxDiff = None
+        self.assertTrue(
+            metadata.validate_format(), 'Valid metadata headers should not elicit error'
+        )
+        collect_jsonschema_errors(metadata, convention)
+        self.assertTrue(
+            report_issues(metadata), 'Valid metadata content should not elicit error'
+        )
+        validate_collected_ontology_data(metadata, convention)
+        # reference errors tests for:
+        #   missing organ_region when organ_region__ontology_label provided
+        #   Invalid identifier MBA_999999999
+        #   mismatch of organ_region__ontology_label value with label value in MBA
+        #   mismatch of organ_region__ontology_label value with label from MBA_id lookup
+        reference_file = open('../tests/data/issues_MBA_v2.1.0.json')
+        reference_issues = json.load(reference_file)
+        reference_file.close()
+        self.assertEqual(
+            metadata.issues,
+            reference_issues,
+            'Metadata validation issues do not match reference issues',
+        )
+        self.teardown_metadata(metadata)
+
     def test_invalid_array_content(self):
         """array-based metadata should conform to convention requirements
         """
