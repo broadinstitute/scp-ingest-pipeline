@@ -33,6 +33,7 @@ import os
 import numbers
 import time
 import backoff
+import pandas as pd
 
 import colorama
 from colorama import Fore
@@ -377,7 +378,7 @@ def regularize_ontology_id(value):
 
 
 def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metadata):
-    """for metadatum, lookup expected type by metadata convention
+    """For metadatum, lookup expected type by metadata convention
         and cast value as appropriate type for validation
     """
     cast_metadata = {}
@@ -525,7 +526,7 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
 
 
 def record_issue(errfile, warnfile, issue_type, msg):
-    """print issue to console with coloring and
+    """Print issue to console with coloring and
     writes issues to appropriate issue file
     """
 
@@ -595,7 +596,8 @@ def exit_if_errors(metadata):
 
 
 def backoff_handler(details):
-    """Handler function to log backoff attempts when querying OLS"""
+    """Handler function to log backoff attempts when querying OLS
+    """
     info_logger.debug(
         "Backing off {wait:0.1f} seconds after {tries} tries "
         "calling function {target} with args {args} and kwargs "
@@ -724,12 +726,26 @@ def validate_collected_ontology_data(metadata, convention):
     # container to store references to retrieved ontologies for faster validation
     stored_ontologies = {}
     for entry in metadata.ontology.keys():
-        # provision to skip validation of non-EBI OLS metadata for now
+        # pull in file for validation of non-EBI OLS metadata for organ_region
         if entry == 'organ_region':
-            continue
+            MBA_url = 'https://raw.githubusercontent.com/broadinstitute/scp-ingest-pipeline/58f9308e425c667a34219a3dcadf7209fe09f788/schema/organ_region/mouse_brain_atlas/MouseBrainAtlas.csv'
+            try:
+                region_ontology = pd.read_csv(MBA_url, header=0)
+            # if we can't get the file in GitHub for validation, exit
+            except:  # noqa E722
+                error_msg = 'Unable to read GitHub-hosted organ_region ontology file'
+                error_logger.error(error_msg)
+                metadata.store_validation_issue('error', 'ontology', error_msg)
+                # immediately return as validation should not continue
+                return
+
         # split on comma in case this property from the convention supports multiple ontologies
         ontology_urls = convention['properties'][entry]['ontology'].split(',')
         for ontology_info in metadata.ontology[entry].keys():
+            # provision to validate non-EBI OLS metadata differently
+            if entry == 'organ_region':
+                validate_organ_region_metadata(ontology_info, region_ontology, metadata)
+                continue
             try:
                 ontology_id, ontology_label = ontology_info
                 matching_term = retrieve_ontology_term(
@@ -806,6 +822,58 @@ def validate_collected_ontology_data(metadata, convention):
                     # immediately return as validation cannot continue
                     return
     return
+
+
+def validate_organ_region_metadata(ontology_info, region_ontology, metadata):
+    """Validation for non-EBI-OLS ontology, Mouse Brain Atlas
+    """
+    if isinstance(ontology_info, tuple):
+        ontology_id, ontology_label = ontology_info
+    elif isinstance(ontology_info, str):
+        ontology_id = ontology_info
+        ontology_label = None
+    else:
+        error_msg = f'Unable to recognize provided ontology info {ontology_info}'
+    MBA_id = parse_organ_region_ontology_id(ontology_id, metadata)
+    if not MBA_id:
+        error_msg = f'Invalid ontology id provided for organ_region {ontology_id}'
+        metadata.store_validation_issue('error', 'ontology', error_msg)
+    else:
+        MBA_id_exists = (region_ontology['id'] == MBA_id).any()
+        if not MBA_id_exists:
+            error_msg = (
+                f'Ontology id {ontology_id} not found in Mouse Brain Atlas ontology'
+            )
+            metadata.store_validation_issue('error', 'ontology', error_msg)
+        else:
+            MBA_id_label = region_ontology['name'][
+                region_ontology['id'] == MBA_id
+            ].item()
+            if ontology_label is None:
+                error_msg = f'No ontology label provided for {ontology_id}, no cross-check possible'
+                metadata.store_validation_issue('warn', 'ontology', error_msg)
+            elif not MBA_id_label == ontology_label:
+                error_msg = f'Ontology label provided, "{ontology_label}" does not match label found in Mouse Brain Atlas ontology, "{MBA_id_label}" for ontology id "{ontology_id}"'
+                metadata.store_validation_issue('error', 'ontology', error_msg)
+
+
+def parse_organ_region_ontology_id(ontology_id, metadata):
+    """Extract term id from valid identifiers or return None
+    """
+    try:
+        ontology_shortname, term_id = re.split('[_:]', ontology_id)
+        if ontology_shortname == 'MBA':
+            MBA_id = int(term_id)
+            return MBA_id
+        else:
+            error_msg = f'Invalid ontology code for organ_region: {ontology_shortname}'
+            metadata.store_validation_issue('error', 'ontology', error_msg)
+            return None
+    except (ValueError, TypeError):
+        # when ontology_id is malformed and has no separator -> ValueError
+        # when ontology_id value is empty string -> TypeError
+        # when term_id cannot be coerced to int -> ValueError
+        return None
 
 
 def confirm_uniform_units(metadata, convention):
@@ -886,7 +954,7 @@ def validate_input_metadata(metadata, convention, bq_json=None):
 
 
 def push_metadata_to_bq(metadata, ndjson, dataset, table):
-    """upload local NDJSON to BigQuery
+    """Upload local NDJSON to BigQuery
     """
     client = bigquery.Client()
     dataset_ref = client.dataset(dataset)
