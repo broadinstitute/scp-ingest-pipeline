@@ -730,11 +730,13 @@ def validate_collected_ontology_data(metadata, convention):
             MBA_url = 'https://raw.githubusercontent.com/broadinstitute/scp-ingest-pipeline/jlc_validate_organ_region/schema/organ_region/mouse_brain_atlas/MouseBrainAtlas.csv'
             try:
                 region_ontology = pd.read_csv(MBA_url, header=0)
-            except:
-                error_msg = f'Unable to access organ_region ontology file'
+            # if we can't get the file in GitHub for validation, exit
+            except:  # noqa E722
+                error_msg = f'Unable to read GitHub-hosted organ_region ontology file'
                 error_logger.error(error_msg)
-                metadata.store_validation_issue('warn', 'ontology', error_msg)
-                exit(1)
+                metadata.store_validation_issue('error', 'ontology', error_msg)
+                # immediately return as validation should not continue
+                return
 
         # split on comma in case this property from the convention supports multiple ontologies
         ontology_urls = convention['properties'][entry]['ontology'].split(',')

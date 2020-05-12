@@ -276,10 +276,10 @@ class TestValidateMetadata(unittest.TestCase):
         except OSError:
             print('no file to remove')
 
-    def test_invalid_MBA_content(self):
+    def test_invalid_mba_content(self):
         """Mouse Brain Atlas metadata should validate against MBA ontology file
         """
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_MBA_v2.1.0.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_mba_v2.1.1.tsv'
         metadata, convention = self.setup_metadata(args)
         print(dir(metadata))
         self.maxDiff = None
@@ -296,7 +296,7 @@ class TestValidateMetadata(unittest.TestCase):
         #   Invalid identifier MBA_999999999
         #   mismatch of organ_region__ontology_label value with label value in MBA
         #   mismatch of organ_region__ontology_label value with label from MBA_id lookup
-        reference_file = open('../tests/data/issues_MBA_v2.1.0.json')
+        reference_file = open('../tests/data/issues_mba_v2.1.1.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
