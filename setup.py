@@ -20,7 +20,8 @@ setup(
         'mypy_extensions',
         'pymongo',
         # 'loompy',
-	'backoff',
+        'backoff',
+	'opencensus',
     ],
     packages=find_packages(),
 )
