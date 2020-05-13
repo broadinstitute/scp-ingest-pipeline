@@ -7,7 +7,6 @@ setup(
     author='Single Cell Portal team',
     author_email='scp-support@broadinstitute.zendesk.com',
     install_requires=[
-        'google-cloud-firestore',
         'google-cloud-storage',
         'google-cloud-bigquery',
         'requests',
@@ -20,7 +19,8 @@ setup(
         'dataclasses',
         'mypy_extensions',
         'pymongo',
-        'loompy',
+        # 'loompy',
+	'backoff',
     ],
     packages=find_packages(),
 )
