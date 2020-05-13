@@ -25,6 +25,7 @@ setup(
 	'opencensus-context',
 	'opencensus-ext-stackdriver',
 	'google-cloud-trace',
+	'opencensus.ext',
     ],
     packages=find_packages(),
 )
