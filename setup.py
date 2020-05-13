@@ -21,7 +21,10 @@ setup(
         'pymongo',
         # 'loompy',
         'backoff',
-	'opencensus',
+        'opencensus',
+	'opencensus-context',
+	'opencensus-ext-stackdriver',
+	'google-cloud-trace',
     ],
     packages=find_packages(),
 )
