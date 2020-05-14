@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-print('opencensus')
 setup(
     name='scp_ingest_pipeline',
     version='0.1',
