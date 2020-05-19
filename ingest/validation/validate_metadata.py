@@ -34,6 +34,7 @@ import numbers
 import time
 import backoff
 import pandas as pd
+import copy
 
 import colorama
 from colorama import Fore
@@ -164,6 +165,18 @@ def is_ontology_metadata(convention, metadatum):
         return False
 
 
+def is_required_metadata(convention, metadatum):
+    """Check in metadata convention if metadata is required
+    """
+    try:
+        if metadatum in convention['required']:
+            return True
+        else:
+            return False
+    except KeyError:
+        return False
+
+
 def lookup_metadata_type(convention, metadatum):
     """Look up metadata type from metadata convention
     """
@@ -204,61 +217,191 @@ def validate_cells_unique(metadata):
     return valid
 
 
-def collect_cell_for_ontology(metadatum, row, metadata, array=False):
-    """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
+def lookup_ontology_label(id, metadatum, convention, metadata):
+    """Look up official ontology label
     """
+    if metadatum == 'organ_region':
+        print(f'MBA lookup for {id}')
+        MBA_label = parse_organ_region_ontology_id(id, metadata)
+        return MBA_label
+    else:
+        print(f'OLS lookup for {id}')
+        ontology_urls = convention['properties'][metadatum]['ontology'].split(',')
+        stored_ontologies = {}
+        term_lookup = retrieve_ontology_term(ontology_urls, id, stored_ontologies)
+        return term_lookup['label']
+
+
+def lookup_local_label_info(id, metadata, metadatum, convention):
+    """Look in metadata.ontology_label to see if we've looked up this ontology before
+    if yes, return known ontology_label
+    otherwise go to EBI OLS to get it
+    """
+    if id in metadata.ontology_label.keys():
+        print(f'found {metadata.ontology_label[id]} for {id} locally')
+        pass
+    else:
+        print(f'{id} not found locally')
+        official_label = lookup_ontology_label(id, metadatum, convention, metadata)
+        metadata.ontology_label[id] = official_label
+    return metadata.ontology_label[id]
+
+
+def collect_cell_for_ontology(metadatum, row, metadata, convention, array, required):
+    """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
+    if ontology_label not provided for optional metadata, label is looked up
+    and added to BigQuery json to populate metadata backend
+    Missing ontology_label for required metadata is not inserted, should fail validation
+    """
+    updated_row = copy.deepcopy(row)
     if metadatum.endswith('__unit'):
         ontology_label = metadatum + '_label'
     else:
         ontology_label = metadatum + '__ontology_label'
     cell_id = row['CellID']
     if array:
-        # Catch unusual edge case where ontology_label column provided but empty
+        # Catch unusual case where ontology_label column completely empty
         # np.isnan does not support string values and generates a TypeError
         try:
             np.isnan(row[ontology_label])
+            array_label_for_bq = []
             for id in row[metadatum]:
-                metadata.ontology[metadatum][(id)].append(cell_id)
+                if required:
+                    print(
+                        f'ARRAY label isnan Required {metadatum} {id}, skip label lookup'
+                    )
+                    metadata.ontology[metadatum][(id)].append(cell_id)
+                else:
+                    print(
+                        f'ARRAY label isnan Optional {metadatum} {id}, lookup {metadatum} {id} here'
+                    )
+                    label_lookup = lookup_local_label_info(
+                        id, metadata, metadatum, convention
+                    )
+                    array_label_for_bq.append(label_lookup)
+                    metadata.ontology[metadatum][(id, label_lookup)].append(cell_id)
+                    error_msg = (
+                        f'{metadatum}: missing ontology label '
+                        f'\"{id}\" - using \"{label_lookup}\" per EBI OLS lookup (ARRAY label isnan Optional)'
+                    )
+                    metadata.store_validation_issue(
+                        'warn', 'ontology', error_msg, [cell_id]
+                    )
+            if not required:
+                updated_row[ontology_label] = array_label_for_bq
         except (TypeError, KeyError):
             # Not all ontology data will have user-provided ontology_label
             # where provided, collect to provide cross-validation
             try:
                 ontology_dict = dict(zip(row[metadatum], row[ontology_label]))
                 for id, label in ontology_dict.items():
+                    print(f'Proceed: ARRAY {label} provided for {id}')
                     metadata.ontology[metadatum][(id, label)].append(cell_id)
-            # where ontology_label not provided, collect ontology id for validation
+            # lookup ontology_label for optional metadata, collect ontology id for validation
             except (TypeError, KeyError):
+                array_label_for_bq = []
                 for id in row[metadatum]:
-                    metadata.ontology[metadatum][(id)].append(cell_id)
+                    if required:
+                        print(
+                            f'ARRAY missing label Required {metadatum} {id}, skip label lookup; \"normal\" missing label'
+                        )
+                        metadata.ontology[metadatum][(id)].append(cell_id)
+                    else:
+                        print(
+                            f'ARRAY missing label Optional for {metadatum}, lookup {metadatum} {id} here'
+                        )
+                        label_lookup = lookup_local_label_info(
+                            id, metadata, metadatum, convention
+                        )
+                        array_label_for_bq.append(label_lookup)
+                        # replace line here update that includes label
+                        metadata.ontology[metadatum][(id, label_lookup)].append(cell_id)
+                        error_msg = (
+                            f'{metadatum}: missing ontology label '
+                            f'\"{id}\" - using \"{label_lookup}\" per EBI OLS lookup (ARRAY missing label Optional)'
+                        )
+                        metadata.store_validation_issue(
+                            'warn', 'ontology', error_msg, [cell_id]
+                        )
+                if not required:
+                    updated_row[ontology_label] = array_label_for_bq
     else:
-        # Catch unusual edge case where ontology_label column provided but empty
+        # Catch unusual case where ontology_label column completely empty
         # np.isnan does not support string values and generates a TypeError
+        id = row[metadatum]
         try:
             np.isnan(row[ontology_label])
-            metadata.ontology[metadatum][(row[metadatum])].append(cell_id)
+            if required:
+                print(f'label isnan Required: {metadatum} {id}, skip label lookup')
+                metadata.ontology[metadatum][(id)].append(cell_id)
+            else:
+                print(
+                    f'label isnan Optional: {metadatum}, lookup {metadatum} {id} here'
+                )
+                label_lookup = lookup_local_label_info(
+                    id, metadata, metadatum, convention
+                )
+                metadata.ontology[metadatum][(id, label_lookup)].append(cell_id)
+                error_msg = (
+                    f'{metadatum}: missing ontology label '
+                    f'\"{id}\" - using \"{label_lookup}\" per EBI OLS lookup (label isnan Optional)'
+                )
+                metadata.store_validation_issue(
+                    'warn', 'ontology', error_msg, [cell_id]
+                )
+            if not required:
+                updated_row[ontology_label] = label_lookup
         except (TypeError, KeyError):
             # Not all ontology data will have user-provided ontology_label
             # where provided, collect to provide cross-validation
             try:
-                metadata.ontology[metadatum][
-                    (row[metadatum], row[ontology_label])
-                ].append(cell_id)
-            # where ontology_label not provided, collect ontology id for validation
+                label = row[ontology_label]
+                print(f'Proceed NON-array: {label} provided for {id}')
+                metadata.ontology[metadatum][(id, label)].append(cell_id)
+            # lookup ontology_label for optional metadata, collect ontology id for validation
             except KeyError:
-                metadata.ontology[metadatum][(row[metadatum])].append(cell_id)
-    return
+                if required:
+                    print(
+                        f'label missing Required: {metadatum} {id}, skip label lookup'
+                    )
+                    metadata.ontology[metadatum][(id)].append(cell_id)
+                else:
+                    print(
+                        f'label missing Optional: {metadatum}, lookup {metadatum} {id}'
+                    )
+                    label_lookup = lookup_local_label_info(
+                        id, metadata, metadatum, convention
+                    )
+                    metadata.ontology[metadatum][(id, label_lookup)].append(cell_id)
+                    error_msg = (
+                        f'{metadatum}: missing ontology label '
+                        f'\"{id}\" - using \"{label_lookup}\" per EBI OLS lookup (missing label Optional)'
+                    )
+                    metadata.store_validation_issue(
+                        'warn', 'ontology', error_msg, [cell_id]
+                    )
+                    updated_row[ontology_label] = label_lookup
+    return updated_row
 
 
 def collect_ontology_data(row_data, metadata, convention):
     """Collect unique ontology IDs for ontology validation
     """
-    for entry in row_data.keys():
+    row_ref = copy.deepcopy(row_data)
+    for entry in row_ref.keys():
         if is_ontology_metadata(convention, entry):
-            if is_array_metadata(convention, entry):
-                collect_cell_for_ontology(entry, row_data, metadata, array=True)
-            else:
-                collect_cell_for_ontology(entry, row_data, metadata)
-    return
+            updated_row = collect_cell_for_ontology(
+                entry,
+                row_data,
+                metadata,
+                convention,
+                array=is_array_metadata(convention, entry),
+                required=is_required_metadata(convention, entry),
+            )
+            # update BigQuery data to include missing ontology labels
+            # for optional ontology metadata
+            row_data.update(updated_row)
+    return row_data
 
 
 def compare_type_annots_to_convention(metadata, convention):
@@ -501,7 +644,7 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
         while line:
             row = process_metadata_row(metadata, convention, line)
             metadata.cells.append(row['CellID'])
-            collect_ontology_data(row, metadata, convention)
+            row = collect_ontology_data(row, metadata, convention)
             for error in schema.iter_errors(row):
                 try:
                     error.message = error.path[0] + ': ' + error.message
@@ -742,6 +885,7 @@ def validate_collected_ontology_data(metadata, convention):
         # split on comma in case this property from the convention supports multiple ontologies
         ontology_urls = convention['properties'][entry]['ontology'].split(',')
         for ontology_info in metadata.ontology[entry].keys():
+            print(f'validating {ontology_info} for {entry}')
             # provision to validate non-EBI OLS metadata differently
             if entry == 'organ_region':
                 validate_organ_region_metadata(ontology_info, region_ontology, metadata)
@@ -811,14 +955,19 @@ def validate_collected_ontology_data(metadata, convention):
                             metadata.ontology[entry][(ontology_id)],
                         )
                     error_msg = (
-                        f'{entry}: no ontology label supplied in metadata file for '
-                        f'\"{ontology_id}\" - no cross-check for data entry error possible'
+                        f'{entry}: no ontology label for \"{ontology_id}\" - '
+                        f'label required to cross-check for data entry error'
                     )
-                    metadata.store_validation_issue('warn', 'ontology', error_msg)
+                    metadata.store_validation_issue(
+                        'error',
+                        'ontology',
+                        error_msg,
+                        metadata.ontology[entry][(ontology_id)],
+                    )
                 except requests.exceptions.RequestException as err:
                     error_msg = f'External service outage connecting to {ontology_urls} when querying {ontology_id}:{ontology_label}: {err}'
                     error_logger.error(error_msg)
-                    metadata.store_validation_issue('error', 'ontology', error_msg)
+                    metadata.store_validation_issue('error', 'ontology', error_msg),
                     # immediately return as validation cannot continue
                     return
     return
