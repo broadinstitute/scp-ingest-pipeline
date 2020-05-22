@@ -38,15 +38,26 @@
     "ontology": {
       "organ: No match found in EBI OLS for provided ontology ID: nan": [
         "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "organ: no ontology label for \"UBERON_0001913\" - label required to cross-check for data entry error": [
+        "BM01_16dpp_CCGAATTCACCG"
       ]
     }
   },
   "warn": {
     "ontology": {
-      "disease__time_since_onset__unit: no ontology label supplied in metadata file for \"UO_0000035\" - no cross-check for data entry error possible": null,
-      "disease__time_since_onset__unit: no ontology label supplied in metadata file for \"UO_0000033\" - no cross-check for data entry error possible": null,
-      "organ: no ontology label supplied in metadata file for \"UBERON_0001913\" - no cross-check for data entry error possible": null,
-      "ethnicity: no ontology label supplied in metadata file for \"HANCESTRO_0005\" - no cross-check for data entry error possible": null
+      "disease__time_since_onset__unit: missing ontology label \"UO_0000035\" - using \"month\" per EBI OLS lookup": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "ethnicity: missing ontology label \"HANCESTRO_0005\" - using \"European\" per EBI OLS lookup": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "disease__time_since_onset__unit: missing ontology label \"UO_0000033\" - using \"day\" per EBI OLS lookup": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
     }
   }
 }

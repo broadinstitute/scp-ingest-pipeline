@@ -309,7 +309,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_array_content(self):
         """array-based metadata should conform to convention requirements
         """
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_array_v2.0.0.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_array_v2.1.2.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -323,7 +323,7 @@ class TestValidateMetadata(unittest.TestCase):
         # invalid boolean value: disease__treated
         # non-uniform unit values: organism_age__unit
         # missing ontology ID or label for non-required metadata: ethnicity
-        reference_file = open('../tests/data/issues_array_v2.0.0.json')
+        reference_file = open('../tests/data/issues_array_v2.1.2.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
