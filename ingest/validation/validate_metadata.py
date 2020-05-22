@@ -231,7 +231,7 @@ def lookup_ontology_label(id, metadatum, convention, metadata):
         return term_lookup['label']
 
 
-def lookup_local_label_info(id, metadata, metadatum, convention):
+def lookup_label_info(id, metadata, metadatum, convention):
     """Look in metadata.ontology_label to see if we've looked up this ontology before
     if yes, return known ontology_label
     otherwise go to EBI OLS to get it
@@ -249,26 +249,40 @@ def insert_array_ontology_label_to_bq(
 ):
     row_for_insertion = copy.deepcopy(row)
     array_label_for_bq = []
+    all_labels_valid = True
     cell_id = row['CellID']
     for id in row[metadatum]:
         if required:
             metadata.ontology[metadatum][(id)].append(cell_id)
         else:
-            label_lookup = lookup_local_label_info(id, metadata, metadatum, convention)
-            array_label_for_bq.append(label_lookup)
-            metadata.ontology[metadatum][(id, label_lookup)].append(cell_id)
-            if metadatum == 'organ_region':
+            label_lookup = lookup_label_info(id, metadata, metadatum, convention)
+            if label_lookup is None:
+                all_labels_valid = False
                 error_msg = (
-                    f'{metadatum}: missing ontology label '
-                    f'\"{id}\" - using \"{label_lookup}\" per Mouse Brain Atlas ontology'
+                    f'{metadatum}: unable to lookup \"{id}\" - '
+                    f'cannot propagate array of labels for {metadatum};'
+                    f'may cause inaccurate error reporting for {metadatum}'
+                )
+                metadata.store_validation_issue(
+                    'error', 'ontology', error_msg, [cell_id]
                 )
             else:
-                error_msg = (
-                    f'{metadatum}: missing ontology label '
-                    f'\"{id}\" - using \"{label_lookup}\" per EBI OLS lookup'
+                array_label_for_bq.append(label_lookup)
+                metadata.ontology[metadatum][(id, label_lookup)].append(cell_id)
+                if metadatum == 'organ_region':
+                    error_msg = (
+                        f'{metadatum}: missing ontology label '
+                        f'\"{id}\" - using \"{label_lookup}\" per Mouse Brain Atlas ontology'
+                    )
+                else:
+                    error_msg = (
+                        f'{metadatum}: missing ontology label '
+                        f'\"{id}\" - using \"{label_lookup}\" per EBI OLS lookup'
+                    )
+                metadata.store_validation_issue(
+                    'warn', 'ontology', error_msg, [cell_id]
                 )
-            metadata.store_validation_issue('warn', 'ontology', error_msg, [cell_id])
-    if not required:
+    if not required and all_labels_valid:
         row_for_insertion[ontology_label] = array_label_for_bq
     return row_for_insertion
 
@@ -282,14 +296,15 @@ def insert_ontology_label_to_bq(
     if required:
         metadata.ontology[metadatum][(id)].append(cell_id)
     else:
-        label_lookup = lookup_local_label_info(id, metadata, metadatum, convention)
-        metadata.ontology[metadatum][(id, label_lookup)].append(cell_id)
-        error_msg = (
-            f'{metadatum}: missing ontology label '
-            f'\"{id}\" - using \"{label_lookup}\" per EBI OLS lookup'
-        )
-        metadata.store_validation_issue('warn', 'ontology', error_msg, [cell_id])
-        row_for_insertion[ontology_label] = label_lookup
+        label_lookup = lookup_label_info(id, metadata, metadatum, convention)
+        if label_lookup is not None:
+            metadata.ontology[metadatum][(id, label_lookup)].append(cell_id)
+            error_msg = (
+                f'{metadatum}: missing ontology label '
+                f'\"{id}\" - using \"{label_lookup}\" per EBI OLS lookup'
+            )
+            metadata.store_validation_issue('warn', 'ontology', error_msg, [cell_id])
+            row_for_insertion[ontology_label] = label_lookup
     return row_for_insertion
 
 
@@ -960,10 +975,7 @@ def lookup_organ_region_ontology_label(ontology_id, metadata, region_ontology):
     else:
         MBA_id_exists = (region_ontology['id'] == MBA_id).any()
         if not MBA_id_exists:
-            error_msg = (
-                f'Ontology id {ontology_id} not found in Mouse Brain Atlas ontology'
-            )
-            metadata.store_validation_issue('error', 'ontology', error_msg)
+            MBA_id_label = None
         else:
             MBA_id_label = region_ontology['name'][
                 region_ontology['id'] == MBA_id
@@ -989,6 +1001,9 @@ def validate_organ_region_metadata(ontology_info, region_ontology, metadata):
             f'No ontology label provided for {ontology_id}, no cross-check possible'
         )
         metadata.store_validation_issue('warn', 'ontology', error_msg)
+    elif MBA_id_label is None:
+        error_msg = f'Ontology id {ontology_id} not found in Mouse Brain Atlas ontology'
+        metadata.store_validation_issue('error', 'ontology', error_msg)
     elif not MBA_id_label == ontology_label:
         error_msg = f'Ontology label provided, "{ontology_label}" does not match label found in Mouse Brain Atlas ontology, "{MBA_id_label}" for ontology id "{ontology_id}"'
         metadata.store_validation_issue('error', 'ontology', error_msg)

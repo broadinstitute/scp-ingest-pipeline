@@ -233,7 +233,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_valid_array_content(self):
         """array-based metadata should conform to convention requirements
         """
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_array_v2.0.0.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_array_v2.1.2.tsv'
         metadata, convention = self.setup_metadata(args)
         self.assertTrue(
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
@@ -244,7 +244,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         # valid array data emits one warning message for disease__time_since_onset__unit
         # because no ontology label supplied in metadata file for the unit ontology
-        reference_file = open('../tests/data/issues_warn_v2.0.0.json')
+        reference_file = open('../tests/data/issues_warn_v2.1.2.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
@@ -279,7 +279,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_invalid_mba_content(self):
         """Mouse Brain Atlas metadata should validate against MBA ontology file
         """
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_mba_v2.1.1.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_mba_v2.1.2.tsv'
         metadata, convention = self.setup_metadata(args)
         print(dir(metadata))
         self.maxDiff = None
@@ -296,7 +296,7 @@ class TestValidateMetadata(unittest.TestCase):
         #   Invalid identifier MBA_999999999
         #   mismatch of organ_region__ontology_label value with label value in MBA
         #   mismatch of organ_region__ontology_label value with label from MBA_id lookup
-        reference_file = open('../tests/data/issues_mba_v2.1.1.json')
+        reference_file = open('../tests/data/issues_mba_v2.1.2.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
         self.assertEqual(
