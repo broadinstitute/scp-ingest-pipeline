@@ -35,6 +35,7 @@ import time
 import backoff
 import pandas as pd
 import copy
+import itertools
 
 import colorama
 from colorama import Fore
@@ -332,9 +333,20 @@ def collect_cell_for_ontology(metadatum, row, metadata, convention, array, requi
             # Not all ontology data will have user-provided ontology_label
             # where provided, collect to provide cross-validation
             try:
-                ontology_dict = dict(zip(row[metadatum], row[ontology_label]))
+                ontology_dict = dict(
+                    itertools.zip_longest(row[metadatum], row[ontology_label])
+                )
                 for id, label in ontology_dict.items():
-                    metadata.ontology[metadatum][(id, label)].append(cell_id)
+                    if label:
+                        metadata.ontology[metadatum][(id, label)].append(cell_id)
+                    else:
+                        error_msg = (
+                            f'{metadatum}: \"{id}\" accompanied by invalid'
+                            f' array of ontology labels - unable to parse labels'
+                        )
+                        metadata.store_validation_issue(
+                            'error', 'ontology', error_msg, [cell_id]
+                        )
             # lookup ontology_label for optional metadata, collect ontology id for validation
             except (TypeError, KeyError):
                 updated_row = insert_array_ontology_label_to_bq(
@@ -395,7 +407,7 @@ def compare_type_annots_to_convention(metadata, convention):
     # word in header is not some form of 'NAME' and script breaks
     metadata_names[0] = 'CellID'
     type_annots[0] = 'group'
-    metadata_annots = dict(zip(metadata_names, type_annots))
+    metadata_annots = dict(itertools.zip_longest(metadata_names, type_annots))
     annot_equivalents = {
         'numeric': ['number', 'integer'],
         'group': ['boolean', 'string'],
@@ -590,7 +602,7 @@ def process_metadata_row(metadata, convention, line):
     # but subsequent code expects 'CellID' even if header check fails and first
     # word in header is not some form of 'NAME' and script breaks
     metadata_names[0] = 'CellID'
-    row_info = dict(zip(metadata_names, line))
+    row_info = dict(itertools.zip_longest(metadata_names, line))
     processed_row = {}
     for k, v in row_info.items():
         try:

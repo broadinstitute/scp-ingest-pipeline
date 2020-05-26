@@ -257,7 +257,7 @@ class TestValidateMetadata(unittest.TestCase):
     def test_bigquery_json_content(self):
         """generated newline delimited JSON for BigQuery upload should match expected output
         """
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v2.0.0.tsv'
+        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_array_v2.1.2.tsv'
         metadata, convention = self.setup_metadata(args)
         validate_input_metadata(metadata, convention, bq_json=True)
 
