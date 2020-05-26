@@ -1,0 +1,467 @@
+[
+    {
+        "mode": "NULLABLE",
+        "name": "biosample_id",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "biosample_type",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "CellID",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "disease",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "disease__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "donor_id",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "library_preparation_protocol",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "library_preparation_protocol__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "organ",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "organ__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "sex",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "species",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "species__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "bmi",
+        "type": "FLOAT"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "cell_type",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "cell_type__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "cell_type__custom",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "culture_duration",
+        "type": "FLOAT"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "culture_duration__unit",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "culture_duration__unit_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "development_stage",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "development_stage__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "disease__intracellular_pathogen",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "disease__intracellular_pathogen__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "disease__time_since_onset",
+        "type": "FLOAT"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "disease__time_since_onset__unit",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "disease__time_since_onset__unit_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "disease__time_since_treatment_start",
+        "type": "FLOAT"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "disease__time_since_treatment_start__unit",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "disease__time_since_treatment_start__unit_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "disease__treated",
+        "type": "BOOLEAN"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "disease__treatment",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "end_bias",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "enrichment__cell_type",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "enrichment__cell_type__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "enrichment__facs_markers",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "enrichment_method",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "ethnicity",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "ethnicity__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "gene_perturbation",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "gene_perturbation__direction",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "gene_perturbation__dynamics",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "gene_perturbation__method",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "gene_perturbation__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "geographical_region",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "geographical_region__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "growth_factor_perturbation",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "growth_factor_perturbation__concentration",
+        "type": "FLOAT"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "growth_factor_perturbation__concentration__unit",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "growth_factor_perturbation__concentration__unit_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "growth_factor_perturbation__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "growth_factor_perturbation__solvent",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "growth_factor_perturbation__source",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "is_living",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "mhc_genotype",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "mouse_strain",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "mouse_strain__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "number_of_reads",
+        "type": "FLOAT"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "organ_region",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "organ_region__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "organism_age",
+        "type": "FLOAT"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "organism_age__unit",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "organism_age__unit_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "paired_ends",
+        "type": "BOOLEAN"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "preservation_method",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "primer",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "race",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "race__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "read_length",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "sequencing_instrument_manufacturer_model",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "sequencing_instrument_manufacturer_model__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "small_molecule_perturbation",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "small_molecule_perturbation__concentration",
+        "type": "FLOAT"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "small_molecule_perturbation__concentration__unit",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "small_molecule_perturbation__concentration__unit_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "small_molecule_perturbation__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "small_molecule_perturbation__solvent",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "small_molecule_perturbation__source",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "spike_in_concentration",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "spike_in_kit",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "strand",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "vaccination",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "vaccination__adjuvants",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "vaccination__dosage",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "vaccination__ontology_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "vaccination__route",
+        "type": "STRING"
+    },
+    {
+        "mode": "REPEATED",
+        "name": "vaccination__time_since",
+        "type": "FLOAT"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "vaccination__time_since__unit",
+        "type": "STRING"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "vaccination__time_since__unit_label",
+        "type": "STRING"
+    },
+    {
+        "mode": "REQUIRED",
+        "name": "study_accession",
+        "type": "string"
+    },
+    {
+        "mode": "REQUIRED",
+        "name": "file_id",
+        "type": "string"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "metadata_convention_version",
+        "type": "string"
+    },
+    {
+        "mode": "NULLABLE",
+        "name": "organism_age__seconds",
+        "type": "float"
+    }
+]
