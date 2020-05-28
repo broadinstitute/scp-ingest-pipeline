@@ -17,7 +17,7 @@
       ]
     },
     "convention": {
-      "organ: nan is not of type 'string'": [
+      "organ: '' does not match '^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'": [
         "BM01_16dpp_TAAGCAGTGGTA"
       ],
       "'disease__time_since_onset' is a dependency of 'disease__time_since_onset__unit'": [
@@ -27,19 +27,16 @@
       "'ethnicity' is a dependency of 'ethnicity__ontology_label'": [
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "organ__ontology_label: nan is not of type 'string'": [
-        "BM01_16dpp_CCGAATTCACCG"
-      ],
       "disease__time_since_onset__unit: values for each unit metadata required to be uniform": null
     },
     "metadata_name": {
       "donor : only alphanumeric characters and underscore allowed in metadata name": null
     },
     "ontology": {
-      "organ: No match found in EBI OLS for provided ontology ID: nan": [
+      "organ: required column \"organ\" empty": [
         "BM01_16dpp_TAAGCAGTGGTA"
       ],
-      "organ: no ontology label for \"UBERON_0001913\" - label required to cross-check for data entry error": [
+      "organ: required column \"organ__ontology_label\" empty": [
         "BM01_16dpp_CCGAATTCACCG"
       ]
     }

@@ -521,15 +521,28 @@ def collect_cell_for_ontology(property_name, row, metadata, convention, array, r
         ontology_label = property_name + '__ontology_label'
     updated_row = copy.deepcopy(row)
     cell_id = updated_row['CellID']
-    # for case where they've omitted the ontology label column altogether, add a blank entry
-    if not ontology_label in updated_row:
+
+    # for case where they've omitted a column altogether or left it blank, add a blank entry
+    # the check for != is because pandas converts blank to nan.
+    # See https://stackoverflow.com/questions/944700/how-can-i-check-for-nan-values
+    if not ontology_label in updated_row or updated_row[ontology_label] != updated_row[ontology_label]:
         updated_row[ontology_label] = ''
 
-    # Catch unusual case where ontology_label column completely empty
-    if not updated_row[ontology_label] and required:
+    if not property_name in updated_row or updated_row[property_name] != updated_row[property_name]:
+        updated_row[property_name] = ''
+
+    if (not updated_row[ontology_label] or not updated_row[property_name]) and required:
+        # Catch cases where ontology_label or property_name column completely empty
+        missing_column_message = ''
+        if not updated_row[property_name]:
+            missing_column_message = f'{property_name}: required column \"{property_name}\" empty'
+        if not updated_row[ontology_label]:
+            if not updated_row[property_name]:
+               missing_column_message += ' and '
+            missing_column_message += f'{property_name}: required column \"{ontology_label}\" empty'
         # for required columns, just log the error and continue
-        metadata.store_validation_issue('error', 'ontology', f'Required column {ontology_label} empty', [cell_id])
-        metadata.ontology[property_name][(updated_row[property_name], None)].append(cell_id)
+        metadata.store_validation_issue('error', 'ontology', missing_column_message, [cell_id])
+        # metadata.ontology[property_name][(updated_row[property_name], None)].append(cell_id)
     else:
         if array:
             updated_row = insert_array_ontology_label_row_data(
@@ -935,7 +948,7 @@ def validate_collected_ontology_data(metadata, convention):
                         ontology_source_name = 'Allen Mouse Brain Atlas'
                     error_msg = (
                         f'{property_name}: input ontology_label \"{ontology_label}\" '
-                        f'does not match {ontology_source_name} lookup \"{matched_label_for_id}\",'
+                        f'does not match {ontology_source_name} lookup \"{matched_label_for_id}\" for ontology id \"{ontology_id}\"'
                     )
                     metadata.store_validation_issue(
                         'error',

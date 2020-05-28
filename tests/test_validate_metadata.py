@@ -34,7 +34,7 @@ from validate_metadata import (
     CellMetadata,
     validate_collected_ontology_data,
     validate_input_metadata,
-    retrieve_ontology,
+    request_json_with_backoff,
     MAX_HTTP_ATTEMPTS,
 )
 
@@ -221,7 +221,6 @@ class TestValidateMetadata(unittest.TestCase):
         #   invalid ontologyID UBERON_1000331 for organ__ontology_label
         reference_file = open('../tests/data/issues_ontology_v2.0.0.json')
         reference_issues = json.load(reference_file)
-
         self.assertEqual(
             metadata.issues,
             reference_issues,
@@ -239,6 +238,7 @@ class TestValidateMetadata(unittest.TestCase):
             metadata.validate_format(), 'Valid metadata headers should not elicit error'
         )
         validate_input_metadata(metadata, convention)
+
         self.assertFalse(
             report_issues(metadata), 'Valid ontology content should not elicit error'
         )
@@ -339,7 +339,7 @@ class TestValidateMetadata(unittest.TestCase):
         """
         request_url = 'https://www.ebi.ac.uk/ols/api/ontologies/'
         self.assertRaises(
-            requests.exceptions.RequestException, retrieve_ontology, request_url
+            requests.exceptions.RequestException, request_json_with_backoff, request_url
         )
         self.assertEqual(mocked_requests_get.call_count, MAX_HTTP_ATTEMPTS)
 
