@@ -13,9 +13,9 @@
       ]
     },
     "ontology": {
-      "Ontology id MBA_999999999 not found in Mouse Brain Atlas ontology": null,
-      "Ontology label provided, \"Crus 1, urkinje layer\" does not match label found in Mouse Brain Atlas ontology, \"Crus 1, Purkinje layer\" for ontology id \"MBA_000010676\"": null,
-      "Ontology label provided, \"Paraflocculus, granular layer\" does not match label found in Mouse Brain Atlas ontology, \"Copula pyramidis, molecular layer\" for ontology id \"MBA_000010686\"": null
+      "organ_region: No match found in Allen Mouse Brain Atlas for provided ontology ID: MBA_999999999": ["IXa_M003_AGGGTGACAGTCCCGA"],
+      "organ_region: input ontology_label \"Crus 1, urkinje layer\" does not match Allen Mouse Brain Atlas lookup \"Crus 1, Purkinje layer\" for ontology id \"MBA_000010676\"": ["AN1b_F002_TCTCACGAGAAGGGAT"],
+      "organ_region: input ontology_label \"Paraflocculus, granular layer\" does not match Allen Mouse Brain Atlas lookup \"Copula pyramidis, molecular layer\" for ontology id \"MBA_000010686\"": ["PFa_M001_TCCACCAAGGAACTAT"]
     }
   }
 }

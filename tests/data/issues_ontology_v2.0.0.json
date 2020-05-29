@@ -9,7 +9,7 @@
       ]
     },
     "ontology": {
-      "species: input ontology_label \"homo sapien\" does not match EBI OLS lookup \"Homo sapiens\",": [
+      "species: input ontology_label \"homo sapien\" does not match EBI OLS lookup \"Homo sapiens\" for ontology id \"NCBITaxon_9606\"": [
         "BM01_16dpp_CGGTAAACCATT"
       ],
       "library_preparation_protocol: No match found in EBI OLS for provided ontology ID: EFO0008919": [
