@@ -7,7 +7,6 @@ an dense matrix.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-from pympler import muppy, summary
 import collections
 from typing import List  # noqa: F401
 
@@ -97,11 +96,11 @@ class Dense(GeneExpression, IngestFiles):
         # Holds gene name and gene model for a single gene
         GeneModel = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
         gene_models = []
-         # Represents row as an ordered dictionary
+        # Represents row as an ordered dictionary
         for row in self.csv_file:
             gene = row['GENE']
             if gene in self.gene_names:
-                    raise ValueError(f'Duplicate gene: {gene}')
+                raise ValueError(f'Duplicate gene: {gene}')
             self.gene_names.append(gene)
             formatted_gene_name = gene.strip().strip('\"')
             self.info_logger.info(
@@ -109,30 +108,36 @@ class Dense(GeneExpression, IngestFiles):
             )
             id = ObjectId()
 
-            gene_models.append(GeneModel(
-                # Name of gene as observed in file
-                gene,
-                self.Model(
-                    {
-                        'name': formatted_gene_name,
-                        'searchable_name': formatted_gene_name.lower(),
-                        'study_file_id': self.study_file_id,
-                        'study_id': self.study_id,
-                        '_id': id,
-                        'gene_id': self.matrix_params['gene_id']
-                        if 'gene_id' in self.matrix_params
-                        else None,
-                    }
-                ),
-            ))
+            gene_models.append(
+                GeneModel(
+                    # Name of gene as observed in file
+                    gene,
+                    self.Model(
+                        {
+                            'name': formatted_gene_name,
+                            'searchable_name': formatted_gene_name.lower(),
+                            'study_file_id': self.study_file_id,
+                            'study_id': self.study_id,
+                            '_id': id,
+                            'gene_id': self.matrix_params['gene_id']
+                            if 'gene_id' in self.matrix_params
+                            else None,
+                        }
+                    ),
+                )
+            )
             # Will need to filter out values from row
             # Expression values
-            gene_models.append(self.set_data_array_gene_cell_names(
-                gene, ObjectId(), list(row.values())[1:]
-            ))
-            gene_models.append(self.set_data_array_gene_expression_values(
-                gene, ObjectId(), list(row.keys())[1:]
-            ))
+            gene_models.append(
+                self.set_data_array_gene_cell_names(
+                    gene, ObjectId(), list(row.values())[1:]
+                )
+            )
+            gene_models.append(
+                self.set_data_array_gene_expression_values(
+                    gene, ObjectId(), list(row.keys())[1:]
+                )
+            )
             if len(gene_models) > 1_000:
                 gene_models = []
 

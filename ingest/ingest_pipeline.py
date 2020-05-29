@@ -342,8 +342,8 @@ class IngestPipeline(object):
     def ingest_expression(self) -> int:
         """Ingests expression files.
         """
-        gene_documents = []
-        data_array_documents = []
+        # gene_documents = []
+        # data_array_documents = []
         self.matrix.transform()
         # if self.kwargs["gene_file"] is not None:
         #     self.matrix.extract()
