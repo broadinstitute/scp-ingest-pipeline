@@ -7,7 +7,7 @@ an dense matrix.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-
+from pympler import muppy, summary
 import collections
 from typing import List  # noqa: F401
 
@@ -36,8 +36,8 @@ class Dense(GeneExpression, IngestFiles):
         )
         self.matrix_params = kwargs
         self.gene_names = []
-        csv_file, self.open_file_object = self.open_file(self.file_path)
-        self.header = next(csv_file)
+        self.csv_file, self.open_file_object = self.open_file(self.file_path)
+        self.header = self.csv_file.fieldnames
 
     def validate_unique_header(self):
         """Validates header has no duplicate values"""
@@ -63,32 +63,32 @@ class Dense(GeneExpression, IngestFiles):
                 return False
         return True
 
-    @trace
-    def preprocess(self):
-        """Determines if file is R-formatted. Creates dataframe (df)"""
-        csv_file, open_file_object = self.open_file(self.file_path)
-        dtypes = {'GENE': object}
-
-        # # Remove white spaces and quotes
-        header = [col_name.strip().strip('\"') for col_name in self.header]
-        # See if R formatted file
-        if (header[-1] == '') and (header[0].upper() != 'GENE'):
-            header.insert(0, 'GENE')
-            # Although the last column in the header is empty, python treats it
-            # as an empty string,[ ..., ""]
-            header = header[0:-1]
-        else:
-            header[0] = header[0].upper()
-        # Set dtype for expression values to floats
-        dtypes.update({cell_name: 'float' for cell_name in header[1:]})
-        self.df = self.open_file(
-            self.file_path,
-            open_as='dataframe',
-            names=header,
-            skiprows=1,
-            dtype=dtypes,
-            # chunksize=100000, Save for when we chunk data
-        )[0]
+    # @trace
+    # def preprocess(self):
+    #     """Determines if file is R-formatted. Creates dataframe (df)"""
+    #     csv_file, open_file_object = self.open_file(self.file_path)
+    #     dtypes = {'GENE': object}
+    #
+    #     # # Remove white spaces and quotes
+    #     header = [col_name.strip().strip('\"') for col_name in self.header]
+    #     # See if R formatted file
+    #     if (header[-1] == '') and (header[0].upper() != 'GENE'):
+    #         header.insert(0, 'GENE')
+    #         # Although the last column in the header is empty, python treats it
+    #         # as an empty string,[ ..., ""]
+    #         header = header[0:-1]
+    #     else:
+    #         header[0] = header[0].upper()
+    #     # Set dtype for expression values to floats
+    #     dtypes.update({cell_name: 'float' for cell_name in header[1:]})
+    #     self.df = self.open_file(
+    #         self.file_path,
+    #         open_as='dataframe',
+    #         names=header,
+    #         skiprows=1,
+    #         dtype=dtypes,
+    #         # chunksize=100000, Save for when we chunk data
+    #     )[0]
 
     @trace
     def transform(self):
@@ -96,17 +96,20 @@ class Dense(GeneExpression, IngestFiles):
         """
         # Holds gene name and gene model for a single gene
         GeneModel = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
-        for gene in self.df['GENE']:
+        gene_models = []
+         # Represents row as an ordered dictionary
+        for row in self.csv_file:
+            gene = row['GENE']
+            if gene in self.gene_names:
+                    raise ValueError(f'Duplicate gene: {gene}')
+            self.gene_names.append(gene)
             formatted_gene_name = gene.strip().strip('\"')
             self.info_logger.info(
                 f'Transforming gene :{gene}', extra=self.extra_log_params
             )
-            if gene in self.gene_names:
-                raise ValueError(f'Duplicate gene: {gene}')
-            self.gene_names.append(gene)
             id = ObjectId()
 
-            yield GeneModel(
+            gene_models.append(GeneModel(
                 # Name of gene as observed in file
                 gene,
                 self.Model(
@@ -121,7 +124,17 @@ class Dense(GeneExpression, IngestFiles):
                         else None,
                     }
                 ),
-            )
+            ))
+            # Will need to filter out values from row
+            # Expression values
+            gene_models.append(self.set_data_array_gene_cell_names(
+                gene, ObjectId(), list(row.values())[1:]
+            ))
+            gene_models.append(self.set_data_array_gene_expression_values(
+                gene, ObjectId(), list(row.keys())[1:]
+            ))
+            if len(gene_models) > 1_000:
+                gene_models = []
 
     @trace
     def set_data_array(

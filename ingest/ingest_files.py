@@ -12,7 +12,7 @@ import os
 import re
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-
+from csv import DictReader
 import pandas as pd  # NOqa: F821
 from google.cloud import storage
 
@@ -224,7 +224,7 @@ class IngestFiles:
             if file_type == "application/json":
                 return open_file
             elif open_as is None:
-                return (file_connections.get(file_type)(open_file, **kwargs), open_file)
+                return file_connections.get(file_type)(open_file, file_type, **kwargs), open_file
             else:
                 return (
                     file_connections.get(open_as)(
@@ -259,14 +259,23 @@ class IngestFiles:
         """Returns file type"""
         return mimetypes.guess_type(file_path)
 
-    def open_txt(self, open_file_object, **kwargs):
+    def open_txt(self, open_file_object,file_type, **kwargs):
         """Method for opening txt files that are expected be tab
         or comma delimited"""
         # Determine if file is tsv or csv
+        if file_type == "text/tab-separated-values":
+            delimiter = "\t"
+        elif file_type == "text/csv":
+            delimiter = ","
+        else:
+            delimiter = None
+        dialect = csv.Sniffer().sniff(
+            open_file_object.readline(), delimiters=delimiter
+        )
         csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
         csv_dialect.skipinitialspace = True
         open_file_object.seek(0)
-        return csv.reader(open_file_object, csv_dialect)
+        return DictReader(open_file_object, dialect=csv_dialect)
 
     def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
@@ -288,7 +297,7 @@ class IngestFiles:
         else:
             raise ValueError("File must be tab or comma delimited")
 
-    def open_csv(self, opened_file_object, **kwargs):
+    def open_csv(self, opened_file_object,*args, **kwargs):
         """Opens csv file"""
         csv.register_dialect(
             "csvDialect",
@@ -297,7 +306,8 @@ class IngestFiles:
             skipinitialspace=True,
             escapechar='\\',
         )
-        return csv.reader(opened_file_object, dialect="csvDialect")
+
+        return DictReader(opened_file_object, dialect="csvDialect")
 
     def open_tsv(self, opened_file_object, **kwargs):
         """Opens tsv file"""
