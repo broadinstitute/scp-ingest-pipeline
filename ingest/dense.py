@@ -9,7 +9,8 @@ Must have python 3.6 or higher.
 """
 import collections
 from typing import List  # noqa: F401
-
+import datetime
+import csv
 from bson.objectid import ObjectId
 
 try:
@@ -34,9 +35,10 @@ class Dense(GeneExpression, IngestFiles):
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
         self.matrix_params = kwargs
-        self.gene_names = []
-        self.csv_file, self.open_file_object = self.open_file(self.file_path)
-        self.header = self.csv_file.fieldnames
+        self.gene_names = {}
+        # self.csv_file, self.open_file_object = self.open_file(self.file_path)
+        self.csv_file = csv.reader(open(self.file_path, "r"))
+        self.header = next(self.csv_file)
 
     def validate_unique_header(self):
         """Validates header has no duplicate values"""
@@ -93,15 +95,18 @@ class Dense(GeneExpression, IngestFiles):
     def transform(self):
         """Transforms dense matrix into gene data model.
         """
+        start_time = datetime.datetime.now()
+        print('Starting run at ' + str(start_time))
+        num_processed = 0
         # Holds gene name and gene model for a single gene
         GeneModel = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
         gene_models = []
         # Represents row as an ordered dictionary
         for row in self.csv_file:
-            gene = row['GENE']
+            gene = row[0]
             if gene in self.gene_names:
                 raise ValueError(f'Duplicate gene: {gene}')
-            self.gene_names.append(gene)
+            self.gene_names[gene] = True
             formatted_gene_name = gene.strip().strip('\"')
             self.info_logger.info(
                 f'Transforming gene :{gene}', extra=self.extra_log_params
@@ -130,16 +135,23 @@ class Dense(GeneExpression, IngestFiles):
             # Expression values
             gene_models.append(
                 self.set_data_array_gene_cell_names(
-                    gene, ObjectId(), list(row.values())[1:]
+                    gene, ObjectId(), list(self.header)[1:]
                 )
             )
             gene_models.append(
                 self.set_data_array_gene_expression_values(
-                    gene, ObjectId(), list(row.keys())[1:]
+                    gene, ObjectId(), list(row)[1:]
                 )
             )
-            if len(gene_models) > 1_000:
+            if len(gene_models) > 5:
+                num_processed += len(gene_models)
+                print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
                 gene_models = []
+
+        num_processed += len(gene_models)
+        print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
+        gene_models = []
+
 
     @trace
     def set_data_array(
