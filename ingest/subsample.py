@@ -21,12 +21,12 @@ class SubSample(Annotations):
 
     def __init__(self, cluster_file, cell_metadata_file=None):
         Annotations.__init__(self, cluster_file, self.ALLOWED_FILE_TYPES)
+        self.preprocess()
         self.determine_coordinates_and_cell_names()
         if cell_metadata_file is not None:
             self.cell_metadata = Annotations(
                 cell_metadata_file, CellMetadata.ALLOWED_FILE_TYPES
             )
-        self.preprocess()
 
     def prepare_cell_metadata(self):
         """ Does an inner join on cell and cluster file """
