@@ -125,23 +125,336 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
     def test_auto_filling_missing_labels(self):
-        # note that the filename provided here is irrelevant -- we will be specifying row dat ourselves
+        # note that the filename provided here is irrelevant -- we will be specifying row data ourselves
         args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/valid_no_array_v2.0.0.tsv'
         metadata, convention = self.setup_metadata(args)
 
-        # handles lack of required column label value
-        row = {'CellID': 'test1', 'disease': 'MONDO_0005015', 'disease__ontology_label': ''}
-        updated_row = collect_cell_for_ontology('disease', row, metadata, convention, True, True)
-        self.assertEqual(row, updated_row, 'Row should not be altered if required column is missing')
-        self.assertEqual(metadata.issues['error']['ontology'], {'disease: required column "disease__ontology_label" empty': ['test1']}, "unexpected error reporting")
+        # handle empty string ontology label for required array metadata
+        row = {
+            'CellID': 'test1',
+            'disease': ['MONDO_0005015'],
+            'disease__ontology_label': '',
+        }
+        updated_row = collect_cell_for_ontology(
+            'disease', row, metadata, convention, True, True
+        )
+        self.assertEqual(
+            row,
+            updated_row,
+            'Row should not be altered if label for required ontology is missing',
+        )
+        self.assertEqual(
+            metadata.issues['error']['ontology'],
+            {
+                'disease: required column "disease__ontology_label" missing data': [
+                    'test1'
+                ]
+            },
+            "unexpected error reporting",
+        )
 
-        # handles lack of required column label value -- value is nan
+        # handle missing ontology label column for required array metadata
         metadata, convention = self.setup_metadata(args)
-        row = {'CellID': 'test1', 'disease': 'MONDO_0005015', 'disease__ontology_label': np.nan}
-        updated_row = collect_cell_for_ontology('disease', row, metadata, convention, True, True)
-        self.assertEqual({'CellID': 'test1', 'disease': 'MONDO_0005015', 'disease__ontology_label': ''}, updated_row, 'nan should be converted to empty string')
-        self.assertEqual(metadata.issues['error']['ontology'], {'disease: required column "disease__ontology_label" empty': ['test1']}, "unexpected error reporting")
+        row = {'CellID': 'test1', 'disease': ['MONDO_0005015']}
+        updated_row = collect_cell_for_ontology(
+            'disease', row, metadata, convention, True, True
+        )
+        self.assertEqual(
+            {
+                'CellID': 'test1',
+                'disease': ['MONDO_0005015'],
+                'disease__ontology_label': [],
+            },
+            updated_row,
+            'Row should have column ontology_label added with value of empty array',
+        )
+        self.assertEqual(
+            metadata.issues['error']['ontology'],
+            {
+                'disease: required column "disease__ontology_label" missing data': [
+                    'test1'
+                ]
+            },
+            "unexpected error reporting",
+        )
 
+        # handles nan ontology label for required array metadata
+        metadata, convention = self.setup_metadata(args)
+        row = {
+            'CellID': 'test1',
+            'disease': ['MONDO_0005015'],
+            'disease__ontology_label': np.nan,
+        }
+        updated_row = collect_cell_for_ontology(
+            'disease', row, metadata, convention, True, True
+        )
+        self.assertEqual(
+            {
+                'CellID': 'test1',
+                'disease': ['MONDO_0005015'],
+                'disease__ontology_label': [],
+            },
+            updated_row,
+            'nan should be converted to empty array',
+        )
+        self.assertEqual(
+            metadata.issues['error']['ontology'],
+            {
+                'disease: required column "disease__ontology_label" missing data': [
+                    'test1'
+                ]
+            },
+            "unexpected error reporting",
+        )
+
+        # handle empty string ontology label for required non-array metadata
+        metadata, convention = self.setup_metadata(args)
+        row = {
+            'CellID': 'test1',
+            'organ': 'UBERON_0001913',
+            'organ__ontology_label': '',
+        }
+        updated_row = collect_cell_for_ontology(
+            'organ', row, metadata, convention, False, True
+        )
+        self.assertEqual(
+            row,
+            updated_row,
+            'Row should not be altered if label for required ontology is missing',
+        )
+        self.assertEqual(
+            metadata.issues['error']['ontology'],
+            {'organ: required column "organ__ontology_label" missing data': ['test1']},
+            "unexpected error reporting",
+        )
+
+        # handle missing ontology label column for required non-array metadata
+        metadata, convention = self.setup_metadata(args)
+        row = {'CellID': 'test1', 'organ': 'UBERON_0001913'}
+        updated_row = collect_cell_for_ontology(
+            'organ', row, metadata, convention, False, True
+        )
+        self.assertEqual(
+            {'CellID': 'test1', 'organ': 'UBERON_0001913', 'organ__ontology_label': ''},
+            updated_row,
+            'Row should have column ontology_label added with value of empty string',
+        )
+        self.assertEqual(
+            metadata.issues['error']['ontology'],
+            {'organ: required column "organ__ontology_label" missing data': ['test1']},
+            "unexpected error reporting",
+        )
+
+        # handles nan ontology label for required non-array metadata
+        metadata, convention = self.setup_metadata(args)
+        row = {
+            'CellID': 'test1',
+            'organ': 'UBERON_0001913',
+            'organ__ontology_label': np.nan,
+        }
+        updated_row = collect_cell_for_ontology(
+            'organ', row, metadata, convention, False, True
+        )
+        self.assertEqual(
+            {'CellID': 'test1', 'organ': 'UBERON_0001913', 'organ__ontology_label': ''},
+            updated_row,
+            'nan should be converted to empty string',
+        )
+        self.assertEqual(
+            metadata.issues['error']['ontology'],
+            {'organ: required column "organ__ontology_label" missing data': ['test1']},
+            "unexpected error reporting",
+        )
+
+        # handle empty string ontology label for optional array metadata
+        row = {
+            'CellID': 'test1',
+            'ethnicity': ['HANCESTRO_0005'],
+            'ethnicity__ontology_label': '',
+        }
+        updated_row = collect_cell_for_ontology(
+            'ethnicity', row, metadata, convention, True, False
+        )
+        self.assertEqual(
+            {
+                'CellID': 'test1',
+                'ethnicity': ['HANCESTRO_0005'],
+                'ethnicity__ontology_label': ['European'],
+            },
+            updated_row,
+            'Row should be updated to inject missing ontology label as array',
+        )
+        self.assertEqual(
+            metadata.issues['warn']['ontology'],
+            {
+                'ethnicity: missing ontology label "HANCESTRO_0005" - using "European" per EBI OLS lookup': [
+                    'test1'
+                ]
+            },
+            "unexpected error reporting",
+        )
+
+        # handle missing ontology label column for optional array metadata
+        metadata, convention = self.setup_metadata(args)
+        row = {'CellID': 'test1', 'ethnicity': ['HANCESTRO_0005']}
+        updated_row = collect_cell_for_ontology(
+            'ethnicity', row, metadata, convention, True, False
+        )
+        self.assertEqual(
+            {
+                'CellID': 'test1',
+                'ethnicity': ['HANCESTRO_0005'],
+                'ethnicity__ontology_label': ['European'],
+            },
+            updated_row,
+            'Row should be updated to inject missing ontology label as array',
+        )
+        self.assertEqual(
+            metadata.issues['warn']['ontology'],
+            {
+                'ethnicity: missing ontology label "HANCESTRO_0005" - using "European" per EBI OLS lookup': [
+                    'test1'
+                ]
+            },
+            "unexpected error reporting",
+        )
+
+        # handles nan ontology label for optional array metadata
+        metadata, convention = self.setup_metadata(args)
+        row = {
+            'CellID': 'test1',
+            'ethnicity': ['HANCESTRO_0005'],
+            'ethnicity__ontology_label': np.nan,
+        }
+        updated_row = collect_cell_for_ontology(
+            'ethnicity', row, metadata, convention, True, False
+        )
+        self.assertEqual(
+            {
+                'CellID': 'test1',
+                'ethnicity': ['HANCESTRO_0005'],
+                'ethnicity__ontology_label': ['European'],
+            },
+            updated_row,
+            'Row should be updated to inject missing ontology label as array',
+        )
+        self.assertEqual(
+            metadata.issues['warn']['ontology'],
+            {
+                'ethnicity: missing ontology label "HANCESTRO_0005" - using "European" per EBI OLS lookup': [
+                    'test1'
+                ]
+            },
+            "unexpected error reporting",
+        )
+
+        # handle empty string ontology label for optional non-array metadata
+        metadata, convention = self.setup_metadata(args)
+        row = {
+            'CellID': 'test1',
+            'cell_type': 'CL_0000066',
+            'cell_type__ontology_label': '',
+        }
+        updated_row = collect_cell_for_ontology(
+            'cell_type', row, metadata, convention, False, False
+        )
+        self.assertEqual(
+            {
+                'CellID': 'test1',
+                'cell_type': 'CL_0000066',
+                'cell_type__ontology_label': 'epithelial cell',
+            },
+            updated_row,
+            'Row should be updated to inject missing ontology label as non-array',
+        )
+        self.assertEqual(
+            metadata.issues['warn']['ontology'],
+            {
+                'cell_type: missing ontology label "CL_0000066" - using "epithelial cell" per EBI OLS lookup': [
+                    'test1'
+                ]
+            },
+            "unexpected error reporting",
+        )
+
+        # handle missing ontology label column for optional non-array metadata
+        metadata, convention = self.setup_metadata(args)
+        row = {'CellID': 'test1', 'cell_type': 'CL_0000066'}
+        updated_row = collect_cell_for_ontology(
+            'cell_type', row, metadata, convention, False, False
+        )
+        self.assertEqual(
+            {
+                'CellID': 'test1',
+                'cell_type': 'CL_0000066',
+                'cell_type__ontology_label': 'epithelial cell',
+            },
+            updated_row,
+            'Row should be updated to inject missing ontology label as non-array',
+        )
+        self.assertEqual(
+            metadata.issues['warn']['ontology'],
+            {
+                'cell_type: missing ontology label "CL_0000066" - using "epithelial cell" per EBI OLS lookup': [
+                    'test1'
+                ]
+            },
+            "unexpected error reporting",
+        )
+
+        # handles nan ontology label for optional non-array metadata
+        metadata, convention = self.setup_metadata(args)
+        row = {
+            'CellID': 'test1',
+            'cell_type': 'CL_0000066',
+            'cell_type__ontology_label': np.nan,
+        }
+        updated_row = collect_cell_for_ontology(
+            'cell_type', row, metadata, convention, False, False
+        )
+        self.assertEqual(
+            {
+                'CellID': 'test1',
+                'cell_type': 'CL_0000066',
+                'cell_type__ontology_label': 'epithelial cell',
+            },
+            updated_row,
+            'Row should be updated to inject missing ontology label as non-array',
+        )
+        self.assertEqual(
+            metadata.issues['warn']['ontology'],
+            {
+                'cell_type: missing ontology label "CL_0000066" - using "epithelial cell" per EBI OLS lookup': [
+                    'test1'
+                ]
+            },
+            "unexpected error reporting",
+        )
+
+        # handles mismatch in item #s for optional array metadata and its label
+        metadata, convention = self.setup_metadata(args)
+        row = {
+            'CellID': 'test1',
+            'ethnicity': ['HANCESTRO_0005', 'HANCESTRO_0462'],
+            'ethnicity__ontology_label': ['British'],
+        }
+        updated_row = collect_cell_for_ontology(
+            'ethnicity', row, metadata, convention, True, False
+        )
+        self.assertEqual(
+            row,
+            updated_row,
+            'Row should not be altered if mismatch in item #s for between array metadata and its label',
+        )
+        self.assertEqual(
+            metadata.issues['error']['ontology'],
+            {
+                'ethnicity: mismatched # of ethnicity and ethnicity__ontology_label values': [
+                    'test1'
+                ]
+            },
+            "unexpected error reporting",
+        )
 
     def test_valid_nonontology_content(self):
         """Non-ontology metadata should conform to convention requirements

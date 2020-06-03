@@ -16,6 +16,14 @@
         "BM01_16dpp_CCGAATTCACCG"
       ]
     },
+    "ontology": {
+      "organ: required column \"organ\" missing data": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "organ: required column \"organ__ontology_label\" missing data": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
+    },
     "convention": {
       "organ: '' does not match '^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'": [
         "BM01_16dpp_TAAGCAGTGGTA"
@@ -31,14 +39,6 @@
     },
     "metadata_name": {
       "donor : only alphanumeric characters and underscore allowed in metadata name": null
-    },
-    "ontology": {
-      "organ: required column \"organ\" empty": [
-        "BM01_16dpp_TAAGCAGTGGTA"
-      ],
-      "organ: required column \"organ__ontology_label\" empty": [
-        "BM01_16dpp_CCGAATTCACCG"
-      ]
     }
   },
   "warn": {

@@ -33,7 +33,6 @@ import os
 import numbers
 import time
 import backoff
-import pandas as pd
 import csv
 import copy
 import itertools
@@ -129,8 +128,9 @@ def create_parser():
     parser.add_argument('input_metadata', help='Metadata TSV file')
     return parser
 
+
 ######################## ONTOLOGY RETRIVER  #########################
-#. code in this section may want to be moved to a separate file, but is here for ease of dependency
+# . code in this section may want to be moved to a separate file, but is here for ease of dependency
 
 
 # Configure maximum number of seconds to spend & total attempts at external HTTP requests to services, e.g. OLS
@@ -155,7 +155,6 @@ class OntologyRetriever:
     cached_ontologies = {}
     cached_terms = {}
 
-
     def retrieve_ontology_term_label(self, term, property_name, convention):
         """Retrieve an individual term label from an ontology
         returns JSON payload of ontology, or None if unsuccessful
@@ -170,10 +169,13 @@ class OntologyRetriever:
 
         if term not in self.cached_terms[property_name]:
             ontology_urls = get_urls_for_property(convention, property_name)
-            self.cached_terms[property_name][term] = self.retrieve_ontology_term_label_remote(term, property_name, ontology_urls)
+            self.cached_terms[property_name][
+                term
+            ] = self.retrieve_ontology_term_label_remote(
+                term, property_name, ontology_urls
+            )
 
         return self.cached_terms[property_name][term]
-
 
     def retrieve_ontology_term_label_remote(self, term, property_name, ontology_urls):
         """Look up official ontology term from an id, always checking against the remote
@@ -182,7 +184,6 @@ class OntologyRetriever:
             return self.retrieve_mouse_brain_term(term, property_name)
         else:
             return self.retrieve_ols_term(ontology_urls, term, property_name)
-
 
     # Attach exponential backoff to external HTTP requests
     @backoff.on_exception(
@@ -204,11 +205,15 @@ class OntologyRetriever:
         try:
             ontology_shortname, term_id = re.split('[_:]', term)
         except (ValueError, TypeError):
-            raise ValueError(f'{property_name}: No match found in EBI OLS for provided ontology ID: {term}')
+            raise ValueError(
+                f'{property_name}: No match found in EBI OLS for provided ontology ID: {term}'
+            )
         # check if we have already retrieved this ontology reference
         if ontology_shortname not in self.cached_ontologies:
             metadata_url = OLS_BASE_URL + ontology_shortname
-            self.cached_ontologies[ontology_shortname] = request_json_with_backoff(metadata_url)
+            self.cached_ontologies[ontology_shortname] = request_json_with_backoff(
+                metadata_url
+            )
         metadata_ontology = self.cached_ontologies[ontology_shortname]
 
         # check if the ontology parsed from the term is the same ontology defined in the convention
@@ -246,28 +251,33 @@ class OntologyRetriever:
             error_msg = f'No result from EBI OLS for provided ontology shortname \"{ontology_shortname}\"'
             print(error_msg)
             info_logger.info(error_msg, extra={'study_id': None, 'duration': None})
-            raise ValueError( f'{property_name}: No match found in EBI OLS for provided ontology ID: {term}')
+            raise ValueError(
+                f'{property_name}: No match found in EBI OLS for provided ontology ID: {term}'
+            )
         else:
             error_msg = (
-                f'encountered issue retrieving {convention_urls} or {ontology_shortname}'
+                f'encountered issue retrieving {ontology_urls} or {ontology_shortname}'
             )
             print(error_msg)
             info_logger.info(error_msg, extra={'study_id': None, 'duration': None})
             raise RuntimeError(error_msg)
 
-
     def retrieve_mouse_brain_term(self, term, property_name):
         mouse_brain_atlas = self.fetch_allen_mouse_brain_atlas()
         MBA_id = parse_organ_region_ontology_id(term)
         if MBA_id not in mouse_brain_atlas:
-            raise ValueError( f'{property_name}: No match found in Allen Mouse Brain Atlas for provided ontology ID: {term}')
+            raise ValueError(
+                f'{property_name}: No match found in Allen Mouse Brain Atlas for provided ontology ID: {term}'
+            )
         return mouse_brain_atlas[MBA_id]
 
     def fetch_allen_mouse_brain_atlas(self):
         """Get the mouse brain atlas file, either remote or cached, and parse it into an id -> name dictionary
         """
         if 'allen_mouse_brain_atlas' not in self.cached_ontologies:
-            self.cached_ontologies['allen_mouse_brain_atlas'] = fetch_allen_mouse_brain_atlas_remote()
+            self.cached_ontologies[
+                'allen_mouse_brain_atlas'
+            ] = fetch_allen_mouse_brain_atlas_remote()
         return self.cached_ontologies['allen_mouse_brain_atlas']
 
 
@@ -326,6 +336,7 @@ def request_json_with_backoff(ontology_url):
     else:
         return None
 
+
 def encode_term_iri(term_id, base_uri):
     """Double url-encode a term Internationalized Resource Identifier (IRI) for querying OLS ontologies
     returns double url-encoded ontology term IRI
@@ -340,6 +351,7 @@ def extract_terminal_pathname(url):
     """
     return list(filter(None, url.split("/"))).pop()
 
+
 def get_urls_for_property(convention, property_name):
     return convention['properties'][property_name]['ontology'].split(',')
 
@@ -348,6 +360,7 @@ def get_urls_for_property(convention, property_name):
 
 # create an OntologyRetriever instance to handle fetching and caching ontology terms
 retriever = OntologyRetriever()
+
 
 def validate_schema(json, metadata):
     """Check validity of metadata convention as JSON schema.
@@ -444,19 +457,17 @@ def insert_array_ontology_label_row_data(
     cell_id = row['CellID']
     # if there are differing numbers of id/label values, and not empty, log error and don't try to fix
     if len(row[property_name]) != len(row[ontology_label]) and row[ontology_label]:
-        error_msg = (
-            f'{property_name}: row \"{cell_id}\" has mismatched # of {property_name} and {ontology_label} values'
-        )
-        metadata.store_validation_issue(
-            'error', 'ontology', error_msg, [cell_id]
-        )
+        error_msg = f'{property_name}: mismatched # of {property_name} and {ontology_label} values'
+        metadata.store_validation_issue('error', 'ontology', error_msg, [cell_id])
         return row
     if not row[ontology_label]:
         array_label_for_bq = []
         for id in row[property_name]:
             label_lookup = ''
             try:
-                label_lookup = retriever.retrieve_ontology_term_label(id, property_name, convention)
+                label_lookup = retriever.retrieve_ontology_term_label(
+                    id, property_name, convention
+                )
                 error_msg = (
                     f'{property_name}: missing ontology label '
                     f'\"{id}\" - using \"{label_lookup}\" per {"EBI OLS lookup" if property_name != "organ_region" else "Mouse Brain Atlas ontology"}'
@@ -465,7 +476,7 @@ def insert_array_ontology_label_row_data(
                     'warn', 'ontology', error_msg, [cell_id]
                 )
             except BaseException as e:
-                import pdb; pdb.set_trace()
+                print(e)
                 error_msg = (
                     f'{property_name}: unable to lookup \"{id}\" - '
                     f'cannot propagate array of labels for {property_name};'
@@ -478,7 +489,9 @@ def insert_array_ontology_label_row_data(
         row[ontology_label] = array_label_for_bq
 
     for id_and_label in zip(row[property_name], row[ontology_label]):
-        metadata.ontology[property_name][(id_and_label[0], id_and_label[1])].append(cell_id)
+        metadata.ontology[property_name][(id_and_label[0], id_and_label[1])].append(
+            cell_id
+        )
     return row
 
 
@@ -491,24 +504,29 @@ def insert_ontology_label_row_data(
     if not row[ontology_label]:
         # for optional columns, try to fill it in
         try:
-            label = retriever.retrieve_ontology_term_label(id, property_name, convention)
+            label = retriever.retrieve_ontology_term_label(
+                id, property_name, convention
+            )
             row[ontology_label] = label
             error_msg = (
                 f'{property_name}: missing ontology label '
                 f'\"{id}\" - using \"{label}\" per {"EBI OLS lookup" if property_name != "organ_region" else "Mouse Brain Atlas ontology"}'
             )
-            metadata.store_validation_issue(
-                'warn', 'ontology', error_msg, [cell_id]
-            )
-        except:
+            metadata.store_validation_issue('warn', 'ontology', error_msg, [cell_id])
+        except BaseException as e:
+            print(e)
             error_msg = f'Optional column {ontology_label} empty and could not be resolved from {property_name} column value {row[property_name]}'
             metadata.store_validation_issue('warn', 'ontology', error_msg, [cell_id])
 
-    metadata.ontology[property_name][(row[property_name], row[ontology_label])].append(cell_id)
+    metadata.ontology[property_name][(row[property_name], row[ontology_label])].append(
+        cell_id
+    )
     return row
 
 
-def collect_cell_for_ontology(property_name, row, metadata, convention, array, required):
+def collect_cell_for_ontology(
+    property_name, row, metadata, convention, array, required
+):
     """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
     if ontology_label not provided for optional metadata, label is looked up
     and added to BigQuery json to populate metadata backend
@@ -525,32 +543,61 @@ def collect_cell_for_ontology(property_name, row, metadata, convention, array, r
     # for case where they've omitted a column altogether or left it blank, add a blank entry
     # the check for != is because pandas converts blank to nan.
     # See https://stackoverflow.com/questions/944700/how-can-i-check-for-nan-values
-    if not ontology_label in updated_row or updated_row[ontology_label] != updated_row[ontology_label]:
-        updated_row[ontology_label] = ''
+    if (
+        ontology_label not in updated_row
+        or updated_row[ontology_label] != updated_row[ontology_label]
+    ):
+        if array:
+            updated_row[ontology_label] = []
+        else:
+            updated_row[ontology_label] = ''
 
-    if not property_name in updated_row or updated_row[property_name] != updated_row[property_name]:
-        updated_row[property_name] = ''
+    # !!!property_name checking is probably not needed
+    if (
+        property_name not in updated_row
+        or updated_row[property_name] != updated_row[property_name]
+    ):
+        if array:
+            updated_row[property_name] = []
+        else:
+            updated_row[property_name] = ''
 
     if (not updated_row[ontology_label] or not updated_row[property_name]) and required:
         # Catch cases where ontology_label or property_name column completely empty
         missing_column_message = ''
         if not updated_row[property_name]:
-            missing_column_message = f'{property_name}: required column \"{property_name}\" empty'
+            missing_column_message = (
+                f'{property_name}: required column \"{property_name}\" missing data'
+            )
         if not updated_row[ontology_label]:
             if not updated_row[property_name]:
-               missing_column_message += ' and '
-            missing_column_message += f'{property_name}: required column \"{ontology_label}\" empty'
+                missing_column_message += ' and '
+            missing_column_message += (
+                f'{property_name}: required column \"{ontology_label}\" missing data'
+            )
         # for required columns, just log the error and continue
-        metadata.store_validation_issue('error', 'ontology', missing_column_message, [cell_id])
+        metadata.store_validation_issue(
+            'error', 'ontology', missing_column_message, [cell_id]
+        )
         # metadata.ontology[property_name][(updated_row[property_name], None)].append(cell_id)
     else:
         if array:
             updated_row = insert_array_ontology_label_row_data(
-                property_name, updated_row, metadata, required, convention, ontology_label
+                property_name,
+                updated_row,
+                metadata,
+                required,
+                convention,
+                ontology_label,
             )
         else:
             updated_row = insert_ontology_label_row_data(
-                property_name, updated_row, metadata, required, convention, ontology_label
+                property_name,
+                updated_row,
+                metadata,
+                required,
+                convention,
+                ontology_label,
             )
 
     return updated_row
@@ -924,14 +971,15 @@ def validate_collected_ontology_data(metadata, convention):
     validity of ontology_id and cross-check that input ontology_label
     matches ontology_label from ontology lookup
     """
-    # container to store references to retrieved ontologies for faster validation
-    stored_ontologies = {}
     for property_name in metadata.ontology.keys():
         # pull in file for validation of non-EBI OLS metadata for organ_region
         if property_name == 'organ_region':
             try:
-                region_ontology = retriever.fetch_allen_mouse_brain_atlas()
-            except:
+                region_ontology = (  # noqa: F841
+                    retriever.fetch_allen_mouse_brain_atlas()
+                )
+            except BaseException as e:
+                print(e)
                 # immediately return as validation should not continue if ontology file unavailable
                 return
         # split on comma in case this property from the convention supports multiple ontologies
@@ -939,23 +987,42 @@ def validate_collected_ontology_data(metadata, convention):
 
         for ontology_info in metadata.ontology[property_name].keys():
             ontology_id, ontology_label = ontology_info
-
             try:
-                matched_label_for_id = retriever.retrieve_ontology_term_label(ontology_id, property_name, convention)
+                matched_label_for_id = retriever.retrieve_ontology_term_label(
+                    ontology_id, property_name, convention
+                )
                 if matched_label_for_id != ontology_label:
                     ontology_source_name = 'EBI OLS'
                     if property_name == 'organ_region':
                         ontology_source_name = 'Allen Mouse Brain Atlas'
-                    error_msg = (
-                        f'{property_name}: input ontology_label \"{ontology_label}\" '
-                        f'does not match {ontology_source_name} lookup \"{matched_label_for_id}\" for ontology id \"{ontology_id}\"'
-                    )
-                    metadata.store_validation_issue(
-                        'error',
-                        'ontology',
-                        error_msg,
-                        metadata.ontology[property_name][(ontology_id, ontology_label)],
-                    )
+                    if is_required_metadata(convention, property_name) and (
+                        not ontology_label or ontology_label != ontology_label
+                    ):
+                        error_msg = (
+                            f'{property_name}: ontology label required for \"{ontology_id}\" '
+                            f' to cross-check for data entry error"'
+                        )
+                        metadata.store_validation_issue(
+                            'error',
+                            'ontology',
+                            error_msg,
+                            metadata.ontology[property_name][
+                                (ontology_id, ontology_label)
+                            ],
+                        )
+                    else:
+                        error_msg = (
+                            f'{property_name}: input ontology_label \"{ontology_label}\" '
+                            f'does not match {ontology_source_name} lookup \"{matched_label_for_id}\" for ontology id \"{ontology_id}\"'
+                        )
+                        metadata.store_validation_issue(
+                            'error',
+                            'ontology',
+                            error_msg,
+                            metadata.ontology[property_name][
+                                (ontology_id, ontology_label)
+                            ],
+                        )
             except ValueError as valueError:
                 metadata.store_validation_issue(
                     'error',
@@ -964,11 +1031,11 @@ def validate_collected_ontology_data(metadata, convention):
                     metadata.ontology[property_name][(ontology_id, ontology_label)],
                 )
             except requests.exceptions.RequestException as err:
-                    error_msg = f'External service outage connecting to {ontology_urls} when querying {ontology_id}:{ontology_label}: {err}'
-                    error_logger.error(error_msg)
-                    metadata.store_validation_issue('error', 'ontology', error_msg),
-                    # immediately return as validation cannot continue
-                    return
+                error_msg = f'External service outage connecting to {ontology_urls} when querying {ontology_id}:{ontology_label}: {err}'
+                error_logger.error(error_msg)
+                metadata.store_validation_issue('error', 'ontology', error_msg),
+                # immediately return as validation cannot continue
+                return
 
     return
 
@@ -1025,6 +1092,7 @@ def serialize_issues(metadata):
     """
     with open('issues.json', 'w') as jsonfile:
         json.dump(metadata.issues, jsonfile, indent=2)
+        jsonfile.write("\n")  # Add newline cause Py JSON does not
 
 
 def review_metadata_names(metadata):
