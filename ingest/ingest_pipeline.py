@@ -43,6 +43,7 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
 # import google.cloud.logging
 from bson.objectid import ObjectId
+
 # For tracing
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
 from opencensus.trace.samplers import AlwaysOnSampler
@@ -92,8 +93,7 @@ class IngestPipeline(object):
         '../schema/alexandria_convention/alexandria_convention_schema.json'
     )
     logger = logging.getLogger(__name__)
-    error_logger = setup_logger(
-        __name__ + '_errors', 'errors.txt', level=logging.ERROR)
+    error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
     info_logger = setup_logger(__name__, 'info.txt')
     my_debug_logger = log(error_logger)
 
@@ -133,15 +133,13 @@ class IngestPipeline(object):
         else:
             self.tracer = nullcontext()
         if matrix_file is not None:
-            self.matrix = self.initialize_file_connection(
-                matrix_file_type, matrix_file)
+            self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
         if ingest_cell_metadata:
             self.cell_metadata = self.initialize_file_connection(
                 "cell_metadata", cell_metadata_file
             )
         if ingest_cluster:
-            self.cluster = self.initialize_file_connection(
-                "cluster", cluster_file)
+            self.cluster = self.initialize_file_connection("cluster", cluster_file)
         if matrix_file is None:
             self.matrix = matrix_file
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
@@ -219,8 +217,7 @@ class IngestPipeline(object):
             ):
                 linear_id = ObjectId(self.study_id)
             else:
-                linear_id = self.db[collection_name].insert_one(
-                    model).inserted_id
+                linear_id = self.db[collection_name].insert_one(model).inserted_id
             for data_array_model in set_data_array_fn(
                 linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
@@ -247,8 +244,7 @@ class IngestPipeline(object):
                 # Succesfully wrote documents
                 return True, bulk_write_results
             else:
-                bulk_write_results = self.db['data_arrays'].bulk_write(
-                    bulk_operations)
+                bulk_write_results = self.db['data_arrays'].bulk_write(bulk_operations)
                 # Succesfully wrote documents
                 return True, bulk_write_results
         except BulkWriteError as bwe:
@@ -304,8 +300,7 @@ class IngestPipeline(object):
 
     def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        convention_file_object = IngestFiles(
-            self.JSON_CONVENTION, ['application/json'])
+        convention_file_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
         json_file = convention_file_object.open_file(self.JSON_CONVENTION)
         convention = json.load(json_file)
         if self.kwargs['validate_convention'] is not None:
@@ -314,8 +309,7 @@ class IngestPipeline(object):
                 and self.kwargs['bq_dataset']
                 and self.kwargs['bq_table']
             ):
-                validate_input_metadata(
-                    self.cell_metadata, convention, bq_json=True)
+                validate_input_metadata(self.cell_metadata, convention, bq_json=True)
             else:
                 validate_input_metadata(self.cell_metadata, convention)
 
@@ -337,8 +331,7 @@ class IngestPipeline(object):
                 )
                 return write_status
             else:
-                self.error_logger.error(
-                    'Erroneous call to upload_metadata_to_bq')
+                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
@@ -427,7 +420,6 @@ class IngestPipeline(object):
                         return 1
 
             self.cell_metadata.reset_file()
-            self.cell_metadata.createDataFrame()
             for metadataModel in self.cell_metadata.transform():
                 self.info_logger.info(
                     f'Attempting to load cell metadata header : {metadataModel.annot_header}',
@@ -492,7 +484,10 @@ class IngestPipeline(object):
                 subsample.prepare_cell_metadata()
                 for data in subsample.subsample('study'):
                     load_status = self.load_subsample(
-                        Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study'
+                        Clusters.COLLECTION_NAME,
+                        data,
+                        subsample.set_data_array,
+                        'study',
                     )
                     if load_status != 0:
                         return load_status

@@ -24,8 +24,7 @@ class DomainRanges(TypedDict):
 
 
 class Clusters(Annotations):
-    ALLOWED_FILE_TYPES = ["text/csv",
-                          "text/plain", "text/tab-separated-values"]
+    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
     LINEAR_DATA_TYPE = 'ClusterGroup'
     COLLECTION_NAME = 'cluster_groups'
     errors_logger = setup_logger(

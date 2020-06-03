@@ -77,7 +77,8 @@ class TestAnnotations(unittest.TestCase):
         print(f'cell_names_cluster_df:{cell_names_cluster_df}')
         # Cell names found in both cluster and metadata files
         common_cell_names = cell_names_cluster_df[
-            np.isin(cell_names_cluster_df, cell_names_cell_metadata_df)]
+            np.isin(cell_names_cluster_df, cell_names_cell_metadata_df)
+        ]
         print(f'common cell names: {common_cell_names}')
         # Perform merge
         print(self.df.file[['NAME', 'x', 'y', 'z']])
