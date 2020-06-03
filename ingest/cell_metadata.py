@@ -27,7 +27,8 @@ except ImportError:
 
 
 class CellMetadata(Annotations):
-    ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
+    ALLOWED_FILE_TYPES = ['text/csv',
+                          'text/plain', 'text/tab-separated-values']
     COLLECTION_NAME = 'cell_metadata'
 
     def __init__(
@@ -45,7 +46,8 @@ class CellMetadata(Annotations):
         )
         self.cell_names = []
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
-        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        self.issues = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.cells = []
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
@@ -79,7 +81,8 @@ class CellMetadata(Annotations):
         """
         lower_cased_headers = [header.lower() for header in self.headers]
         valid = not any(
-            [coordinate in ('x', 'y', 'z') for coordinate in lower_cased_headers]
+            [coordinate in ('x', 'y', 'z')
+             for coordinate in lower_cased_headers]
         )
         if valid:
             return True

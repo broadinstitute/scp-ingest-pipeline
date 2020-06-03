@@ -32,13 +32,9 @@ class Annotations(IngestFiles):
             self.study_id = ObjectId(study_id)
         if study_file_id is not None:
             self.study_file_id = ObjectId(study_file_id)
-        self.file, self.file_handle = self.open_file(
-            file_path, open_as='dataframe', header=[0, 1]
-        )
-        self.headers = self.file.columns.get_level_values(0)
-        self.annot_types = self.file.columns.get_level_values(1)
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
-        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        self.issues = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(list)))
 
     def reset_file(self):
         self.file, self.file_handle = self.open_file(
@@ -73,38 +69,47 @@ class Annotations(IngestFiles):
 
     def preprocess(self):
         """Ensures that:
-            - Labels are treated as strings
-            - Numeric columns are rounded to 3 decimals points
-            - Group annotations are strings
             - 'NAME' in first header row is capitalized
             - 'TYPE' in second header row is capitalized
         """
-        # Grab column names and convert to strings
-        headers = [str(header) for header in self.file.columns.get_level_values(0)]
-        annot_types = self.file.columns.get_level_values(1)
-        # Lowercase second level. Example: NUMeric -> numeric
-        self.file.rename(
-            columns=lambda col_name: col_name.lower(), level=1, inplace=True
+        csv_file, self.file_handle = self.open_file(
+            self.file_path
         )
-        name = list(headers)[0]
-        type = list(annot_types)[0].lower()
+        # Remove white spaces, quotes, and lowercase
+        self.headers = [header.strip().strip('\"').lower()
+                        for header in next(csv_file)]
+        self.annot_types = [type.strip().strip('\"').lower()
+                            for type in next(csv_file)]
+
         # Uppercase NAME and TYPE
-        self.file.rename(columns={name: name.upper(), type: type.upper()}, inplace=True)
-        # Make sure group annotations are treated as strings
-        # only run this assignment if group annotations are present
-        if 'group' in annot_types:
-            group_columns = self.file.xs(
-                "group", axis=1, level=1, drop_level=False
-            ).columns.tolist()
-            self.file[group_columns] = self.file[group_columns].astype(str)
-        # Find numeric columns and round to 3 decimals places and are floats
-        # only run this assignment if numeric annotations are present
-        if 'numeric' in list(annot_types):
+        self.headers[0] = self.headers[0].upper()
+        self.annot_types[0] = self.annot_types[0].upper()
+
+    def createDataFrame(self):
+        """
+        - Create dataframe with proper dtypes to ensure:
+            - Labels are treated as strings (objects)
+            - Numeric annotations are treated as float32
+            - Numeric columns are rounded to 3 decimals points
+        """
+        columns = []
+        dtypes = {}
+        dtypes[self.headers[0]] = 'object'
+        dtypes[self.annot_types[0]] = 'object'
+        print(dtypes)
+        for annotation, annot_type in zip(annotations, types):
+            dtypes[annotation] = 'object' if annot_types is 'group' else 'float32'
+            columns.append((annotation, annot_type))
+            # multiIndex = pd.MultiIndex.from_tuples(index)
+        self.file = self.open_file(
+            self.file_path, open_as='dataframe', dtype=dtypes, names=columns)[0]
+        print(self.file)
+        if 'numeric' in self.annot_types:
             numeric_columns = self.file.xs(
                 "numeric", axis=1, level=1, drop_level=False
             ).columns.tolist()
-            # TODO perform replace
             try:
+                # Round numeric columns to 3 decimal places
                 self.file[numeric_columns] = (
                     self.file[numeric_columns].round(3).astype(float)
                 )
