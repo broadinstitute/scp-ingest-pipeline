@@ -35,6 +35,14 @@ class Annotations(IngestFiles):
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(
             lambda: defaultdict(lambda: defaultdict(list)))
+        csv_file, self.file_handle = self.open_file(
+            self.file_path
+        )
+        # Remove white spaces, quotes, and lowercase
+        self.headers = [header.strip().strip('\"').lower()
+                        for header in next(csv_file)]
+        self.annot_types = [type.strip().strip('\"').lower()
+                            for type in next(csv_file)]
 
     def reset_file(self):
         self.file, self.file_handle = self.open_file(
@@ -72,18 +80,11 @@ class Annotations(IngestFiles):
             - 'NAME' in first header row is capitalized
             - 'TYPE' in second header row is capitalized
         """
-        csv_file, self.file_handle = self.open_file(
-            self.file_path
-        )
-        # Remove white spaces, quotes, and lowercase
-        self.headers = [header.strip().strip('\"').lower()
-                        for header in next(csv_file)]
-        self.annot_types = [type.strip().strip('\"').lower()
-                            for type in next(csv_file)]
 
         # Uppercase NAME and TYPE
         self.headers[0] = self.headers[0].upper()
         self.annot_types[0] = self.annot_types[0].upper()
+        self.createDataFrame()
 
     def createDataFrame(self):
         """
@@ -103,7 +104,6 @@ class Annotations(IngestFiles):
         index = pd.MultiIndex.from_tuples(columns)
         self.file = self.open_file(
             self.file_path, open_as='dataframe', dtype=dtypes, names=index, skiprows=2)[0]
-        print(self.file)
         if 'numeric' in self.annot_types:
             numeric_columns = self.file.xs(
                 "numeric", axis=1, level=1, drop_level=False

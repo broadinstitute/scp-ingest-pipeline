@@ -225,7 +225,10 @@ class IngestFiles:
             if file_type == "application/json":
                 return open_file
             elif open_as is None:
-                return (file_connections.get(file_type)(open_file, **kwargs), open_file)
+                if file_type == "text/plain":
+                    return (file_connections.get(file_type)(open_file, file_type, **kwargs), open_file)
+                else:
+                    return (file_connections.get(file_type)(open_file, **kwargs), open_file)
             else:
                 return (
                     file_connections.get(open_as)(
@@ -260,7 +263,7 @@ class IngestFiles:
         """Returns file type"""
         return mimetypes.guess_type(file_path)
 
-    def open_txt(self, open_file_object, **kwargs):
+    def open_txt(self, open_file_object, file_type, **kwargs):
         """Method for opening txt files that are expected be tab
         or comma delimited"""
         if file_type == "text/tab-separated-values":
