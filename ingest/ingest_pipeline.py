@@ -229,10 +229,7 @@ class IngestPipeline(object):
             if len(documents) > 0:
                 self.insert_many('data_arrays', documents)
         except Exception as e:
-            print(f'loading error {e}')
             self.error_logger.error(e, extra=self.extra_log_params)
-            if details in e:
-                self.error_logger.error(e.details, extra=self.extra_log_params)
             return 1
         return 0
 

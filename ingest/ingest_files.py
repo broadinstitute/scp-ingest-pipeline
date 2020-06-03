@@ -270,7 +270,8 @@ class IngestFiles:
         else:
             delimiter = None
         # Determine if file is tsv or csv
-        csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024), delimiters=delimiter)
+        csv_dialect = csv.Sniffer().sniff(open_file_object.read(
+            1024), delimiters=delimiter)
         csv_dialect.skipinitialspace = True
         open_file_object.seek(0)
         return csv.reader(open_file_object, csv_dialect)

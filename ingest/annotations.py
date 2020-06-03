@@ -96,13 +96,13 @@ class Annotations(IngestFiles):
         dtypes = {}
         dtypes[self.headers[0]] = 'object'
         dtypes[self.annot_types[0]] = 'object'
-        print(dtypes)
-        for annotation, annot_type in zip(annotations, types):
-            dtypes[annotation] = 'object' if annot_types is 'group' else 'float32'
+        for annotation, annot_type in zip(self.headers, self.annot_types):
+            dtypes[annotation] = 'object' if annotation is 'group' else 'float32'
             columns.append((annotation, annot_type))
             # multiIndex = pd.MultiIndex.from_tuples(index)
+        index = pd.MultiIndex.from_tuples(columns)
         self.file = self.open_file(
-            self.file_path, open_as='dataframe', dtype=dtypes, names=columns)[0]
+            self.file_path, open_as='dataframe', dtype=dtypes, names=index, skiprows=2)[0]
         print(self.file)
         if 'numeric' in self.annot_types:
             numeric_columns = self.file.xs(
