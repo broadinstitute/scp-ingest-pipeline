@@ -657,6 +657,7 @@ class TestValidateMetadata(unittest.TestCase):
         # invalid boolean value: disease__treated
         # non-uniform unit values: organism_age__unit
         # missing ontology ID or label for non-required metadata: ethnicity
+        # invalid header content: donor info (only alphanumeric or underscore allowed)
         reference_file = open('../tests/data/issues_array_v2.1.2.json')
         reference_issues = json.load(reference_file)
         reference_file.close()
