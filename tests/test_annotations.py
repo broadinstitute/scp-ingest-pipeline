@@ -21,7 +21,6 @@ import random
 import sys
 import unittest
 from decimal import Decimal
-import pandas as pd
 
 import numpy as np
 
