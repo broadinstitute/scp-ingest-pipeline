@@ -948,6 +948,7 @@ def validate_input_metadata(metadata, convention, bq_json=None):
     """Wrapper function to run validation functions
     """
     collect_jsonschema_errors(metadata, convention, bq_json)
+    print(metadata.issues)
     review_metadata_names(metadata)
     validate_collected_ontology_data(metadata, convention)
     confirm_uniform_units(metadata, convention)
