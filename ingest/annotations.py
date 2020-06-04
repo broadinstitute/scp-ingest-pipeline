@@ -79,9 +79,9 @@ class Annotations(IngestFiles):
         # Uppercase NAME and TYPE
         self.headers[0] = self.headers[0].upper()
         self.annot_types[0] = self.annot_types[0].upper()
-        self.createDataFrame()
+        self.create_data_frame()
 
-    def createDataFrame(self):
+    def create_data_frame(self):
         """
         - Create dataframe with proper dtypes to ensure:
             - Labels are treated as strings (objects)
@@ -93,7 +93,7 @@ class Annotations(IngestFiles):
         dtypes[self.headers[0]] = 'object'
         dtypes[self.annot_types[0]] = 'object'
         for annotation, annot_type in zip(self.headers, self.annot_types):
-            dtypes[annotation] = 'object' if annotation is 'group' else 'float32'
+            dtypes[annotation] = 'object' if annotation is not 'numeric' else 'float'
             columns.append((annotation, annot_type))
             # multiIndex = pd.MultiIndex.from_tuples(index)
         index = pd.MultiIndex.from_tuples(columns)

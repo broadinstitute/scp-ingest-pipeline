@@ -21,6 +21,7 @@ import random
 import sys
 import unittest
 from decimal import Decimal
+import pandas as pd
 
 import numpy as np
 
@@ -72,7 +73,6 @@ class TestAnnotations(unittest.TestCase):
         )
         cell_metadata_df.preprocess()
         cell_names_cell_metadata_df = np.asarray(cell_metadata_df.file['NAME'])
-        print(cell_names_cell_metadata_df)
         cell_names_cluster_df = np.asarray(self.df.file['NAME'])
         print(f'cell_names_cluster_df:{cell_names_cluster_df}')
         # Cell names found in both cluster and metadata files
