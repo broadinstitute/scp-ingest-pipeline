@@ -90,10 +90,8 @@ class Annotations(IngestFiles):
         """
         columns = []
         dtypes = {}
-        dtypes[self.headers[0]] = 'object'
-        dtypes[self.annot_types[0]] = 'object'
         for annotation, annot_type in zip(self.headers, self.annot_types):
-            dtypes[annotation] = 'object' if annot_type is not 'numeric' else 'float32'
+            dtypes[annotation] = 'object' if annot_type != 'numeric' else 'float32'
             columns.append((annotation, annot_type))
             # multiIndex = pd.MultiIndex.from_tuples(index)
         index = pd.MultiIndex.from_tuples(columns)
