@@ -73,13 +73,15 @@ class TestAnnotations(unittest.TestCase):
         cell_metadata_df.preprocess()
         cell_names_cell_metadata_df = np.asarray(cell_metadata_df.file['NAME'])
         cell_names_cluster_df = np.asarray(self.df.file['NAME'])
-
+        print(f'cell_names_cluster_df:{cell_names_cluster_df}')
         # Cell names found in both cluster and metadata files
         common_cell_names = cell_names_cluster_df[
             np.isin(cell_names_cluster_df, cell_names_cell_metadata_df)
         ]
+        print(f'common cell names: {common_cell_names}')
         # Perform merge
-        self.df.merge_df(self.df.file[['NAME', 'X', 'Y', 'Z']], cell_metadata_df.file)
+        print(self.df.file[['NAME', 'x', 'y', 'z']])
+        self.df.merge_df(self.df.file[['NAME', 'x', 'y', 'z']], cell_metadata_df.file)
 
         # Ensure ONLY common cell names found in cell metadata file and cluster file
         # are in the newly merged df

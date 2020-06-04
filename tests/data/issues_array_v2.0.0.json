@@ -32,9 +32,6 @@
       ],
       "disease__time_since_onset__unit: values for each unit metadata required to be uniform": null
     },
-    "metadata_name": {
-      "donor : only alphanumeric characters and underscore allowed in metadata name": null
-    },
     "ontology": {
       "organ: No match found in EBI OLS for provided ontology ID: nan": [
         "BM01_16dpp_TAAGCAGTGGTA"
