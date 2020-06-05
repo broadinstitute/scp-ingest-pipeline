@@ -292,7 +292,7 @@ def parse_organ_region_ontology_id(term):
         else:
             error_msg = f'organ_region: Invalid ontology code, "{ontology_shortname}"'
             raise ValueError(error_msg)
-    except (TypeError):
+    except (TypeError, ValueError):
         # when term value is empty string -> TypeError, convert this to a value error
         raise ValueError(
             f'organ_region: Could not parse provided ontology id, "{term}"'
