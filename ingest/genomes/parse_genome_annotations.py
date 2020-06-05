@@ -10,6 +10,8 @@ import shutil
 import subprocess
 import urllib.request as request
 
+print('in parse_genome_annotations.py')
+
 from persist_annotation_metadata import *
 from utils import *
 
