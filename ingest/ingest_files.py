@@ -275,7 +275,7 @@ class IngestFiles:
         csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
         csv_dialect.skipinitialspace = True
         open_file_object.seek(0)
-        return DictReader(open_file_object, dialect=csv_dialect)
+        return csv.reader(open_file_object, dialect=csv_dialect, 'r')
 
     def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
@@ -307,7 +307,7 @@ class IngestFiles:
             escapechar='\\',
         )
 
-        return DictReader(opened_file_object, dialect="csvDialect")
+        return csv.reader(opened_file_object, dialect="csvDialect")
 
     def open_tsv(self, opened_file_object, **kwargs):
         """Opens tsv file"""

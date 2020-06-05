@@ -36,7 +36,7 @@ class Dense(GeneExpression, IngestFiles):
         self.matrix_params = kwargs
         self.gene_names = []
         self.csv_file, self.open_file_object = self.open_file(self.file_path)
-        self.header = self.csv_file.fieldnames
+        self.header = next(self.csv_file)
 
     def validate_unique_header(self):
         """Validates header has no duplicate values"""
