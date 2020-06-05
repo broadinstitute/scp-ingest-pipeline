@@ -224,7 +224,16 @@ class IngestFiles:
             if file_type == "application/json":
                 return open_file
             elif open_as is None:
-                return (file_connections.get(file_type)(open_file, **kwargs), open_file)
+                if file_type == "text/plain":
+                    return (
+                        file_connections.get(file_type)(open_file, file_type, **kwargs),
+                        open_file,
+                    )
+                else:
+                    return (
+                        file_connections.get(file_type)(open_file, **kwargs),
+                        open_file,
+                    )
             else:
                 return (
                     file_connections.get(open_as)(
@@ -259,11 +268,19 @@ class IngestFiles:
         """Returns file type"""
         return mimetypes.guess_type(file_path)
 
-    def open_txt(self, open_file_object, **kwargs):
+    def open_txt(self, open_file_object, file_type, **kwargs):
         """Method for opening txt files that are expected be tab
         or comma delimited"""
+        if file_type == "text/tab-separated-values":
+            delimiter = "\t"
+        elif file_type == "text/csv":
+            delimiter = ","
+        else:
+            delimiter = None
         # Determine if file is tsv or csv
-        csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
+        csv_dialect = csv.Sniffer().sniff(
+            open_file_object.read(1024), delimiters=delimiter
+        )
         csv_dialect.skipinitialspace = True
         open_file_object.seek(0)
         return csv.reader(open_file_object, csv_dialect)

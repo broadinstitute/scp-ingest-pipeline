@@ -227,8 +227,6 @@ class IngestPipeline(object):
                 self.insert_many('data_arrays', documents)
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
-            if e.details is not None:
-                self.error_logger.error(e.details, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -404,6 +402,7 @@ class IngestPipeline(object):
     # @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
+        self.cell_metadata.preprocess()
         if self.cell_metadata.validate():
             self.info_logger.info(
                 f'Cell metadata file format valid', extra=self.extra_log_params
@@ -421,7 +420,6 @@ class IngestPipeline(object):
                         return 1
 
             self.cell_metadata.reset_file()
-            self.cell_metadata.preprocess()
             for metadataModel in self.cell_metadata.transform():
                 self.info_logger.info(
                     f'Attempting to load cell metadata header : {metadataModel.annot_header}',
@@ -482,13 +480,20 @@ class IngestPipeline(object):
                 return load_status
 
         if self.cell_metadata_file is not None:
-            subsample.prepare_cell_metadata()
-            for data in subsample.subsample('study'):
-                load_status = self.load_subsample(
-                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study'
-                )
-                if load_status != 0:
-                    return load_status
+            try:
+                subsample.prepare_cell_metadata()
+                for data in subsample.subsample('study'):
+                    load_status = self.load_subsample(
+                        Clusters.COLLECTION_NAME,
+                        data,
+                        subsample.set_data_array,
+                        'study',
+                    )
+                    if load_status != 0:
+                        return load_status
+            except Exception as e:
+                self.error_logger.error(e, extra=self.extra_log_params)
+                return 1
         return 0
 
 

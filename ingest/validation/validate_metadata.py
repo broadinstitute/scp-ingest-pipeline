@@ -998,7 +998,7 @@ def validate_collected_ontology_data(metadata, convention):
                     ):
                         error_msg = (
                             f'{property_name}: ontology label required for \"{ontology_id}\" '
-                            f' to cross-check for data entry error"'
+                            f'to cross-check for data entry error"'
                         )
                         metadata.store_validation_issue(
                             'error',
