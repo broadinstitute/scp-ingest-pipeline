@@ -4,6 +4,7 @@ These tests verify:
     - Group type annotations that have numeric-like values are being treated as strings
     - Numeric columns are rounded to 3 decimals points
     - Filtering cell names (given from cluster file) in metadata correctly
+    - Labels are treated as strings
 
 PREREQUISITES
 Spin up Python 3.6 virtualenv, install Python dependencies in requirements.txt
@@ -12,24 +13,24 @@ Note: When CI environment moves to Python 3.7, tests may break due to minor
 differences in how the reference issues are serialized
 
 # Run all tests in a manner that shows report_issues output
-python3 test_ingest_files.py -s
+python3 test_annotations.py -s
 """
 
 
+import random
 import sys
 import unittest
 from decimal import Decimal
+
 import numpy as np
-import random
 
 sys.path.append("../ingest")
-
 from annotations import Annotations
 
 
 class TestAnnotations(unittest.TestCase):
     CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
-    CELL_METADATA_PATH = '../tests/data/valid_no_array_v1.1.3.tsv'
+    CELL_METADATA_PATH = '../tests/data/valid_no_array_v2.0.0.tsv'
 
     EXPONENT = -3
 
@@ -54,6 +55,9 @@ class TestAnnotations(unittest.TestCase):
     def test_group_annotations(self):
         self.df.preprocess()
         for column in self.df.file.columns:
+            # Ensure labels are strings
+            header = column[0]
+            assert isinstance(header, str)
             annot_type = column[1]
             if annot_type == 'group':
                 assert (
@@ -69,13 +73,15 @@ class TestAnnotations(unittest.TestCase):
         cell_metadata_df.preprocess()
         cell_names_cell_metadata_df = np.asarray(cell_metadata_df.file['NAME'])
         cell_names_cluster_df = np.asarray(self.df.file['NAME'])
-
+        print(f'cell_names_cluster_df:{cell_names_cluster_df}')
         # Cell names found in both cluster and metadata files
         common_cell_names = cell_names_cluster_df[
             np.isin(cell_names_cluster_df, cell_names_cell_metadata_df)
         ]
+        print(f'common cell names: {common_cell_names}')
         # Perform merge
-        self.df.merge_df(self.df.file[['NAME', 'X', 'Y', 'Z']], cell_metadata_df.file)
+        print(self.df.file[['NAME', 'x', 'y', 'z']])
+        self.df.merge_df(self.df.file[['NAME', 'x', 'y', 'z']], cell_metadata_df.file)
 
         # Ensure ONLY common cell names found in cell metadata file and cluster file
         # are in the newly merged df

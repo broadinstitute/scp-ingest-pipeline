@@ -3,17 +3,18 @@
 DESCRIPTION
 Module provides extract capabilities for text, CSV, and TSV file types
 """
+import copy
 import csv
+import gzip
 import logging
 import mimetypes
 import os
 import re
-from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 from dataclasses import dataclass
-import gzip
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+
 import pandas as pd  # NOqa: F821
 from google.cloud import storage
-import copy
 
 # from google.cloud.logging.resource import Resource
 # import google.cloud.logging
@@ -223,7 +224,16 @@ class IngestFiles:
             if file_type == "application/json":
                 return open_file
             elif open_as is None:
-                return (file_connections.get(file_type)(open_file, **kwargs), open_file)
+                if file_type == "text/plain":
+                    return (
+                        file_connections.get(file_type)(open_file, file_type, **kwargs),
+                        open_file,
+                    )
+                else:
+                    return (
+                        file_connections.get(file_type)(open_file, **kwargs),
+                        open_file,
+                    )
             else:
                 return (
                     file_connections.get(open_as)(
@@ -258,11 +268,19 @@ class IngestFiles:
         """Returns file type"""
         return mimetypes.guess_type(file_path)
 
-    def open_txt(self, open_file_object, **kwargs):
+    def open_txt(self, open_file_object, file_type, **kwargs):
         """Method for opening txt files that are expected be tab
         or comma delimited"""
+        if file_type == "text/tab-separated-values":
+            delimiter = "\t"
+        elif file_type == "text/csv":
+            delimiter = ","
+        else:
+            delimiter = None
         # Determine if file is tsv or csv
-        csv_dialect = csv.Sniffer().sniff(open_file_object.read(1024))
+        csv_dialect = csv.Sniffer().sniff(
+            open_file_object.read(1024), delimiters=delimiter
+        )
         csv_dialect.skipinitialspace = True
         open_file_object.seek(0)
         return csv.reader(open_file_object, csv_dialect)
@@ -270,30 +288,20 @@ class IngestFiles:
     def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
         open_file_object = kwargs.pop('open_file_object')
-        if file_type == "text/tab-separated-values":
-            return pd.read_csv(
-                file_path,
-                sep="\t",
-                skipinitialspace=True,
-                quoting=csv.QUOTE_NONNUMERIC,
-                **kwargs,
+        if file_type in self.allowed_file_types:
+            # Determine delimiter based on file type
+            if file_type == "text/tab-separated-values":
+                delimiter = "\t"
+            elif file_type == "text/csv":
+                delimiter = ","
+            else:
+                delimiter = None
+            dialect = csv.Sniffer().sniff(
+                open_file_object.readline(), delimiters=delimiter
             )
-        elif file_type == "text/csv":
-            return pd.read_csv(
-                file_path,
-                sep=",",
-                quotechar='"',
-                quoting=csv.QUOTE_NONNUMERIC,
-                skipinitialspace=True,
-                escapechar='\\',
-                **kwargs,
-            )
-        elif file_type == 'text/plain':
-            csv_dialect = csv.Sniffer().sniff(open_file_object.readline())
-            csv_dialect.skipinitialspace = True
+            dialect.skipinitialspace = True
             open_file_object.seek(0)
-            return pd.read_csv(file_path, dialect=csv_dialect, **kwargs)
-
+            return pd.read_csv(file_path, dialect=dialect, **kwargs)
         else:
             raise ValueError("File must be tab or comma delimited")
 

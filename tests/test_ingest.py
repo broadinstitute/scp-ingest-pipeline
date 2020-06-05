@@ -36,7 +36,8 @@ import sys
 import unittest
 from unittest.mock import patch
 from bson.objectid import ObjectId
-
+from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_models
+from mock_data.matrix_mtx.gene_model_0 import expected_model
 from gcp_mocks import mock_storage_client, mock_storage_blob
 
 sys.path.append('../ingest')
@@ -66,6 +67,7 @@ def mock_load(self, *args, **kwargs):
 
 
 # Mock method that writes to database
+IngestPipeline.load_expression_file = mock_load
 IngestPipeline.load = mock_load
 
 
@@ -123,20 +125,24 @@ class IngestTestCase(unittest.TestCase):
             '--genome-annotation',
             'Ensembl 94',
             '--matrix-file',
-            'gs://fake-bucket/tests/data/dense_matrix_19_genes_100k_cells.txt',
+            'gs://fake-bucket/tests/data/dense_matrix_19_genes_1000_cells.txt',
             '--matrix-file-type',
             'dense',
         ]
         ingest = self.setup_ingest(args)[0]
-        model = ingest.load_args[1]
-        # Ensure that 'ObjectID' in model is removed
-        # print(model)
+        models = ingest.load_args[0]
+        print(models)
+        for model in models:
+            # Ensure that 'ObjectID' in model is removed
+            del model['_id']
+            self.assertEqual(model, gene_models[model['name']])
+        # print(models)
 
         # Verify gene model looks as expected
-        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-        expected_model = get_gene_model(mock_dir)
+        # mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
+        # expected_model = get_gene_model(mock_dir)
 
-        self.assertEqual(model, expected_model)
+        # self.assertEqual(models, gene_models)
 
     def test_ingest_local_dense_matrix(self):
         """Ingest Pipeline should extract and transform local dense matrices
@@ -159,21 +165,18 @@ class IngestTestCase(unittest.TestCase):
             '--genome-annotation',
             'Ensembl 94',
             '--matrix-file',
-            '../tests/data/dense_matrix_19_genes_100k_cells.txt',
+            '../tests/data/dense_matrix_19_genes_1000_cells.txt',
             '--matrix-file-type',
             'dense',
         ]
         ingest = self.setup_ingest(args)[0]
 
-        model = ingest.load_args[1]
-        # Ensure that 'ObjectID' in model is removed
-        # print(model)
-
-        # Verify that the first gene model looks as expected
-        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-        expected_model = get_gene_model(mock_dir)
-
-        self.assertEqual(model, expected_model)
+        models = ingest.load_args[0]
+        for model in models:
+            # Ensure that 'ObjectID' in model is removed
+            del model['_id']
+            self.assertEqual(model, gene_models[model['name']])
+        # print(models)
 
     def test_ingest_local_compressed_dense_matrix(self):
         """Ingest Pipeline should extract and transform local dense matrices
@@ -203,12 +206,11 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)[0]
 
-        model = ingest.load_args[1]
-        # Verify that the first gene model looks as expected
-        mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-        expected_model = get_gene_model(mock_dir)
-
-        self.assertEqual(model, expected_model)
+        models = ingest.load_args[0]
+        for model in models:
+            # Ensure that 'ObjectID' in model is removed
+            del model['_id']
+            self.assertEqual(model, gene_models[model['name']])
 
     def test_ingest_mtx_matrix(self):
         """Ingest Pipeline should extract and transform MTX matrix bundles
@@ -241,12 +243,12 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)[0]
 
-        model = ingest.load_args[1]
-        print(model)
-
-        mock_dir = 'matrix_mtx'
-        expected_model = get_gene_model(mock_dir)
-        self.assertEqual(model, expected_model)
+        models = ingest.load_args[0]
+        for model in models:
+            # Ensure that 'ObjectID' in model is removed
+            del model['_id']
+        # print(model)
+        self.assertEqual(models, expected_model)
 
     def test_remote_mtx_bundles(self):
         """Ingest Pipeline should handle MTX matrix files fetched from bucket
@@ -279,12 +281,11 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)[0]
 
-        model = ingest.load_args[1]
-        # print(model)
-
-        mock_dir = 'matrix_mtx'
-        expected_model = get_gene_model(mock_dir)
-        self.assertEqual(model, expected_model)
+        models = ingest.load_args[0]
+        for model in models:
+            # Ensure that 'ObjectID' in model is removed
+            del model['_id']
+        self.assertEqual(models, expected_model)
 
     def test_mtx_bundle_argument_validation(self):
         """Omitting --gene-file and --barcode-file in MTX ingest should error
@@ -377,6 +378,28 @@ class IngestTestCase(unittest.TestCase):
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
+    def test_bad_metadata_file_contains_coordinates(self):
+        """Ingest Pipeline should not succeed for metadata file containing
+        coordinates
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_cell_metadata',
+            '--cell-metadata-file',
+            '../tests/data/metadata_bad_contains_coordinates.txt',
+            '--study-accession',
+            'SCP123',
+            '--ingest-cell-metadata',
+        ]
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+
     def test_good_cluster_file(self):
         """Ingest Pipeline should succeed for properly formatted cluster file
         """
@@ -413,6 +436,27 @@ class IngestTestCase(unittest.TestCase):
             'ingest_cluster',
             '--cluster-file',
             '../tests/data/cluster_bad.txt',
+            '--ingest-cluster',
+            '--name',
+            'cluster1',
+        ]
+        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+
+    def test_bad_cluster_missing_coordinate_file(self):
+        """Ingest Pipeline should fail for missing coordinate in cluster file
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_cluster',
+            '--cluster-file',
+            '../tests/data/cluster_bad_missing_coordinate.txt',
             '--ingest-cluster',
             '--name',
             'cluster1',

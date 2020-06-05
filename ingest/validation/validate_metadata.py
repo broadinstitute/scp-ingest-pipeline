@@ -7,9 +7,17 @@ represents the rules that should be enforced on metadata files for studies
 participating under the convention.
 
 EXAMPLE
-# Using JSON file for Alexandria metadata convention TSV, validate input TSV
-$ python3 validate_metadata.py ../../tests/data/AMC_v1.1.3.json ../../tests/data/valid_no_array_v1.1.3.tsv \
-          --study-accession SCP123 --study-id 5dfa6718421aa90fea085476 --study-file-id 5e27451e2209c211b1e7c9cc
+# Using JSON file for latest Alexandria metadata convention in repo, validate input TSV
+$ python3 validate_metadata.py  ../../tests/data/valid_no_array_v2.0.0.tsv
+
+# generate an issues.json file to compare with reference test files
+$ python3 validate_metadata.py --issues-json ../../tests/data/valid_no_array_v2.0.0.tsv
+
+# generate a BigQuery upload file to compare with reference test files
+$ python3 validate_metadata.py --bq-json ../../tests/data/valid_no_array_v2.0.0.tsv
+
+# use a different metadata convention for validation
+$ python3 validate_metadata.py --convention <path to convention json> ../../tests/data/valid_no_array_v2.0.0.tsv
 
 """
 
@@ -25,6 +33,10 @@ import os
 import numbers
 import time
 import backoff
+import csv
+import copy
+import itertools
+import math
 
 import colorama
 from colorama import Fore
@@ -35,15 +47,18 @@ sys.path.append('..')
 try:
     # Used when importing internally and in tests
     from cell_metadata import CellMetadata
+    from monitor import setup_logger
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from ..cell_metadata import CellMetadata
+    from ..monitor import setup_logger
 
-# ToDo set up parameters to adjust log levels
-#  logging.basicConfig(level=logging.INFO, filename='app.log', filemode='w',
-#   format='%(name)s - %(levelname)s - %(message)s')
-logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+
+info_logger = setup_logger(__name__, "info.txt")
+
+error_logger = setup_logger(
+    __name__ + "_errors", "errors.txt", level=logging.ERROR, format=''
+)
 
 # Ensures normal color for print() output, unless explicitly changed
 colorama.init(autoreset=True)
@@ -52,10 +67,10 @@ colorama.init(autoreset=True)
 MAX_HTTP_REQUEST_TIME = 120
 MAX_HTTP_ATTEMPTS = 8
 
+
 def create_parser():
     """Parse command line values for validate_metadata
     """
-    logger.debug('Begin: create_parser')
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -85,16 +100,19 @@ def create_parser():
     # test BigQuery upload functions
     parser.add_argument('--upload', action='store_true')
     # validate_metadata.py CLI only for dev, bogus defaults below shouldn't propagate
+    # make bogus defaults obviously artificial for ease of detection
     parser.add_argument(
         '--study-id',
         help='MongoDB study identifier',
-        default='6d276a50421aa9117c982846',
+        default='dec0dedfeed1111111111111',
     )
     parser.add_argument(
-        '--study-file-id', help='MongoDB file identifier', default='abc123'
+        '--study-file-id',
+        help='MongoDB file identifier',
+        default='addedfeed000000000000000',
     )
     parser.add_argument(
-        '--study-accession', help='SCP study accession', default='SCP888'
+        '--study-accession', help='SCP study accession', default='SCPtest'
     )
     parser.add_argument(
         '--bq-dataset', help='BigQuery dataset identifier', default='cell_metadata'
@@ -102,9 +120,248 @@ def create_parser():
     parser.add_argument(
         '--bq-table', help='BigQuery table identifier', default='alexandria_convention'
     )
-    parser.add_argument('convention', help='Metadata convention JSON file ')
+    parser.add_argument(
+        '--convention',
+        help='Metadata convention JSON file',
+        default='../../schema/alexandria_convention/alexandria_convention_schema.json',
+    )
     parser.add_argument('input_metadata', help='Metadata TSV file')
     return parser
+
+
+######################## ONTOLOGY RETRIVER  #########################
+# TODO: move code in this section to a separate file
+
+
+# Configure maximum number of seconds to spend & total attempts at external HTTP requests to services, e.g. OLS
+MAX_HTTP_REQUEST_TIME = 120
+MAX_HTTP_ATTEMPTS = 8
+
+
+def backoff_handler(details):
+    """Handler function to log backoff attempts when querying OLS
+    """
+    info_logger.debug(
+        "Backing off {wait:0.1f} seconds after {tries} tries "
+        "calling function {target} with args {args} and kwargs "
+        "{kwargs}".format(**details),
+        extra={'study_id': None, 'duration': None},
+    )
+
+
+# contains methods for looking up terms in various ontologies,
+# as well as caching results of previous queries to speed up performance
+class OntologyRetriever:
+    cached_ontologies = {}
+    cached_terms = {}
+
+    def retrieve_ontology_term_label(self, term, property_name, convention):
+        """Retrieve an individual term label from an ontology
+        returns JSON payload of ontology, or None if unsuccessful
+        Will store any retrieved terms for faster validation of downstream terms
+
+        throws ValueError if the term does not exist or is malformatted
+        """
+
+        # initialize cached terms for this property if we haven't seen it yet
+        if property_name not in self.cached_terms:
+            self.cached_terms[property_name] = {}
+
+        if term not in self.cached_terms[property_name]:
+            ontology_urls = get_urls_for_property(convention, property_name)
+            self.cached_terms[property_name][
+                term
+            ] = self.retrieve_ontology_term_label_remote(
+                term, property_name, ontology_urls
+            )
+
+        return self.cached_terms[property_name][term]
+
+    def retrieve_ontology_term_label_remote(self, term, property_name, ontology_urls):
+        """Look up official ontology term from an id, always checking against the remote
+        """
+        if property_name == 'organ_region':
+            return self.retrieve_mouse_brain_term(term, property_name)
+        else:
+            return self.retrieve_ols_term(ontology_urls, term, property_name)
+
+    # Attach exponential backoff to external HTTP requests
+    @backoff.on_exception(
+        backoff.expo,
+        requests.exceptions.RequestException,
+        max_time=MAX_HTTP_REQUEST_TIME,
+        max_tries=MAX_HTTP_ATTEMPTS,
+        on_backoff=backoff_handler,
+        logger="info_logger",
+    )
+    def retrieve_ols_term(self, ontology_urls, term, property_name):
+        """Retrieve an individual term from an ontology
+        returns JSON payload of ontology, or None if unsuccessful
+        Will store any retrieved ontologies for faster validation of downstream terms
+        """
+        OLS_BASE_URL = 'https://www.ebi.ac.uk/ols/api/ontologies/'
+        # separate ontology shortname from term ID number
+        # valid separators are underscore and colon (used by HCA)
+        try:
+            ontology_shortname, term_id = re.split('[_:]', term)
+        except (ValueError, TypeError):
+            raise ValueError(
+                f'{property_name}: Could not parse provided ontology id, "{term}"'
+            )
+        # check if we have already retrieved this ontology reference
+        if ontology_shortname not in self.cached_ontologies:
+            metadata_url = OLS_BASE_URL + ontology_shortname
+            self.cached_ontologies[ontology_shortname] = request_json_with_backoff(
+                metadata_url
+            )
+        metadata_ontology = self.cached_ontologies[ontology_shortname]
+
+        # check if the ontology parsed from the term is the same ontology defined in the convention
+        # if so, skip the extra call to OLS; otherwise, retrieve the convention-defined ontology for term lookups
+        convention_ontology = None
+        if metadata_ontology is not None:
+            reference_url = metadata_ontology['_links']['self']['href']
+            matches = [
+                url for url in ontology_urls if url.lower() == reference_url.lower()
+            ]
+            if matches:
+                convention_ontology = metadata_ontology.copy()
+            else:
+                # store all convention ontologies for lookup later
+                for convention_url in ontology_urls:
+                    convention_shortname = extract_terminal_pathname(convention_url)
+                    convention_ontology = request_json_with_backoff(convention_url)
+                    self.cached_ontologies[convention_shortname] = convention_ontology
+
+        if convention_ontology and metadata_ontology:
+            base_term_uri = metadata_ontology['config']['baseUris'][0]
+            query_iri = encode_term_iri(term_id, base_term_uri)
+
+            term_url = convention_ontology['_links']['terms']['href'] + '/' + query_iri
+            # add timeout to prevent request from hanging indefinitely
+            response = requests.get(term_url, timeout=60)
+            # inserting sleep to minimize 'Connection timed out' error with too many concurrent requests
+            time.sleep(0.25)
+            if response.status_code == 200:
+                return response.json()['label']
+            else:
+                error_msg = f'{property_name}: No match found in EBI OLS for provided ontology ID: {term}'
+                raise ValueError(error_msg)
+        elif not metadata_ontology:
+            error_msg = f'No result from EBI OLS for provided ontology shortname \"{ontology_shortname}\"'
+            print(error_msg)
+            info_logger.info(error_msg, extra={'study_id': None, 'duration': None})
+            raise ValueError(
+                f'{property_name}: No match found in EBI OLS for provided ontology ID: {term}'
+            )
+        else:
+            error_msg = (
+                f'encountered issue retrieving {ontology_urls} or {ontology_shortname}'
+            )
+            print(error_msg)
+            info_logger.info(error_msg, extra={'study_id': None, 'duration': None})
+            raise RuntimeError(error_msg)
+
+    def retrieve_mouse_brain_term(self, term, property_name):
+        mouse_brain_atlas = self.fetch_allen_mouse_brain_atlas()
+        MBA_id = parse_organ_region_ontology_id(term)
+        if MBA_id not in mouse_brain_atlas:
+            raise ValueError(
+                f'{property_name}: No match found in Allen Mouse Brain Atlas for provided ontology ID: {term}'
+            )
+        return mouse_brain_atlas[MBA_id]
+
+    def fetch_allen_mouse_brain_atlas(self):
+        """Get the mouse brain atlas file, either remote or cached, and parse it into an id -> name dictionary
+        """
+        if 'allen_mouse_brain_atlas' not in self.cached_ontologies:
+            self.cached_ontologies[
+                'allen_mouse_brain_atlas'
+            ] = fetch_allen_mouse_brain_atlas_remote()
+        return self.cached_ontologies['allen_mouse_brain_atlas']
+
+
+def parse_organ_region_ontology_id(term):
+    """Extract term id from valid identifiers or raise a ValueError
+    """
+    try:
+        ontology_shortname, term_id = re.split('[_:]', term)
+        if ontology_shortname == 'MBA':
+            # remove leading zeroes (e.g. '000786' => '786') since the dictionary file doesn't have them
+            return term_id.lstrip('0')
+        else:
+            error_msg = f'organ_region: Invalid ontology code, "{ontology_shortname}"'
+            raise ValueError(error_msg)
+    except (TypeError, ValueError):
+        # when term value is empty string -> TypeError, convert this to a value error
+        raise ValueError(
+            f'organ_region: Could not parse provided ontology id, "{term}"'
+        )
+
+
+def fetch_allen_mouse_brain_atlas_remote():
+    """Get the mouse brain atlas file from the remote source, and parse it into an id -> name dictionary
+    """
+    MBA_url = 'https://raw.githubusercontent.com/broadinstitute/scp-ingest-pipeline/58f9308e425c667a34219a3dcadf7209fe09f788/schema/organ_region/mouse_brain_atlas/MouseBrainAtlas.csv'
+    region_dict = {}
+    try:
+        region_ontology = requests.get(MBA_url).text
+        csv_data = csv.DictReader(region_ontology.splitlines())
+        for row in csv_data:
+            region_dict[row['id']] = row['name']
+        return region_dict
+    # if we can't get the file in GitHub for validation record error
+    except:  # noqa E722
+        error_msg = 'Unable to read GitHub-hosted organ_region ontology file'
+        raise RuntimeError(error_msg)
+
+
+# Attach exponential backoff to external HTTP requests
+@backoff.on_exception(
+    backoff.expo,
+    requests.exceptions.RequestException,
+    max_time=MAX_HTTP_REQUEST_TIME,
+    max_tries=MAX_HTTP_ATTEMPTS,
+    on_backoff=backoff_handler,
+    logger="info_logger",
+)
+def request_json_with_backoff(ontology_url):
+    """Retrieve an ontology listing from EBI OLS
+    returns JSON payload of ontology, or None if unsuccessful
+    """
+    # add timeout to prevent request from hanging indefinitely
+    response = requests.get(ontology_url, timeout=60)
+    # inserting sleep to minimize 'Connection timed out' error with too many concurrent requests
+    time.sleep(0.25)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return None
+
+
+def encode_term_iri(term_id, base_uri):
+    """Double url-encode a term Internationalized Resource Identifier (IRI) for querying OLS ontologies
+    returns double url-encoded ontology term IRI
+    """
+    query_uri = base_uri + term_id
+    encoded_iri = encoder.quote_plus(encoder.quote_plus(query_uri))
+    return encoded_iri
+
+
+def extract_terminal_pathname(url):
+    """Extract the last path segment from a URL
+    """
+    return list(filter(None, url.split("/"))).pop()
+
+
+def get_urls_for_property(convention, property_name):
+    return convention['properties'][property_name]['ontology'].split(',')
+
+
+######################## END ONTOLOGY RETRIVER DEFINITION #########################
+
+# create an OntologyRetriever instance to handle fetching and caching ontology terms
+retriever = OntologyRetriever()
 
 
 def validate_schema(json, metadata):
@@ -125,7 +382,6 @@ def validate_schema(json, metadata):
 def is_array_metadata(convention, metadatum):
     """Check if metadata is array type from metadata convention
     """
-    logger.debug('Begin: is_array_metadata')
     try:
         type_lookup = convention['properties'][metadatum]['type']
         if type_lookup == 'array':
@@ -139,9 +395,20 @@ def is_array_metadata(convention, metadatum):
 def is_ontology_metadata(convention, metadatum):
     """Check if metadata is ontology from metadata convention
     """
-    logger.debug('Begin: is_ontology_metadata')
     try:
         return bool(convention['properties'][metadatum]['ontology'])
+    except KeyError:
+        return False
+
+
+def is_required_metadata(convention, metadatum):
+    """Check in metadata convention if metadata is required
+    """
+    try:
+        if metadatum in convention['required']:
+            return True
+        else:
+            return False
     except KeyError:
         return False
 
@@ -149,7 +416,6 @@ def is_ontology_metadata(convention, metadatum):
 def lookup_metadata_type(convention, metadatum):
     """Look up metadata type from metadata convention
     """
-    logger.debug('Begin: lookup_metadata_type')
     try:
         if is_array_metadata(convention, metadatum):
             type_lookup = convention['properties'][metadatum]['items']['type']
@@ -187,45 +453,176 @@ def validate_cells_unique(metadata):
     return valid
 
 
-def collect_cell_for_ontology(metadatum, row_data, metadata, array=False):
-    """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
-    """
-    logger.debug('Begin: collect_cell_for_ontology')
-    if metadatum.endswith('__unit'):
-        ontology_label = metadatum + '_label'
-    else:
-        ontology_label = metadatum + '__ontology_label'
-    if array:
+def insert_array_ontology_label_row_data(
+    property_name, row, metadata, required, convention, ontology_label
+):
+    cell_id = row['CellID']
+    # if there are differing numbers of id/label values, and not empty, log error and don't try to fix
+    if len(row[property_name]) != len(row[ontology_label]) and row[ontology_label]:
+        error_msg = f'{property_name}: mismatched # of {property_name} and {ontology_label} values'
+        metadata.store_validation_issue('error', 'ontology', error_msg, [cell_id])
+        return row
+    if not row[ontology_label]:
+        array_label_for_bq = []
+        for id in row[property_name]:
+            label_lookup = ''
+            try:
+                label_lookup = retriever.retrieve_ontology_term_label(
+                    id, property_name, convention
+                )
+                reference_ontology = (
+                    "EBI OLS lookup"
+                    if property_name != "organ_region"
+                    else "Mouse Brain Atlas ontology"
+                )
+                error_msg = (
+                    f'{property_name}: missing ontology label '
+                    f'"{id}" - using "{label_lookup}" per {reference_ontology}'
+                )
+                metadata.store_validation_issue(
+                    'warn', 'ontology', error_msg, [cell_id]
+                )
+            except BaseException as e:
+                print(e)
+                error_msg = (
+                    f'{property_name}: unable to lookup "{id}" - '
+                    f'cannot propagate array of labels for {property_name};'
+                    f'may cause inaccurate error reporting for {property_name}'
+                )
+                metadata.store_validation_issue(
+                    'error', 'ontology', error_msg, [cell_id]
+                )
+            array_label_for_bq.append(label_lookup)
+        row[ontology_label] = array_label_for_bq
+
+    for id, label in zip(row[property_name], row[ontology_label]):
+        metadata.ontology[property_name][(id, label)].append(cell_id)
+    return row
+
+
+def insert_ontology_label_row_data(
+    property_name, row, metadata, required, convention, ontology_label
+):
+    id = row[property_name]
+    cell_id = row['CellID']
+
+    if not row[ontology_label]:
+        # for optional columns, try to fill it in
         try:
-            ontology_dict = dict(zip(row_data[metadatum], row_data[ontology_label]))
-            for id, label in ontology_dict.items():
-                metadata.ontology[metadatum][(id, label)].append(row_data['CellID'])
-        except TypeError:
-            for id in row_data[metadatum]:
-                metadata.ontology[metadatum][(id)].append(row_data['CellID'])
-    else:
-        try:
-            metadata.ontology[metadatum][
-                (row_data[metadatum], row_data[ontology_label])
-            ].append(row_data['CellID'])
-        except KeyError:
-            metadata.ontology[metadatum][(row_data[metadatum])].append(
-                row_data['CellID']
+            label = retriever.retrieve_ontology_term_label(
+                id, property_name, convention
             )
-    return
+            row[ontology_label] = label
+            reference_ontology = (
+                "EBI OLS lookup"
+                if property_name != "organ_region"
+                else "Mouse Brain Atlas ontology"
+            )
+            error_msg = (
+                f'{property_name}: missing ontology label '
+                f'"{id}" - using "{label}" per {reference_ontology}'
+            )
+            metadata.store_validation_issue('warn', 'ontology', error_msg, [cell_id])
+        except BaseException as e:
+            print(e)
+            error_msg = f'Optional column {ontology_label} empty and could not be resolved from {property_name} column value {row[property_name]}'
+            metadata.store_validation_issue('warn', 'ontology', error_msg, [cell_id])
+
+    metadata.ontology[property_name][(row[property_name], row[ontology_label])].append(
+        cell_id
+    )
+    return row
+
+
+def collect_cell_for_ontology(
+    property_name, row, metadata, convention, array, required
+):
+    """Collect ontology info for a single metadatum into CellMetadata.ontology dictionary
+    if ontology_label not provided for optional metadata, label is looked up
+    and added to BigQuery json to populate metadata backend
+    Missing ontology_label for required metadata is not inserted, should fail validation
+    """
+
+    if property_name.endswith('__unit'):
+        ontology_label = property_name + '_label'
+    else:
+        ontology_label = property_name + '__ontology_label'
+    updated_row = copy.deepcopy(row)
+    cell_id = updated_row['CellID']
+
+    # for case where they've omitted a column altogether or left it blank, add a blank entry
+    if ontology_label not in updated_row or value_is_nan(updated_row[ontology_label]):
+        if array:
+            updated_row[ontology_label] = []
+        else:
+            updated_row[ontology_label] = ''
+
+    # !!!property_name checking is probably not needed
+    if property_name not in updated_row or value_is_nan(updated_row[property_name]):
+        if array:
+            updated_row[property_name] = []
+        else:
+            updated_row[property_name] = ''
+
+    if (not updated_row[ontology_label] or not updated_row[property_name]) and required:
+        # Catch cases where ontology_label or property_name column completely empty
+        missing_column_message = ''
+        if not updated_row[property_name]:
+            missing_column_message = (
+                f'{property_name}: required column "{property_name}" missing data'
+            )
+        if not updated_row[ontology_label]:
+            if not updated_row[property_name]:
+                missing_column_message += ' and '
+            missing_column_message += (
+                f'{property_name}: required column "{ontology_label}" missing data'
+            )
+        # for required columns, just log the error and continue
+        metadata.store_validation_issue(
+            'error', 'ontology', missing_column_message, [cell_id]
+        )
+        # metadata.ontology[property_name][(updated_row[property_name], None)].append(cell_id)
+    else:
+        if array:
+            updated_row = insert_array_ontology_label_row_data(
+                property_name,
+                updated_row,
+                metadata,
+                required,
+                convention,
+                ontology_label,
+            )
+        else:
+            updated_row = insert_ontology_label_row_data(
+                property_name,
+                updated_row,
+                metadata,
+                required,
+                convention,
+                ontology_label,
+            )
+
+    return updated_row
 
 
 def collect_ontology_data(row_data, metadata, convention):
     """Collect unique ontology IDs for ontology validation
     """
-    logger.debug('Begin: collect_ontology_data')
-    for entry in row_data.keys():
+    row_ref = copy.deepcopy(row_data)
+    for entry in row_ref.keys():
         if is_ontology_metadata(convention, entry):
-            if is_array_metadata(convention, entry):
-                collect_cell_for_ontology(entry, row_data, metadata, array=True)
-            else:
-                collect_cell_for_ontology(entry, row_data, metadata)
-    return
+            updated_row = collect_cell_for_ontology(
+                entry,
+                row_data,
+                metadata,
+                convention,
+                array=is_array_metadata(convention, entry),
+                required=is_required_metadata(convention, entry),
+            )
+            # update BigQuery data to include missing ontology labels
+            # for optional ontology metadata
+            row_data.update(updated_row)
+    return row_data
 
 
 def compare_type_annots_to_convention(metadata, convention):
@@ -240,7 +637,7 @@ def compare_type_annots_to_convention(metadata, convention):
     # word in header is not some form of 'NAME' and script breaks
     metadata_names[0] = 'CellID'
     type_annots[0] = 'group'
-    metadata_annots = dict(zip(metadata_names, type_annots))
+    metadata_annots = dict(itertools.zip_longest(metadata_names, type_annots))
     annot_equivalents = {
         'numeric': ['number', 'integer'],
         'group': ['boolean', 'string'],
@@ -294,10 +691,24 @@ def cast_boolean_type(value):
         raise ValueError(f'cannot cast {value} as boolean')
 
 
+def value_is_nan(value):
+    """Check if value is nan
+    nan is a special dataframe value to indicate missing data
+    """
+    try:
+        return math.isnan(value)
+    except TypeError:
+        return False
+
+
 def cast_integer_type(value):
     """Cast metadata value as integer
     """
-    return int(value)
+    if value_is_nan(value):
+        # nan indicates missing data, has no valid integer value for casting
+        return value
+    else:
+        return int(value)
 
 
 def cast_float_type(value):
@@ -309,14 +720,29 @@ def cast_float_type(value):
 def cast_string_type(value):
     """Cast string type per convention where Pandas autodetected a number
     """
-    if isinstance(value, numbers.Number):
+    if value_is_nan(value):
+        # nan indicates missing data; by type, nan is a numpy float
+        # so a separate type check is needed for proper handling
+        return value
+    elif isinstance(value, numbers.Number):
         return str(value)
     else:
         return value
 
 
+def regularize_ontology_id(value):
+    """Regularize ontology_ids for storage with underscore format
+    """
+    try:
+        return value.replace(":", "_")
+    except AttributeError:
+        # when expected value is not actually an ontology ID
+        # return the bad value for JSON schema validation
+        return value
+
+
 def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metadata):
-    """for metadatum, lookup expected type by metadata convention
+    """For metadatum, lookup expected type by metadata convention
         and cast value as appropriate type for validation
     """
     cast_metadata = {}
@@ -334,6 +760,13 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
             # files that support array-based metadata navtively (eg. loom,
             # anndata etc) splitting on pipe may become problematic
             for element in value.split('|'):
+                try:
+                    if 'ontology' in convention['properties'][metadatum]:
+                        element = regularize_ontology_id(element)
+                except KeyError:
+                    # study-specific metadata (ie. non-metadata-convention metadata)
+                    # should no longer trigger this exception but should be allowed to pass
+                    pass
                 cast_element = metadata_types.get(
                     lookup_metadata_type(convention, metadatum)
                 )(element)
@@ -351,8 +784,24 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         # metadata is being cast - the value needs to be passed as an array,
         # it is already boolean via Pandas' inference processes
         except AttributeError:
-            cast_metadata[metadatum] = [value]
+            try:
+                if 'ontology' in convention['properties'][metadatum]:
+                    value = regularize_ontology_id(value)
+            except KeyError:
+                # study-specific metadata (ie. non-metadata convention metadata)
+                # should no longer trigger this exception but should be allowed to pass
+                pass
+            cast_metadata[metadatum] = [
+                metadata_types.get(lookup_metadata_type(convention, metadatum))(value)
+            ]
     else:
+        try:
+            if 'ontology' in convention['properties'][metadatum]:
+                value = regularize_ontology_id(value)
+        except KeyError:
+            # study-specific metadata (ie. non-metadata convention metadata)
+            # should no longer trigger this exception but should be allowed to pass
+            pass
         try:
             cast_value = metadata_types.get(
                 lookup_metadata_type(convention, metadatum)
@@ -372,9 +821,9 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
 
 def process_metadata_row(metadata, convention, line):
     """Process metadata row by row
+    check metadata type is of type assigned in convention
     returns processed row of convention data as dict
     """
-    logger.debug('Begin: process_metadata_row')
     # extract first row of metadata from pandas array as python list
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     # if input was TSV metadata file, SCP format requires 'NAME' for the first
@@ -383,9 +832,15 @@ def process_metadata_row(metadata, convention, line):
     # but subsequent code expects 'CellID' even if header check fails and first
     # word in header is not some form of 'NAME' and script breaks
     metadata_names[0] = 'CellID'
-    row_info = dict(zip(metadata_names, line))
+    row_info = dict(itertools.zip_longest(metadata_names, line))
     processed_row = {}
     for k, v in row_info.items():
+        # for metadata not in convention, no need to process
+        if k not in convention['properties'].keys():
+            continue
+        # for optional metadata, do not pass empty cells (nan)
+        if k not in convention['required'] and value_is_nan(v):
+            continue
         processed_row.update(
             cast_metadata_type(k, v, row_info['CellID'], convention, metadata)
         )
@@ -396,12 +851,17 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
     """Evaluate metadata input against metadata convention using JSON schema
     returns False if input convention is invalid JSON schema
     """
-    logger.debug('Begin: collect_jsonschema_errors')
     # this function seems overloaded with its three tasks
     # schema validation, non-ontology errors, ontology info collection
     # the latter two should be done together in the same pass thru the file
     js_errors = defaultdict(list)
     schema = validate_schema(convention, metadata)
+
+    if bq_json:
+        bq_filename = str(metadata.study_file_id) + '.json'
+        # truncate JSON file so data from serialize_bq starts with an empty file
+        fh = open(bq_filename, 'w')
+        fh.close()
     if schema:
         compare_type_annots_to_convention(metadata, convention)
         rows = metadata.yield_by_row()
@@ -409,7 +869,7 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
         while line:
             row = process_metadata_row(metadata, convention, line)
             metadata.cells.append(row['CellID'])
-            collect_ontology_data(row, metadata, convention)
+            row = collect_ontology_data(row, metadata, convention)
             for error in schema.iter_errors(row):
                 try:
                     error.message = error.path[0] + ': ' + error.message
@@ -417,10 +877,11 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
                     pass
                 js_errors[error.message].append(row['CellID'])
             if bq_json:
-                bq_filename = str(metadata.study_file_id) + '.json'
                 # add non-convention, SCP-required, metadata for BigQuery
                 row['study_accession'] = metadata.study_accession
                 row['file_id'] = str(metadata.study_file_id)
+                # extract convention version from URI in convention JSON file
+                row['metadata_convention_version'] = convention['$id'].split("/")[-2]
                 serialize_bq(row, bq_filename)
             try:
                 line = next(rows)
@@ -433,12 +894,13 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
 
 
 def record_issue(errfile, warnfile, issue_type, msg):
-    """print issue to console with coloring and
+    """Print issue to console with coloring and
     writes issues to appropriate issue file
     """
 
     if issue_type == 'error':
         errfile.write(msg + '\n')
+        error_logger.error(msg)
         color = Fore.RED
     elif issue_type == 'warn':
         warnfile.write(msg + '\n')
@@ -453,7 +915,11 @@ def report_issues(metadata):
     """Report issues in CellMetadata.issues dictionary
     returns True if errors are reported, False if no errors to report
     """
-    logger.debug('Begin: report_issues')
+
+    info_logger.info(
+        f'Checking for validation issues',
+        extra={'study_id': metadata.study_id, 'duration': None},
+    )
 
     error_file = open('scp_validation_errors.txt', 'w')
     warn_file = open('scp_validation_warnings.txt', 'w')
@@ -486,8 +952,6 @@ def exit_if_errors(metadata):
     """Determine if CellMetadata.issues has errors
     Exit with error code 1 if errors are reported, return False if no errors
     """
-    logger.debug('Begin: exit_if_errors')
-
     errors = False
     for error_type in metadata.issues.keys():
         for error_category, category_dict in metadata.issues[error_type].items():
@@ -498,190 +962,79 @@ def exit_if_errors(metadata):
         exit(1)
     return errors
 
-def backoff_handler(details):
-    """Handler function to log backoff attempts when querying OLS"""
-    logger.debug("Backing off {wait:0.1f} seconds after {tries} tries "
-           "calling function {target} with args {args} and kwargs "
-           "{kwargs}".format(**details))
-
-# Attach exponential backoff to external HTTP requests
-@backoff.on_exception(backoff.expo,
-                      requests.exceptions.RequestException,
-                      max_time=MAX_HTTP_REQUEST_TIME,
-                      max_tries=MAX_HTTP_ATTEMPTS,
-                      on_backoff=backoff_handler,
-                      logger="logger")
-def retrieve_ontology(ontology_url):
-    """Retrieve an ontology listing from EBI OLS
-    returns JSON payload of ontology, or None if unsuccessful
-    """
-    # add timeout to prevent request from hanging indefinitely
-    response = requests.get(ontology_url, timeout=60)
-    # inserting sleep to minimize 'Connection timed out' error with too many concurrent requests
-    time.sleep(0.25)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return None
-
-# Attach exponential backoff to external HTTP requests
-@backoff.on_exception(backoff.expo,
-                      requests.exceptions.RequestException,
-                      max_time=MAX_HTTP_REQUEST_TIME,
-                      max_tries=MAX_HTTP_ATTEMPTS,
-                      on_backoff=backoff_handler,
-                      logger="logger")
-def retrieve_ontology_term(convention_url, ontology_id, ontologies):
-    """Retrieve an individual term from an ontology
-    returns JSON payload of ontology, or None if unsuccessful
-    Will store any retrieved ontologies for faster validation of downstream terms
-    """
-    OLS_BASE_URL = 'https://www.ebi.ac.uk/ols/api/ontologies/'
-    # separate ontology shortname from term ID number
-    # valid separators are underscore and colon (used by HCA)
-    try:
-        ontology_shortname, term_id = re.split('[_:]', ontology_id)
-    # when ontolgyID is malformed and has no separator -> ValueError
-    # when ontologyID value is empty string -> TypeError
-    except (ValueError, TypeError):
-        return None
-    # check if we have already retrieved this ontology reference
-    if ontology_shortname not in ontologies:
-        metadata_url = OLS_BASE_URL + ontology_shortname
-        ontologies[ontology_shortname] = retrieve_ontology(metadata_url)
-    metadata_ontology = ontologies[ontology_shortname]
-    # check if the ontology parsed from the term is the same ontology defined in the convention
-    # if so, skip the extra call to OLS; otherwise, retrieve the convention-defined ontology for term lookups
-    if metadata_ontology is not None:
-        reference_url = metadata_ontology['_links']['self']['href']
-        if reference_url.lower() == convention_url.lower():
-            convention_ontology = metadata_ontology.copy()
-        else:
-            convention_shortname = extract_terminal_pathname(convention_url)
-            convention_ontology = retrieve_ontology(convention_url)
-            ontologies[convention_shortname] = convention_ontology
-    else:
-        convention_ontology = None # we did not get a metadata_ontology, so abort the check
-    if convention_ontology and metadata_ontology:
-        base_term_uri = metadata_ontology['config']['baseUris'][0]
-        query_iri = encode_term_iri(term_id, base_term_uri)
-        term_url = convention_ontology['_links']['terms']['href'] + '/' + query_iri
-        # add timeout to prevent request from hanging indefinitely
-        response = requests.get(term_url, timeout=60)
-        # inserting sleep to minimize 'Connection timed out' error with too many concurrent requests
-        time.sleep(0.25)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return None
-    elif not metadata_ontology:
-        print(
-            f'No result from EBI OLS for provided ontology shortname \"{ontology_shortname}\"'
-        )
-    else:
-        print(f'encountered issue retrieving {convention_url} or {ontology_shortname}')
-        return None
-
-
-def encode_term_iri(term_id, base_uri):
-    """Double url-encode a term Internationalized Resource Identifier (IRI) for querying OLS ontologies
-    returns double url-encoded ontology term IRI
-    """
-    query_uri = base_uri + term_id
-    encoded_iri = encoder.quote_plus(encoder.quote_plus(query_uri))
-    return encoded_iri
-
-def extract_terminal_pathname(url):
-    """Extract the last path segment from a URL
-    """
-    return list(filter(None, url.split("/"))).pop()
-
 
 def validate_collected_ontology_data(metadata, convention):
     """Evaluate collected ontology_id, ontology_label info in
-    CellMetadata.ontology dictionary by querying EBI OLS for
+    CellMetadata.ontology dictionary by querying ontology source
     validity of ontology_id and cross-check that input ontology_label
-    matches ontology_label from EBI OLS lookup
+    matches ontology_label from ontology lookup
     """
-    logger.debug('Begin: validate_collected_ontology_data')
-    # container to store references to retrieved ontologies for faster validation
-    stored_ontologies = {}
-    for entry in metadata.ontology.keys():
-        ontology_url = convention['properties'][entry]['ontology']
-        try:
-            for ontology_id, ontology_label in metadata.ontology[entry].keys():
-                matching_term = retrieve_ontology_term(ontology_url, ontology_id, stored_ontologies)
-                if matching_term:
-                    if matching_term['label'] != ontology_label:
-                        try:
-                            error_msg = (
-                                f'{entry}: input ontology_label \"{ontology_label}\" '
-                                f'does not match EBI OLS lookup \"{matching_term["label"]}\",'
-                            )
-                            metadata.store_validation_issue(
-                                'error',
-                                'ontology',
-                                error_msg,
-                                metadata.ontology[entry][(ontology_id, ontology_label)],
-                            )
-                        except TypeError:
-                            error_msg = f'{entry}: No description found for {ontology_id} in ontology lookup'
-                            metadata.store_validation_issue(
-                                'error',
-                                'ontology',
-                                error_msg,
-                                metadata.ontology[entry][(ontology_id, ontology_label)],
-                            )
-                # handle case where EBI OLS has no match result
-                else:
-                    # empty cells for ontology_id and ontology_label now nan when using pandas for ingest
-                    if ontology_id:
-                        error_msg = f'{entry}: No match found in EBI OLS for provided ontology ID: {ontology_id}'
+    for property_name in metadata.ontology.keys():
+        # pull in file for validation of non-EBI OLS metadata for organ_region
+        if property_name == 'organ_region':
+            try:
+                region_ontology = (  # noqa: F841
+                    retriever.fetch_allen_mouse_brain_atlas()
+                )
+            except BaseException as e:
+                print(e)
+                # immediately return as validation should not continue if ontology file unavailable
+                return
+        # split on comma in case this property from the convention supports multiple ontologies
+        ontology_urls = convention['properties'][property_name]['ontology'].split(',')
+
+        for ontology_info in metadata.ontology[property_name].keys():
+            ontology_id, ontology_label = ontology_info
+            try:
+                matched_label_for_id = retriever.retrieve_ontology_term_label(
+                    ontology_id, property_name, convention
+                )
+                if matched_label_for_id != ontology_label:
+                    ontology_source_name = 'EBI OLS'
+                    if property_name == 'organ_region':
+                        ontology_source_name = 'Allen Mouse Brain Atlas'
+                    if is_required_metadata(convention, property_name) and (
+                        not ontology_label or value_is_nan(ontology_label)
+                    ):
+                        error_msg = (
+                            f'{property_name}: ontology label required for \"{ontology_id}\" '
+                            f'to cross-check for data entry error"'
+                        )
                         metadata.store_validation_issue(
                             'error',
                             'ontology',
                             error_msg,
-                            metadata.ontology[entry][(ontology_id, ontology_label)],
+                            metadata.ontology[property_name][
+                                (ontology_id, ontology_label)
+                            ],
                         )
-                    # conditions for this else clause should no longer occur (with pandas)
-                    # if this clause is triggered, a RuntimeError should result
                     else:
                         error_msg = (
-                            f'{entry}: No ontology_id provided for {ontology_label}'
+                            f'{property_name}: input ontology_label \"{ontology_label}\" '
+                            f'does not match {ontology_source_name} lookup \"{matched_label_for_id}\" for ontology id \"{ontology_id}\"'
                         )
                         metadata.store_validation_issue(
                             'error',
                             'ontology',
                             error_msg,
-                            metadata.ontology[entry][(ontology_label)],
+                            metadata.ontology[property_name][
+                                (ontology_id, ontology_label)
+                            ],
                         )
-        # handle case where no ontology_label provided
-        except (TypeError, ValueError):
-            for ontology_id in metadata.ontology[entry].keys():
-                matching_term = retrieve_ontology_term(ontology_url, ontology_id, stored_ontologies)
-                if not matching_term:
-                    error_msg = f'{entry}: No match found in EBI OLS for provided ontology ID: {ontology_id}'
-                    metadata.store_validation_issue(
-                        'error',
-                        'ontology',
-                        error_msg,
-                        metadata.ontology[entry][(ontology_id)],
-                    )
-                error_msg = (
-                    f'{entry}: no ontology label supplied in metadata file for '
-                    f'\"{ontology_id}\" - no cross-check for data entry error possible'
+            except ValueError as valueError:
+                metadata.store_validation_issue(
+                    'error',
+                    'ontology',
+                    valueError.args[0],
+                    metadata.ontology[property_name][(ontology_id, ontology_label)],
                 )
-                metadata.store_validation_issue('warn', 'ontology', error_msg)
-        except requests.exceptions.RequestException as err:
-            error_msg = f'External service outage connecting to {ontology_url} when querying {ontology_id}:{ontology_label}: {err}'
-            logger.error(error_msg)
-            metadata.store_validation_issue(
-                'error',
-                'ontology',
-                error_msg
-            )
-            # immediately return as validation cannot continue
-            return
+            except requests.exceptions.RequestException as err:
+                error_msg = f'External service outage connecting to {ontology_urls} when querying {ontology_id}:{ontology_label}: {err}'
+                error_logger.error(error_msg)
+                metadata.store_validation_issue('error', 'ontology', error_msg),
+                # immediately return as validation cannot continue
+                return
+
     return
 
 
@@ -692,7 +1045,9 @@ def confirm_uniform_units(metadata, convention):
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     for name in metadata_names:
         if name.endswith('__unit'):
-            if metadata.file[name].nunique(dropna=False).values[0] != 1:
+            # existence of unit metadata is enforced by jsonschema
+            # any empty cells in a unit column are okay to be empty
+            if metadata.file[name].nunique(dropna=True).values[0] != 1:
                 error_msg = (
                     f'{name}: values for each unit metadata required to be uniform'
                 )
@@ -703,9 +1058,31 @@ def serialize_bq(bq_dict, filename='bq.json'):
     """Write metadata collected for validation to json file
     BigQuery requires newline delimited json objects
     """
-    data = json.dumps(bq_dict)
+    bq_dict_copy = bq_dict.copy()
+    if 'organism_age' in bq_dict and 'organism_age__unit_label' in bq_dict:
+        bq_dict_copy['organism_age__seconds'] = calculate_organism_age_in_seconds(
+            bq_dict['organism_age'], bq_dict['organism_age__unit_label']
+        )
+
+    data = json.dumps(bq_dict_copy)
     with open(filename, 'a') as jsonfile:
         jsonfile.write(data + '\n')
+
+
+def calculate_organism_age_in_seconds(organism_age, organism_age_unit_label):
+    multipliers = {
+        'microsecond': 0.000001,
+        'millisecond': 0.001,
+        'second': 1,
+        'minute': 60,
+        'hour': 3600,
+        'day': 86400,
+        'week': 604800,
+        'month': 2626560,  # (day * 30.4 to fuzzy-account for different months)
+        'year': 31557600,  # (day * 365.25 to fuzzy-account for leap-years)
+    }
+    multiplier = multipliers[organism_age_unit_label]
+    return organism_age * multiplier
 
 
 def serialize_issues(metadata):
@@ -713,6 +1090,7 @@ def serialize_issues(metadata):
     """
     with open('issues.json', 'w') as jsonfile:
         json.dump(metadata.issues, jsonfile, indent=2)
+        jsonfile.write("\n")  # Add newline cause Py JSON does not
 
 
 def review_metadata_names(metadata):
@@ -739,7 +1117,7 @@ def validate_input_metadata(metadata, convention, bq_json=None):
 
 
 def push_metadata_to_bq(metadata, ndjson, dataset, table):
-    """upload local NDJSON to BigQuery
+    """Upload local NDJSON to BigQuery
     """
     client = bigquery.Client()
     dataset_ref = client.dataset(dataset)
@@ -753,17 +1131,22 @@ def push_metadata_to_bq(metadata, ndjson, dataset, table):
                 source_file, table_ref, job_config=job_config
             )
         job.result()  # Waits for table load to complete.
-        print(f'Metadata uploaded to BigQuery. ({job.output_rows} rows)')
+        info_msg = f'Metadata uploaded to BigQuery. ({job.output_rows} rows)'
+        print(info_msg)
+        info_logger.info(
+            info_msg, extra={'study_id': metadata.study_id, 'duration': None}
+        )
     # Unable to intentionally trigger a failed BigQuery upload
     # please add print statement below to error logging so
     # error handling can be updated when better understood
     except Exception as e:
         print(e)
+        info_logger.info(e, extra={'study_id': metadata.study_id, 'duration': None})
         return 1
     if job.output_rows != len(metadata.cells):
-        print(
-            f'BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells'
-        )
+        error_msg = f'BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells'
+        print(error_msg)
+        error_logger.error(error_msg)
         return 1
     os.remove(ndjson)
     return 0

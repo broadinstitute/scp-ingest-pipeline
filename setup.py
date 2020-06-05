@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-
 setup(
     name='scp_ingest_pipeline',
     version='0.1',
@@ -7,7 +6,6 @@ setup(
     author='Single Cell Portal team',
     author_email='scp-support@broadinstitute.zendesk.com',
     install_requires=[
-        'google-cloud-firestore',
         'google-cloud-storage',
         'google-cloud-bigquery',
         'requests',
@@ -21,6 +19,13 @@ setup(
         'mypy_extensions',
         'pymongo',
         'loompy',
+        'backoff',
+        'opencensus',
+        'opencensus-context',
+        'opencensus-ext-stackdriver',
+        'google-cloud-trace',
+	'grpcio',
+	'grpcio-tools'
     ],
     packages=find_packages(),
 )

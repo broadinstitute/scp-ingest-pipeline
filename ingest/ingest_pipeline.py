@@ -22,7 +22,7 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v1.1.3.tsv --study-accession SCP123 --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
 
 # Ingest dense file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_100k_cells.txt --matrix-file-type dense
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_1000_cells.txt --matrix-file-type dense
 
 # Ingest loom file
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --matrix-file ../tests/data/test_loom.loom  --matrix-file-type loom --taxon-name 'Homo Sapiens' --taxon-common-name humans
@@ -33,24 +33,23 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 # Ingest mtx files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
-from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-from contextlib import nullcontext
-
-import sys
 import json
-import os
 import logging
+import os
 import re
-
-from pymongo import MongoClient
+import sys
+from contextlib import nullcontext
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
 # import google.cloud.logging
 from bson.objectid import ObjectId
 
 # For tracing
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
-from opencensus.trace.tracer import Tracer
 from opencensus.trace.samplers import AlwaysOnSampler
+from opencensus.trace.tracer import Tracer
+from pymongo import InsertOne, MongoClient
+from pymongo.errors import BulkWriteError
 
 # from google.cloud.logging.resource import Resource
 
@@ -90,7 +89,9 @@ except ImportError:
 
 class IngestPipeline(object):
     # File location for metadata json convention
-    JSON_CONVENTION = 'gs://broad-singlecellportal-public/AMC_v1.1.3.json'
+    JSON_CONVENTION = (
+        '../schema/alexandria_convention/alexandria_convention_schema.json'
+    )
     logger = logging.getLogger(__name__)
     error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
     info_logger = setup_logger(__name__, 'info.txt')
@@ -226,10 +227,33 @@ class IngestPipeline(object):
                 self.insert_many('data_arrays', documents)
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
-            if e.details is not None:
-                self.error_logger.error(e.details, extra=self.extra_log_params)
             return 1
         return 0
+
+    # @profile
+    def load_expression_file(self, models, is_gene_model=False):
+        collection_name = self.matrix.COLLECTION_NAME
+        # Creates operations to perform for bulk write
+        bulk_operations = list(map(lambda model: InsertOne(model), models))
+        try:
+            if is_gene_model:
+                # bulk_write_results describes the type and count of operations performed.
+                bulk_write_results = self.db[collection_name].bulk_write(
+                    bulk_operations
+                )
+                # Succesfully wrote documents
+                return True, bulk_write_results
+            else:
+                bulk_write_results = self.db['data_arrays'].bulk_write(bulk_operations)
+                # Succesfully wrote documents
+                return True, bulk_write_results
+        except BulkWriteError as bwe:
+            self.error_logger.error(bwe.details, extra=self.extra_log_params)
+            return False, bwe.details
+
+        except Exception as e:
+            self.error_logger.error(e, extra=self.extra_log_params)
+            return False, None
 
     def load_subsample(
         self, parent_collection_name, subsampled_data, set_data_array_fn, scope
@@ -253,7 +277,8 @@ class IngestPipeline(object):
                 for model in set_data_array_fn(
                     (
                         key_value[0],  # NAMES, x, y, or z
-                        parent_data['name'],  # Cluster name provided from parent
+                        # Cluster name provided from parent
+                        parent_data['name'],
                         key_value[1],  # Subsampled data/values
                         ObjectId(self.study_file_id),
                         ObjectId(self.study_id),
@@ -310,12 +335,13 @@ class IngestPipeline(object):
                 return 1
         return 0
 
-    @trace
-    @my_debug_logger()
-    # @profile
+    # @trace
+    # @my_debug_logger()
     def ingest_expression(self) -> int:
         """Ingests expression files.
         """
+        gene_documents = []
+        data_array_documents = []
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
         else:
@@ -329,30 +355,46 @@ class IngestPipeline(object):
                     f"Attempting to load gene: {gene.gene_model['searchable_name']}",
                     extra=self.extra_log_params,
                 )
+                gene_documents.append(gene.gene_model)
                 if idx == 0:
-                    status = self.load(
-                        self.matrix.COLLECTION_NAME,
-                        gene.gene_model,
-                        self.matrix.set_data_array,
+                    for data_array_document in self.matrix.set_data_array(
+                        gene.gene_model['_id'],
                         gene.gene_name,
                         gene.gene_model['searchable_name'],
                         {'create_cell_data_array': True},
-                    )
+                    ):
+                        data_array_documents.append(data_array_document)
                 else:
-                    status = self.load(
-                        self.matrix.COLLECTION_NAME,
-                        gene.gene_model,
-                        self.matrix.set_data_array,
+                    for data_array_document in self.matrix.set_data_array(
+                        gene.gene_model['_id'],
                         gene.gene_name,
                         gene.gene_model['searchable_name'],
-                    )
-                if status != 0:
-                    self.error_logger.error(
-                        f'Loading gene name {gene.gene_name} failed. Exiting program',
-                        extra=self.extra_log_params,
-                    )
-                    return status
-            return status
+                    ):
+                        data_array_documents.append(data_array_document)
+            load_gene_status, load_gene_results = self.load_expression_file(
+                gene_documents, is_gene_model=True
+            )
+            load_data_array_status, load_data_array_results = self.load_expression_file(
+                data_array_documents
+            )
+            # check load status
+            if load_gene_status and load_data_array_status:
+                # load_<   >_results describes the type and count of operations performed.
+                self.info_logger.info(
+                    f"Bulk Write Results for gene models: {load_gene_results.bulk_api_result}",
+                    extra=self.extra_log_params,
+                )
+                self.info_logger.info(
+                    f"Bulk Write Results for gene data arrays: {load_data_array_results.bulk_api_result}",
+                    extra=self.extra_log_params,
+                )
+                return 0
+            else:
+                self.error_logger.error(
+                    f'Loading expression data failed. Exiting program',
+                    extra=self.extra_log_params,
+                )
+                return 1
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
@@ -360,7 +402,8 @@ class IngestPipeline(object):
     # @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        if self.cell_metadata.validate_format():
+        self.cell_metadata.preprocess()
+        if self.cell_metadata.validate():
             self.info_logger.info(
                 f'Cell metadata file format valid', extra=self.extra_log_params
             )
@@ -377,7 +420,6 @@ class IngestPipeline(object):
                         return 1
 
             self.cell_metadata.reset_file()
-            self.cell_metadata.preprocess()
             for metadataModel in self.cell_metadata.transform():
                 self.info_logger.info(
                     f'Attempting to load cell metadata header : {metadataModel.annot_header}',
@@ -406,7 +448,7 @@ class IngestPipeline(object):
     @my_debug_logger()
     def ingest_cluster(self):
         """Ingests cluster files."""
-        if self.cluster.validate_format():
+        if self.cluster.validate():
             annotation_model = self.cluster.transform()
             status = self.load(
                 self.cluster.COLLECTION_NAME,
@@ -438,13 +480,20 @@ class IngestPipeline(object):
                 return load_status
 
         if self.cell_metadata_file is not None:
-            subsample.prepare_cell_metadata()
-            for data in subsample.subsample('study'):
-                load_status = self.load_subsample(
-                    Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'study'
-                )
-                if load_status != 0:
-                    return load_status
+            try:
+                subsample.prepare_cell_metadata()
+                for data in subsample.subsample('study'):
+                    load_status = self.load_subsample(
+                        Clusters.COLLECTION_NAME,
+                        data,
+                        subsample.set_data_array,
+                        'study',
+                    )
+                    if load_status != 0:
+                        return load_status
+            except Exception as e:
+                self.error_logger.error(e, extra=self.extra_log_params)
+                return 1
         return 0
 
 

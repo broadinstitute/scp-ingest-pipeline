@@ -20,12 +20,6 @@
         "BM01_16dpp_CGGTAAACCATT",
         "BM01_16dpp_AAGCAGTGGTAT"
       ],
-      "is_living: 'nan' is not one of ['yes', 'no', 'unknown']": [
-        "BM01_16dpp_TAAGCAGTGGTA"
-      ],
-      "sample_type: 'direct from donr - fresh' is not one of ['cell line', 'organoid', 'direct from donor - fresh', 'direct from donor - frozen', 'cultured primary cells']": [
-        "BM01_16dpp_CTAAGCAGTGGT"
-      ],
       "'organism_age' is a dependency of 'organism_age__unit'": [
         "BM01_16dpp_CGGTAAACCATT"
       ]
