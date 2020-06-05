@@ -1,0 +1,21 @@
+{
+  "warn": {
+    "ontology": {
+      "organ_region: missing ontology label \"MBA_484682508\" - using \"Area prostriata\" per Mouse Brain Atlas ontology": [
+        "SIMa_M006_CACCAAAGTAGAGATT"
+      ]
+    }
+  },
+  "error": {
+    "convention": {
+      "'organ_region' is a dependency of 'organ_region__ontology_label'": [
+        "VIIIb_F002_CTTCCTTGTGCATCTA"
+      ]
+    },
+    "ontology": {
+      "organ_region: No match found in Allen Mouse Brain Atlas for provided ontology ID: MBA_999999999": ["IXa_M003_AGGGTGACAGTCCCGA"],
+      "organ_region: input ontology_label \"Crus 1, urkinje layer\" does not match Allen Mouse Brain Atlas lookup \"Crus 1, Purkinje layer\" for ontology id \"MBA_000010676\"": ["AN1b_F002_TCTCACGAGAAGGGAT"],
+      "organ_region: input ontology_label \"Paraflocculus, granular layer\" does not match Allen Mouse Brain Atlas lookup \"Copula pyramidis, molecular layer\" for ontology id \"MBA_000010686\"": ["PFa_M001_TCCACCAAGGAACTAT"]
+    }
+  }
+}
