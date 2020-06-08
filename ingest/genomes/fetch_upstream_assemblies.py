@@ -11,7 +11,7 @@ EXAMPLES
 
 python3 fetch_upstream_assemblies.py
 
-TODO (SCP-2470): Move /scripts/genomes (including this module) to scp-ingest-pipeline
+TODO (SCP-2491): Add automated tests and refactor code moved from single_cell_portal
 '''
 
 import argparse

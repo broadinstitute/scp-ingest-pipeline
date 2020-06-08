@@ -1,6 +1,6 @@
 """Write genome annotation metadata locally, and upload transformed GTFs to GCS
 
-TODO (SCP-2470): Move /scripts/genomes (including this module) to scp-ingest-pipeline
+TODO (SCP-2491): Add automated tests and refactor code moved from single_cell_portal
 """
 
 # flake8: noqa F403

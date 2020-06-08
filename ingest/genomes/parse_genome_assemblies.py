@@ -10,7 +10,7 @@ Only assemblies that are chromosome-level or above are included.
 For definitions of assembly-related terms and other domain background, see:
 https://www.ncbi.nlm.nih.gov/assembly/help/#glossary
 
-TODO (SCP-2470): Move /scripts/genomes (including this module) to scp-ingest-pipeline
+TODO (SCP-2491): Add automated tests and refactor code moved from single_cell_portal
 """
 
 # flake8: noqa F403
