@@ -15,6 +15,7 @@ import urllib.request as request
 from google.cloud import storage
 from google.oauth2 import service_account
 
+
 def get_species_list(organisms_path):
     """Get priority species to support in Single Cell Portal
     """
@@ -22,6 +23,7 @@ def get_species_list(organisms_path):
         raw_species_list = [line.strip().split('\t') for line in f.readlines()[1:]]
         species_list = [line for line in raw_species_list if line[0][0] != '#']
     return species_list
+
 
 def fetch_gzipped_content(url, output_path):
     """Fetch remote gzipped content, or read it from disk if cached
@@ -31,14 +33,11 @@ def fetch_gzipped_content(url, output_path):
         # Use locally cached content if available
         with open(output_path, 'rb') as f:
             content = ''
-            #content = gzip.GzipFile(fileobj=f).readlines()
+            # content = gzip.GzipFile(fileobj=f).readlines()
     else:
         print('  Fetching gzipped ' + url)
         # If local report absent, fetch remote content and cache it
-        request_obj = request.Request(
-            url,
-            headers={"Accept-Encoding": "gzip"}
-        )
+        request_obj = request.Request(url, headers={"Accept-Encoding": "gzip"})
         with request.urlopen(request_obj) as response:
             remote_content = gzip.decompress(response.read())
             with open(output_path, 'wb') as f:
@@ -53,6 +52,7 @@ def fetch_gzipped_content(url, output_path):
             content = remote_content
     print('  Returning content for gzipped ' + url)
     return content
+
 
 def fetch_content(url_and_output_paths):
     """Fetch remote content, or read it from disk if cached
@@ -79,10 +79,12 @@ def fetch_content(url_and_output_paths):
         content_dict[output_path] = content
     return content_dict
 
+
 def chunkify(lst, n):
     """Chunk a big list into smaller lists, each of length n
     """
     return [lst[i::n] for i in range(n)]
+
 
 def get_pool_args(urls, output_dir, num_cores):
     """Gets chunked URL and output path arguments for multicore fetch
@@ -101,6 +103,7 @@ def get_pool_args(urls, output_dir, num_cores):
 
     return chunked_url_and_output_paths
 
+
 def batch_fetch(urls, output_dir):
     """Fetch content from multiple URLs (or read cache), in parallel
     """
@@ -118,7 +121,7 @@ def batch_fetch(urls, output_dir):
     #   else:
     #       num_cores = num_cores_raw
 
-    num_cores = 3 # Low multiple is a decent way to keep some memory free
+    num_cores = 3  # Low multiple is a decent way to keep some memory free
     chunked_url_and_output_paths = get_pool_args(urls, output_dir, num_cores)
 
     with multiprocessing.Pool(processes=num_cores) as pool:
@@ -128,6 +131,7 @@ def batch_fetch(urls, output_dir):
                 batch_contents.append([output_path, content])
 
     return batch_contents
+
 
 def get_gcs_storage_client(vault_path):
     """Get Google Cloud Storage storage client for service account
@@ -143,6 +147,7 @@ def get_gcs_storage_client(vault_path):
     storage_client = storage.Client(project_id, credentials=credentials)
 
     return storage_client
+
 
 def copy_gcs_data_from_prod_to_dev(bucket, prod_dir, dev_dir):
     """Copy all GCS prod contents to GCS dev, to ensure they're equivalent

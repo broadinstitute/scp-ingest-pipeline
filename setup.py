@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+
 setup(
     name='scp_ingest_pipeline',
     version='0.1',
@@ -24,8 +25,8 @@ setup(
         'opencensus-context',
         'opencensus-ext-stackdriver',
         'google-cloud-trace',
-	'grpcio',
-	'grpcio-tools'
+        'grpcio',
+        'grpcio-tools',
     ],
     packages=find_packages(),
 )

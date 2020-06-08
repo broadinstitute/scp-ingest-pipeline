@@ -21,14 +21,19 @@ import urllib.request as request
 from .utils import *
 
 parser = argparse.ArgumentParser(
-    description=__doc__, # Use docstring at top of file for --help summary
-    formatter_class=argparse.RawDescriptionHelpFormatter)
-parser.add_argument('--input-dir',
-                    help='Input directory; where to find organisms.tsv.  Default: ./',
-                    default='./')
-parser.add_argument('--output-dir',
-                    help='Directory to send output data to.  Default: output/',
-                    default='output/')
+    description=__doc__,  # Use docstring at top of file for --help summary
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+)
+parser.add_argument(
+    '--input-dir',
+    help='Input directory; where to find organisms.tsv.  Default: ./',
+    default='./',
+)
+parser.add_argument(
+    '--output-dir',
+    help='Directory to send output data to.  Default: output/',
+    default='output/',
+)
 args = parser.parse_args()
 input_dir = args.input_dir
 output_dir = args.output_dir
@@ -75,13 +80,21 @@ def parse_columns(columns):
     organism_name = columns[7]
     assembly_level = columns[11]
     release_type = columns[12]
-    #genome_rep = columns[13]
+    # genome_rep = columns[13]
     release_date = columns[14].replace('/', '-')
     assembly_name = columns[15]
     refseq_accession = columns[17]
 
-    return [release_type, assembly_level, refseq_category, assembly_name, release_date,
-            organism_name, accession, refseq_accession]
+    return [
+        release_type,
+        assembly_level,
+        refseq_category,
+        assembly_name,
+        release_date,
+        organism_name,
+        accession,
+        refseq_accession,
+    ]
 
 
 def is_relevant_assembly(rel_type, asm_level, refseq_category, refseq_acc):
@@ -106,8 +119,16 @@ def is_relevant_assembly(rel_type, asm_level, refseq_category, refseq_acc):
 def update_assemblies(columns, assemblies):
     """ Parse and return all relevant assemblies, by organism
     """
-    (rel_type, asm_level, refseq_category, asm_name, rel_date, org_name,
-        accession, refseq_acc) = parse_columns(columns)
+    (
+        rel_type,
+        asm_level,
+        refseq_category,
+        asm_name,
+        rel_date,
+        org_name,
+        accession,
+        refseq_acc,
+    ) = parse_columns(columns)
 
     if is_relevant_assembly(rel_type, asm_level, refseq_category, refseq_acc):
         if org_name == 'Homo sapiens' and asm_name[:3] != 'GRC':
@@ -133,8 +154,14 @@ def refine_assemblies(assemblies):
         asms = assemblies[scientific_name]
         for asm in asms:
             (assembly_name, accession, release_date) = asm
-            row = [scientific_name, common_name, taxid,
-                assembly_name, accession, release_date]
+            row = [
+                scientific_name,
+                common_name,
+                taxid,
+                assembly_name,
+                accession,
+                release_date,
+            ]
             refined_assemblies.append(row)
 
     return refined_assemblies
@@ -161,8 +188,14 @@ def write_assemblies_to_file(assemblies):
     """ Save assembly metadata to disk
     """
     assemblies_str = []
-    header = ['# scientific_name', 'common_name', 'taxid',
-        'assembly_name', 'assembly_accession', 'assembly_release_date']
+    header = [
+        '# scientific_name',
+        'common_name',
+        'taxid',
+        'assembly_name',
+        'assembly_accession',
+        'assembly_release_date',
+    ]
     assemblies.insert(0, header)
     for assembly in assemblies:
         assemblies_str.append('\t'.join(assembly))
@@ -187,10 +220,10 @@ def parse_genome_assemblies():
     assemblies += historical_assemblies
 
     # Sort assemblies by species priority and assembly release date
+    assemblies = sorted(assemblies, key=lambda assembly: assembly[4], reverse=True)
     assemblies = sorted(
-        assemblies, key=lambda assembly: assembly[4], reverse=True)
-    assemblies = sorted(
-        assemblies, key=lambda assembly: species_names.index(assembly[0]))
+        assemblies, key=lambda assembly: species_names.index(assembly[0])
+    )
 
     write_assemblies_to_file(assemblies)
 

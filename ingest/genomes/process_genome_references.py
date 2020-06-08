@@ -40,33 +40,42 @@ import argparse
 import subprocess
 
 parser = argparse.ArgumentParser(
-    description=__doc__, # Use docstring at top of file for --help summary
-    formatter_class=argparse.RawDescriptionHelpFormatter)
-parser.add_argument('--vault-path',
-                    help='Path in Vault for GCS service account credentials')
-parser.add_argument('--input-dir',
-                    help='Input directory; where to find organisms.tsv.  Default: ./',
-                    default='./')
-parser.add_argument('--remote-output-dir',
-                    help='Remote directory for output in GCS bucket.  ' +
-                    'Default: reference_data_dev/',
-                    default='reference_data_dev/')
-parser.add_argument('--local-output-dir',
-                    help='Local directory for output.  Default: output/',
-                    default='output/')
-parser.add_argument('--gcs-bucket',
-                    help='Name of GCS bucket for upload.  ' +
-                    'Default: reference_data_dev/',
-                    default='fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2')
-parser.add_argument('--copy-data-from-prod-dir',
-                    help='Remote directory from which to copy data into ' +
-                    'remote_output_dir.  Use to ensure test data ' +
-                    'environment is equivalent to production data ' +
-                    'environment.  Default: reference_data/',
-                    default='reference_data/')
-parser.add_argument('--use-cache',
-                    help='Whether to use cache',
-                    action='store_true')
+    description=__doc__,  # Use docstring at top of file for --help summary
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+)
+parser.add_argument(
+    '--vault-path', help='Path in Vault for GCS service account credentials'
+)
+parser.add_argument(
+    '--input-dir',
+    help='Input directory; where to find organisms.tsv.  Default: ./',
+    default='./',
+)
+parser.add_argument(
+    '--remote-output-dir',
+    help='Remote directory for output in GCS bucket.  '
+    + 'Default: reference_data_dev/',
+    default='reference_data_dev/',
+)
+parser.add_argument(
+    '--local-output-dir',
+    help='Local directory for output.  Default: output/',
+    default='output/',
+)
+parser.add_argument(
+    '--gcs-bucket',
+    help='Name of GCS bucket for upload.  ' + 'Default: reference_data_dev/',
+    default='fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2',
+)
+parser.add_argument(
+    '--copy-data-from-prod-dir',
+    help='Remote directory from which to copy data into '
+    + 'remote_output_dir.  Use to ensure test data '
+    + 'environment is equivalent to production data '
+    + 'environment.  Default: reference_data/',
+    default='reference_data/',
+)
+parser.add_argument('--use-cache', help='Whether to use cache', action='store_true')
 args = parser.parse_args()
 
 vault_path = args.vault_path
@@ -83,13 +92,20 @@ assemblies_command = ['python3', 'parse_genome_assemblies.py']
 print('Calling ' + ' '.join(assemblies_command))
 subprocess.call(assemblies_command)
 annotations_command = [
-    'python3', 'parse_genome_annotations.py',
-    '--vault_path', vault_path,
-    '--input_dir', input_dir,
-    '--remote_output_dir', remote_output_dir,
-    '--local_output_dir', local_output_dir,
-    '--gcs_bucket', gcs_bucket,
-    '--copy_data_from_prod_dir', copy_data_from_prod_dir
+    'python3',
+    'parse_genome_annotations.py',
+    '--vault_path',
+    vault_path,
+    '--input_dir',
+    input_dir,
+    '--remote_output_dir',
+    remote_output_dir,
+    '--local_output_dir',
+    local_output_dir,
+    '--gcs_bucket',
+    gcs_bucket,
+    '--copy_data_from_prod_dir',
+    copy_data_from_prod_dir,
 ]
 if use_cache:
     annotations_command.append('--use_cache')

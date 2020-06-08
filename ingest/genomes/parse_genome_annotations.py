@@ -32,7 +32,7 @@ def get_ensembl_metadata():
         assembly = species['assembly']
         strain = species['strain']
 
-        if (taxid == '10090' and strain != 'reference (CL57BL6)'):
+        if taxid == '10090' and strain != 'reference (CL57BL6)':
             # Mouse has multiple annotated assemblies; only use reference assembly
             continue
 
@@ -41,10 +41,11 @@ def get_ensembl_metadata():
             'taxid': taxid,
             'assembly_name': assembly,
             'assembly_accession': species['accession'],
-            'release': str(species['release'])
+            'release': str(species['release']),
         }
 
     return ensembl_metadata
+
 
 def get_ensembl_gtf_urls(ensembl_metadata, scp_species, output_dir):
     """Construct the URL of an Ensembl genome annotation GTF file.
@@ -71,6 +72,7 @@ def get_ensembl_gtf_urls(ensembl_metadata, scp_species, output_dir):
         ensembl_metadata[taxid]['gtf_path'] = output_dir + filename
 
     return [gtf_urls, ensembl_metadata]
+
 
 def transform_ensembl_gtf(gtf_path, ref_dir):
     """Produce sorted GTF and GTF index from Ensembl GTF; needed for igv.js
@@ -103,6 +105,7 @@ def transform_ensembl_gtf(gtf_path, ref_dir):
 
     return outputs
 
+
 def make_local_reference_dirs(ensembl_metadata, scp_species):
     """Create a folder hierarchy on this machine to mirror that planned for GCS
     """
@@ -124,13 +127,16 @@ def make_local_reference_dirs(ensembl_metadata, scp_species):
 
     return ensembl_metadata
 
+
 def fetch_gtfs(scp_species, output_dir='', ensembl_metadata=None):
     """Request GTF files, return their contents and updated Ensembl metadata
     """
     if ensembl_metadata is None:
         ensembl_metadata = get_ensembl_metadata()
 
-    gtf_urls, ensembl_metadata = get_ensembl_gtf_urls(ensembl_metadata, scp_species, output_dir)
+    gtf_urls, ensembl_metadata = get_ensembl_gtf_urls(
+        ensembl_metadata, scp_species, output_dir
+    )
 
     print('Fetching GTFs')
     gtfs = batch_fetch(gtf_urls, output_dir)
@@ -144,7 +150,9 @@ def transform_ensembl_gtfs(ensembl_metadata, scp_species, output_dir):
     """
     transformed_gtfs = []
 
-    gtfs, ensembl_metadata = fetch_gtfs(scp_species, output_dir=output_dir, ensembl_metadata=ensembl_metadata)
+    gtfs, ensembl_metadata = fetch_gtfs(
+        scp_species, output_dir=output_dir, ensembl_metadata=ensembl_metadata
+    )
 
     ensembl_metadata = make_local_reference_dirs(ensembl_metadata)
 
@@ -160,6 +168,7 @@ def transform_ensembl_gtfs(ensembl_metadata, scp_species, output_dir):
 
     return ensembl_metadata
 
+
 def create_parser():
     """Creates parser for input arguments.
     Structuring the argument parsing code like this eases automated testing.
@@ -170,35 +179,45 @@ def create_parser():
         parser: ArgumentParser object
     """
     parser = argparse.ArgumentParser(
-    description=__doc__, # Use docstring at top of file for --help summary
-    formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--use-cache',
-                        help='Whether to use cache',
-                        action='store_true')
-    parser.add_argument('--vault-path',
-                        help='Path in Vault for GCS service account credentials')
-    parser.add_argument('--input-dir',
-                        help='Input directory; where to find organisms.tsv.  Default: ./',
-                        default='./')
-    parser.add_argument('--local-output-dir',
-                        help='Local directory for output.  Default: output/',
-                        default='output/')
-    parser.add_argument('--gcs-bucket',
-                        help='Name of GCS bucket for upload.  ' +
-                        'Default: reference_data_dev/',
-                        default='fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2')
-    parser.add_argument('--remote-output-dir',
-                        help='Remote directory for output in GCS bucket.  ' +
-                        'Default: reference_data_dev/',
-                        default='reference_data_dev/')
-    parser.add_argument('--copy-data-from-prod-dir',
-                        help='Remote directory from which to copy data into ' +
-                        'remote_output_dir.  Use to ensure test data ' +
-                        'environment is equivalent to production data ' +
-                        'environment.  Default: reference_data/',
-                        default='reference_data/')
+        description=__doc__,  # Use docstring at top of file for --help summary
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument('--use-cache', help='Whether to use cache', action='store_true')
+    parser.add_argument(
+        '--vault-path', help='Path in Vault for GCS service account credentials'
+    )
+    parser.add_argument(
+        '--input-dir',
+        help='Input directory; where to find organisms.tsv.  Default: ./',
+        default='./',
+    )
+    parser.add_argument(
+        '--local-output-dir',
+        help='Local directory for output.  Default: output/',
+        default='output/',
+    )
+    parser.add_argument(
+        '--gcs-bucket',
+        help='Name of GCS bucket for upload.  ' + 'Default: reference_data_dev/',
+        default='fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2',
+    )
+    parser.add_argument(
+        '--remote-output-dir',
+        help='Remote directory for output in GCS bucket.  '
+        + 'Default: reference_data_dev/',
+        default='reference_data_dev/',
+    )
+    parser.add_argument(
+        '--copy-data-from-prod-dir',
+        help='Remote directory from which to copy data into '
+        + 'remote_output_dir.  Use to ensure test data '
+        + 'environment is equivalent to production data '
+        + 'environment.  Default: reference_data/',
+        default='reference_data/',
+    )
 
     return parser
+
 
 def main():
     """Enables running this module via CLI
@@ -220,10 +239,12 @@ def main():
         'gcs_bucket': gcs_bucket,
         'output_dir': output_dir,
         'remote_prod_dir': remote_prod_dir,
-        'remote_output_dir': remote_output_dir
+        'remote_output_dir': remote_output_dir,
     }
 
     ensembl_metadata = get_ensembl_metadata()
     ensembl_metadata = transform_ensembl_gtfs(ensembl_metadata, scp_species, output_dir)
-    ensembl_metadata = upload_ensembl_gtf_products(ensembl_metadata, scp_species, context)
+    ensembl_metadata = upload_ensembl_gtf_products(
+        ensembl_metadata, scp_species, context
+    )
     record_annotation_metadata(ensembl_metadata, scp_species)

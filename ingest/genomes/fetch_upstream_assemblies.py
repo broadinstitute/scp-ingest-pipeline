@@ -21,11 +21,9 @@ import os
 import urllib.request as request
 
 parser = argparse.ArgumentParser(
-    description=__doc__,
-    formatter_class=argparse.RawDescriptionHelpFormatter)
-parser.add_argument('--output-dir',
-                    help='Directory to send output data to',
-                    default='')
+    description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+)
+parser.add_argument('--output-dir', help='Directory to send output data to', default='')
 
 args = parser.parse_args()
 output_dir = args.output_dir
@@ -38,6 +36,7 @@ asms_path_historical = 'assembly_summary_historical.txt'
 
 eutils_base = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils'
 esummary_base = eutils_base + '/esummary.fcgi'
+
 
 def fetch_asm_summary(group, group_asms_path, group_asms_historical_path):
     '''Retrieve NCBI assembly summary TSV file by organism group
@@ -65,6 +64,7 @@ def fetch_asm_summary(group, group_asms_path, group_asms_historical_path):
             with open(path, 'w') as f:
                 f.write(data)
 
+
 def get_taxid_chunks(taxids):
     '''Return taxids in comma-delimited lists of 500
     Needed because NCBI EUtils limits parameters to 500 values each.
@@ -87,14 +87,15 @@ def get_taxid_chunks(taxids):
 
     return taxid_chunks
 
+
 def add_common_names(asms):
     '''Add organism common names (e.g. human) to genome assembly objects
     '''
     # NCBI Taxonomy identifiers, an organism ID.  Human: 9606, etc.
     taxids = [asm['taxid'] for asm in asms]
-    taxids = list(set(taxids)) # deduplicate
+    taxids = list(set(taxids))  # deduplicate
 
-    names_by_taxid  = {}
+    names_by_taxid = {}
 
     taxid_chunks = get_taxid_chunks(taxids)
 
@@ -103,7 +104,7 @@ def add_common_names(asms):
         with request.urlopen(eutils_url) as response:
             data = json.loads(response.read().decode('utf-8'))
         taxid_json = data['result']
-        del taxid_json['uids'] # Remove placeholder from relevant data
+        del taxid_json['uids']  # Remove placeholder from relevant data
 
         for taxid in taxid_json:
             names_by_taxid[taxid] = taxid_json[taxid]['commonname']
@@ -115,6 +116,7 @@ def add_common_names(asms):
         new_asms.append(new_asm)
 
     return new_asms
+
 
 def parse_current_assemblies(group, group_asms_path):
     ''' Parse current genome assemblies
@@ -140,9 +142,9 @@ def parse_current_assemblies(group, group_asms_path):
         categories = ['representative genome', 'reference genome']
 
         if (
-            asm['assembly_level'] != 'Chromosome' or
-            asm['release_type'] != 'Major' or
-            asm['refseq_category'] not in categories
+            asm['assembly_level'] != 'Chromosome'
+            or asm['release_type'] != 'Major'
+            or asm['refseq_category'] not in categories
         ):
             continue
 
@@ -151,6 +153,7 @@ def parse_current_assemblies(group, group_asms_path):
         asms.append(asm)
 
     return asms
+
 
 def parse_historical_assemblies(group, group_asms_historical_path):
     asms = []
@@ -166,9 +169,9 @@ def parse_historical_assemblies(group, group_asms_historical_path):
         asm = dict(zip(headers, columns))
 
         if (
-            asm['assembly_level'] != 'Chromosome' or
-            asm['release_type'] != 'Major' or
-            asm['submitter'] != 'Genome Reference Consortium'
+            asm['assembly_level'] != 'Chromosome'
+            or asm['release_type'] != 'Major'
+            or asm['submitter'] != 'Genome Reference Consortium'
         ):
             continue
 
@@ -177,6 +180,7 @@ def parse_historical_assemblies(group, group_asms_historical_path):
         asms.append(asm)
 
     return asms
+
 
 def get_assemblies():
     '''Fetch metadata on genome assemblies from NCBI, and write it locally
@@ -194,7 +198,7 @@ def get_assemblies():
         'plant',
         'protozoa',
         'vertebrate_mammalian',
-        'vertebrate_other'
+        'vertebrate_other',
     ]
 
     asms = []
@@ -206,8 +210,7 @@ def get_assemblies():
         fetch_asm_summary(group, group_asms_path, group_asms_historical_path)
 
         group_asms += parse_current_assemblies(group, group_asms_path)
-        group_asms +=\
-            parse_historical_assemblies(group, group_asms_historical_path)
+        group_asms += parse_historical_assemblies(group, group_asms_historical_path)
 
         group_asms = sorted(group_asms, key=lambda asm: asm['organism_name'])
         asms += group_asms
@@ -215,6 +218,7 @@ def get_assemblies():
     asms = add_common_names(asms)
 
     return asms
+
 
 asms = get_assemblies()
 
@@ -224,7 +228,7 @@ output_headers = [
     'organism_name',
     'organism_common_name',
     'asm_name',
-    'assembly_accession'
+    'assembly_accession',
 ]
 for asm in asms:
     asm_entry = [asm[header] for header in output_headers]

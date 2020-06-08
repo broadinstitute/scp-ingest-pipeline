@@ -5,6 +5,7 @@ TODO (SCP-2470): Move /scripts/genomes (including this module) to scp-ingest-pip
 
 from .utils import *
 
+
 def upload_gtf_product(transformed_gtf, bucket, existing_names):
     """Execute upload of a GTF product to GCS
     """
@@ -54,8 +55,7 @@ def upload_ensembl_gtf_products(ensembl_metadata, scp_species, config):
         transformed_gtfs = organism_metadata['transformed_gtfs']
 
         for transformed_gtf in transformed_gtfs:
-            target_name = upload_gtf_product(transformed_gtf, bucket,
-                existing_names)
+            target_name = upload_gtf_product(transformed_gtf, bucket, existing_names)
 
             # Add GTF product URLs to metadata
             origin = 'https://storage.cloud.google.com'
@@ -153,7 +153,7 @@ def record_annotation_metadata(ensembl_metadata, scp_species):
         'annotation_name',
         'annotation_release_date',
         'annotation_url',
-        'annotation_index_url'
+        'annotation_index_url',
     ]
     header = '\t'.join(assembly_headers + annot_headers) + '\n'
     new_metadata_ref = header + '\n'.join(new_metadata_ref)
