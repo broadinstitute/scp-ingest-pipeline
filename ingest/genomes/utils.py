@@ -9,7 +9,6 @@ import multiprocessing
 import os
 import shutil
 import subprocess
-import time
 import urllib.request as request
 
 from google.cloud import storage
