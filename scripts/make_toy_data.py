@@ -42,101 +42,92 @@ scp_species = [['Homo sapiens', 'human', '9606']]
 args = argparse.ArgumentParser(
     prog='make_toy_data.py',
     description=__doc__,
-    formatter_class=argparse.RawDescriptionHelpFormatter
+    formatter_class=argparse.RawDescriptionHelpFormatter,
 )
 args.add_argument(
-    '--num-files', default=3, type=int,
-    help='Number of toy data files to output'
+    '--num-files', default=3, type=int, help='Number of toy data files to output'
 )
 args.add_argument(
-    '--filename-leaf', default='toy',
+    '--filename-leaf',
+    default='toy',
     help=(
-        '"Leaf" to distinguish this file set from others.  ' +
-        'File naming pattern: AB_<leaf>.txt, CD_<leaf>.txt, ...'
-    )
+        '"Leaf" to distinguish this file set from others.  '
+        + 'File naming pattern: AB_<leaf>.txt, CD_<leaf>.txt, ...'
+    ),
 )
 args.add_argument(
-    '--size-per-file', default="25_MiB",
+    '--size-per-file',
+    default="25_MiB",
     help=(
-        '<filesize_value>_<filesize_unit_symbol>, ' +
-        'e.g. 300_MiB means 300 mebibytes per file.'
-    )
+        '<filesize_value>_<filesize_unit_symbol>, '
+        + 'e.g. 300_MiB means 300 mebibytes per file.'
+    ),
 )
 args.add_argument(
-    '--gzip', action='store_true', dest='gzip_files',
-    help='Flag: compress files with gzip?'
+    '--gzip',
+    action='store_true',
+    dest='gzip_files',
+    help='Flag: compress files with gzip?',
 )
 args.add_argument(
-    '--num-cores', default=None, type=int,
+    '--num-cores',
+    default=None,
+    type=int,
     help=(
-        'Number of CPUs to use.  ' +
-        'Defaults to number of CPUs in machine, minus 1 (if multicore).'
-    )
+        'Number of CPUs to use.  '
+        + 'Defaults to number of CPUs in machine, minus 1 (if multicore).'
+    ),
 )
 args.add_argument(
-    '--matrix-types', nargs='+', choices=['dense', 'sparse'], default=['dense'],
+    '--matrix-types',
+    nargs='+',
+    choices=['dense', 'sparse'],
+    default=['dense'],
+    help=('Format(s) of output expression matrix files.'),
+)
+args.add_argument(
+    '--crush', default=0.8, type=float, help=('Fraction of cells with zero expression')
+)
+args.add_argument('--num-genes', default=80, type=int, help=('Number of genes (rows)'))
+args.add_argument(
+    '--num-cells', default=None, type=int, help=('Number of cells (columns)')
+)
+args.add_argument(
+    '--preloaded-genes',
+    default=None,
     help=(
-        'Format(s) of output expression matrix files.'
-    )
+        'A preloaded file of gene names (e.g. gene TSV file from sparse '
+        + 'matrix output).  Two possible use cases:'
+        + ''
+        + 'Use case 1: Generate a matrix that has more genes than the most '
+        + 'current human Ensembl annotation. (make_toy_data.py currently '
+        + 'limits the generated toy matrix to the number of genes in '
+        + 'the fetched human Ensembl annotation). '
+        + ''
+        + 'Use case 2: simulate/replicate visualization with a specific list '
+        + 'of gene names (e.g. non-human gene names or an expression matrix '
+        + 'for nonRNAseq data, scATAC-seq "gene names" would be genome '
+        + 'coordinate ranges) for troubleshooting.'
+    ),
 )
 args.add_argument(
-    '--crush', default=0.8, type=float,
-    help=(
-        'Fraction of cells with zero expression'
-    )
-)
-args.add_argument(
-    '--num-genes', default=80, type=int,
-    help=(
-        'Number of genes (rows)'
-    )
-)
-args.add_argument(
-    '--num-cells', default=None, type=int,
-    help=(
-        'Number of cells (columns)'
-    )
-)
-args.add_argument(
-    '--preloaded-genes', default=None,
-    help=(
-        'A preloaded file of gene names (e.g. gene TSV file from sparse ' +
-        'matrix output).  Two possible use cases:' +
-        '' +
-        'Use case 1: Generate a matrix that has more genes than the most ' +
-        'current human Ensembl annotation. (make_toy_data.py currently ' +
-        'limits the generated toy matrix to the number of genes in ' +
-        'the fetched human Ensembl annotation). ' +
-        '' +
-        'Use case 2: simulate/replicate visualization with a specific list ' +
-        'of gene names (e.g. non-human gene names or an expression matrix ' +
-        'for nonRNAseq data, scATAC-seq "gene names" would be genome ' +
-        'coordinate ranges) for troubleshooting.'
-    )
-)
-args.add_argument(
-    '--preloaded-barcodes', default=None,
+    '--preloaded-barcodes',
+    default=None,
     help=(
         'A preloaded file of barcode names (e.g. barcodes TSV file from sparse matrix output)'
-    )
+    ),
 )
 args.add_argument(
-    '--max-write-size', default=8e7, type=float,
-    help=(
-        'Estimated maximum chunk size for writes'
-    )
+    '--max-write-size',
+    default=8e7,
+    type=float,
+    help=('Estimated maximum chunk size for writes'),
 )
 args.add_argument(
-    '--random-seed', default=0, type=float,
-    help=(
-        'Random seed for number generation'
-    )
+    '--random-seed', default=0, type=float, help=('Random seed for number generation')
 )
 args.add_argument(
-    '--visualize', action='store_true',
-    help=(
-        'Generate cluster and metadata files'
-    )
+    '--visualize', action='store_true', help=('Generate cluster and metadata files')
 )
 
 # load arg parser
@@ -164,6 +155,7 @@ sparse = 'sparse' in matrix_types
 # set the seed for number generation
 np.random.seed(random_seed)
 
+
 def split_seq(li, cols=5):
     """
     Chunk an array into an array of len cols + 1 (last element is remainder elements)
@@ -178,6 +170,7 @@ def split_seq(li, cols=5):
         stop = start + len(li[i::cols])
         yield li[start:stop]
         start = stop
+
 
 def fetch_genes():
     """
@@ -195,11 +188,18 @@ def fetch_genes():
         with open(preloaded_genes) as f:
             # read the genes and gene ids
             lines = f.readlines()
-            ids = [[l.strip() for l in line.split()][0] for line in lines if len(line) > 2]
-            genes = [[l.strip() for l in line.split()][1] for line in lines if len(line) > 2]
+            ids = [
+                [l.strip() for l in line.split()][0] for line in lines if len(line) > 2
+            ]
+            genes = [
+                [l.strip() for l in line.split()][1] for line in lines if len(line) > 2
+            ]
             # if --num_genes param is higher than the number of genes you tried to preload, lower it
             if num_rows > len(genes):
-                print('Not enough genes in preloaded file, reducing gene number to', len(genes))
+                print(
+                    'Not enough genes in preloaded file, reducing gene number to',
+                    len(genes),
+                )
                 num_rows = len(genes)
             genes = genes[:num_rows]
             ids = ids[:num_rows]
@@ -213,11 +213,13 @@ def fetch_genes():
             lines = f.readlines()
 
         for line in lines:
-            if line[0] == '#': continue
+            if line[0] == '#':
+                continue
             columns = line.split('\t')
-            feature_type = columns[2] # gene, transcript, exon, etc.
+            feature_type = columns[2]  # gene, transcript, exon, etc.
 
-            if feature_type != 'gene': continue
+            if feature_type != 'gene':
+                continue
 
             raw_attrs = [x.strip() for x in columns[8].split(';')]
             raw_attrs[-1] = raw_attrs[-1].replace('";', '')
@@ -225,7 +227,8 @@ def fetch_genes():
             attrs = {}
             for raw_attr in raw_attrs:
                 split_attr = raw_attr.split()
-                if len(split_attr) < 2: continue
+                if len(split_attr) < 2:
+                    continue
                 attrs[split_attr[0]] = split_attr[1].strip('"')
 
             gene_id = attrs['gene_id']
@@ -241,6 +244,7 @@ def fetch_genes():
 
     return genes[:num_rows], ['FAKE00' + str(i) for i in range(num_rows)]
 
+
 def fetch_cells(prefix):
     """
     Retrieve/ Generate cell names
@@ -255,7 +259,7 @@ def fetch_cells(prefix):
 
     global num_columns
     if not num_columns:
-        num_columns = int(bytes_per_file/bytes_per_column)
+        num_columns = int(bytes_per_file / bytes_per_column)
     # Generate header
     barcodes = []
     header = 'GENE\t'
@@ -269,13 +273,19 @@ def fetch_cells(prefix):
             if num_columns > len(barcodes):
                 # if user param --num-barcodes is higher than the number in the
                 # preloaded file, drop it down
-                print('Not enough barcodes in preloaded file, reducing barcode number to', len(barcodes))
+                print(
+                    'Not enough barcodes in preloaded file, reducing barcode number to',
+                    len(barcodes),
+                )
                 num_columns = len(barcodes)
             if visualize and num_columns % 8 != 0:
                 # if we want to create cluster files, we have 8 clusters, so
                 # drop down the number of barcodes to a multiple of 8
                 num_columns -= num_columns % 8
-                print('Visualization relies on having 8 subclusters, reducing number of cells/columns to', num_columns)
+                print(
+                    'Visualization relies on having 8 subclusters, reducing number of cells/columns to',
+                    num_columns,
+                )
             barcodes = barcodes[:num_columns]
             print('Preloaded', '{:,}'.format(len(barcodes)), 'cells')
             # make the header
@@ -283,8 +293,11 @@ def fetch_cells(prefix):
     else:
         # if no preloaded barcodes, randomly generate them
         if visualize and num_columns % 8 != 0:
-                num_columns -= num_columns % 8
-                print('Visualization relies on having 8 subclusters, reducing number of cells/columns to', num_columns)
+            num_columns -= num_columns % 8
+            print(
+                'Visualization relies on having 8 subclusters, reducing number of cells/columns to',
+                num_columns,
+            )
         for i in range(num_columns):
             random_string = ''
             for j in range(1, 16):
@@ -294,11 +307,7 @@ def fetch_cells(prefix):
                 random_string += letters[ri1]
             ri2 = str(randrange(1, 9))
             ri3 = str(randrange(1, 9))
-            barcode = (
-                'Foobar' + prefix +
-                ri2 + '_BazMoo_' +
-                ri3 + random_string + '-1'
-            )
+            barcode = 'Foobar' + prefix + ri2 + '_BazMoo_' + ri3 + random_string + '-1'
             if sparse:
                 barcodes = barcodes + [barcode]
             header += barcode + '\t'
@@ -337,10 +346,14 @@ def get_signature_content(prefix):
         else:
             # Random values with 15-digit precision, from real data
             exp_values = [
-                0, 0.319394022678176,
-                0.942319217427033, 1.51898924628139,
-                0.935021832385126, 1.1253079191313,
-                1.98297962349834, 2.65073109135182
+                0,
+                0.319394022678176,
+                0.942319217427033,
+                1.51898924628139,
+                0.935021832385126,
+                1.1253079191313,
+                1.98297962349834,
+                2.65073109135182,
             ]
 
         # the probability that it is zero is whatever the user provided in
@@ -348,8 +361,14 @@ def get_signature_content(prefix):
         prob_not_zero = (1 - crush) / 7
         # probability list for np.random.choice
         expr_probs = [
-            crush, prob_not_zero, prob_not_zero, prob_not_zero,
-            prob_not_zero, prob_not_zero, prob_not_zero, prob_not_zero
+            crush,
+            prob_not_zero,
+            prob_not_zero,
+            prob_not_zero,
+            prob_not_zero,
+            prob_not_zero,
+            prob_not_zero,
+            prob_not_zero,
         ]
         # Generate values below header
         values = header + '\n'
@@ -359,7 +378,9 @@ def get_signature_content(prefix):
             expr = []
             gene_row = np.asarray([group_of_genes])
             # generate random scores with dimension (num_genes_in_chunk, num_cells)
-            scores = np.random.choice(exp_values, size=(len(group_of_genes), num_columns), p=expr_probs)
+            scores = np.random.choice(
+                exp_values, size=(len(group_of_genes), num_columns), p=expr_probs
+            )
             # generate the dense matrix rows
             rows = np.concatenate((gene_row.T, scores), axis=1)
             joined_row = ['\t'.join(row) for row in rows]
@@ -396,9 +417,13 @@ def generate_metadata_and_cluster(barcodes):
     cluster_length = bar_length / 2
     subcluster_length = bar_length / 8
     cluster_groups = np.repeat(clusters, cluster_length).reshape(bar_length, 1)
-    sub_cluster_groups = np.repeat(subclusters, subcluster_length).reshape(bar_length, 1)
+    sub_cluster_groups = np.repeat(subclusters, subcluster_length).reshape(
+        bar_length, 1
+    )
     # metadata table rows are barcode, cluster_group, sub_cluster_group
-    metadata_table = np.concatenate((barcodes_arr, cluster_groups, sub_cluster_groups), axis=1)
+    metadata_table = np.concatenate(
+        (barcodes_arr, cluster_groups, sub_cluster_groups), axis=1
+    )
 
     print('Generating cluster coordinates')
     # generate random coordinate values, but accurately, so P in a dimension
@@ -416,8 +441,12 @@ def generate_metadata_and_cluster(barcodes):
     cluster_table = np.concatenate((barcodes_arr, cluster_coords), axis=1)
     # join the tables into strings (tab seperated) and add the proper headers
     print('Generating cluster and metadata strings')
-    metadata_string = metadata_header + '\n'.join(['\t'.join(row) for row in metadata_table])
-    cluster_string = cluster_header + '\n'.join(['\t'.join(row) for row in cluster_table])
+    metadata_string = metadata_header + '\n'.join(
+        ['\t'.join(row) for row in metadata_table]
+    )
+    cluster_string = cluster_header + '\n'.join(
+        ['\t'.join(row) for row in cluster_table]
+    )
     return metadata_string, cluster_string
 
 
@@ -483,7 +512,14 @@ def pool_processing(prefix):
         # iterate through the generator
         # Generate sparse string header
         sparse_str = '%%MatrixMarket matrix coordinate integer general\n'
-        sparse_str += ' '.join([str(num_rows), str(bar_len), str(round(num_rows*num_columns*(1-crush))), '\n'])
+        sparse_str += ' '.join(
+            [
+                str(num_rows),
+                str(bar_len),
+                str(round(num_rows * num_columns * (1 - crush))),
+                '\n',
+            ]
+        )
         # the row generator returns content (string of joined dense matrix
         # rows) and exprs (1d array of random expression scores that is gene,
         # barcode sorted)
@@ -506,13 +542,18 @@ def pool_processing(prefix):
                         # only write the values with actual expression
                         if expr > 0:
                             # generate the gene num and barcode numbers
-                            gene_num = str(((i+exprs_written) // num_columns) + 1)
+                            gene_num = str(((i + exprs_written) // num_columns) + 1)
                             barcode_num = str((i % num_columns) + 1)
                             # join the row by space and add it to the string to write
                             line = ' '.join([gene_num, barcode_num, str(expr) + '\n'])
                             sparse_str += line
                     # write the multiple rows strings
-                    print('Writing', '{:,}'.format(i+1), 'scores, @ size:', '{:,}'.format(len(sparse_str)))
+                    print(
+                        'Writing',
+                        '{:,}'.format(i + 1),
+                        'scores, @ size:',
+                        '{:,}'.format(len(sparse_str)),
+                    )
                     m.write(sparse_str)
                     # reset the string
                     sparse_str = ''
@@ -554,7 +595,7 @@ def parse_filesize_string(filesize_string):
     filesize_unit_symbol = fss[1][0]  # e.g. 'M'
 
     # Unit prefix: binary multiplier (in scientific E-notation)
-    unit_multipliers = {'': 1, 'K': 1.024E3, 'M': 1.024E6, 'G': 1.024E9, 'T': 1.024E12}
+    unit_multipliers = {'': 1, 'K': 1.024e3, 'M': 1.024e6, 'G': 1.024e9, 'T': 1.024e12}
     filesize_unit_multiplier = unit_multipliers[filesize_unit_symbol]
 
     num_bytes = int(filesize_value * filesize_unit_multiplier)
@@ -570,8 +611,8 @@ genes, ids = fetch_genes()
 # Available prefix characters for output toy data file names
 alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 for i in range(0, num_files):
-    index = i*2
-    prefix = alphabet[index:index+2]   # e.g. 'AB' or 'CD'
+    index = i * 2
+    prefix = alphabet[index : index + 2]  # e.g. 'AB' or 'CD'
     prefixes.append(prefix)
 
 if num_cores is None:
