@@ -50,12 +50,12 @@ def fetch_asm_summary(group, group_asms_path, group_asms_historical_path):
     }
     for version in path_versions:
         path = path_versions[version]
-        if version is 'current':
+        if version == 'current':
             leaf = f'{group}/{asms_path}'
         else:
             leaf = f'{group}/{asms_path_historical}'
 
-        if os.path.exists(path) == False:
+        if os.path.exists(path) is False:
             # Example URL:
             # https://ftp.ncbi.nlm.nih.gov/genomes/genbank/vertebrate_mammalian/assembly_summary.txt
             url = f'https://ftp.ncbi.nlm.nih.gov/genomes/genbank/{leaf}'
@@ -230,6 +230,7 @@ output_headers = [
     'asm_name',
     'assembly_accession',
 ]
+
 for asm in asms:
     asm_entry = [asm[header] for header in output_headers]
     asm_list.append('\t'.join(asm_entry))

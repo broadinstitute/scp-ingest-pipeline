@@ -13,6 +13,8 @@ https://www.ncbi.nlm.nih.gov/assembly/help/#glossary
 TODO (SCP-2470): Move /scripts/genomes (including this module) to scp-ingest-pipeline
 """
 
+# flake8: noqa F403
+
 import argparse
 from functools import cmp_to_key
 import os

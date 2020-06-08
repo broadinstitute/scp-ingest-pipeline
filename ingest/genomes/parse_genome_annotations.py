@@ -9,7 +9,7 @@ import os
 import subprocess
 import urllib.request as request
 
-print('in parse_genome_annotations.py')
+# flake8: noqa F403
 
 from .persist_annotation_metadata import *
 from .utils import *

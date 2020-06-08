@@ -3,6 +3,8 @@
 TODO (SCP-2470): Move /scripts/genomes (including this module) to scp-ingest-pipeline
 """
 
+# flake8: noqa F403
+
 from .utils import *
 
 
