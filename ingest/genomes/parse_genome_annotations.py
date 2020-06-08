@@ -6,14 +6,14 @@ TODO (SCP-2470): Move /scripts/genomes (including this module) to scp-ingest-pip
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import urllib.request as request
 
 print('in parse_genome_annotations.py')
 
-from persist_annotation_metadata import *
-from utils import *
+from .persist_annotation_metadata import *
+from .utils import *
+
 
 def get_ensembl_metadata():
     """Get organism, assembly, and annotation release metadata from Ensembl

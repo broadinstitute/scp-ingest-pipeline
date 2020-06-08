@@ -3,7 +3,7 @@
 TODO (SCP-2470): Move /scripts/genomes (including this module) to scp-ingest-pipeline
 """
 
-from utils import *
+from .utils import *
 
 def upload_gtf_product(transformed_gtf, bucket, existing_names):
     """Execute upload of a GTF product to GCS

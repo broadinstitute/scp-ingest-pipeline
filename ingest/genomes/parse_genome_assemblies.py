@@ -18,7 +18,7 @@ from functools import cmp_to_key
 import os
 import urllib.request as request
 
-from utils import *
+from .utils import *
 
 parser = argparse.ArgumentParser(
     description=__doc__, # Use docstring at top of file for --help summary
