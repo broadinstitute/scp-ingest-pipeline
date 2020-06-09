@@ -3,13 +3,16 @@ tests/issues.json
 # Ignore Python runtime assets
 env/
 __pycache__/
-
+dist
+build
+*egg-info*
 
 # Ignore editor configuration
 .idea/
 .vscode/
 *.sublime-project
 *.sublime-workspace
+@.code-workspace
 
 # Ignore other detritus
 *.log
