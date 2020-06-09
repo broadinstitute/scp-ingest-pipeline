@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setup(
     name='scp-ingest-pipeline',
-    version='1.3.7rc1',
+    version='1.3.7',
     description='ETL pipeline for single-cell RNA-seq data',
     long_description=long_description,
     long_description_content_type='text/markdown',
