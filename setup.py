@@ -4,8 +4,8 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name='scp-ingest-pipe',
-    version='1.3.6rc1',
+    name='scp-ingest-pipeline',
+    version='1.3.7rc1',
     description='ETL pipeline for single-cell RNA-seq data',
     long_description=long_description,
     long_description_content_type="text/markdown",
