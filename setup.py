@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-with open("README.md", "r") as fh:
+with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setup(
@@ -8,7 +8,8 @@ setup(
     version='1.3.7rc1',
     description='ETL pipeline for single-cell RNA-seq data',
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type='text/markdown',
+    url='https://github.com/broadinstitute/scp-ingest-pipeline',
     author='Single Cell Portal team',
     author_email='scp-support@broadinstitute.zendesk.com',
     install_requires=[
