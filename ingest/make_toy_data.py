@@ -234,6 +234,10 @@ def fetch_genes():
             gene_id = attrs['gene_id']
             gene_name = attrs['gene_name'] if 'gene_name' in attrs else gene_id
 
+            if gene_name in genes:
+                print(f'Duplicate gene name: {gene_name}, skipping')
+                continue
+
             genes.append(gene_name)
 
         # if --num-genes param is greater than the number of genes you tried to
