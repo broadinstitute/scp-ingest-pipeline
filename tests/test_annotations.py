@@ -30,7 +30,7 @@ from annotations import Annotations
 
 class TestAnnotations(unittest.TestCase):
     CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
-    CELL_METADATA_PATH = '../tests/data/valid_no_array_v2.0.0.tsv'
+    CELL_METADATA_PATH = '../tests/data/valid_no_array_v2.0.0.txt'
 
     EXPONENT = -3
 
