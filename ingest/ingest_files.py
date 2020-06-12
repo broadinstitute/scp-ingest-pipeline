@@ -278,12 +278,19 @@ class IngestFiles:
         else:
             delimiter = None
         # Determine if file is tsv or csv
-        csv_dialect = csv.Sniffer().sniff(
-            open_file_object.read(1024), delimiters=delimiter
-        )
-        csv_dialect.skipinitialspace = True
-        open_file_object.seek(0)
-        return csv.reader(open_file_object, csv_dialect)
+        # reading single line of file instead of first 1024 bytes to avoid issues with delimiter detection
+        # reference: https://stackoverflow.com/questions/35756682/getting-csv-sniffer-to-work-with-quoted-values
+        try:
+            csv_dialect = csv.Sniffer().sniff(
+                open_file_object.readline(), delimiters=delimiter
+            )
+            csv_dialect.skipinitialspace = True
+            open_file_object.seek(0)
+            return csv.reader(open_file_object, csv_dialect)
+        except:
+            raise ValueError(
+                f'Could not determine delimiter. Please save file with appropriate suffix (.tsv or .csv) and try again.'
+            )
 
     def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
