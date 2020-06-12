@@ -287,7 +287,7 @@ class IngestFiles:
             csv_dialect.skipinitialspace = True
             open_file_object.seek(0)
             return csv.reader(open_file_object, csv_dialect)
-        except:
+        except Exception:
             raise ValueError(
                 f'Could not determine delimiter. Please save file with appropriate suffix (.tsv or .csv) and try again.'
             )
