@@ -60,9 +60,11 @@ class TestAnnotations(unittest.TestCase):
             assert isinstance(header, str)
             annot_type = column[1]
             if annot_type == 'group':
-                assert (
-                    self.df.file[column].dtype != np.number
-                ), "Group annotations must be string values"
+                # corrected testings of dataframe column dtype, using != always returns True
+                assertFalse(  # noqa F821
+                    np.issubdtype(self.df.file[column].dtypes, np.number),
+                    "Group annotations must be string values",
+                )
 
     def test_merge_df(self):
         self.df.preprocess()
@@ -73,7 +75,6 @@ class TestAnnotations(unittest.TestCase):
         cell_metadata_df.preprocess()
         cell_names_cell_metadata_df = np.asarray(cell_metadata_df.file['NAME'])
         cell_names_cluster_df = np.asarray(self.df.file['NAME'])
-        print(f'cell_names_cluster_df:{cell_names_cluster_df}')
         # Cell names found in both cluster and metadata files
         common_cell_names = cell_names_cluster_df[
             np.isin(cell_names_cluster_df, cell_names_cell_metadata_df)
