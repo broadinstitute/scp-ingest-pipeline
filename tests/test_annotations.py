@@ -61,7 +61,7 @@ class TestAnnotations(unittest.TestCase):
             annot_type = column[1]
             if annot_type == 'group':
                 # corrected testings of dataframe column dtype, using != always returns True
-                assertFalse(  # noqa F821
+                self.assertFalse(
                     np.issubdtype(self.df.file[column].dtypes, np.number),
                     "Group annotations must be string values",
                 )
