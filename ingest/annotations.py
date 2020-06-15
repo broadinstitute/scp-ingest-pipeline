@@ -35,8 +35,12 @@ class Annotations(IngestFiles):
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         csv_file, self.file_handle = self.open_file(self.file_path)
-        # Remove white spaces, quotes, and lowercase
-        self.headers = [header.strip().strip('\"').lower() for header in next(csv_file)]
+        # Remove white spaces, quotes (only lowercase annot_types)
+        self.headers = [header.strip().strip('\"') for header in next(csv_file)]
+        # Lowercase coordinate headers, expected for df merge
+        for i, header in enumerate(self.headers):
+            if header in ['X', 'Y', 'Z']:
+                self.headers[i] = self.headers[i].lower()
         self.annot_types = [type.strip().strip('\"').lower() for type in next(csv_file)]
 
     def reset_file(self):

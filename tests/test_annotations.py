@@ -64,6 +64,19 @@ class TestAnnotations(unittest.TestCase):
                     self.df.file[column].dtype != np.number
                 ), "Group annotations must be string values"
 
+    def test_non_coordinate_case_integrity(self):
+        # if headers of this file change, the reference for the assert needs to be updated
+        self.df.preprocess()
+        assert self.df.headers == [
+            'NAME',
+            'x',
+            'y',
+            'z',
+            'CLUSTER',
+            'SUBCLUSTER',
+            '1',
+        ], 'preprocess should only downcase coordinate header columns'
+
     def test_merge_df(self):
         self.df.preprocess()
         cell_metadata_df = Annotations(
@@ -71,9 +84,9 @@ class TestAnnotations(unittest.TestCase):
             ['text/csv', 'text/plain', 'text/tab-separated-values'],
         )
         cell_metadata_df.preprocess()
+        self.df.determine_coordinates_and_cell_names()
         cell_names_cell_metadata_df = np.asarray(cell_metadata_df.file['NAME'])
         cell_names_cluster_df = np.asarray(self.df.file['NAME'])
-        print(f'cell_names_cluster_df:{cell_names_cluster_df}')
         # Cell names found in both cluster and metadata files
         common_cell_names = cell_names_cluster_df[
             np.isin(cell_names_cluster_df, cell_names_cell_metadata_df)
