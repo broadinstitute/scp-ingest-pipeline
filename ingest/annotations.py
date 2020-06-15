@@ -37,10 +37,6 @@ class Annotations(IngestFiles):
         csv_file, self.file_handle = self.open_file(self.file_path)
         # Remove white spaces, quotes (only lowercase annot_types)
         self.headers = [header.strip().strip('\"') for header in next(csv_file)]
-        # Lowercase coordinate headers, expected for df merge
-        for i, header in enumerate(self.headers):
-            if header in ['X', 'Y', 'Z']:
-                self.headers[i] = self.headers[i].lower()
         self.annot_types = [type.strip().strip('\"').lower() for type in next(csv_file)]
 
     def reset_file(self):
