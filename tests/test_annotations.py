@@ -30,7 +30,7 @@ from annotations import Annotations
 
 class TestAnnotations(unittest.TestCase):
     CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
-    CELL_METADATA_PATH = '../tests/data/valid_no_array_v2.0.0.tsv'
+    CELL_METADATA_PATH = '../tests/data/valid_no_array_v2.0.0.txt'
 
     EXPONENT = -3
 
@@ -60,9 +60,11 @@ class TestAnnotations(unittest.TestCase):
             assert isinstance(header, str)
             annot_type = column[1]
             if annot_type == 'group':
-                assert (
-                    self.df.file[column].dtype != np.number
-                ), "Group annotations must be string values"
+                # corrected testings of dataframe column dtype, using != always returns True
+                self.assertFalse(
+                    np.issubdtype(self.df.file[column].dtypes, np.number),
+                    "Group annotations must be string values",
+                )
 
     def test_non_coordinate_case_integrity(self):
         # if headers of this file change, the reference for the assert needs to be updated
