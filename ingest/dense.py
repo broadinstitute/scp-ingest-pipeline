@@ -8,6 +8,8 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 import collections
+import csv
+import datetime
 from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
@@ -25,7 +27,8 @@ except ImportError:
 
 
 class Dense(GeneExpression, IngestFiles):
-    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
+    ALLOWED_FILE_TYPES = ["text/csv",
+                          "text/plain", "text/tab-separated-values"]
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
         self.tracer = kwargs.pop("tracer")
@@ -34,8 +37,9 @@ class Dense(GeneExpression, IngestFiles):
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
         self.matrix_params = kwargs
-        self.gene_names = []
-        self.csv_file, self.open_file_object = self.open_file(self.file_path)
+
+        self.csv_file = self.open_file(self.file_path)[0]
+        self.gene_names = {}
         self.header = next(self.csv_file)
 
     def validate_unique_header(self):
@@ -93,15 +97,33 @@ class Dense(GeneExpression, IngestFiles):
     def transform(self):
         """Transforms dense matrix into gene data model.
         """
+        start_time = datetime.datetime.now()
+        self.info_logger.info('Starting run at ' +
+                              str(start_time), extra=self.extra_log_params)
+        num_processed = 0
         # Holds gene name and gene model for a single gene
-        GeneModel = collections.namedtuple('Gene', ['gene_name', 'gene_model'])
+        GeneModel = collections.namedtuple(
+            'Gene', ['gene_name', 'gene_model'])
         gene_models = []
+        data_arrays = []
+        all_cells = self.set_data_array_cells(self.header[1:], ObjectId())
+        gene_models.append(all_cells)
         # Represents row as an ordered dictionary
         for row in self.csv_file:
-            gene = row['GENE']
-            if gene in self.gene_names:
-                raise ValueError(f'Duplicate gene: {gene}')
-            self.gene_names.append(gene)
+            numeric_scores = list(
+                map(lambda x: round(float(x.strip().strip("\'")), 3), row[1:])
+            )
+            valid_expression_scores = []
+            cells = []
+            # print(f'reading row{row}')
+            for idx, expression_score in enumerate(numeric_scores, 1):
+                if expression_score > 0:
+                    valid_expression_scores.append(expression_score)
+                    cells.append(self.header[idx])
+            gene = row[0]
+            # if gene in self.gene_names:
+            #     raise ValueError(f'Duplicate gene: {gene}')
+            self.gene_names[gene] = True
             formatted_gene_name = gene.strip().strip('\"')
             self.info_logger.info(
                 f'Transforming gene :{gene}', extra=self.extra_log_params
@@ -124,22 +146,26 @@ class Dense(GeneExpression, IngestFiles):
                             else None,
                         }
                     ),
-                )
+                ).gene_model
             )
             # Will need to filter out values from row
             # Expression values
-            gene_models.append(
-                self.set_data_array_gene_cell_names(
-                    gene, ObjectId(), list(row.values())[1:]
-                )
-            )
-            gene_models.append(
-                self.set_data_array_gene_expression_values(
-                    gene, ObjectId(), list(row.keys())[1:]
-                )
-            )
-            if len(gene_models) > 1_000:
-                gene_models = []
+            if len(valid_expression_scores) > 0:
+                for gene_cell_model in self.set_data_array_gene_cell_names(gene, id, cells):
+                    data_arrays.append(gene_cell_model)
+                for gene_expression_values in self.set_data_array_gene_expression_values(gene, id, valid_expression_scores):
+                    data_arrays.append(gene_expression_values)
+                if len(gene_models) > 5:
+                    num_processed += len(gene_models)
+                    yield (gene_models, data_arrays)
+                    self.info_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
+                    gene_models = []
+                    data_arrays = []
+        yield (gene_models, data_arrays)
+        num_processed += len(gene_models)
+        self.info_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
+        gene_models = []
+        data_arrays = []
 
     @trace
     def set_data_array(
@@ -163,7 +189,8 @@ class Dense(GeneExpression, IngestFiles):
 
         # Get row of expression values for gene
         # Round expression values to 3 decimal points
-        cells_and_expression_vals = gene_df[cells].round(3).to_dict('records')[0]
+        cells_and_expression_vals = gene_df[cells].round(3).to_dict('records')[
+            0]
         # Filter out expression values = 0
         cells_and_expression_vals = dict(
             filter(lambda k_v: k_v[1] > 0, cells_and_expression_vals.items())

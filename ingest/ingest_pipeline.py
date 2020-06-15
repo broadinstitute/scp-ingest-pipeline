@@ -33,6 +33,7 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 # Ingest mtx files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
+import datetime
 import json
 import logging
 import os
@@ -43,13 +44,13 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
 # import google.cloud.logging
 from bson.objectid import ObjectId
-
 # For tracing
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
 from opencensus.trace.samplers import AlwaysOnSampler
 from opencensus.trace.tracer import Tracer
 from pymongo import InsertOne, MongoClient
 from pymongo.errors import BulkWriteError
+from pympler import muppy, summary
 
 # from google.cloud.logging.resource import Resource
 
@@ -93,7 +94,8 @@ class IngestPipeline(object):
         '../schema/alexandria_convention/alexandria_convention_schema.json'
     )
     logger = logging.getLogger(__name__)
-    error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
+    error_logger = setup_logger(
+        __name__ + '_errors', 'errors.txt', level=logging.ERROR)
     info_logger = setup_logger(__name__, 'info.txt')
     my_debug_logger = log(error_logger)
 
@@ -133,13 +135,15 @@ class IngestPipeline(object):
         else:
             self.tracer = nullcontext()
         if matrix_file is not None:
-            self.matrix = self.initialize_file_connection(matrix_file_type, matrix_file)
+            self.matrix = self.initialize_file_connection(
+                matrix_file_type, matrix_file)
         if ingest_cell_metadata:
             self.cell_metadata = self.initialize_file_connection(
                 "cell_metadata", cell_metadata_file
             )
         if ingest_cluster:
-            self.cluster = self.initialize_file_connection("cluster", cluster_file)
+            self.cluster = self.initialize_file_connection(
+                "cluster", cluster_file)
         if matrix_file is None:
             self.matrix = matrix_file
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
@@ -217,7 +221,8 @@ class IngestPipeline(object):
             ):
                 linear_id = ObjectId(self.study_id)
             else:
-                linear_id = self.db[collection_name].insert_one(model).inserted_id
+                linear_id = self.db[collection_name].insert_one(
+                    model).inserted_id
             for data_array_model in set_data_array_fn(
                 linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
@@ -233,22 +238,36 @@ class IngestPipeline(object):
         return 0
 
     # @profile
-    def load_expression_file(self, models, is_gene_model=False):
+    def load_expression_file(self, gene_docs, data_array_documents, is_gene_model=False):
         collection_name = self.matrix.COLLECTION_NAME
-        # Creates operations to perform for bulk write
-        bulk_operations = list(map(lambda model: InsertOne(model), models))
+        data_array_colection = self.db['data_arrays']
+        start_time = datetime.datetime.now()
+
+        data_array_bulk_operations = list(
+            map(lambda model: InsertOne(model), data_array_documents))
+        gene_model_bulk_operations = list(
+            map(lambda model: InsertOne(model), gene_docs))
         try:
-            if is_gene_model:
-                # bulk_write_results describes the type and count of operations performed.
-                bulk_write_results = self.db[collection_name].bulk_write(
-                    bulk_operations
-                )
-                # Succesfully wrote documents
-                return True, bulk_write_results
-            else:
-                bulk_write_results = self.db['data_arrays'].bulk_write(bulk_operations)
-                # Succesfully wrote documents
-                return True, bulk_write_results
+            data_array_colection.bulk_write(
+                data_array_bulk_operations,  ordered=False
+            )
+            self.db[collection_name].bulk_write(
+                gene_model_bulk_operations,  ordered=False
+            )
+            self.info_logger.info(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}', extra=self.extra_log_params)
+            # bulk.insert(models)
+            # bulk.execute();
+        #     if is_gene_model:
+        #         # bulk_write_results describes the type and count of operations performed.
+        #         bulk_write_results = self.db[collection_name].bulk_write(
+        #             bulk_operations
+        #         )
+        #         # Succesfully wrote documents
+        #         return True, bulk_write_results
+        #     else:
+        #         bulk_write_results = self.db['data_arrays'].bulk_write(bulk_operations)
+            # Succesfully wrote documents
+            return True, 0
         except BulkWriteError as bwe:
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
             return False, bwe.details
@@ -302,7 +321,8 @@ class IngestPipeline(object):
 
     def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        convention_file_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        convention_file_object = IngestFiles(
+            self.JSON_CONVENTION, ['application/json'])
         json_file = convention_file_object.open_file(self.JSON_CONVENTION)
         convention = json.load(json_file)
         if self.kwargs['validate_convention'] is not None:
@@ -311,7 +331,8 @@ class IngestPipeline(object):
                 and self.kwargs['bq_dataset']
                 and self.kwargs['bq_table']
             ):
-                validate_input_metadata(self.cell_metadata, convention, bq_json=True)
+                validate_input_metadata(
+                    self.cell_metadata, convention, bq_json=True)
             else:
                 validate_input_metadata(self.cell_metadata, convention)
 
@@ -333,7 +354,8 @@ class IngestPipeline(object):
                 )
                 return write_status
             else:
-                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
+                self.error_logger.error(
+                    'Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
@@ -344,7 +366,7 @@ class IngestPipeline(object):
         """
         # gene_documents = []
         # data_array_documents = []
-        self.matrix.transform()
+        # self.matrix.transform()
         # if self.kwargs["gene_file"] is not None:
         #     self.matrix.extract()
         # else:
@@ -352,52 +374,56 @@ class IngestPipeline(object):
         #         return 1
         #     else:
         #         self.matrix.preprocess()
-        # try:
-        #     for idx, gene in enumerate(self.matrix.transform()):
-        #         self.info_logger.info(
-        #             f"Attempting to load gene: {gene.gene_model['searchable_name']}",
-        #             extra=self.extra_log_params,
-        #         )
-        #         gene_documents.append(gene.gene_model)
-        #         if idx == 0:
-        #             for data_array_document in self.matrix.set_data_array(
-        #                 gene.gene_model['_id'],
-        #                 gene.gene_name,
-        #                 gene.gene_model['searchable_name'],
-        #                 {'create_cell_data_array': True},
-        #             ):
-        #                 data_array_documents.append(data_array_document)
-        #         else:
-        #             for data_array_document in self.matrix.set_data_array(
-        #                 gene.gene_model['_id'],
-        #                 gene.gene_name,
-        #                 gene.gene_model['searchable_name'],
-        #             ):
-        #                 data_array_documents.append(data_array_document)
-        #     load_gene_status, load_gene_results = self.load_expression_file(
-        #         gene_documents, is_gene_model=True
+        # for idx, gene in enumerate(self.matrix.transform()):
+        self.info_logger.info('starting transform',
+                              extra=self.extra_log_params)
+        for gene_docs, data_array_documents in self.matrix.transform():
+                # print(f'this is the array doc {data_array_documents}')
+
+                #     self.info_logger.info(
+                #         f"Attempting to load gene: {gene.gene_model['searchable_name']}",
+                #         extra=self.extra_log_params,
+                #     )
+                #     gene_documents, data_array_documents =
+                #     if idx == 0:
+                #         for data_array_document in self.matrix.set_data_array(
+                #             gene.gene_model['_id'],
+                #             gene.gene_name,
+                #             gene.gene_model['searchable_name'],
+                #             {'create_cell_data_array': True},
+                #         ):
+                #             data_array_documents.append(data_array_document)
+                #     else:
+                #         for data_array_document in self.matrix.set_data_array(
+                #             gene.gene_model['_id'],
+                #             gene.gene_name,
+                #             gene.gene_model['searchable_name'],
+                #         ):
+                #             data_array_documents.append(data_array_document)
+                # load_gene_status, load_gene_results = self.load_expression_file(
+                #     gene_documents, is_gene_model=True
+                # )
+            load_data_array_status, load_data_array_results = self.load_expression_file(
+                gene_docs, data_array_documents
+            )
+            # # check load status
+            # if load_gene_status and load_data_array_status:
+            #     # load_<   >_results describes the type and count of operations performed.
+            #     self.info_logger.info(
+            #         f"Bulk Write Results for gene models: {load_gene_results.bulk_api_result}",
+            #         extra=self.extra_log_params,
+            #     )
+            #     self.info_logger.info(
+            #         f"Bulk Write Results for gene data arrays: {load_data_array_results.bulk_api_result}",
+            #         extra=self.extra_log_params,
+            #     )
+        return 0
+        # else:
+        #     self.error_logger.error(
+        #         f'Loading expression data failed. Exiting program',
+        #         extra=self.extra_log_params,
         #     )
-        #     load_data_array_status, load_data_array_results = self.load_expression_file(
-        #         data_array_documents
-        #     )
-        #     # check load status
-        #     if load_gene_status and load_data_array_status:
-        #         # load_<   >_results describes the type and count of operations performed.
-        #         self.info_logger.info(
-        #             f"Bulk Write Results for gene models: {load_gene_results.bulk_api_result}",
-        #             extra=self.extra_log_params,
-        #         )
-        #         self.info_logger.info(
-        #             f"Bulk Write Results for gene data arrays: {load_data_array_results.bulk_api_result}",
-        #             extra=self.extra_log_params,
-        #         )
-        #         return 0
-        #     else:
-        #         self.error_logger.error(
-        #             f'Loading expression data failed. Exiting program',
-        #             extra=self.extra_log_params,
-        #         )
-        #         return 1
+        #     return 1
         # except Exception as e:
         #     self.error_logger.error(e, extra=self.extra_log_params)
         #     return 1

@@ -8,11 +8,13 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 import abc
-from dataclasses import dataclass
-from mypy_extensions import TypedDict
-from typing import List  # noqa: F401
 import ntpath
+import types
+from dataclasses import dataclass
+from typing import List  # noqa: F401
+
 from bson.objectid import ObjectId
+from mypy_extensions import TypedDict
 
 try:
     from ingest_files import DataArray
@@ -58,7 +60,7 @@ class GeneExpression:
     def set_data_array_cells(self, values: List, linear_data_id):
         """Sets DataArray for cells that were observed in an
         expression matrix."""
-        return DataArray(
+        for model in DataArray(
             f"{self.cluster_name} Cells",
             self.cluster_name,
             "cells",
@@ -67,7 +69,8 @@ class GeneExpression:
             linear_data_id,
             self.study_id,
             self.study_file_id,
-        ).get_data_array()
+        ).get_data_array():
+            yield model
 
     def set_data_array_gene_cell_names(
         self, name: str, linear_data_id: str, values: List
@@ -76,7 +79,7 @@ class GeneExpression:
         DataArray contains cell names that had significant (i.e. non-zero)
         expression for a gene. """
 
-        return DataArray(
+        for model in DataArray(
             f"{name} Cells",
             self.cluster_name,
             "cells",
@@ -85,7 +88,8 @@ class GeneExpression:
             linear_data_id,
             self.study_id,
             self.study_file_id,
-        ).get_data_array()
+        ).get_data_array():
+            yield model
 
     def set_data_array_gene_expression_values(
         self, name: str, linear_data_id: str, values: List
@@ -93,7 +97,7 @@ class GeneExpression:
         """ Sets DataArray for expression values for a gene. This is an array of
         significant (i.e. non-zero) expression values for a gene. """
 
-        return DataArray(
+        for model in DataArray(
             f"{name} Expression",
             self.cluster_name,
             "expression",
@@ -102,4 +106,5 @@ class GeneExpression:
             linear_data_id,
             self.study_id,
             self.study_file_id,
-        ).get_data_array()
+        ).get_data_array():
+            yield model
