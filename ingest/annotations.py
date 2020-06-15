@@ -97,7 +97,7 @@ class Annotations(IngestFiles):
             self.file_path, open_as='dataframe', dtype=dtypes, names=index, skiprows=2
         )[0]
         # dtype of object allows mixed dtypes in columns, including numeric dtypes
-        # coerce group annotations pandas detects as non-object types to type string
+        # coerce group annotations that pandas detects as non-object types to type string
         for annotation, annot_type in columns:
             if (
                 annot_type == 'group'
