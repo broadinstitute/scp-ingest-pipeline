@@ -10,7 +10,7 @@ Must have python 3.6 or higher.
 import abc
 from collections import defaultdict
 
-import pandas as pd  # NOqa: F821
+import pandas as pd
 from bson.objectid import ObjectId
 
 try:
@@ -40,9 +40,7 @@ class Annotations(IngestFiles):
         self.annot_types = [type.strip().strip('\"').lower() for type in next(csv_file)]
 
     def reset_file(self):
-        self.file, self.file_handle = self.open_file(
-            self.file_path, open_as='dataframe', header=[0, 1]
-        )
+        self.preprocess()
 
     @abc.abstractmethod
     def transform(self):
@@ -98,6 +96,14 @@ class Annotations(IngestFiles):
         self.file = self.open_file(
             self.file_path, open_as='dataframe', dtype=dtypes, names=index, skiprows=2
         )[0]
+        # dtype of object allows mixed dtypes in columns, including numeric dtypes
+        # coerce group annotations that pandas detects as non-object types to type string
+        for annotation, annot_type in columns:
+            if (
+                annot_type == 'group'
+                and self.file[annotation].dtypes[annot_type] != 'O'
+            ):
+                self.file[annotation] = self.file[annotation].astype(str)
         if 'numeric' in self.annot_types:
             numeric_columns = self.file.xs(
                 "numeric", axis=1, level=1, drop_level=False
