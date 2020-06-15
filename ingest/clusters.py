@@ -60,6 +60,10 @@ class Clusters(Annotations):
         Annotations.__init__(
             self, file_path, self.ALLOWED_FILE_TYPES, study_id, study_file_id
         )
+        # Lowercase coordinate headers, expected for df merge
+        for i, header in enumerate(self.headers):
+            if header in ['X', 'Y', 'Z']:
+                self.headers[i] = self.headers[i].lower()
         self.preprocess()
         self.determine_coordinates_and_cell_names()
         self.source_file_type = "cluster"

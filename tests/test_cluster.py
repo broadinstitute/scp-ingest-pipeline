@@ -29,3 +29,21 @@ class TestCellMetadata(unittest.TestCase):
             'testCluster',
         )
         self.assertTrue(cluster.validate_header_for_coordinate_values())
+
+    def test_non_coordinate_case_integrity(self):
+        # if headers of this file change, the reference for the assert needs to be updated
+        cluster = Clusters(
+            '../tests/data/test_1k_cluster_data.csv',
+            'dec0dedfeed1111111111111',
+            'addedfeed000000000000000',
+            'testCluster',
+        )
+        assert cluster.headers == [
+            'NAME',
+            'x',
+            'y',
+            'z',
+            'CLUSTER',
+            'SUBCLUSTER',
+            '1',
+        ], 'cluster instantiation should only downcase coordinate header columns'
