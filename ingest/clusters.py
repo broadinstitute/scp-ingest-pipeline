@@ -60,6 +60,11 @@ class Clusters(Annotations):
         Annotations.__init__(
             self, file_path, self.ALLOWED_FILE_TYPES, study_id, study_file_id
         )
+        # Lowercase coordinate headers, expected for df merge
+        for i, header in enumerate(self.headers):
+            if header in ['X', 'Y', 'Z']:
+                self.headers[i] = self.headers[i].lower()
+        self.preprocess()
         self.determine_coordinates_and_cell_names()
         self.source_file_type = "cluster"
         self.cluster_type = (
@@ -74,7 +79,6 @@ class Clusters(Annotations):
         # Check if domain_ranges is an empty dictionary
         self.domain_ranges = domain_ranges if not (not domain_ranges) else None
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
-        self.preprocess()
 
     # Will evolve to do cross file validation
     def validate(self):
