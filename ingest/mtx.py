@@ -11,11 +11,13 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 
-from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import collections
+import copy
+import subprocess
+from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+
 import scipy.io
 from bson.objectid import ObjectId
-import copy
 
 try:
     from expression_files import GeneExpression
@@ -29,7 +31,7 @@ except ImportError:
 
 
 class Mtx(GeneExpression):
-    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
+    ALLOWED_FILE_TYPES = ["text/tab-separated-values"]
 
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         self.tracer = kwargs.pop("tracer")
@@ -37,25 +39,41 @@ class Mtx(GeneExpression):
 
         genes_path = kwargs.pop("gene_file")
         genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
-        self.genes_file, genes_local_path = genes_ingest_file.resolve_path(genes_path)
+        self.genes_file, genes_local_path = genes_ingest_file.resolve_path(
+            genes_path)
 
         barcodes_path = kwargs.pop("barcode_file")
-        barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
+        barcodes_ingest_file = IngestFiles(
+            barcodes_path, self.ALLOWED_FILE_TYPES)
         self.barcodes_file, barcodes_local_path = barcodes_ingest_file.resolve_path(
             barcodes_path
         )
 
         mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
-        mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(mtx_path)
-
+        self.mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(
+            mtx_path)
+        print(self.mtx_file)
         self.matrix_params = kwargs
         self.exp_by_gene = {}
+        self.extract_gene_lines()
+
+    def extract_gene_lines(self):
+        grep = subprocess.run(['egrep', '^1\s', self.mtx_local_path],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                              ).stdout.decode('utf-8')
+        print(grep)
+        # Grab first line to determine how many genes there are
+        # grep for aomunt of genes in order. Ex 1, 2, 3...N
+        # Pull index from gene and cell file.
+        # tmp_file_path = 'foo' + gene + '.mtx_tmp'
+        # os.exec(f'grep -e "{gene} " {mtx_path} > tmp_file_path')
+        # return fs.open(tmp_file_path).readlines()
 
     @trace
     def extract(self):
         """Sets relevant iterables for each file of the MTX bundle
         """
-        self.matrix_file = scipy.io.mmread(self.mtx_local_path)
+        # self.matrix_file = scipy.io.mmread(self.mtx_local_path)
         self.genes = [g.strip() for g in self.genes_file.readlines()]
         self.cells = [c.strip() for c in self.barcodes_file.readlines()]
 
@@ -65,7 +83,8 @@ class Mtx(GeneExpression):
         """
         # Named tuple that has orignial string format of a gene's name, 'gene_name'
         # and it's corresponding model 'gene_model'
-        GeneModelData = collections.namedtuple('GeneModel', ['gene_name', 'gene_model'])
+        GeneModelData = collections.namedtuple(
+            'GeneModel', ['gene_name', 'gene_model'])
         # Named tuple to hold expression data for a single gene
         GeneExpressionValues = collections.namedtuple(
             'GeneExpressionValues', ['expression_scores', 'cell_names']
