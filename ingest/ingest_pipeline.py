@@ -50,7 +50,6 @@ from opencensus.trace.samplers import AlwaysOnSampler
 from opencensus.trace.tracer import Tracer
 from pymongo import InsertOne, MongoClient
 from pymongo.errors import BulkWriteError
-from pympler import muppy, summary
 
 # from google.cloud.logging.resource import Resource
 
