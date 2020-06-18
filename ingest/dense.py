@@ -106,8 +106,9 @@ class Dense(GeneExpression, IngestFiles):
             'Gene', ['gene_name', 'gene_model'])
         gene_models = []
         data_arrays = []
-        all_cells = self.set_data_array_cells(self.header[1:], ObjectId())
-        gene_models.append(all_cells)
+        for all_cell_model in self.set_data_array_cells(
+                self.header[1:], ObjectId()):
+            gene_models.append(all_cell_model)
         # Represents row as an ordered dictionary
         for row in self.csv_file:
             numeric_scores = list(

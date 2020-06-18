@@ -238,6 +238,8 @@ class IngestPipeline(object):
     def load_expression_file(self, gene_docs, data_array_documents, is_gene_model=False):
         collection_name = self.matrix.COLLECTION_NAME
         data_array_colection = self.db['data_arrays']
+        gene_doc_bulk_write_results = None
+        data_array_bulk_write_results = None
         start_time = datetime.datetime.now()
 
         data_array_bulk_operations = list(
@@ -245,13 +247,9 @@ class IngestPipeline(object):
         gene_model_bulk_operations = list(
             map(lambda model: InsertOne(model), gene_docs))
         try:
-            data_array_colection.bulk_write(
+            data_array_bulk_write_results = data_array_colection.bulk_write(
                 data_array_bulk_operations,  ordered=False
             )
-            self.db[collection_name].bulk_write(
-                gene_model_bulk_operations,  ordered=False
-            )
-            self.info_logger.info(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}', extra=self.extra_log_params)
             # bulk.insert(models)
             # bulk.execute();
         #     if is_gene_model:
@@ -264,14 +262,26 @@ class IngestPipeline(object):
         #     else:
         #         bulk_write_results = self.db['data_arrays'].bulk_write(bulk_operations)
             # Succesfully wrote documents
-            return True, 0
         except BulkWriteError as bwe:
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
-            return False, bwe.details
+            return False
 
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
-            return False, None
+            return False
+        try:
+            gene_doc_bulk_write_results = self.db[collection_name].bulk_write(
+                gene_model_bulk_operations,  ordered=False
+            )
+        except BulkWriteError as bwe:
+            self.error_logger.error(bwe.details, extra=self.extra_log_params)
+            return False
+
+        except Exception as e:
+            self.error_logger.error(e, extra=self.extra_log_params)
+            return False
+        self.info_logger.info(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}', extra=self.extra_log_params)
+        return True
 
     def load_subsample(
         self, parent_collection_name, subsampled_data, set_data_array_fn, scope
@@ -400,20 +410,11 @@ class IngestPipeline(object):
                 # load_gene_status, load_gene_results = self.load_expression_file(
                 #     gene_documents, is_gene_model=True
                 # )
-            load_data_array_status, load_data_array_results = self.load_expression_file(
-                gene_docs, data_array_documents
-            )
+            load_status = self.load_expression_file(
+                gene_docs, data_array_documents)
             # # check load status
-            # if load_gene_status and load_data_array_status:
-            #     # load_<   >_results describes the type and count of operations performed.
-            #     self.info_logger.info(
-            #         f"Bulk Write Results for gene models: {load_gene_results.bulk_api_result}",
-            #         extra=self.extra_log_params,
-            #     )
-            #     self.info_logger.info(
-            #         f"Bulk Write Results for gene data arrays: {load_data_array_results.bulk_api_result}",
-            #         extra=self.extra_log_params,
-            #     )
+            if not load_status:
+                return 1
         return 0
         # else:
         #     self.error_logger.error(
