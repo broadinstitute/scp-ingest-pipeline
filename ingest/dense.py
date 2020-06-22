@@ -43,6 +43,8 @@ class Dense(GeneExpression, IngestFiles):
         num_processed = 0
         self.gene_names = {}
         self.header = next(self.csv_file)
+        self.error_logger.error('Initailizing Dense matrix ',
+                                extra=self.extra_log_params)
 
     def validate_unique_header(self):
         """Validates header has no duplicate values"""

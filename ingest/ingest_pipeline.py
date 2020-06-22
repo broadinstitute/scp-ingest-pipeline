@@ -119,10 +119,10 @@ class IngestPipeline(object):
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
         if os.environ.get('DATABASE_HOST') is not None:
             # Needed to run tests in CircleCI.  TODO: add mock, remove this
-            self.error_logger.error(f"Database host is: {os.environ.get('DATABASE_HOST')}", self.extra_log_params)
+            self.error_logger.error(f"Database host is: {os.environ.get('DATABASE_HOST')}", extra=self.extra_log_params)
             self.db = self.get_mongo_db()
         else:
-            self.error_logger.error(f"Database host is NONE", self.extra_log_params)
+            self.error_logger.error(f"Database host is: NONE", extra=self.extra_log_params)
             self.db = None
         self.cluster_file = cluster_file
         self.kwargs = kwargs
@@ -159,8 +159,7 @@ class IngestPipeline(object):
         user = os.environ['MONGODB_USERNAME']
         password = os.environ['MONGODB_PASSWORD']
         db_name = os.environ['DATABASE_NAME']
-        self.error_logger.error(f'db_name:{db_name},  user:{user}, host:{host}', self.extra_log_params)
-        print(f'db_name:{db_name},  user:{user}, host:{host}')
+        self.error_logger.error(f'db_name:{db_name},  user:{user}, host:{host}', extra=self.extra_log_params)
         client = MongoClient(
             host,
             username=user,
@@ -177,7 +176,7 @@ class IngestPipeline(object):
             Returns:
                 File object.
         """
-        self.error_logger.error(f'Trying to initialize file')
+        self.error_logger.error(f'Trying to initialize file', extra=self.extra_log_params)
         print(f'Trying to initialize file')
         # Mtx file types not included because class declaration is different
         file_connections = {
@@ -242,6 +241,7 @@ class IngestPipeline(object):
 
     # @profile
     def load_expression_file(self, gene_docs, data_array_documents, is_gene_model=False):
+        self.error_logger.error(f'Starting to load expression file', extra=self.extra_log_params)
         collection_name = self.matrix.COLLECTION_NAME
         data_array_colection = self.db['data_arrays']
         gene_doc_bulk_write_results = None
@@ -389,7 +389,7 @@ class IngestPipeline(object):
         #         self.matrix.preprocess()
         # for idx, gene in enumerate(self.matrix.transform()):
         self.error_logger.error(
-            'starting transform',
+            'Entered ingest expression ',
             extra=self.extra_log_params,
         )
         for gene_docs, data_array_documents in self.matrix.transform():
@@ -418,6 +418,8 @@ class IngestPipeline(object):
                 # load_gene_status, load_gene_results = self.load_expression_file(
                 #     gene_documents, is_gene_model=True
                 # )
+            self.error_logger.error(
+                "About to load file", extra=self.extra_log_params)
             load_status = self.load_expression_file(
                 gene_docs, data_array_documents)
             # # check load status
@@ -537,8 +539,8 @@ def run_ingest(ingest, arguments, parsed_args):
     """
     status = []
     status_cell_metadata = None
-    logging.debug(f'passed in arguments: {arguments}')
-    print(f'passed in arguments: {arguments}, par')
+    logging.basicConfig(filename='errors.txt', level=logging.DEBUG)
+    logging.debug(f'In run_ingest: {arguments}')
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
         status.append(ingest.ingest_expression())
@@ -563,29 +565,47 @@ def run_ingest(ingest, arguments, parsed_args):
 def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """Logs any errors, then exits Ingest Pipeline with standard OS code
     """
-    logging.debug(f'trying to exit_pipeline len of status is :{len(status)}')
+    logging.basicConfig(filename='errors.txt', level=logging.DEBUG)
+    logging.debug("exit_pipeline now")
+    for argument in list(arguments.keys()):
+        captured_argument = re.match("(\w*file)$", argument)
+        if captured_argument is not None:
+            study_file_id = arguments['study_file_id']
+            matched_argument = captured_argument.groups()[0]
+            file_path = arguments[matched_argument]
+            if IngestFiles.is_remote_file(file_path):
+                IngestFiles.delocalize_file(
+                    study_file_id,
+                    arguments['study_id'],
+                    file_path,
+                    'errors.txt',
+                    f'parse_logs/{study_file_id}/errors.txt',
+                )
+            # Need 1 argument that has a path to identify google bucket
+            # Break after first argument
+            break
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:
             # delocalize errors file
-            for argument in list(arguments.keys()):
-                captured_argument = re.match("(\w*file)$", argument)
-                if captured_argument is not None:
-                    study_file_id = arguments['study_file_id']
-                    matched_argument = captured_argument.groups()[0]
-                    file_path = arguments[matched_argument]
-                    if IngestFiles.is_remote_file(file_path):
-                        IngestFiles.delocalize_file(
-                            study_file_id,
-                            arguments['study_id'],
-                            file_path,
-                            'errors.txt',
-                            f'parse_logs/{study_file_id}/errors.txt',
-                        )
+            # for argument in list(arguments.keys()):
+            #     captured_argument = re.match("(\w*file)$", argument)
+            #     if captured_argument is not None:
+            #         study_file_id = arguments['study_file_id']
+            #         matched_argument = captured_argument.groups()[0]
+            #         file_path = arguments[matched_argument]
+            #         if IngestFiles.is_remote_file(file_path):
+            #             IngestFiles.delocalize_file(
+            #                 study_file_id,
+            #                 arguments['study_id'],
+            #                 file_path,
+            #                 'errors.txt',
+            #                 f'parse_logs/{study_file_id}/errors.txt',
+            #             )
                     # Need 1 argument that has a path to identify google bucket
                     # Break after first argument
-                    break
+                    # break
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
                     # PAPI jobs failing metadata validation against convention report
@@ -593,35 +613,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     # EX_DATAERR (65) The input data was incorrect in some way.
                     # note that failure to load to MongoDB also triggers this error
                     sys.exit(os.EX_DATAERR)
-            for argument in list(arguments.keys()):
-                captured_argument = re.match("(\w*file)$", argument)
-                if captured_argument is not None:
-                    study_file_id = arguments['study_file_id']
-                    matched_argument = captured_argument.groups()[0]
-                    file_path = arguments[matched_argument]
-                    if IngestFiles.is_remote_file(file_path):
-                        IngestFiles.delocalize_file(
-                            study_file_id,
-                            arguments['study_id'],
-                            file_path,
-                            'errors.txt',
-                            f'parse_logs/{study_file_id}/errors.txt',
-                        )
             sys.exit(1)
-        for argument in list(arguments.keys()):
-            captured_argument = re.match("(\w*file)$", argument)
-            if captured_argument is not None:
-                study_file_id = arguments['study_file_id']
-                matched_argument = captured_argument.groups()[0]
-                file_path = arguments[matched_argument]
-                if IngestFiles.is_remote_file(file_path):
-                    IngestFiles.delocalize_file(
-                        study_file_id,
-                        arguments['study_id'],
-                        file_path,
-                        'errors.txt',
-                        f'parse_logs/{study_file_id}/errors.txt',
-                    )
 
 
 def main() -> None:
@@ -638,7 +630,6 @@ def main() -> None:
     logging.debug("Made it into main")
     parsed_args = create_parser().parse_args()
     logging.debug(f'Here are the parsed args: {parsed_args}')
-    print(f'Here are the parsed args: {parsed_args}')
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     logging.debug(f'Initailizing ingest pipeline')
