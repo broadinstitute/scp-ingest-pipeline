@@ -39,6 +39,8 @@ class Dense(GeneExpression, IngestFiles):
         self.matrix_params = kwargs
 
         self.csv_file = self.open_file(self.file_path)[0]
+        self.info_logger.info('file has opened', extra=self.extra_log_params)
+        num_processed = 0
         self.gene_names = {}
         self.header = next(self.csv_file)
 
@@ -98,8 +100,8 @@ class Dense(GeneExpression, IngestFiles):
         """Transforms dense matrix into gene data model.
         """
         start_time = datetime.datetime.now()
-        self.info_logger.info('Starting run at ' +
-                              str(start_time), extra=self.extra_log_params)
+        self.error_logger.info('Starting run at ' +
+                               str(start_time), extra=self.extra_log_params)
         num_processed = 0
         # Holds gene name and gene model for a single gene
         GeneModel = collections.namedtuple(
@@ -126,7 +128,7 @@ class Dense(GeneExpression, IngestFiles):
             #     raise ValueError(f'Duplicate gene: {gene}')
             self.gene_names[gene] = True
             formatted_gene_name = gene.strip().strip('\"')
-            self.info_logger.info(
+            self.error_logger.info(
                 f'Transforming gene :{gene}', extra=self.extra_log_params
             )
             id = ObjectId()
@@ -159,12 +161,12 @@ class Dense(GeneExpression, IngestFiles):
                 if len(gene_models) > 5:
                     num_processed += len(gene_models)
                     yield (gene_models, data_arrays)
-                    self.info_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
+                    self.error_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
                     gene_models = []
                     data_arrays = []
         yield (gene_models, data_arrays)
         num_processed += len(gene_models)
-        self.info_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
+        self.error_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
         gene_models = []
         data_arrays = []
 

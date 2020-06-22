@@ -116,10 +116,13 @@ class IngestPipeline(object):
         self.study_file_id = study_file_id
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
+        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
         if os.environ.get('DATABASE_HOST') is not None:
             # Needed to run tests in CircleCI.  TODO: add mock, remove this
+            self.error_logger.error(f"Database host is: {os.environ.get('DATABASE_HOST')}", self.extra_log_params)
             self.db = self.get_mongo_db()
         else:
+            self.error_logger.error(f"Database host is NONE", self.extra_log_params)
             self.db = None
         self.cluster_file = cluster_file
         self.kwargs = kwargs
@@ -145,7 +148,7 @@ class IngestPipeline(object):
                 "cluster", cluster_file)
         if matrix_file is None:
             self.matrix = matrix_file
-        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
+
         if subsample:
             self.cluster_file = cluster_file
             self.cell_metadata_file = cell_metadata_file
@@ -156,7 +159,8 @@ class IngestPipeline(object):
         user = os.environ['MONGODB_USERNAME']
         password = os.environ['MONGODB_PASSWORD']
         db_name = os.environ['DATABASE_NAME']
-
+        self.error_logger.error(f'db_name:{db_name},  user:{user}, host:{host}', self.extra_log_params)
+        print(f'db_name:{db_name},  user:{user}, host:{host}')
         client = MongoClient(
             host,
             username=user,
@@ -173,6 +177,8 @@ class IngestPipeline(object):
             Returns:
                 File object.
         """
+        self.error_logger.error(f'Trying to initialize file')
+        print(f'Trying to initialize file')
         # Mtx file types not included because class declaration is different
         file_connections = {
             "dense": Dense,
@@ -280,7 +286,7 @@ class IngestPipeline(object):
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
             return False
-        self.info_logger.info(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}', extra=self.extra_log_params)
+        self.error_logger.error(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}', extra=self.extra_log_params)
         return True
 
     def load_subsample(
@@ -382,8 +388,10 @@ class IngestPipeline(object):
         #     else:
         #         self.matrix.preprocess()
         # for idx, gene in enumerate(self.matrix.transform()):
-        self.info_logger.info('starting transform',
-                              extra=self.extra_log_params)
+        self.error_logger.error(
+            'starting transform',
+            extra=self.extra_log_params,
+        )
         for gene_docs, data_array_documents in self.matrix.transform():
                 # print(f'this is the array doc {data_array_documents}')
 
@@ -529,7 +537,8 @@ def run_ingest(ingest, arguments, parsed_args):
     """
     status = []
     status_cell_metadata = None
-
+    logging.debug(f'passed in arguments: {arguments}')
+    print(f'passed in arguments: {arguments}, par')
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
         status.append(ingest.ingest_expression())
@@ -554,6 +563,7 @@ def run_ingest(ingest, arguments, parsed_args):
 def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """Logs any errors, then exits Ingest Pipeline with standard OS code
     """
+    logging.debug(f'trying to exit_pipeline len of status is :{len(status)}')
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
@@ -583,7 +593,35 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     # EX_DATAERR (65) The input data was incorrect in some way.
                     # note that failure to load to MongoDB also triggers this error
                     sys.exit(os.EX_DATAERR)
+            for argument in list(arguments.keys()):
+                captured_argument = re.match("(\w*file)$", argument)
+                if captured_argument is not None:
+                    study_file_id = arguments['study_file_id']
+                    matched_argument = captured_argument.groups()[0]
+                    file_path = arguments[matched_argument]
+                    if IngestFiles.is_remote_file(file_path):
+                        IngestFiles.delocalize_file(
+                            study_file_id,
+                            arguments['study_id'],
+                            file_path,
+                            'errors.txt',
+                            f'parse_logs/{study_file_id}/errors.txt',
+                        )
             sys.exit(1)
+        for argument in list(arguments.keys()):
+            captured_argument = re.match("(\w*file)$", argument)
+            if captured_argument is not None:
+                study_file_id = arguments['study_file_id']
+                matched_argument = captured_argument.groups()[0]
+                file_path = arguments[matched_argument]
+                if IngestFiles.is_remote_file(file_path):
+                    IngestFiles.delocalize_file(
+                        study_file_id,
+                        arguments['study_id'],
+                        file_path,
+                        'errors.txt',
+                        f'parse_logs/{study_file_id}/errors.txt',
+                    )
 
 
 def main() -> None:
@@ -595,10 +633,19 @@ def main() -> None:
     Returns:
         None
     """
+    logging.basicConfig(filename='errors.txt', level=logging.DEBUG)
+    print("Made it into main")
+    logging.debug("Made it into main")
     parsed_args = create_parser().parse_args()
+    logging.debug(f'Here are the parsed args: {parsed_args}')
+    print(f'Here are the parsed args: {parsed_args}')
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
+    logging.debug(f'Initailizing ingest pipeline')
+    print('Initailizing ingest pipeline')
     ingest = IngestPipeline(**arguments)
+    print('Starting ingest')
+    logging.debug(f'Starting ingest')
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
