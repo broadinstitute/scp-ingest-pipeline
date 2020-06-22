@@ -245,17 +245,20 @@ class IngestPipeline(object):
     def load_expression_file(self, gene_docs, data_array_documents, is_gene_model=False):
         self.error_logger.error(f'Starting to load expression file', extra=self.extra_log_params)
         print(f'Starting to load expression file')
+        print(f"Making sure doesn't return null value : {self.db['data_arrays']}")
         collection_name = self.matrix.COLLECTION_NAME
         data_array_colection = self.db['data_arrays']
         gene_doc_bulk_write_results = None
         data_array_bulk_write_results = None
         start_time = datetime.datetime.now()
 
+        print('Creating bulk operations')
         data_array_bulk_operations = list(
             map(lambda model: InsertOne(model), data_array_documents))
         gene_model_bulk_operations = list(
             map(lambda model: InsertOne(model), gene_docs))
         try:
+            print('Trying to upload data_array_colection')
             data_array_bulk_write_results = data_array_colection.bulk_write(
                 data_array_bulk_operations,  ordered=False
             )
@@ -272,10 +275,12 @@ class IngestPipeline(object):
         #         bulk_write_results = self.db['data_arrays'].bulk_write(bulk_operations)
             # Succesfully wrote documents
         except BulkWriteError as bwe:
+            print(f"error caused by data docs : {bwe.details}")
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
             return False
 
         except Exception as e:
+            print(f"error caused by data docs : {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
             return False
         try:
@@ -283,10 +288,12 @@ class IngestPipeline(object):
                 gene_model_bulk_operations,  ordered=False
             )
         except BulkWriteError as bwe:
+            print(f"error caused by gene docs : {bwe.details}")
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
             return False
 
         except Exception as e:
+            print(f"error caused by gene docs : {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
             return False
         print(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}')
