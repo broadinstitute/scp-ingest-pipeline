@@ -32,6 +32,7 @@ class Dense(GeneExpression, IngestFiles):
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
         self.tracer = kwargs.pop("tracer")
+        print('Initailizing Dense matrix ')
         GeneExpression.__init__(self, file_path, study_file_id, study_id)
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
@@ -130,6 +131,7 @@ class Dense(GeneExpression, IngestFiles):
             #     raise ValueError(f'Duplicate gene: {gene}')
             self.gene_names[gene] = True
             formatted_gene_name = gene.strip().strip('\"')
+            print(f'Transforming gene :{gene}')
             self.error_logger.info(
                 f'Transforming gene :{gene}', extra=self.extra_log_params
             )
@@ -163,11 +165,13 @@ class Dense(GeneExpression, IngestFiles):
                 if len(gene_models) > 5:
                     num_processed += len(gene_models)
                     yield (gene_models, data_arrays)
+                    print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
                     self.error_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
                     gene_models = []
                     data_arrays = []
         yield (gene_models, data_arrays)
         num_processed += len(gene_models)
+        print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
         self.error_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
         gene_models = []
         data_arrays = []

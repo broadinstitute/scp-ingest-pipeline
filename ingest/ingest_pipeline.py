@@ -120,6 +120,7 @@ class IngestPipeline(object):
         if os.environ.get('DATABASE_HOST') is not None:
             # Needed to run tests in CircleCI.  TODO: add mock, remove this
             self.error_logger.error(f"Database host is: {os.environ.get('DATABASE_HOST')}", extra=self.extra_log_params)
+            print(f"Database host is: {os.environ.get('DATABASE_HOST')}")
             self.db = self.get_mongo_db()
         else:
             self.error_logger.error(f"Database host is: NONE", extra=self.extra_log_params)
@@ -159,6 +160,7 @@ class IngestPipeline(object):
         user = os.environ['MONGODB_USERNAME']
         password = os.environ['MONGODB_PASSWORD']
         db_name = os.environ['DATABASE_NAME']
+        print(f'db_name:{db_name},  user:{user}, host:{host}')
         self.error_logger.error(f'db_name:{db_name},  user:{user}, host:{host}', extra=self.extra_log_params)
         client = MongoClient(
             host,
@@ -242,6 +244,7 @@ class IngestPipeline(object):
     # @profile
     def load_expression_file(self, gene_docs, data_array_documents, is_gene_model=False):
         self.error_logger.error(f'Starting to load expression file', extra=self.extra_log_params)
+        print(f'Starting to load expression file')
         collection_name = self.matrix.COLLECTION_NAME
         data_array_colection = self.db['data_arrays']
         gene_doc_bulk_write_results = None
@@ -286,6 +289,7 @@ class IngestPipeline(object):
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
             return False
+        print(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}')
         self.error_logger.error(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}', extra=self.extra_log_params)
         return True
 
@@ -392,6 +396,7 @@ class IngestPipeline(object):
             'Entered ingest expression ',
             extra=self.extra_log_params,
         )
+        print('Entered ingest expression ',)
         for gene_docs, data_array_documents in self.matrix.transform():
                 # print(f'this is the array doc {data_array_documents}')
 
@@ -420,6 +425,7 @@ class IngestPipeline(object):
                 # )
             self.error_logger.error(
                 "About to load file", extra=self.extra_log_params)
+            print("About to load file")
             load_status = self.load_expression_file(
                 gene_docs, data_array_documents)
             # # check load status
@@ -541,6 +547,7 @@ def run_ingest(ingest, arguments, parsed_args):
     status_cell_metadata = None
     logging.basicConfig(filename='errors.txt', level=logging.DEBUG)
     logging.debug(f'In run_ingest: {arguments}')
+    print(f'In run_ingest: {arguments}')
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
         status.append(ingest.ingest_expression())
@@ -567,6 +574,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """
     logging.basicConfig(filename='errors.txt', level=logging.DEBUG)
     logging.debug("exit_pipeline now")
+    print('exit_pipeline now')
     for argument in list(arguments.keys()):
         captured_argument = re.match("(\w*file)$", argument)
         if captured_argument is not None:
@@ -630,6 +638,7 @@ def main() -> None:
     logging.debug("Made it into main")
     parsed_args = create_parser().parse_args()
     logging.debug(f'Here are the parsed args: {parsed_args}')
+    print(f'Here are the parsed args: {parsed_args}')
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     logging.debug(f'Initailizing ingest pipeline')
