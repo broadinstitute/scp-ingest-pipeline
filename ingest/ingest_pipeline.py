@@ -247,11 +247,11 @@ class IngestPipeline(object):
         print(f'Starting to load expression file')
         print(f"Making sure doesn't return null value : {self.db['data_arrays']}")
         collection_name = self.matrix.COLLECTION_NAME
-        data_array_colection = self.db['data_arrays']
         gene_doc_bulk_write_results = None
         data_array_bulk_write_results = None
         start_time = datetime.datetime.now()
 
+        self.db['test_collection'].insert_one({'name': "Test_Insert"})
         print('Creating bulk operations')
         data_array_bulk_operations = list(
             map(lambda model: InsertOne(model), data_array_documents))
@@ -259,7 +259,7 @@ class IngestPipeline(object):
             map(lambda model: InsertOne(model), gene_docs))
         try:
             print('Trying to upload data_array_colection')
-            data_array_bulk_write_results = data_array_colection.bulk_write(
+            data_array_bulk_write_results = self.db['data_arrays'].data_array_colection.bulk_write(
                 data_array_bulk_operations,  ordered=False
             )
             # bulk.insert(models)

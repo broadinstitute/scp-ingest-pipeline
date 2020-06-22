@@ -105,6 +105,7 @@ class Dense(GeneExpression, IngestFiles):
         start_time = datetime.datetime.now()
         self.error_logger.info('Starting run at ' +
                                str(start_time), extra=self.extra_log_params)
+        print('Starting run at ' + str(start_time))
         num_processed = 0
         # Holds gene name and gene model for a single gene
         GeneModel = collections.namedtuple(
