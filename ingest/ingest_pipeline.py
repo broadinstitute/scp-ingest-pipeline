@@ -37,6 +37,7 @@ import datetime
 import json
 import logging
 import os
+import pprint
 import re
 import sys
 from contextlib import nullcontext
@@ -250,7 +251,7 @@ class IngestPipeline(object):
         gene_doc_bulk_write_results = None
         data_array_bulk_write_results = None
         start_time = datetime.datetime.now()
-
+        pprint.pprint(f"Reading information out the database: {self.db['data_arrays'].find_one()}")
         self.db['test_collection'].insert_one({'name': "Test_Insert"})
         print('Creating bulk operations')
         data_array_bulk_operations = list(
