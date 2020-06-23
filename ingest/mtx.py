@@ -13,6 +13,7 @@ Must have python 3.6 or higher.
 
 import collections
 import copy
+import os
 import subprocess
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
@@ -52,16 +53,16 @@ class Mtx(GeneExpression):
         mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
         self.mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(
             mtx_path)
-        print(self.mtx_file)
+        self.mtx_file.readline()
+        self.mtx_map = self.mtx_file.readline().split()
+
         self.matrix_params = kwargs
         self.exp_by_gene = {}
-        self.extract_gene_lines()
 
-    def extract_gene_lines(self):
-        grep = subprocess.run(['egrep', '^1\s', self.mtx_local_path],
+    def extract_gene_lines(self, value):
+        return subprocess.run(['egrep', f'^{value}\s', self.mtx_local_path],
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE
                               ).stdout.decode('utf-8')
-        print(grep)
         # Grab first line to determine how many genes there are
         # grep for aomunt of genes in order. Ex 1, 2, 3...N
         # Pull index from gene and cell file.
@@ -89,6 +90,32 @@ class Mtx(GeneExpression):
         GeneExpressionValues = collections.namedtuple(
             'GeneExpressionValues', ['expression_scores', 'cell_names']
         )
+        gene_models = []
+        data_arrays = []
+        for x in range(int(self.mtx_map[0])):
+            expression_scores = []
+            cell_names = []
+            id = ObjectId()
+            matched_rows = self.extract_gene_lines(x)
+            matched_rows.split("\n")
+            gene_id, gene = self.genes[int(x)].split('\t')
+            gene_models.append(self.Model(
+                {
+                    'name': gene,
+                    'searchable_name': gene.lower(),
+                    'study_file_id': self.study_file_id,
+                    'study_id': self.study_id,
+                    'gene_id': gene_id,
+                    '_id': id,
+                }
+            ))
+            for row in matched_rows:
+                raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split(
+                )
+
+                cell_name = self.cells[int(raw_barcode_idx)]
+                exp_score = round(float(raw_exp_score), 3)
+
         for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(
             self.matrix_file.row, self.matrix_file.col, self.matrix_file.data
         ):
