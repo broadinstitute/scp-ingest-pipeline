@@ -584,11 +584,14 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     logging.debug("exit_pipeline now")
     print('exit_pipeline now')
     for argument in list(arguments.keys()):
+
         captured_argument = re.match("(\w*file)$", argument)
+        print(captured_argument)
         if captured_argument is not None:
             study_file_id = arguments['study_file_id']
             matched_argument = captured_argument.groups()[0]
             file_path = arguments[matched_argument]
+            print(file_path)
             if IngestFiles.is_remote_file(file_path):
                 IngestFiles.delocalize_file(
                     study_file_id,
