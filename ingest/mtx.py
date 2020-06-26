@@ -95,11 +95,13 @@ class Mtx(GeneExpression):
         data_arrays = []
         print(range(int(self.mtx_map[0]) - 1))
         for mtx_gene_idx in range(int(self.mtx_map[0]) - 1):
+            print(mtx_gene_idx)
             expression_scores = []
             cell_names = []
             id = ObjectId()
             matched_rows = self.extract_gene_lines(
                 str(mtx_gene_idx + 1)).split("\n")[:-1]
+            print(f'Length of matched_rows are: {len(matched_rows)}')
             gene_id, gene = self.genes[int(mtx_gene_idx)].split('\t')
             gene_models.append(self.Model(
                 {
@@ -111,19 +113,17 @@ class Mtx(GeneExpression):
                     '_id': id,
                 }
             ))
-            print(type(matched_rows))
-            for row, idx in enumerate(matched_rows):
-                print(idx)
-                print(row)
+            for row in matched_rows:
+                # import pdb
+                # pdb.set_trace()
                 raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
                 cell_name = self.cells[int(raw_barcode_idx)]
                 exp_score = round(float(raw_exp_score), 3)
                 cell_names.append(cell_name)
                 expression_scores.append(exp_score)
-                print(len(cell_names))
-            print("hello")
-            print(f'Length of cell names: {cell_names}')
-            print(f'Length of expression_scores names: {expression_scores}')
+        #     print("hello")
+        #     print(f'Length of cell names: {cell_names}')
+        #     print(f'Length of expression_scores names: {expression_scores}')
             data_arrays.append(self.set_data_array_gene_cell_names(
                 gene,
                 id,
@@ -134,7 +134,7 @@ class Mtx(GeneExpression):
                 linear_data_id,
                 self.exp_by_gene[unformatted_gene_name].expression_scores,
             ))
-        print(gene_models)
+        # print(gene_models)
 
         # for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(
         #     self.matrix_file.row, self.matrix_file.col, self.matrix_file.data
