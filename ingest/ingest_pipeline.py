@@ -260,7 +260,7 @@ class IngestPipeline(object):
             map(lambda model: InsertOne(model), gene_docs))
         try:
             print('Trying to upload data_array_colection')
-            data_array_bulk_write_results = self.db['data_arrays'].data_array_colection.bulk_write(
+            self.db['data_arrays'].bulk_write(
                 data_array_bulk_operations,  ordered=False
             )
             # bulk.insert(models)
@@ -285,6 +285,7 @@ class IngestPipeline(object):
             self.error_logger.error(e, extra=self.extra_log_params)
             return False
         try:
+            print("writing gene docs")
             gene_doc_bulk_write_results = self.db[collection_name].bulk_write(
                 gene_model_bulk_operations,  ordered=False
             )
@@ -586,12 +587,10 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     for argument in list(arguments.keys()):
 
         captured_argument = re.match("(\w*file)$", argument)
-        print(captured_argument)
         if captured_argument is not None:
             study_file_id = arguments['study_file_id']
             matched_argument = captured_argument.groups()[0]
             file_path = arguments[matched_argument]
-            print(file_path)
             if IngestFiles.is_remote_file(file_path):
                 IngestFiles.delocalize_file(
                     study_file_id,
