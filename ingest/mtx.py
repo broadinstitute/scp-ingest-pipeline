@@ -54,6 +54,7 @@ class Mtx(GeneExpression):
         self.mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(
             mtx_path)
         self.mtx_file.readline()
+        #
         self.mtx_map = self.mtx_file.readline().split()
 
         self.matrix_params = kwargs
@@ -92,13 +93,14 @@ class Mtx(GeneExpression):
         )
         gene_models = []
         data_arrays = []
-        for x in range(int(self.mtx_map[0])):
+        print(range(int(self.mtx_map[0]) - 1))
+        for mtx_gene_idx in range(int(self.mtx_map[0]) - 1):
             expression_scores = []
             cell_names = []
             id = ObjectId()
-            matched_rows = self.extract_gene_lines(x)
-            matched_rows.split("\n")
-            gene_id, gene = self.genes[int(x)].split('\t')
+            matched_rows = self.extract_gene_lines(
+                str(mtx_gene_idx + 1)).split("\n")[:-1]
+            gene_id, gene = self.genes[int(mtx_gene_idx)].split('\t')
             gene_models.append(self.Model(
                 {
                     'name': gene,
@@ -109,44 +111,62 @@ class Mtx(GeneExpression):
                     '_id': id,
                 }
             ))
-            for row in matched_rows:
-                raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split(
-                )
-
+            print(type(matched_rows))
+            for row, idx in enumerate(matched_rows):
+                print(idx)
+                print(row)
+                raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
                 cell_name = self.cells[int(raw_barcode_idx)]
                 exp_score = round(float(raw_exp_score), 3)
+                cell_names.append(cell_name)
+                expression_scores.append(exp_score)
+                print(len(cell_names))
+            print("hello")
+            print(f'Length of cell names: {cell_names}')
+            print(f'Length of expression_scores names: {expression_scores}')
+            data_arrays.append(self.set_data_array_gene_cell_names(
+                gene,
+                id,
+                cell_names,
+            ))
+            data_arrays.append(self.set_data_array_gene_expression_values(
+                unformatted_gene_name,
+                linear_data_id,
+                self.exp_by_gene[unformatted_gene_name].expression_scores,
+            ))
+        print(gene_models)
 
-        for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(
-            self.matrix_file.row, self.matrix_file.col, self.matrix_file.data
-        ):
-            gene_id, gene = self.genes[int(raw_gene_idx)].split('\t')
-            cell_name = self.cells[int(raw_barcode_idx)]
-            exp_score = round(float(raw_exp_score), 3)
-            if gene in self.exp_by_gene.keys():
-                # Append new score to 'expression_scores' key in GeneModelData
-                self.exp_by_gene[gene].expression_scores.append(exp_score)
-                # Append new cell name to 'cell_names' key in GeneModelData
-                self.exp_by_gene[gene].cell_names.append(cell_name)
-            else:
-                self.exp_by_gene[gene] = copy.copy(
-                    GeneExpressionValues([exp_score], [cell_name])
-                )
-                self.info_logger.info(
-                    f'Creating model for {gene} ', extra=self.extra_log_params
-                )
-                yield GeneModelData(
-                    gene,
-                    self.Model(
-                        {
-                            'name': gene,
-                            'searchable_name': gene.lower(),
-                            'study_file_id': self.study_file_id,
-                            'study_id': self.study_id,
-                            'gene_id': gene_id,
-                            '_id': ObjectId(),
-                        }
-                    ),
-                )
+        # for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(
+        #     self.matrix_file.row, self.matrix_file.col, self.matrix_file.data
+        # ):
+        #     gene_id, gene = self.genes[int(raw_gene_idx)].split('\t')
+        #     cell_name = self.cells[int(raw_barcode_idx)]
+        #     exp_score = round(float(raw_exp_score), 3)
+        #     if gene in self.exp_by_gene.keys():
+        #         # Append new score to 'expression_scores' key in GeneModelData
+        #         self.exp_by_gene[gene].expression_scores.append(exp_score)
+        #         # Append new cell name to 'cell_names' key in GeneModelData
+        #         self.exp_by_gene[gene].cell_names.append(cell_name)
+        #     else:
+        #         self.exp_by_gene[gene] = copy.copy(
+        #             GeneExpressionValues([exp_score], [cell_name])
+        #         )
+        #         self.info_logger.info(
+        #             f'Creating model for {gene} ', extra=self.extra_log_params
+        #         )
+        #         yield GeneModelData(
+        #             gene,
+        #             self.Model(
+        #                 {
+        #                     'name': gene,
+        #                     'searchable_name': gene.lower(),
+        #                     'study_file_id': self.study_file_id,
+        #                     'study_id': self.study_id,
+        #                     'gene_id': gene_id,
+        #                     '_id': ObjectId(),
+        #                 }
+        #             ),
+        #         )
 
     @trace
     def set_data_array(
