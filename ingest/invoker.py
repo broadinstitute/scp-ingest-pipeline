@@ -1,5 +1,6 @@
 from command import Command
 
+
 class IngestInvoker:
     """
     The invoker has a reference to the Command

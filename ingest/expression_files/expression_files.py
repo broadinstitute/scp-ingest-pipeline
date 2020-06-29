@@ -8,6 +8,7 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 import abc
+import datetime
 import ntpath
 import types
 from dataclasses import dataclass
@@ -15,8 +16,6 @@ from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
-import datetime
-
 from pymongo import InsertOne, MongoClient
 from pymongo.errors import BulkWriteError
 
@@ -118,7 +117,7 @@ class GeneExpression:
 
     def load_expression_file(self, gene_docs: List, data_array_documents: List):
         """
-        
+
         """
         gene_doc_bulk_write_results = None
         data_array_bulk_write_results = None

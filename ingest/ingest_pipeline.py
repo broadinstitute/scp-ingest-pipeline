@@ -45,33 +45,31 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
 # import google.cloud.logging
 from bson.objectid import ObjectId
+from cell_metadata import CellMetadata
+from cli_parser import create_parser, validate_arguments
+from clusters import Clusters
+from expression_files.dense import Dense
+from expression_files.dense_command import DenseCommand
+# from google.cloud.logging.resource import Resource
+#
+# try:
+# Used when importing internally and in tests
+from ingest_files import IngestFiles
+from invoker import IngestInvoker
+from loom import Loom
+from monitor import log, setup_logger, trace
+from mtx import Mtx
 # For tracing
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
 from opencensus.trace.samplers import AlwaysOnSampler
 from opencensus.trace.tracer import Tracer
 from pymongo import InsertOne, MongoClient
 from pymongo.errors import BulkWriteError
-
-# from google.cloud.logging.resource import Resource
-#
-# try:
-# Used when importing internally and in tests
-from ingest_files import IngestFiles
 from subsample import SubSample
-from loom import Loom
-from validation.validate_metadata import (
-    validate_input_metadata,
-    report_issues,
-    write_metadata_to_bq,
-)
-from monitor import setup_logger, log, trace
-from cell_metadata import CellMetadata
-from clusters import Clusters
-from expression_files.dense_command import DenseCommand
-from expression_files.dense import Dense
-from invoker import IngestInvoker
-from mtx import Mtx
-from cli_parser import create_parser, validate_arguments
+from validation.validate_metadata import (report_issues,
+                                          validate_input_metadata,
+                                          write_metadata_to_bq)
+
 # except ImportError:
 #     # Used when importing as external package, e.g. imports in single_cell_portal code
 #     from .ingest_files import IngestFiles

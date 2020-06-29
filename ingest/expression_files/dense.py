@@ -10,22 +10,22 @@ Must have python 3.6 or higher.
 import collections
 import csv
 import datetime
-from typing import List  # noqa: F401
 import sys
+from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
 
 try:
-    from expression_files import GeneExpression
     sys.path.append("../ingest")
+    from expression_files import GeneExpression
     from ingest_files import IngestFiles
     from .monitor import trace
     from connection import Connection
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .expression_files import GeneExpression
     sys.path.append("../ingest")
+    from .expression_files import GeneExpression
     from ingest_files import IngestFiles
     from monitor import trace
 
@@ -130,17 +130,17 @@ class Dense(GeneExpression, IngestFiles):
             formatted_gene_name = gene.strip().strip('\"')
             id = ObjectId()
             gene_models.append(self.Model(
-                        {
-                            'name': formatted_gene_name,
-                            'searchable_name': formatted_gene_name.lower(),
-                            'study_file_id': self.study_file_id,
-                            'study_id': self.study_id,
-                            '_id': id,
-                            'gene_id': self.matrix_params['gene_id']
-                            if 'gene_id' in self.matrix_params
-                            else None,
-                        }
-                    )
+                {
+                    'name': formatted_gene_name,
+                    'searchable_name': formatted_gene_name.lower(),
+                    'study_file_id': self.study_file_id,
+                    'study_id': self.study_id,
+                    '_id': id,
+                    'gene_id': self.matrix_params['gene_id']
+                    if 'gene_id' in self.matrix_params
+                    else None,
+                }
+            )
             )
             if len(valid_expression_scores) > 0:
                 for gene_cell_model in self.set_data_array_gene_cell_names(gene, id, cells):

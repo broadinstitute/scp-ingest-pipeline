@@ -1,9 +1,10 @@
 import abc
 import sys
 
-sys.path.append("../ingest")
 from command import Command
 from expression_files.dense import Dense
+
+sys.path.append("../ingest")
 
 
 class DenseCommand(Command):
