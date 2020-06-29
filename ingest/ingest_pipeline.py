@@ -53,39 +53,41 @@ from pymongo import InsertOne, MongoClient
 from pymongo.errors import BulkWriteError
 
 # from google.cloud.logging.resource import Resource
-
-try:
-    # Used when importing internally and in tests
-    from ingest_files import IngestFiles
-    from subsample import SubSample
-    from loom import Loom
-    from validation.validate_metadata import (
-        validate_input_metadata,
-        report_issues,
-        write_metadata_to_bq,
-    )
-    from monitor import setup_logger, log, trace
-    from cell_metadata import CellMetadata
-    from clusters import Clusters
-    from dense import Dense
-    from mtx import Mtx
-    from cli_parser import create_parser, validate_arguments
-except ImportError:
-    # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .ingest_files import IngestFiles
-    from .subsample import SubSample
-    from .loom import Loom
-    from .validation.validate_metadata import (
-        validate_input_metadata,
-        report_issues,
-        write_metadata_to_bq,
-    )
-    from .monitor import setup_logger, log, trace
-    from .cell_metadata import CellMetadata
-    from .clusters import Clusters
-    from .dense import Dense
-    from .mtx import Mtx
-    from .cli_parser import create_parser, validate_arguments
+#
+# try:
+# Used when importing internally and in tests
+from ingest_files import IngestFiles
+from subsample import SubSample
+from loom import Loom
+from validation.validate_metadata import (
+    validate_input_metadata,
+    report_issues,
+    write_metadata_to_bq,
+)
+from monitor import setup_logger, log, trace
+from cell_metadata import CellMetadata
+from clusters import Clusters
+from expression_files.dense_command import DenseCommand
+from expression_files.dense import Dense
+from invoker import IngestInvoker
+from mtx import Mtx
+from cli_parser import create_parser, validate_arguments
+# except ImportError:
+#     # Used when importing as external package, e.g. imports in single_cell_portal code
+#     from .ingest_files import IngestFiles
+#     from .subsample import SubSample
+#     from .loom import Loom
+#     from .validation.validate_metadata import (
+#         validate_input_metadata,
+#         report_issues,
+#         write_metadata_to_bq,
+#     )
+#     from .monitor import setup_logger, log, trace
+#     from .cell_metadata import CellMetadata
+#     from .clusters import Clusters
+#     from .dense import Dense
+#     from .mtx import Mtx
+#     from .cli_parser import create_parser, validate_arguments
 
 
 class IngestPipeline(object):
@@ -138,9 +140,6 @@ class IngestPipeline(object):
 
         else:
             self.tracer = nullcontext()
-        if matrix_file is not None:
-            self.matrix = self.initialize_file_connection(
-                matrix_file_type, matrix_file)
         if ingest_cell_metadata:
             self.cell_metadata = self.initialize_file_connection(
                 "cell_metadata", cell_metadata_file
@@ -207,6 +206,19 @@ class IngestPipeline(object):
     def insert_many(self, collection_name, documents):
         self.db[collection_name].insert_many(documents)
 
+    def ingest_expression(self):
+        expression_command = None
+        print(self.matrix_file_type)
+        if self.matrix_file_type == 'dense':
+            dense = Dense(self.matrix_file,
+                          self.study_id,
+                          self.study_file_id,
+                          tracer=self.tracer,
+                          **self.kwargs,)  # Dense receiver
+            expression_command = DenseCommand(dense)  # Dense concrete command
+        invoker = IngestInvoker(expression_command)  # invoker
+        invoker.execute()  # Starting the method calls
+
     @trace
     # @profile
     def load(
@@ -241,215 +253,6 @@ class IngestPipeline(object):
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
-
-    # @profile
-    def load_expression_file(self, gene_docs, data_array_documents, is_gene_model=False):
-        self.error_logger.error(f'Starting to load expression file', extra=self.extra_log_params)
-        print(f'Starting to load expression file')
-        print(f"Making sure doesn't return null value : {self.db['data_arrays']}")
-        collection_name = self.matrix.COLLECTION_NAME
-        gene_doc_bulk_write_results = None
-        data_array_bulk_write_results = None
-        start_time = datetime.datetime.now()
-        pprint.pprint(f"Reading information out the database: {self.db['data_arrays'].find_one()}")
-        self.db['test_collection'].insert_one({'name': "Test_Insert"})
-        print('Creating bulk operations')
-        data_array_bulk_operations = list(
-            map(lambda model: InsertOne(model), data_array_documents))
-        gene_model_bulk_operations = list(
-            map(lambda model: InsertOne(model), gene_docs))
-        try:
-            print('Trying to upload data_array_colection')
-            self.db['data_arrays'].bulk_write(
-                data_array_bulk_operations,  ordered=False
-            )
-            # bulk.insert(models)
-            # bulk.execute();
-        #     if is_gene_model:
-        #         # bulk_write_results describes the type and count of operations performed.
-        #         bulk_write_results = self.db[collection_name].bulk_write(
-        #             bulk_operations
-        #         )
-        #         # Succesfully wrote documents
-        #         return True, bulk_write_results
-        #     else:
-        #         bulk_write_results = self.db['data_arrays'].bulk_write(bulk_operations)
-            # Succesfully wrote documents
-        except BulkWriteError as bwe:
-            print(f"error caused by data docs : {bwe.details}")
-            self.error_logger.error(bwe.details, extra=self.extra_log_params)
-            return False
-
-        except Exception as e:
-            print(f"error caused by data docs : {e}")
-            self.error_logger.error(e, extra=self.extra_log_params)
-            return False
-        try:
-            print("writing gene docs")
-            gene_doc_bulk_write_results = self.db[collection_name].bulk_write(
-                gene_model_bulk_operations,  ordered=False
-            )
-        except BulkWriteError as bwe:
-            print(f"error caused by gene docs : {bwe.details}")
-            self.error_logger.error(bwe.details, extra=self.extra_log_params)
-            return False
-
-        except Exception as e:
-            print(f"error caused by gene docs : {e}")
-            self.error_logger.error(e, extra=self.extra_log_params)
-            return False
-        print(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}')
-        self.error_logger.error(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}', extra=self.extra_log_params)
-        return True
-
-    def load_subsample(
-        self, parent_collection_name, subsampled_data, set_data_array_fn, scope
-    ):
-        """Loads subsampled data into MongoDB"""
-        documents = []
-        try:
-            for key_value in subsampled_data[0].items():
-                annot_name = subsampled_data[1][0]
-                annot_type = subsampled_data[1][1]
-                sample_size = subsampled_data[2]
-                query = {
-                    'study_id': ObjectId(self.study_id),
-                    'study_file_id': ObjectId(self.study_file_id),
-                }
-                # Query mongo for linear_id and 'name' of parent
-                # Then return 'name' and 'id' fields from query results
-                parent_data = self.db[parent_collection_name].find_one(
-                    query, {'name': 1}
-                )
-                for model in set_data_array_fn(
-                    (
-                        key_value[0],  # NAMES, x, y, or z
-                        # Cluster name provided from parent
-                        parent_data['name'],
-                        key_value[1],  # Subsampled data/values
-                        ObjectId(self.study_file_id),
-                        ObjectId(self.study_id),
-                        parent_data['_id'],
-                    ),
-                    {
-                        'subsample_annotation': f"{annot_name}--{annot_type}--{scope}",
-                        'subsample_threshold': sample_size,
-                    },
-                ):
-                    documents.append(model)
-            self.db['data_arrays'].insert_many(documents)
-
-        except Exception as e:
-            # TODO: Log this error
-            self.error_logger.error(e, extra=self.extra_log_params)
-            return 1
-        return 0
-
-    def conforms_to_metadata_convention(self):
-        """ Determines if cell metadata file follows metadata convention"""
-        convention_file_object = IngestFiles(
-            self.JSON_CONVENTION, ['application/json'])
-        json_file = convention_file_object.open_file(self.JSON_CONVENTION)
-        convention = json.load(json_file)
-        if self.kwargs['validate_convention'] is not None:
-            if (
-                self.kwargs['validate_convention']
-                and self.kwargs['bq_dataset']
-                and self.kwargs['bq_table']
-            ):
-                validate_input_metadata(
-                    self.cell_metadata, convention, bq_json=True)
-            else:
-                validate_input_metadata(self.cell_metadata, convention)
-
-        json_file.close()
-        return not report_issues(self.cell_metadata)
-
-    def upload_metadata_to_bq(self):
-        """Uploads metadata to BigQuery"""
-        if self.kwargs['validate_convention'] is not None:
-            if (
-                self.kwargs['validate_convention']
-                and self.kwargs['bq_dataset']
-                and self.kwargs['bq_table']
-            ):
-                write_status = write_metadata_to_bq(
-                    self.cell_metadata,
-                    self.kwargs['bq_dataset'],
-                    self.kwargs['bq_table'],
-                )
-                return write_status
-            else:
-                self.error_logger.error(
-                    'Erroneous call to upload_metadata_to_bq')
-                return 1
-        return 0
-
-    # @trace
-    # @my_debug_logger()
-    def ingest_expression(self) -> int:
-        """Ingests expression files.
-        """
-        # gene_documents = []
-        # data_array_documents = []
-        # self.matrix.transform()
-        # if self.kwargs["gene_file"] is not None:
-        #     self.matrix.extract()
-        # else:
-        #     if not self.matrix.validate_format():
-        #         return 1
-        #     else:
-        #         self.matrix.preprocess()
-        # for idx, gene in enumerate(self.matrix.transform()):
-        self.error_logger.error(
-            'Entered ingest expression ',
-            extra=self.extra_log_params,
-        )
-        print('Entered ingest expression ',)
-        for gene_docs, data_array_documents in self.matrix.transform():
-                # print(f'this is the array doc {data_array_documents}')
-
-                #     self.info_logger.info(
-                #         f"Attempting to load gene: {gene.gene_model['searchable_name']}",
-                #         extra=self.extra_log_params,
-                #     )
-                #     gene_documents, data_array_documents =
-                #     if idx == 0:
-                #         for data_array_document in self.matrix.set_data_array(
-                #             gene.gene_model['_id'],
-                #             gene.gene_name,
-                #             gene.gene_model['searchable_name'],
-                #             {'create_cell_data_array': True},
-                #         ):
-                #             data_array_documents.append(data_array_document)
-                #     else:
-                #         for data_array_document in self.matrix.set_data_array(
-                #             gene.gene_model['_id'],
-                #             gene.gene_name,
-                #             gene.gene_model['searchable_name'],
-                #         ):
-                #             data_array_documents.append(data_array_document)
-                # load_gene_status, load_gene_results = self.load_expression_file(
-                #     gene_documents, is_gene_model=True
-                # )
-            self.error_logger.error(
-                "About to load file", extra=self.extra_log_params)
-            print("About to load file")
-            load_status = self.load_expression_file(
-                gene_docs, data_array_documents)
-            # # check load status
-            if not load_status:
-                return 1
-        return 0
-        # else:
-        #     self.error_logger.error(
-        #         f'Loading expression data failed. Exiting program',
-        #         extra=self.extra_log_params,
-        #     )
-        #     return 1
-        # except Exception as e:
-        #     self.error_logger.error(e, extra=self.extra_log_params)
-        #     return 1
 
     # @my_debug_logger()
     def ingest_cell_metadata(self):

@@ -18,12 +18,12 @@ from bson.objectid import ObjectId
 import copy
 
 try:
-    from expression_files import GeneExpression
+    from expression_files.expression_files import GeneExpression
     from ingest_files import IngestFiles
     from monitor import trace
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .expression_files import GeneExpression
+    from .expression_files.expression_files import GeneExpression
     from .ingest_files import IngestFiles
     from .monitor import trace
 
