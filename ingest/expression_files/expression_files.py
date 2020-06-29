@@ -48,8 +48,8 @@ class GeneExpression:
     def __init__(self, file_path: str, study_id: str, study_file_id: str):
         self.study_id = ObjectId(study_id)
         self.study_file_id = ObjectId(study_file_id)
-        self.head, self.tail = ntpath.split(file_path)
-        self.cluster_name = self.tail or ntpath.basename(self.head)
+        head, tail = ntpath.split(file_path)
+        self.cluster_name = tail or ntpath.basename(head)
         self.extra_log_params = {"study_id": self.study_id, "duration": None}
         self.mongo_connection = MongoConnection()
 
@@ -83,8 +83,8 @@ class GeneExpression:
     ):
         """Sets DataArray for cell names associated to a single gene. This
         DataArray contains cell names that had significant (i.e. non-zero)
-        expression for a gene. """
-
+        expression for a gene.
+        """
         for model in DataArray(
             f"{name} Cells",
             self.cluster_name,
@@ -100,9 +100,10 @@ class GeneExpression:
     def set_data_array_gene_expression_values(
         self, name: str, linear_data_id: str, values: List
     ):
-        """ Sets DataArray for expression values for a gene. This is an array of
-        significant (i.e. non-zero) expression values for a gene. """
-
+        """
+        Sets DataArray for expression values for a gene. This is an array of
+        significant (i.e. non-zero) expression values for a gene.
+        """
         for model in DataArray(
             f"{name} Expression",
             self.cluster_name,
@@ -117,7 +118,7 @@ class GeneExpression:
 
     def load_expression_file(self, gene_docs: List, data_array_documents: List):
         """
-
+        Load gene and data_array models into mongoDB
         """
         gene_doc_bulk_write_results = None
         data_array_bulk_write_results = None
@@ -136,12 +137,10 @@ class GeneExpression:
             )
         except BulkWriteError as bwe:
             print(f"error caused by data docs : {bwe.details}")
-            self.error_logger.error(bwe.details, extra=self.extra_log_params)
             raise BulkWriteError(f'Error caused by data docs : {bwe.details}')
 
         except Exception as e:
             print(f"error caused by data docs : {e}")
-            self.error_logger.error(e, extra=self.extra_log_params)
             raise Exception(f'{e}')
 
         # Try writing gene docs
