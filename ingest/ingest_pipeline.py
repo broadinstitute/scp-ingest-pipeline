@@ -48,8 +48,7 @@ from bson.objectid import ObjectId
 from cell_metadata import CellMetadata
 from cli_parser import create_parser, validate_arguments
 from clusters import Clusters
-from expression_files.dense import Dense
-from expression_files.dense_command import DenseCommand
+from expression_files.dense import DenseIngestor
 # from google.cloud.logging.resource import Resource
 #
 try:
@@ -83,7 +82,7 @@ except ImportError:
     from .monitor import setup_logger, log, trace
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
-    from .dense import Dense
+    from .dense import DenseIngestor
     from .mtx import Mtx
     from .cli_parser import create_parser, validate_arguments
 
@@ -200,16 +199,15 @@ class IngestPipeline(object):
         self.db[collection_name].insert_many(documents)
 
     def ingest_expression(self):
-        if self.matrix_file_type == 'dense':
-            dense = Dense(self.matrix_file,
-                          self.study_id,
-                          self.study_file_id,
-                          tracer=self.tracer,
-                          **self.kwargs,)  # Dense receiver
-            expression_command = DenseCommand(dense)  # Dense concrete command
-        invoker = IngestInvoker(expression_command)  # Invoker
+
+        if DenseIngestor.matches_file_type(self.matrix_file_type):
+            dense_ingestor = DenseIngestor(self.matrix_file,
+                                           self.study_id,
+                                           self.study_file_id,
+                                           tracer=self.tracer,
+                                           **self.kwargs,)  # Dense receiver
         try:
-            invoker.invoke_ingest()  # Starting the method calls
+            dense_ingestor.execute_ingest()  # Starting the method calls
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
@@ -250,7 +248,7 @@ class IngestPipeline(object):
             return 1
         return 0
 
-        def load_subsample(
+    def load_subsample(
         self, parent_collection_name, subsampled_data, set_data_array_fn, scope
     ):
         """Loads subsampled data into MongoDB"""
@@ -479,8 +477,8 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                             'errors.txt',
                             f'parse_logs/{study_file_id}/errors.txt',
                         )
-                    Need 1 argument that has a path to identify google bucket
-                    Break after first argument
+                    # Need 1 argument that has a path to identify google bucket
+                    # Break after first argument
                     break
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
