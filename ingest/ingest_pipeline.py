@@ -52,40 +52,40 @@ from expression_files.dense import Dense
 from expression_files.dense_command import DenseCommand
 # from google.cloud.logging.resource import Resource
 #
-# try:
-# Used when importing internally and in tests
-from ingest_files import IngestFiles
-from invoker import IngestInvoker
-from loom import Loom
-from monitor import log, setup_logger, trace
-from mtx import Mtx
-# For tracing
-from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
-from opencensus.trace.samplers import AlwaysOnSampler
-from opencensus.trace.tracer import Tracer
-from pymongo import InsertOne, MongoClient
-from pymongo.errors import BulkWriteError
-from subsample import SubSample
-from validation.validate_metadata import (report_issues,
-                                          validate_input_metadata,
-                                          write_metadata_to_bq)
+try:
+    # Used when importing internally and in tests
+    from ingest_files import IngestFiles
+    from invoker import IngestInvoker
+    from loom import Loom
+    from monitor import log, setup_logger, trace
+    from mtx import Mtx
+    # For tracing
+    from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
+    from opencensus.trace.samplers import AlwaysOnSampler
+    from opencensus.trace.tracer import Tracer
+    from pymongo import InsertOne, MongoClient
+    from pymongo.errors import BulkWriteError
+    from subsample import SubSample
+    from validation.validate_metadata import (report_issues,
+                                              validate_input_metadata,
+                                              write_metadata_to_bq)
 
-# except ImportError:
-#     # Used when importing as external package, e.g. imports in single_cell_portal code
-#     from .ingest_files import IngestFiles
-#     from .subsample import SubSample
-#     from .loom import Loom
-#     from .validation.validate_metadata import (
-#         validate_input_metadata,
-#         report_issues,
-#         write_metadata_to_bq,
-#     )
-#     from .monitor import setup_logger, log, trace
-#     from .cell_metadata import CellMetadata
-#     from .clusters import Clusters
-#     from .dense import Dense
-#     from .mtx import Mtx
-#     from .cli_parser import create_parser, validate_arguments
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .ingest_files import IngestFiles
+    from .subsample import SubSample
+    from .loom import Loom
+    from .validation.validate_metadata import (
+        validate_input_metadata,
+        report_issues,
+        write_metadata_to_bq,
+    )
+    from .monitor import setup_logger, log, trace
+    from .cell_metadata import CellMetadata
+    from .clusters import Clusters
+    from .dense import Dense
+    from .mtx import Mtx
+    from .cli_parser import create_parser, validate_arguments
 
 
 class IngestPipeline(object):
@@ -173,7 +173,6 @@ class IngestPipeline(object):
             Returns:
                 File object.
         """
-        self.error_logger.error(f'Trying to initialize file', extra=self.extra_log_params)
         print(f'Trying to initialize file')
         # Mtx file types not included because class declaration is different
         file_connections = {
@@ -249,6 +248,86 @@ class IngestPipeline(object):
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
+        return 0
+
+        def load_subsample(
+        self, parent_collection_name, subsampled_data, set_data_array_fn, scope
+    ):
+        """Loads subsampled data into MongoDB"""
+        documents = []
+        try:
+            for key_value in subsampled_data[0].items():
+                annot_name = subsampled_data[1][0]
+                annot_type = subsampled_data[1][1]
+                sample_size = subsampled_data[2]
+                query = {
+                    'study_id': ObjectId(self.study_id),
+                    'study_file_id': ObjectId(self.study_file_id),
+                }
+                # Query mongo for linear_id and 'name' of parent
+                # Then return 'name' and 'id' fields from query results
+                parent_data = self.db[parent_collection_name].find_one(
+                    query, {'name': 1}
+                )
+                for model in set_data_array_fn(
+                    (
+                        key_value[0],  # NAMES, x, y, or z
+                        # Cluster name provided from parent
+                        parent_data['name'],
+                        key_value[1],  # Subsampled data/values
+                        ObjectId(self.study_file_id),
+                        ObjectId(self.study_id),
+                        parent_data['_id'],
+                    ),
+                    {
+                        'subsample_annotation': f"{annot_name}--{annot_type}--{scope}",
+                        'subsample_threshold': sample_size,
+                    },
+                ):
+                    documents.append(model)
+            self.db['data_arrays'].insert_many(documents)
+
+        except Exception as e:
+            # TODO: Log this error
+            self.error_logger.error(e, extra=self.extra_log_params)
+            return 1
+        return 0
+
+    def conforms_to_metadata_convention(self):
+        """ Determines if cell metadata file follows metadata convention"""
+        convention_file_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        json_file = convention_file_object.open_file(self.JSON_CONVENTION)
+        convention = json.load(json_file)
+        if self.kwargs['validate_convention'] is not None:
+            if (
+                self.kwargs['validate_convention']
+                and self.kwargs['bq_dataset']
+                and self.kwargs['bq_table']
+            ):
+                validate_input_metadata(self.cell_metadata, convention, bq_json=True)
+            else:
+                validate_input_metadata(self.cell_metadata, convention)
+
+        json_file.close()
+        return not report_issues(self.cell_metadata)
+
+    def upload_metadata_to_bq(self):
+        """Uploads metadata to BigQuery"""
+        if self.kwargs['validate_convention'] is not None:
+            if (
+                self.kwargs['validate_convention']
+                and self.kwargs['bq_dataset']
+                and self.kwargs['bq_table']
+            ):
+                write_status = write_metadata_to_bq(
+                    self.cell_metadata,
+                    self.kwargs['bq_dataset'],
+                    self.kwargs['bq_table'],
+                )
+                return write_status
+            else:
+                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
+                return 1
         return 0
 
     # @my_debug_logger()
@@ -381,49 +460,28 @@ def run_ingest(ingest, arguments, parsed_args):
 def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """Logs any errors, then exits Ingest Pipeline with standard OS code
     """
-    logging.basicConfig(filename='errors.txt', level=logging.DEBUG)
-    logging.debug("exit_pipeline now")
-    print('exit_pipeline now')
-    for argument in list(arguments.keys()):
-
-        captured_argument = re.match("(\w*file)$", argument)
-        if captured_argument is not None:
-            study_file_id = arguments['study_file_id']
-            matched_argument = captured_argument.groups()[0]
-            file_path = arguments[matched_argument]
-            if IngestFiles.is_remote_file(file_path):
-                IngestFiles.delocalize_file(
-                    study_file_id,
-                    arguments['study_id'],
-                    file_path,
-                    'errors.txt',
-                    f'parse_logs/{study_file_id}/errors.txt',
-                )
-            # Need 1 argument that has a path to identify google bucket
-            # Break after first argument
-            break
     if len(status) > 0:
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:
             # delocalize errors file
-            # for argument in list(arguments.keys()):
-            #     captured_argument = re.match("(\w*file)$", argument)
-            #     if captured_argument is not None:
-            #         study_file_id = arguments['study_file_id']
-            #         matched_argument = captured_argument.groups()[0]
-            #         file_path = arguments[matched_argument]
-            #         if IngestFiles.is_remote_file(file_path):
-            #             IngestFiles.delocalize_file(
-            #                 study_file_id,
-            #                 arguments['study_id'],
-            #                 file_path,
-            #                 'errors.txt',
-            #                 f'parse_logs/{study_file_id}/errors.txt',
-            #             )
-                    # Need 1 argument that has a path to identify google bucket
-                    # Break after first argument
-                    # break
+            for argument in list(arguments.keys()):
+                captured_argument = re.match("(\w*file)$", argument)
+                if captured_argument is not None:
+                    study_file_id = arguments['study_file_id']
+                    matched_argument = captured_argument.groups()[0]
+                    file_path = arguments[matched_argument]
+                    if IngestFiles.is_remote_file(file_path):
+                        IngestFiles.delocalize_file(
+                            study_file_id,
+                            arguments['study_id'],
+                            file_path,
+                            'errors.txt',
+                            f'parse_logs/{study_file_id}/errors.txt',
+                        )
+                    Need 1 argument that has a path to identify google bucket
+                    Break after first argument
+                    break
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
                     # PAPI jobs failing metadata validation against convention report

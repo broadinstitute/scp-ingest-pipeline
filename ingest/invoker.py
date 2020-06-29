@@ -4,7 +4,7 @@ from command import Command
 class IngestInvoker:
     """
     The invoker has a reference to the Command
-    and the command executes the appropriate action of the receiver.
+    and the command invokes the appropriate action of the receiver.
     """
 
     def __init__(self, command: Command):

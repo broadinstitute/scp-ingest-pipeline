@@ -9,9 +9,9 @@ sys.path.append("../ingest")
 
 class DenseCommand(Command):
     """
-    A concrete / specific Command class, implementing execute()
-    which calls a specific or an appropriate action of a method
-    from a Dense, a receiver class.
+    A concrete / specific Command class that calls a
+    specific or an appropriate action of a method from
+    Dense, a receiver class.
     Args:
         dense (Dense): Receiver class to be attached to the command
     """
