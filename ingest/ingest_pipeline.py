@@ -147,9 +147,6 @@ class IngestPipeline(object):
         if ingest_cluster:
             self.cluster = self.initialize_file_connection(
                 "cluster", cluster_file)
-        if matrix_file is None:
-            self.matrix = matrix_file
-
         if subsample:
             self.cluster_file = cluster_file
             self.cell_metadata_file = cell_metadata_file
@@ -182,7 +179,6 @@ class IngestPipeline(object):
         print(f'Trying to initialize file')
         # Mtx file types not included because class declaration is different
         file_connections = {
-            "dense": Dense,
             "cell_metadata": CellMetadata,
             "cluster": Clusters,
             "mtx": Mtx,
@@ -207,8 +203,6 @@ class IngestPipeline(object):
         self.db[collection_name].insert_many(documents)
 
     def ingest_expression(self):
-        expression_command = None
-        print(self.matrix_file_type)
         if self.matrix_file_type == 'dense':
             dense = Dense(self.matrix_file,
                           self.study_id,
@@ -216,8 +210,13 @@ class IngestPipeline(object):
                           tracer=self.tracer,
                           **self.kwargs,)  # Dense receiver
             expression_command = DenseCommand(dense)  # Dense concrete command
-        invoker = IngestInvoker(expression_command)  # invoker
-        invoker.execute()  # Starting the method calls
+        invoker = IngestInvoker(expression_command)  # Invoker
+        try:
+            invoker.invoke_ingest()  # Starting the method calls
+        except Exception as e:
+            self.error_logger.error(e, extra=self.extra_log_params)
+            return 1
+        return 0
 
     @trace
     # @profile
@@ -447,18 +446,10 @@ def main() -> None:
         None
     """
     logging.basicConfig(filename='errors.txt', level=logging.DEBUG)
-    print("Made it into main")
-    logging.debug("Made it into main")
     parsed_args = create_parser().parse_args()
-    logging.debug(f'Here are the parsed args: {parsed_args}')
-    print(f'Here are the parsed args: {parsed_args}')
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
-    logging.debug(f'Initailizing ingest pipeline')
-    print('Initailizing ingest pipeline')
     ingest = IngestPipeline(**arguments)
-    print('Starting ingest')
-    logging.debug(f'Starting ingest')
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 

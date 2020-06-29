@@ -7,5 +7,5 @@ class Command(metaclass=abc.ABCMeta):
     action.
     """
     @abc.abstractmethod
-    def execute(self):
+    def execute_ingest(self):
         pass

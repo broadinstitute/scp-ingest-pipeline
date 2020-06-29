@@ -15,14 +15,20 @@ from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
+import datetime
+
+from pymongo import InsertOne, MongoClient
+from pymongo.errors import BulkWriteError
 
 try:
     from ingest_files import DataArray
     from monitor import setup_logger
+    from connection import MongoConnection
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import DataArray
     from .monitor import setup_logger
+    from connection import MongoConnection
 
 
 class GeneExpression:
@@ -46,6 +52,7 @@ class GeneExpression:
         self.head, self.tail = ntpath.split(file_path)
         self.cluster_name = self.tail or ntpath.basename(self.head)
         self.extra_log_params = {"study_id": self.study_id, "duration": None}
+        self.mongo_connection = MongoConnection()
 
     @abc.abstractmethod
     def transform(self):
@@ -109,22 +116,23 @@ class GeneExpression:
         ).get_data_array():
             yield model
 
-    def load_expression_file(self, gene_docs, data_array_documents):
-        self.error_logger.error(f'Starting to load expression file', extra=self.extra_log_params)
-        print(f'Starting to load expression file')
-        print(f"Making sure doesn't return null value : {self.db['data_arrays']}")
-        collection_name = self.matrix.COLLECTION_NAME
+    def load_expression_file(self, gene_docs: List, data_array_documents: List):
+        """
+        
+        """
         gene_doc_bulk_write_results = None
         data_array_bulk_write_results = None
         start_time = datetime.datetime.now()
-        print('Creating bulk operations')
+
+        # Creating Mongo bulk operations
         data_array_bulk_operations = list(
             map(lambda model: InsertOne(model), data_array_documents))
         gene_model_bulk_operations = list(
             map(lambda model: InsertOne(model), gene_docs))
+
+        # Try writing data_array_colection
         try:
-            print('Trying to upload data_array_colection')
-            self.db['data_arrays'].bulk_write(
+            self.mongo_connection.client['data_arrays'].bulk_write(
                 data_array_bulk_operations,  ordered=False
             )
         except BulkWriteError as bwe:
@@ -136,9 +144,10 @@ class GeneExpression:
             print(f"error caused by data docs : {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
             return False
+
+        # Try writing gene docs
         try:
-            print("writing gene docs")
-            gene_doc_bulk_write_results = self.db[collection_name].bulk_write(
+            gene_doc_bulk_write_results = self.mongo_connection.client[self.COLLECTION_NAME].bulk_write(
                 gene_model_bulk_operations,  ordered=False
             )
         except BulkWriteError as bwe:
@@ -151,5 +160,4 @@ class GeneExpression:
             self.error_logger.error(e, extra=self.extra_log_params)
             return False
         print(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}')
-        self.error_logger.error(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}', extra=self.extra_log_params)
         return True
