@@ -5,7 +5,10 @@ from pymongo import MongoClient
 
 
 class Connection(metaclass=abc.ABCMeta):
-
+    """
+    The connetion interface that declares a client for a particular
+    client.
+    """
     @property
     @abc.abstractmethod
     def client(self):
@@ -19,8 +22,7 @@ class Connection(metaclass=abc.ABCMeta):
 
 class MongoConnection(Connection):
     """
-    The command interface that declares a method (execute) for a particular
-    action.
+    A concrete class that defines a MongoDB client
     """
 
     def __init__(self):
