@@ -26,7 +26,5 @@ class DenseCommand(Command):
         for gene_docs, data_array_documents in self._dense.transform():
             load_status = self._dense.load_expression_file(
                 gene_docs, data_array_documents)
-            if load_status != 0:
-                return load_status
         self._dense.close()
         return 0

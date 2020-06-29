@@ -137,12 +137,12 @@ class GeneExpression:
         except BulkWriteError as bwe:
             print(f"error caused by data docs : {bwe.details}")
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
-            return False
+            raise BulkWriteError(f'Error caused by data docs : {bwe.details}')
 
         except Exception as e:
             print(f"error caused by data docs : {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
-            return False
+            raise Exception(f'{e}')
 
         # Try writing gene docs
         try:
@@ -151,12 +151,9 @@ class GeneExpression:
             )
         except BulkWriteError as bwe:
             print(f"error caused by gene docs : {bwe.details}")
-            self.error_logger.error(bwe.details, extra=self.extra_log_params)
-            return False
+            raise BulkWriteError(f'Error caused by data docs : {bwe.details}')
 
         except Exception as e:
             print(f"error caused by gene docs : {e}")
-            self.error_logger.error(e, extra=self.extra_log_params)
-            return False
+            raise Exception(f'{e}')
         print(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}')
-        return True
