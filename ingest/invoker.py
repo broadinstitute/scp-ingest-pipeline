@@ -19,7 +19,7 @@ class IngestInvoker:
         Execute all the saved commands, then empty the list.
         """
         for cmd in self._command_list:
-            cmd.execute()
+            cmd.execute_ingest()
 
         self._command_list.clear()
 
