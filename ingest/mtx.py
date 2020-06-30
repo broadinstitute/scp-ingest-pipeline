@@ -113,15 +113,14 @@ class Mtx(GeneExpression):
                     '_id': id,
                 }
             ))
+            print(f'Length of barcodes file: {len(self.cells)}')
             for row in matched_rows:
-                # import pdb
-                # pdb.set_trace()
                 raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
-                cell_name = self.cells[int(raw_barcode_idx)]
+                cell_name = self.cells[int(raw_barcode_idx)-1]
                 exp_score = round(float(raw_exp_score), 3)
                 cell_names.append(cell_name)
                 expression_scores.append(exp_score)
-        #     print("hello")
+            print("hello")
         #     print(f'Length of cell names: {cell_names}')
         #     print(f'Length of expression_scores names: {expression_scores}')
             data_arrays.append(self.set_data_array_gene_cell_names(
@@ -130,10 +129,11 @@ class Mtx(GeneExpression):
                 cell_names,
             ))
             data_arrays.append(self.set_data_array_gene_expression_values(
-                unformatted_gene_name,
-                linear_data_id,
-                self.exp_by_gene[unformatted_gene_name].expression_scores,
+                gene,
+                id,
+                expression_scores,
             ))
+            return data_arrays, gene_models
         # print(gene_models)
 
         # for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(
