@@ -348,9 +348,6 @@ class IngestPipeline(object):
     def ingest_expression(self) -> int:
         """Ingests expression files.
         """
-
-        gene_documents = []
-        data_array_documents = []
         if self.kwargs["gene_file"] is not None:
             self.matrix.extract()
         else:
@@ -360,10 +357,8 @@ class IngestPipeline(object):
                 self.matrix.preprocess()
         # try:
         for gene, data_arrays in self.matrix.transform():
-            self.info_logger.info(
-                f"Attempting to load gene: {gene.gene_model['searchable_name']}",
-                extra=self.extra_log_params,
-            )
+            print(gene)
+            
         #         gene_documents.append(gene.gene_model)
         #         if idx == 0:
         #             for data_array_document in self.matrix.set_data_array(

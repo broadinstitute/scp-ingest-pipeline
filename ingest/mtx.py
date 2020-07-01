@@ -73,9 +73,9 @@ class Mtx(GeneExpression):
 
     @trace
     def extract(self):
-        """Sets relevant iterables for each file of the MTX bundle
+        """Sets relevant iterables for each gene and barcode files
+        of the MTX bundle
         """
-        # self.matrix_file = scipy.io.mmread(self.mtx_local_path)
         self.genes = [g.strip() for g in self.genes_file.readlines()]
         self.cells = [c.strip() for c in self.barcodes_file.readlines()]
 
@@ -83,25 +83,19 @@ class Mtx(GeneExpression):
     def transform(self):
         """Transforms matrix gene data model
         """
-        # Named tuple that has orignial string format of a gene's name, 'gene_name'
-        # and it's corresponding model 'gene_model'
-        GeneModelData = collections.namedtuple(
-            'GeneModel', ['gene_name', 'gene_model'])
-        # Named tuple to hold expression data for a single gene
-        GeneExpressionValues = collections.namedtuple(
-            'GeneExpressionValues', ['expression_scores', 'cell_names']
-        )
+        num_processed = 0
         gene_models = []
         data_arrays = []
-        print(range(int(self.mtx_map[0]) - 1))
+        # Create gene model for all cells available in file
+        for all_cell_model in self.set_data_array_cells(
+                self.cells, ObjectId()):
+            data_arrays.append(all_cell_model)
         for mtx_gene_idx in range(int(self.mtx_map[0]) - 1):
-            print(mtx_gene_idx)
             expression_scores = []
             cell_names = []
             id = ObjectId()
             matched_rows = self.extract_gene_lines(
                 str(mtx_gene_idx + 1)).split("\n")[:-1]
-            print(f'Length of matched_rows are: {len(matched_rows)}')
             gene_id, gene = self.genes[int(mtx_gene_idx)].split('\t')
             gene_models.append(self.Model(
                 {
@@ -113,16 +107,12 @@ class Mtx(GeneExpression):
                     '_id': id,
                 }
             ))
-            print(f'Length of barcodes file: {len(self.cells)}')
             for row in matched_rows:
                 raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
                 cell_name = self.cells[int(raw_barcode_idx)-1]
                 exp_score = round(float(raw_exp_score), 3)
                 cell_names.append(cell_name)
                 expression_scores.append(exp_score)
-            print("hello")
-        #     print(f'Length of cell names: {cell_names}')
-        #     print(f'Length of expression_scores names: {expression_scores}')
             data_arrays.append(self.set_data_array_gene_cell_names(
                 gene,
                 id,
@@ -133,7 +123,18 @@ class Mtx(GeneExpression):
                 id,
                 expression_scores,
             ))
-            return data_arrays, gene_models
+            if len(gene_models) > 5:
+                num_processed += len(gene_models)
+                yield (gene_models, data_arrays)
+                print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
+                self.error_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
+                gene_models = []
+                data_arrays = []
+        yield (gene_models, data_arrays)
+        num_processed += len(gene_models)
+        print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
+        gene_models = []
+        data_arrays = []
         # print(gene_models)
 
         # for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(
