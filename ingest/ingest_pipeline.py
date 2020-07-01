@@ -38,6 +38,7 @@ import logging
 import os
 import re
 import sys
+import datetime
 from contextlib import nullcontext
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
@@ -151,7 +152,7 @@ class IngestPipeline(object):
 
     @my_debug_logger()
     def get_mongo_db(self):
-        host = os.environ['DATABASE_HOST']
+        host = os.environ['e']
         user = os.environ['MONGODB_USERNAME']
         password = os.environ['MONGODB_PASSWORD']
         db_name = os.environ['DATABASE_NAME']
@@ -234,31 +235,49 @@ class IngestPipeline(object):
             return 1
         return 0
 
-    # @profile
-    def load_expression_file(self, models, is_gene_model=False):
+    def load_expression_file(self, gene_docs, data_array_documents, is_gene_model=False):
+        self.error_logger.error(f'Starting to load expression file', extra=self.extra_log_params)
+        print(f'Starting to load expression file')
         collection_name = self.matrix.COLLECTION_NAME
-        # Creates operations to perform for bulk write
-        bulk_operations = list(map(lambda model: InsertOne(model), models))
+        gene_doc_bulk_write_results = None
+        data_array_bulk_write_results = None
+        start_time = datetime.datetime.now()
+        print('Creating bulk operations')
+        data_array_bulk_operations = list(
+            map(lambda model: InsertOne(model), data_array_documents))
+        gene_model_bulk_operations = list(
+            map(lambda model: InsertOne(model), gene_docs))
         try:
-            if is_gene_model:
-                # bulk_write_results describes the type and count of operations performed.
-                bulk_write_results = self.db[collection_name].bulk_write(
-                    bulk_operations
-                )
-                # Succesfully wrote documents
-                return True, bulk_write_results
-            else:
-                bulk_write_results = self.db['data_arrays'].bulk_write(
-                    bulk_operations)
-                # Succesfully wrote documents
-                return True, bulk_write_results
+            print('Trying to upload data_array_colection')
+            self.db['data_arrays'].bulk_write(
+                data_array_bulk_operations,  ordered=False
+            )
         except BulkWriteError as bwe:
+            print(f"error caused by data docs : {bwe.details}")
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
-            return False, bwe.details
+            return False
 
         except Exception as e:
+            print(f"error caused by data docs : {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
-            return False, None
+            return False
+        try:
+            print("writing gene docs")
+            gene_doc_bulk_write_results = self.db[collection_name].bulk_write(
+                gene_model_bulk_operations,  ordered=False
+            )
+        except BulkWriteError as bwe:
+            print(f"error caused by gene docs : {bwe.details}")
+            self.error_logger.error(bwe.details, extra=self.extra_log_params)
+            return False
+
+        except Exception as e:
+            print(f"error caused by gene docs : {e}")
+            self.error_logger.error(e, extra=self.extra_log_params)
+            return False
+        print(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}')
+        self.error_logger.error(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}', extra=self.extra_log_params)
+        return True
 
     def load_subsample(
         self, parent_collection_name, subsampled_data, set_data_array_fn, scope
@@ -348,60 +367,15 @@ class IngestPipeline(object):
     def ingest_expression(self) -> int:
         """Ingests expression files.
         """
-        if self.kwargs["gene_file"] is not None:
-            self.matrix.extract()
-        else:
-            if not self.matrix.validate_format():
-                return 1
-            else:
-                self.matrix.preprocess()
-        # try:
-        for gene, data_arrays in self.matrix.transform():
-            print(gene)
-            
-        #         gene_documents.append(gene.gene_model)
-        #         if idx == 0:
-        #             for data_array_document in self.matrix.set_data_array(
-        #                 gene.gene_model['_id'],
-        #                 gene.gene_name,
-        #                 gene.gene_model['searchable_name'],
-        #                 {'create_cell_data_array': True},
-        #             ):
-        #                 data_array_documents.append(data_array_document)
-        #         else:
-        #             for data_array_document in self.matrix.set_data_array(
-        #                 gene.gene_model['_id'],
-        #                 gene.gene_name,
-        #                 gene.gene_model['searchable_name'],
-        #             ):
-        #                 data_array_documents.append(data_array_document)
-        #     load_gene_status, load_gene_results = self.load_expression_file(
-        #         gene_documents, is_gene_model=True
-        #     )
-        #     load_data_array_status, load_data_array_results = self.load_expression_file(
-        #         data_array_documents
-        #     )
-        #     # check load status
-        #     if load_gene_status and load_data_array_status:
-        #         # load_<   >_results describes the type and count of operations performed.
-        #         self.info_logger.info(
-        #             f"Bulk Write Results for gene models: {load_gene_results.bulk_api_result}",
-        #             extra=self.extra_log_params,
-        #         )
-        #         self.info_logger.info(
-        #             f"Bulk Write Results for gene data arrays: {load_data_array_results.bulk_api_result}",
-        #             extra=self.extra_log_params,
-        #         )
-        #         return 0
-        #     else:
-        #         self.error_logger.error(
-        #             f'Loading expression data failed. Exiting program',
-        #             extra=self.extra_log_params,
-        #         )
-        #         return 1
-        # except Exception as e:
-        #     self.error_logger.error(e, extra=self.extra_log_params)
-        #     return 1
+        # if self.kwargs["gene_file"] is not None:
+        self.matrix.extract()
+        try:
+            for gene, data_arrays in self.matrix.transform():
+                self.load_expression_file(gene, data_arrays)
+        except Exception as e:
+            print(e)
+            return 1
+        return 0
 
     # @my_debug_logger()
     def ingest_cell_metadata(self):

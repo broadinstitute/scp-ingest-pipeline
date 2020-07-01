@@ -14,6 +14,7 @@ Must have python 3.6 or higher.
 import collections
 import copy
 import os
+import datetime
 import subprocess
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
@@ -84,6 +85,7 @@ class Mtx(GeneExpression):
         """Transforms matrix gene data model
         """
         num_processed = 0
+        start_time = datetime.datetime.now()
         gene_models = []
         data_arrays = []
         # Create gene model for all cells available in file
@@ -113,21 +115,17 @@ class Mtx(GeneExpression):
                 exp_score = round(float(raw_exp_score), 3)
                 cell_names.append(cell_name)
                 expression_scores.append(exp_score)
-            data_arrays.append(self.set_data_array_gene_cell_names(
+            for cell_data_array in self.set_data_array_gene_cell_names(
                 gene,
                 id,
-                cell_names,
-            ))
-            data_arrays.append(self.set_data_array_gene_expression_values(
-                gene,
-                id,
-                expression_scores,
-            ))
+                cell_names):
+                data_arrays.append(cell_data_array)
+            for gene_data_array in self.set_data_array_gene_expression_values(gene,id,expression_scores):
+                data_arrays.append(gene_data_array)
             if len(gene_models) > 5:
                 num_processed += len(gene_models)
                 yield (gene_models, data_arrays)
                 print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
-                self.error_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
                 gene_models = []
                 data_arrays = []
         yield (gene_models, data_arrays)
@@ -135,39 +133,7 @@ class Mtx(GeneExpression):
         print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
         gene_models = []
         data_arrays = []
-        # print(gene_models)
 
-        # for raw_gene_idx, raw_barcode_idx, raw_exp_score in zip(
-        #     self.matrix_file.row, self.matrix_file.col, self.matrix_file.data
-        # ):
-        #     gene_id, gene = self.genes[int(raw_gene_idx)].split('\t')
-        #     cell_name = self.cells[int(raw_barcode_idx)]
-        #     exp_score = round(float(raw_exp_score), 3)
-        #     if gene in self.exp_by_gene.keys():
-        #         # Append new score to 'expression_scores' key in GeneModelData
-        #         self.exp_by_gene[gene].expression_scores.append(exp_score)
-        #         # Append new cell name to 'cell_names' key in GeneModelData
-        #         self.exp_by_gene[gene].cell_names.append(cell_name)
-        #     else:
-        #         self.exp_by_gene[gene] = copy.copy(
-        #             GeneExpressionValues([exp_score], [cell_name])
-        #         )
-        #         self.info_logger.info(
-        #             f'Creating model for {gene} ', extra=self.extra_log_params
-        #         )
-        #         yield GeneModelData(
-        #             gene,
-        #             self.Model(
-        #                 {
-        #                     'name': gene,
-        #                     'searchable_name': gene.lower(),
-        #                     'study_file_id': self.study_file_id,
-        #                     'study_id': self.study_id,
-        #                     'gene_id': gene_id,
-        #                     '_id': ObjectId(),
-        #                 }
-        #             ),
-        #         )
 
     @trace
     def set_data_array(

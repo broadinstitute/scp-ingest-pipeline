@@ -56,9 +56,11 @@ class GeneExpression:
         DataArray with expression data."""
 
     def set_data_array_cells(self, values: List, linear_data_id):
-        """Sets DataArray for cells that were observed in an
-        expression matrix."""
-        return DataArray(
+        """
+        Sets DataArray for cells that were observed in an
+        expression matrix.
+        """
+        for model in DataArray(
             f"{self.cluster_name} Cells",
             self.cluster_name,
             "cells",
@@ -67,16 +69,17 @@ class GeneExpression:
             linear_data_id,
             self.study_id,
             self.study_file_id,
-        ).get_data_array()
+        ).get_data_array():
+            yield model
 
     def set_data_array_gene_cell_names(
         self, name: str, linear_data_id: str, values: List
     ):
         """Sets DataArray for cell names associated to a single gene. This
         DataArray contains cell names that had significant (i.e. non-zero)
-        expression for a gene. """
-
-        return DataArray(
+        expression for a gene.
+        """
+        for model in DataArray(
             f"{name} Cells",
             self.cluster_name,
             "cells",
@@ -85,15 +88,17 @@ class GeneExpression:
             linear_data_id,
             self.study_id,
             self.study_file_id,
-        ).get_data_array()
+        ).get_data_array():
+            yield model
 
     def set_data_array_gene_expression_values(
         self, name: str, linear_data_id: str, values: List
     ):
-        """ Sets DataArray for expression values for a gene. This is an array of
-        significant (i.e. non-zero) expression values for a gene. """
-
-        return DataArray(
+        """
+        Sets DataArray for expression values for a gene. This is an array of
+        significant (i.e. non-zero) expression values for a gene.
+        """
+        for model in DataArray(
             f"{name} Expression",
             self.cluster_name,
             "expression",
@@ -102,4 +107,5 @@ class GeneExpression:
             linear_data_id,
             self.study_id,
             self.study_file_id,
-        ).get_data_array()
+        ).get_data_array():
+            yield model
