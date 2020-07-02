@@ -55,6 +55,7 @@ class Mtx(GeneExpression):
         self.mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(
             mtx_path)
         self.mtx_file.readline()
+        self.mtx_file.readline()
         #
         self.mtx_map = self.mtx_file.readline().split()
 
@@ -112,7 +113,9 @@ class Mtx(GeneExpression):
             for row in matched_rows:
                 raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
                 cell_name = self.cells[int(raw_barcode_idx)-1]
+                print(cell_name)
                 exp_score = round(float(raw_exp_score), 3)
+                print(exp_score)
                 cell_names.append(cell_name)
                 expression_scores.append(exp_score)
             for cell_data_array in self.set_data_array_gene_cell_names(
