@@ -58,6 +58,7 @@ class Mtx(GeneExpression):
         self.mtx_file.readline()
         #
         self.mtx_map = self.mtx_file.readline().split()
+        print(self.mtx_map)
 
         self.matrix_params = kwargs
         self.exp_by_gene = {}
@@ -94,11 +95,13 @@ class Mtx(GeneExpression):
                 self.cells, ObjectId()):
             data_arrays.append(all_cell_model)
         for mtx_gene_idx in range(int(self.mtx_map[0]) - 1):
+            print(f'current rang is {mtx_gene_idx}')
             expression_scores = []
             cell_names = []
             id = ObjectId()
             matched_rows = self.extract_gene_lines(
                 str(mtx_gene_idx + 1)).split("\n")[:-1]
+            print(f'Matched rows are {matched_rows}')
             gene_id, gene = self.genes[int(mtx_gene_idx)].split('\t')
             gene_models.append(self.Model(
                 {
@@ -111,6 +114,7 @@ class Mtx(GeneExpression):
                 }
             ))
             for row in matched_rows:
+                print(row)
                 raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
                 cell_name = self.cells[int(raw_barcode_idx)-1]
                 print(cell_name)
