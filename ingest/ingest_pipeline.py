@@ -152,7 +152,7 @@ class IngestPipeline(object):
 
     @my_debug_logger()
     def get_mongo_db(self):
-        host = os.environ['e']
+        host = os.environ['DATABASE_HOST']
         user = os.environ['MONGODB_USERNAME']
         password = os.environ['MONGODB_PASSWORD']
         db_name = os.environ['DATABASE_NAME']
@@ -255,29 +255,28 @@ class IngestPipeline(object):
         except BulkWriteError as bwe:
             print(f"error caused by data docs : {bwe.details}")
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
-            return False
+            raise BulkWriteError(f'{bwe.details}')
 
         except Exception as e:
             print(f"error caused by data docs : {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
-            return False
+            raise Exception(f'{e}')
         try:
-            print("writing gene docs")
+            print("Try to write gene docs")
             gene_doc_bulk_write_results = self.db[collection_name].bulk_write(
                 gene_model_bulk_operations,  ordered=False
             )
         except BulkWriteError as bwe:
             print(f"error caused by gene docs : {bwe.details}")
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
-            return False
+            raise BulkWriteError(bwe.details)
 
         except Exception as e:
             print(f"error caused by gene docs : {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
-            return False
+            raise Exception(f'{e}')
         print(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}')
         self.error_logger.error(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}', extra=self.extra_log_params)
-        return True
 
     def load_subsample(
         self, parent_collection_name, subsampled_data, set_data_array_fn, scope
@@ -508,6 +507,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """
     if len(status) > 0:
         if all(i < 1 for i in status):
+            print('Finished ingest pipeline succesfully')
             sys.exit(os.EX_OK)
         else:
             # delocalize errors file
