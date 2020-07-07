@@ -32,7 +32,6 @@ setup(
         'opencensus-ext-stackdriver',
         'google-cloud-trace',
         'grpcio',
-        'grpcio-tools',
     ],
     packages=find_packages(),
     classifiers=[
