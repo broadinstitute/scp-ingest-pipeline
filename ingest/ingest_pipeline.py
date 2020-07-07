@@ -238,6 +238,7 @@ class IngestPipeline(object):
     def load_expression_file(self, gene_docs, data_array_documents, is_gene_model=False):
         self.error_logger.error(f'Starting to load expression file', extra=self.extra_log_params)
         print(f'Starting to load expression file')
+        print(data_array_documents)
         collection_name = self.matrix.COLLECTION_NAME
         gene_doc_bulk_write_results = None
         data_array_bulk_write_results = None

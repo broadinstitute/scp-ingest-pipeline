@@ -64,7 +64,7 @@ class Mtx(GeneExpression):
         self.exp_by_gene = {}
 
     def extract_gene_lines(self, value):
-        return subprocess.run(['egrep', f'^{value}\s', self.mtx_local_path],
+        return subprocess.run(['zgrep', f'^{value}\s', self.mtx_local_path],
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE
                               ).stdout.decode('utf-8')
         # Grab first line to determine how many genes there are
@@ -79,8 +79,8 @@ class Mtx(GeneExpression):
         """Sets relevant iterables for each gene and barcode files
         of the MTX bundle
         """
-        self.genes = [g.strip() for g in self.genes_file.readlines()]
-        self.cells = [c.strip() for c in self.barcodes_file.readlines()]
+        self.genes = [g.strip().strip('\"') for g in self.genes_file.readlines()]
+        self.cells = [c.strip().strip('\"') for c in self.barcodes_file.readlines()]
 
     @trace
     def transform(self):
@@ -99,9 +99,11 @@ class Mtx(GeneExpression):
             expression_scores = []
             cell_names = []
             id = ObjectId()
+            match_rows = self.extract_gene_lines(
+                str(mtx_gene_idx + 1))
+            # print(f'unsplit rows are {match_rows }')
             matched_rows = self.extract_gene_lines(
                 str(mtx_gene_idx + 1)).split("\n")[:-1]
-            print(f'Matched rows are {matched_rows}')
             gene_id, gene = self.genes[int(mtx_gene_idx)].split('\t')
             gene_models.append(self.Model(
                 {
@@ -114,12 +116,9 @@ class Mtx(GeneExpression):
                 }
             ))
             for row in matched_rows:
-                print(row)
                 raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
                 cell_name = self.cells[int(raw_barcode_idx)-1]
-                print(cell_name)
                 exp_score = round(float(raw_exp_score), 3)
-                print(exp_score)
                 cell_names.append(cell_name)
                 expression_scores.append(exp_score)
             for cell_data_array in self.set_data_array_gene_cell_names(
