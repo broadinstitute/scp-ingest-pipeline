@@ -308,7 +308,7 @@ class IngestFiles:
             )
             dialect.skipinitialspace = True
             open_file_object.seek(0)
-            return pd.read_csv(file_path, dialect=dialect, **kwargs)
+            return pd.read_csv(file_path, dialect=dialect, low_memory=False, **kwargs)
         else:
             raise ValueError("File must be tab or comma delimited")
 
