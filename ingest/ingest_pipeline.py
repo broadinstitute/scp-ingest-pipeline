@@ -479,8 +479,8 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                             'errors.txt',
                             f'parse_logs/{study_file_id}/errors.txt',
                         )
-                    Need 1 argument that has a path to identify google bucket
-                    Break after first argument
+                    # Need 1 argument that has a path to identify google bucket
+                    # Break after first argument
                     break
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
