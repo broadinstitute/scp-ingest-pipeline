@@ -95,7 +95,7 @@ class Annotations(IngestFiles):
         index = pd.MultiIndex.from_tuples(columns)
         self.file = self.open_file(
             self.file_path, open_as='dataframe', dtype=dtypes, names=index, skiprows=2,
-            keep_default_na=True,
+            keep_default_na=False,
         )[0]
         # dtype of object allows mixed dtypes in columns, including numeric dtypes
         # coerce group annotations that pandas detects as non-object types to type string

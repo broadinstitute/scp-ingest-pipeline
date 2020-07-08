@@ -48,14 +48,17 @@ class TestAnnotations(unittest.TestCase):
             annot_type = column[1]
             if annot_type == 'numeric':
                 value = str(self.df.file[column][ran_num])
-                print(Decimal(value).as_tuple().exponent)
+                # print(Decimal(value).as_tuple().exponent)
                 assert (
                     abs(Decimal(value).as_tuple().exponent) >= self.EXPONENT
                 ), "Numbers did not round to 3 or less decimals places"
 
     def test_group_annotations(self):
-        self.df.preprocess()
-        for column in self.df.file.columns:
+        cluster = Annotations(
+            '../tests/data/cluster_example.txt', ['text/csv', 'text/plain', 'text/tab-separated-values']
+        )
+        cluster.preprocess()
+        for column in cluster.file.columns:
             # Ensure labels are strings
             header = column[0]
             assert isinstance(header, str)
@@ -63,9 +66,15 @@ class TestAnnotations(unittest.TestCase):
             if annot_type == 'group':
                 # corrected testings of dataframe column dtype, using != always returns True
                 self.assertFalse(
-                    np.issubdtype(self.df.file[column].dtypes, np.number),
+                    np.issubdtype(cluster.file[column].dtypes, np.number),
                     "Group annotations must be string values",
                 )
+                # Each value in column should be treated as a string
+                for value in cluster.file[column]:
+                    self.assertTrue(
+                        type(value)== str,
+                        f"{value} is a group annotation and must be a string"
+                    )
 
     def test_merge_df(self):
         cluster = Clusters(
@@ -85,9 +94,9 @@ class TestAnnotations(unittest.TestCase):
         common_cell_names = cell_names_cluster_df[
             np.isin(cell_names_cluster_df, cell_names_cell_metadata_df)
         ]
-        print(f'common cell names: {common_cell_names}')
+        # print(f'common cell names: {common_cell_names}')
         # Perform merge
-        print(cluster.file[['NAME', 'x', 'y', 'z']])
+        # print(cluster.file[['NAME', 'x', 'y', 'z']])
         cluster.merge_df(cluster.file[['NAME', 'x', 'y', 'z']], cell_metadata_df.file)
 
         # Ensure ONLY common cell names found in cell metadata file and cluster file
@@ -99,3 +108,14 @@ class TestAnnotations(unittest.TestCase):
             result,
             f"Merge was not performed correctly. Merge should be performed on 'NAME'",
         )
+    # def test_na_values(self):
+    #
+    #     self.df.preprocess()
+    #     for annotation, annot_type in zip(self.headers, self.annot_types):
+    #         if annot_type is 'group':
+    #             column = list(self.df[annotation])
+    #             for value in column:
+    #                 self.assertTrue(type(value) is 'str', )
+    #
+    #
+    #         self.assertTrue
