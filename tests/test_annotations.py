@@ -54,17 +54,17 @@ class TestAnnotations(unittest.TestCase):
         # and the numeric value was not properly coerced to become a string
         assert isinstance(
             lmtest.file['mixed_data']['group'][0], str
-        ), "numeric value in initial chunk should be coerced to string"
+        ), "numeric value should be coerced to string"
         # This test will need to be adjusted when SCP-2545 is implemented so NA values
         # become strings for group annotations. This test checks for current behavior,
         # an empty cell becomes a NaN value which is a float.
         assert isinstance(
             lmtest.file['mixed_data']['group'][2], float
-        ), "empty cell in initial chunk should be coerced NaN which is a float"
+        ), "expect empty cell conversion to NaN which is a float"
         # numeric value in second chunk should still properly be coerced to string type
         assert isinstance(
             lmtest.file['mixed_data']['group'][32800], str
-        ), "numeric value in second chunk should be coerced to string"
+        ), "numeric value should be coerced to string"
 
     def test_round(self):
         # Pick a random number between 1 and amount of lines in file
