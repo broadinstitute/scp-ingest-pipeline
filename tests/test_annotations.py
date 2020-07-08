@@ -49,15 +49,20 @@ class TestAnnotations(unittest.TestCase):
             ['text/csv', 'text/plain', 'text/tab-separated-values'],
         )
         lmtest.preprocess()
-        print(type(lmtest.file['mixed_data']['group'][0]))
+
+        # when low memory=True, the first row in the file would be in the first chunk
+        # and the numeric value was not properly coerced to become a string
         assert isinstance(
             lmtest.file['mixed_data']['group'][0], str
         ), "numeric value in initial chunk should be coerced to string"
-        print(type(lmtest.file['mixed_data']['group'][2]))
+        # This test will need to be adjusted when SCP-2545 is implemented so NA values
+        # become strings for group annotations. This test checks for current behavior,
+        # an empty cell becomes a NaN value which is a float.
         assert isinstance(
             lmtest.file['mixed_data']['group'][2], float
         ), "empty cell in initial chunk should be coerced NaN which is a float"
-        print(type(lmtest.file['mixed_data']['group'][32800]))
+        # when low memory=True, the first row in the file would be in the first chunk
+        # and the numeric value was not properly coerced to become a string
         assert isinstance(
             lmtest.file['mixed_data']['group'][32800], str
         ), "numeric value in second chunk should be coerced to string"
