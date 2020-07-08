@@ -40,6 +40,28 @@ class TestAnnotations(unittest.TestCase):
             self.CLUSTER_PATH, ['text/csv', 'text/plain', 'text/tab-separated-values']
         )
 
+    def test_low_mem_artifact(self):
+        # pandas default of low_memory=True allows internal chunking during parsing
+        # causing inconsistent dtype coercion artifact for larger annotation files
+
+        lmtest = Annotations(
+            '../tests/data/low_mem_unit.txt',
+            ['text/csv', 'text/plain', 'text/tab-separated-values'],
+        )
+        lmtest.preprocess()
+        print(type(lmtest.file['mixed_data']['group'][0]))
+        assert isinstance(
+            lmtest.file['mixed_data']['group'][0], str
+        ), "numeric value in initial chunk should be coerced to string"
+        print(type(lmtest.file['mixed_data']['group'][2]))
+        assert isinstance(
+            lmtest.file['mixed_data']['group'][2], float
+        ), "empty cell in initial chunk should be coerced NaN which is a float"
+        print(type(lmtest.file['mixed_data']['group'][32800]))
+        assert isinstance(
+            lmtest.file['mixed_data']['group'][32800], str
+        ), "numeric value in second chunk should be coerced to string"
+
     def test_round(self):
         # Pick a random number between 1 and amount of lines in file
         ran_num = random.randint(1, 2000)
