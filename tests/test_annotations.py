@@ -61,8 +61,7 @@ class TestAnnotations(unittest.TestCase):
         assert isinstance(
             lmtest.file['mixed_data']['group'][2], float
         ), "empty cell in initial chunk should be coerced NaN which is a float"
-        # when low memory=True, the first row in the file would be in the first chunk
-        # and the numeric value was not properly coerced to become a string
+        # numeric value in second chunk should still properly be coerced to string type
         assert isinstance(
             lmtest.file['mixed_data']['group'][32800], str
         ), "numeric value in second chunk should be coerced to string"
