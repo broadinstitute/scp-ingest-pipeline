@@ -20,8 +20,11 @@ class MongoConnection:
         return self._client
 
     @client.setter
-    def client(self, x):
-        if os.environ.get('DATABASE_HOST') is not None:
+    def client(self):
+        # Needed to run tests in test_ingest.py in CircleCI.
+        # Needed in test_ingest.py to verify observable
+        # output using the same input interface as PAPI
+        if self.host is not None:
             self._client = MongoClient(
                 host,
                 username=user,
@@ -29,5 +32,7 @@ class MongoConnection:
                 authSource=db_name,
                 authMechanism='SCRAM-SHA-1',
             )
+        # Needed to due to lack of database mock library for MongoDB
+        # TODO: add mock, remove this
         else:
             self._client = None
