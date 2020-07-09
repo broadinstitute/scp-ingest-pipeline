@@ -4,23 +4,7 @@ import os
 from pymongo import MongoClient
 
 
-class Connection(metaclass=abc.ABCMeta):
-    """
-    The connetion interface that declares a client for a particular
-    client.
-    """
-    @property
-    @abc.abstractmethod
-    def client(self):
-        pass
-
-    @client.setter
-    @abc.abstractmethod
-    def client(self, x):
-        pass
-
-
-class MongoConnection(Connection):
+class MongoConnection:
     """
     A concrete class that defines a MongoDB client
     """
