@@ -150,7 +150,7 @@ class GeneExpression:
             )
         except BulkWriteError as bwe:
             print(f"error caused by gene docs : {bwe.details}")
-            raise BulkWriteError(f'Error caused by data docs : {bwe.details}')
+            raise BulkWriteError(f'Error caused by gene docs : {bwe.details}')
 
         except Exception as e:
             print(f"error caused by gene docs : {e}")

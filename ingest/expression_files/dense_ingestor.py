@@ -14,6 +14,8 @@ import sys
 from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
+from ingestor import Ingestor
+
 
 try:
     sys.path.append("../ingest")
@@ -30,7 +32,7 @@ except ImportError:
     from monitor import trace
 
 
-class Dense(GeneExpression, IngestFiles):
+class DenseIngestor(GeneExpression, IngestFiles, Ingestor):
     ALLOWED_FILE_TYPES = ["text/csv",
                           "text/plain", "text/tab-separated-values"]
 
@@ -44,6 +46,16 @@ class Dense(GeneExpression, IngestFiles):
         self.csv_file = self.open_file(self.file_path)[0]
         self.gene_names = {}
         self.header = next(self.csv_file)
+
+    def execute_ingest(self):
+        for gene_docs, data_array_documents in self.transform():
+            load_status = self.load_expression_file(
+                gene_docs, data_array_documents)
+        self.close()
+        return 0
+
+    def matches_file_type(file_type):
+        return file_type == 'dense'
 
     def validate_unique_header(self):
         """Validates header has no duplicate values"""
