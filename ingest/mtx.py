@@ -35,6 +35,9 @@ except ImportError:
 class Mtx(GeneExpression):
     ALLOWED_FILE_TYPES = ["text/tab-separated-values"]
 
+    def matches_mtx_file_type(file_type):
+        return 'mtx' == file_type
+        
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         self.tracer = kwargs.pop("tracer")
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
@@ -54,37 +57,45 @@ class Mtx(GeneExpression):
         mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
         self.mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(
             mtx_path)
-        self.mtx_file.readline()
-        self.mtx_file.readline()
-        #
-        self.mtx_map = self.mtx_file.readline().split()
-        print(self.mtx_map)
+        #An array that represents a gene-barcode matrix N, M, K where N is the
+        # gene index, M is the barcode index, and K is the expresion score
+        self.mtx_desciption = self.mtx_file.readline(3).split()
 
         self.matrix_params = kwargs
         self.exp_by_gene = {}
 
-    def extract_gene_lines(self, value):
+    def execute_ingest(self):
+        self.extract_feature_barcode_matrices()
+        yield from self.transform()
+        self.close()
+
+    def extract_mtx(self, value):
+        """
+        Zgreps by gene index from MEX file to enhance performance/scale
+        """
         return subprocess.run(['zgrep', f'^{value}\s', self.mtx_local_path],
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE
                               ).stdout.decode('utf-8')
-        # Grab first line to determine how many genes there are
-        # grep for aomunt of genes in order. Ex 1, 2, 3...N
-        # Pull index from gene and cell file.
-        # tmp_file_path = 'foo' + gene + '.mtx_tmp'
-        # os.exec(f'grep -e "{gene} " {mtx_path} > tmp_file_path')
-        # return fs.open(tmp_file_path).readlines()
 
     @trace
-    def extract(self):
-        """Sets relevant iterables for each gene and barcode files
-        of the MTX bundle
+    def extract_feature_barcode_matrices(self):
+        """
+        Sets relevant iterables for the gene and barcode file of the MTX bundle
         """
         self.genes = [g.strip().strip('\"') for g in self.genes_file.readlines()]
         self.cells = [c.strip().strip('\"') for c in self.barcodes_file.readlines()]
 
     @trace
     def transform(self):
-        """Transforms matrix gene data model
+        """
+        Transforms bundle into data models.
+            - yields 5 gene models and its corresponding data array models
+                at a time.
+            - Tracks amount of time it takes to create models.
+        Returns:
+            tuple (generator):
+                gene_models (list): gene model documents
+                data_arrays (list): data arrays that correspond to gene models
         """
         num_processed = 0
         start_time = datetime.datetime.now()
@@ -95,15 +106,17 @@ class Mtx(GeneExpression):
                 self.cells, ObjectId()):
             data_arrays.append(all_cell_model)
         for mtx_gene_idx in range(int(self.mtx_map[0]) - 1):
-            print(f'current rang is {mtx_gene_idx}')
             expression_scores = []
             cell_names = []
             id = ObjectId()
-            match_rows = self.extract_gene_lines(
-                str(mtx_gene_idx + 1))
-            # print(f'unsplit rows are {match_rows }')
+            # Extract rows:str from mtx file that match current mtx_gene_idx
+            # matched_rows = [[N, K, M],[N, K, M],...N] where N = mtx_gene_idx
+            # Rows in mtx file are 1 based and represented as strings => have
+            # to add 1 to mtx_gene_idx and convert to string.
             matched_rows = self.extract_gene_lines(
                 str(mtx_gene_idx + 1)).split("\n")[:-1]
+            # Grab gene_id and gene from features file
+            # Location of gene in features file  = mtx_gene_idx
             gene_id, gene = self.genes[int(mtx_gene_idx)].split('\t')
             gene_models.append(self.Model(
                 {
@@ -115,6 +128,7 @@ class Mtx(GeneExpression):
                     '_id': id,
                 }
             ))
+            # Collect all cells and expression scores associated with a gene
             for row in matched_rows:
                 raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
                 cell_name = self.cells[int(raw_barcode_idx)-1]
@@ -142,39 +156,6 @@ class Mtx(GeneExpression):
 
 
     @trace
-    def set_data_array(
-        self,
-        linear_data_id,
-        unformatted_gene_name,
-        gene_name,
-        create_cell_DataArray=False,
-    ):
-        if create_cell_DataArray:
-            self.info_logger.info(
-                f'Creating cell data array for gene :{unformatted_gene_name}',
-                extra=self.extra_log_params,
-            )
-            yield from self.set_data_array_cells(self.cells, linear_data_id)
-        else:
-            self.info_logger.info(
-                f'Creating cell names data array for gene:{unformatted_gene_name}',
-                extra=self.extra_log_params,
-            )
-            yield from self.set_data_array_gene_cell_names(
-                unformatted_gene_name,
-                linear_data_id,
-                self.exp_by_gene[unformatted_gene_name].cell_names,
-            )
-            self.info_logger.info(
-                f'Creating gene expression data array for gene:{unformatted_gene_name}',
-                extra=self.extra_log_params,
-            )
-            yield from self.set_data_array_gene_expression_values(
-                unformatted_gene_name,
-                linear_data_id,
-                self.exp_by_gene[unformatted_gene_name].expression_scores,
-            )
-
     def close(self):
         """Closes file
         """
