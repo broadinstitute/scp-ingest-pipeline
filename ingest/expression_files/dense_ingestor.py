@@ -18,18 +18,16 @@ from ingestor import Ingestor
 
 
 try:
-    sys.path.append("../ingest")
     from expression_files import GeneExpression
     from ingest_files import IngestFiles
     from .monitor import trace
-    from connection import Connection
+    from .connection import MongoConnection
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
-    sys.path.append("../ingest")
     from .expression_files import GeneExpression
-    from ingest_files import IngestFiles
-    from monitor import trace
+    from .ingest_files import IngestFiles
+    from .monitor import trace
 
 
 class DenseIngestor(GeneExpression, IngestFiles, Ingestor):

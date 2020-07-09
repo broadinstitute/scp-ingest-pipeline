@@ -48,14 +48,12 @@ from bson.objectid import ObjectId
 from cell_metadata import CellMetadata
 from cli_parser import create_parser, validate_arguments
 from clusters import Clusters
-from expression_files.dense import DenseIngestor
+from expression_files.dense_ingestor import DenseIngestor
 # from google.cloud.logging.resource import Resource
 #
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
-    from invoker import IngestInvoker
-    from loom import Loom
     from monitor import log, setup_logger, trace
     from mtx import Mtx
     # For tracing
@@ -73,7 +71,6 @@ except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
     from .subsample import SubSample
-    from .loom import Loom
     from .validation.validate_metadata import (
         validate_input_metadata,
         report_issues,
@@ -82,7 +79,7 @@ except ImportError:
     from .monitor import setup_logger, log, trace
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
-    from .dense import DenseIngestor
+    from .expression_files.dense_ingestor.py import DenseIngestor
     from .mtx import Mtx
     from .cli_parser import create_parser, validate_arguments
 
