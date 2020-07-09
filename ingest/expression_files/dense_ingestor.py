@@ -129,7 +129,7 @@ class DenseIngestor(GeneExpression, IngestFiles, Ingestor):
             cells = []
 
             for idx, expression_score in enumerate(numeric_scores, 1):
-                if expression_score > 0:
+                if expression_score != 0:
                     valid_expression_scores.append(expression_score)
                     cells.append(self.header[idx])
             gene = row[0]
