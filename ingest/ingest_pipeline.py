@@ -229,8 +229,6 @@ class IngestPipeline(object):
     def load_expression_file(self, gene_docs, data_array_documents):
         self.error_logger.error(f'Starting to load expression file', extra=self.extra_log_params)
         print(f'Starting to load expression file')
-        print(data_array_documents)
-        collection_name = self.matrix.COLLECTION_NAME
         try:
             print('Trying to upload data_array_colection')
             self.db['data_arrays'].insert_many(
@@ -247,7 +245,7 @@ class IngestPipeline(object):
             raise Exception(f'{e}')
         try:
             print("Try to write gene docs")
-            self.db[collection_name].insert_many(
+            self.db['genes'].insert_many(
                 gene_docs,  ordered=False
             )
         except BulkWriteError as bwe:
@@ -358,8 +356,7 @@ class IngestPipeline(object):
                                            **self.kwargs,)
         try:
             for gene_doc, data_array in expression_ingestor.execute_ingest():
-                print(gene_doc)
-                # self.load_expression_file(gene_doc, data_array)
+                self.load_expression_file(gene_doc, data_array)
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
