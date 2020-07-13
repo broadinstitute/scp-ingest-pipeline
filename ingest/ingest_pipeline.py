@@ -67,7 +67,7 @@ try:
     from cell_metadata import CellMetadata
     from clusters import Clusters
     from dense import Dense
-    from mtx import Mtx
+    from mtx import MTXIngestor
     from cli_parser import create_parser, validate_arguments
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
@@ -83,7 +83,7 @@ except ImportError:
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
     from .dense import Dense
-    from .mtx import Mtx
+    from .mtx import MTXIngestor
     from .cli_parser import create_parser, validate_arguments
 
 
@@ -133,9 +133,6 @@ class IngestPipeline(object):
 
         else:
             self.tracer = nullcontext()
-        if matrix_file is not None:
-            self.matrix = self.initialize_file_connection(
-                matrix_file_type, matrix_file)
         if ingest_cell_metadata:
             self.cell_metadata = self.initialize_file_connection(
                 "cell_metadata", cell_metadata_file
@@ -173,13 +170,11 @@ class IngestPipeline(object):
             Returns:
                 File object.
         """
-        print('here1')
         # Mtx file types not included because class declaration is different
         file_connections = {
             "dense": Dense,
             "cell_metadata": CellMetadata,
             "cluster": Clusters,
-            "mtx": Mtx,
             "loom": Loom,
         }
 
@@ -190,10 +185,6 @@ class IngestPipeline(object):
             tracer=self.tracer,
             **self.kwargs,
         )
-
-    def close_matrix(self):
-        """Closes connection to file"""
-        self.matrix.close()
 
     # @profile
     # TODO: Make @profile conditional (SCP-2081)
@@ -235,23 +226,15 @@ class IngestPipeline(object):
             return 1
         return 0
 
-    def load_expression_file(self, gene_docs, data_array_documents, is_gene_model=False):
+    def load_expression_file(self, gene_docs, data_array_documents):
         self.error_logger.error(f'Starting to load expression file', extra=self.extra_log_params)
         print(f'Starting to load expression file')
         print(data_array_documents)
         collection_name = self.matrix.COLLECTION_NAME
-        gene_doc_bulk_write_results = None
-        data_array_bulk_write_results = None
-        start_time = datetime.datetime.now()
-        print('Creating bulk operations')
-        data_array_bulk_operations = list(
-            map(lambda model: InsertOne(model), data_array_documents))
-        gene_model_bulk_operations = list(
-            map(lambda model: InsertOne(model), gene_docs))
         try:
             print('Trying to upload data_array_colection')
-            self.db['data_arrays'].bulk_write(
-                data_array_bulk_operations,  ordered=False
+            self.db['data_arrays'].insert_many(
+                data_array_documents,  ordered=False
             )
         except BulkWriteError as bwe:
             print(f"error caused by data docs : {bwe.details}")
@@ -264,8 +247,8 @@ class IngestPipeline(object):
             raise Exception(f'{e}')
         try:
             print("Try to write gene docs")
-            gene_doc_bulk_write_results = self.db[collection_name].bulk_write(
-                gene_model_bulk_operations,  ordered=False
+            self.db[collection_name].insert_many(
+                gene_docs,  ordered=False
             )
         except BulkWriteError as bwe:
             print(f"error caused by gene docs : {bwe.details}")
@@ -362,16 +345,23 @@ class IngestPipeline(object):
                 return 1
         return 0
 
-    # @trace
-    # @my_debug_logger()
     def ingest_expression(self) -> int:
-        """Ingests expression files.
         """
+        Ingests expression files.
+        """
+        expression_ingestor = None
+        if MTXIngestor.matches_file_type(self.matrix_file_type):
+            print('made it in here')
+            expression_ingestor = MTXIngestor(self.matrix_file,
+                                           self.study_id,
+                                           self.study_file_id,
+                                           **self.kwargs,)
         try:
-            for gene, data_arrays in self.matrix.ingest():
-                self.load_expression_file(gene, data_arrays)
+            for gene_doc, data_array in expression_ingestor.execute_ingest():
+                print(gene_doc)
+                # self.load_expression_file(gene_doc, data_array)
         except Exception as e:
-            print(e)
+            self.error_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
 

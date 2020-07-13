@@ -17,6 +17,7 @@ import os
 import datetime
 import subprocess
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+import linecache
 
 import scipy.io
 from bson.objectid import ObjectId
@@ -32,14 +33,13 @@ except ImportError:
     from .monitor import trace
 
 
-class Mtx(GeneExpression):
+class MTXIngestor(GeneExpression):
     ALLOWED_FILE_TYPES = ["text/tab-separated-values"]
 
-    def matches_mtx_file_type(file_type):
+    def matches_file_type(file_type):
         return 'mtx' == file_type
-        
+
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
-        self.tracer = kwargs.pop("tracer")
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
 
         genes_path = kwargs.pop("gene_file")
@@ -57,15 +57,20 @@ class Mtx(GeneExpression):
         mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
         self.mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(
             mtx_path)
-        #An array that represents a gene-barcode matrix N, M, K where N is the
-        # gene index, M is the barcode index, and K is the expresion score
-        self.mtx_desciption = self.mtx_file.readline(3).split()
-
+        # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
+        # is the gene index, M is the barcode index, and K is the expresion score
+        # retrieve specific line
+        self.mtx_desciption = linecache.getline(self.mtx_local_path , 2).split()
         self.matrix_params = kwargs
-        self.exp_by_gene = {}
 
     def execute_ingest(self):
+        print('about to transform')
+        # import pdb
+        # pdb.set_trace()
         self.extract_feature_barcode_matrices()
+        print('extracted features')
+        # import pdb
+        # pdb.set_trace()
         yield from self.transform()
         self.close()
 
@@ -77,7 +82,7 @@ class Mtx(GeneExpression):
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE
                               ).stdout.decode('utf-8')
 
-    @trace
+
     def extract_feature_barcode_matrices(self):
         """
         Sets relevant iterables for the gene and barcode file of the MTX bundle
@@ -85,7 +90,6 @@ class Mtx(GeneExpression):
         self.genes = [g.strip().strip('\"') for g in self.genes_file.readlines()]
         self.cells = [c.strip().strip('\"') for c in self.barcodes_file.readlines()]
 
-    @trace
     def transform(self):
         """
         Transforms bundle into data models.
@@ -97,26 +101,30 @@ class Mtx(GeneExpression):
                 gene_models (list): gene model documents
                 data_arrays (list): data arrays that correspond to gene models
         """
+        print('entered transform')
         num_processed = 0
         start_time = datetime.datetime.now()
         gene_models = []
         data_arrays = []
         # Create gene model for all cells available in file
+        print('creating all cells model')
         for all_cell_model in self.set_data_array_cells(
                 self.cells, ObjectId()):
             data_arrays.append(all_cell_model)
-        for mtx_gene_idx in range(int(self.mtx_map[0]) - 1):
-            expression_scores = []
-            cell_names = []
+        for mtx_gene_idx in range(int(self.mtx_desciption[0]) - 1):
+            # import pdb
+            # pdb.set_trace()
+            exp_scores = []
+            exp_cells = []
             id = ObjectId()
             # Extract rows:str from mtx file that match current mtx_gene_idx
             # matched_rows = [[N, K, M],[N, K, M],...N] where N = mtx_gene_idx
             # Rows in mtx file are 1 based and represented as strings => have
             # to add 1 to mtx_gene_idx and convert to string.
-            matched_rows = self.extract_gene_lines(
+            matched_rows = self.extract_mtx(
                 str(mtx_gene_idx + 1)).split("\n")[:-1]
             # Grab gene_id and gene from features file
-            # Location of gene in features file  = mtx_gene_idx
+            # Location of gene in features file = mtx_gene_idx + 1
             gene_id, gene = self.genes[int(mtx_gene_idx)].split('\t')
             gene_models.append(self.Model(
                 {
@@ -131,16 +139,16 @@ class Mtx(GeneExpression):
             # Collect all cells and expression scores associated with a gene
             for row in matched_rows:
                 raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
-                cell_name = self.cells[int(raw_barcode_idx)-1]
+                exp_cell = self.cells[int(raw_barcode_idx)-1]
                 exp_score = round(float(raw_exp_score), 3)
-                cell_names.append(cell_name)
-                expression_scores.append(exp_score)
+                exp_cells.append(exp_cell)
+                exp_scores.append(exp_score)
             for cell_data_array in self.set_data_array_gene_cell_names(
                 gene,
                 id,
-                cell_names):
+                exp_cells):
                 data_arrays.append(cell_data_array)
-            for gene_data_array in self.set_data_array_gene_expression_values(gene,id,expression_scores):
+            for gene_data_array in self.set_data_array_gene_expression_values(gene,id,exp_scores):
                 data_arrays.append(gene_data_array)
             if len(gene_models) > 5:
                 num_processed += len(gene_models)
@@ -157,7 +165,8 @@ class Mtx(GeneExpression):
 
     @trace
     def close(self):
-        """Closes file
+        """
+        Closes file barcode and features file
         """
         self.genes_file.close()
         self.barcodes_file.close()
