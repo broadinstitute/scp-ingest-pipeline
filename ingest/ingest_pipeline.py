@@ -33,12 +33,12 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 # Ingest mtx files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name humans --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
+import datetime
 import json
 import logging
 import os
 import re
 import sys
-import datetime
 from contextlib import nullcontext
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
@@ -350,9 +350,9 @@ class IngestPipeline(object):
         expression_ingestor = None
         if MTXIngestor.matches_file_type(self.matrix_file_type):
             expression_ingestor = MTXIngestor(self.matrix_file,
-                                           self.study_id,
-                                           self.study_file_id,
-                                           **self.kwargs,)
+                                              self.study_id,
+                                              self.study_file_id,
+                                              **self.kwargs,)
         try:
             for gene_doc, data_array in expression_ingestor.execute_ingest():
                 self.load_expression_file(gene_doc, data_array)

@@ -13,11 +13,11 @@ Must have python 3.6 or higher.
 
 import collections
 import copy
-import os
 import datetime
+import linecache
+import os
 import subprocess
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
-import linecache
 
 import scipy.io
 from bson.objectid import ObjectId
@@ -60,7 +60,8 @@ class MTXIngestor(GeneExpression):
         # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
         # is the gene index, M is the barcode index, and K is the expresion score
         # for the given gene index
-        self.mtx_description = linecache.getline(self.mtx_local_path , 2).split()
+        self.mtx_description = linecache.getline(
+            self.mtx_local_path, 2).split()
 
     def execute_ingest(self):
         # import pdb
@@ -79,13 +80,14 @@ class MTXIngestor(GeneExpression):
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE
                               ).stdout.decode('utf-8')
 
-
     def extract_feature_barcode_matrices(self):
         """
         Sets relevant iterables for the gene and barcode file of the MTX bundle
         """
-        self.genes = [g.strip().strip('\"') for g in self.genes_file.readlines()]
-        self.cells = [c.strip().strip('\"') for c in self.barcodes_file.readlines()]
+        self.genes = [g.strip().strip('\"')
+                      for g in self.genes_file.readlines()]
+        self.cells = [c.strip().strip('\"')
+                      for c in self.barcodes_file.readlines()]
 
     def transform(self):
         """
@@ -132,16 +134,16 @@ class MTXIngestor(GeneExpression):
             # Collect all cells and expression scores associated with a gene
             for row in matched_rows:
                 raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
-                exp_cell = self.cells[int(raw_barcode_idx)-1]
+                exp_cell = self.cells[int(raw_barcode_idx) - 1]
                 exp_score = round(float(raw_exp_score), 3)
                 exp_cells.append(exp_cell)
                 exp_scores.append(exp_score)
             for cell_data_array in self.set_data_array_gene_cell_names(
-                gene,
-                id,
-                exp_cells):
+                    gene,
+                    id,
+                    exp_cells):
                 data_arrays.append(cell_data_array)
-            for gene_data_array in self.set_data_array_gene_expression_values(gene,id,exp_scores):
+            for gene_data_array in self.set_data_array_gene_expression_values(gene, id, exp_scores):
                 data_arrays.append(gene_data_array)
             if len(gene_models) > 5:
                 num_processed += len(gene_models)
@@ -154,7 +156,6 @@ class MTXIngestor(GeneExpression):
         print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
         gene_models = []
         data_arrays = []
-
 
     @trace
     def close(self):
