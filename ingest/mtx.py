@@ -61,7 +61,6 @@ class MTXIngestor(GeneExpression):
         # is the gene index, M is the barcode index, and K is the expresion score
         # for the given gene index
         self.mtx_description = linecache.getline(self.mtx_local_path , 2).split()
-        self.matrix_params = kwargs
 
     def execute_ingest(self):
         # import pdb
@@ -99,19 +98,15 @@ class MTXIngestor(GeneExpression):
                 gene_models (list): gene model documents
                 data_arrays (list): data arrays that correspond to gene models
         """
-        print('entered transform')
         num_processed = 0
         start_time = datetime.datetime.now()
         gene_models = []
         data_arrays = []
         # Create gene model for all cells available in file
-        print('creating all cells model')
         for all_cell_model in self.set_data_array_cells(
                 self.cells, ObjectId()):
             data_arrays.append(all_cell_model)
-        for mtx_gene_idx in range(int(self.mtx_desciption[0]) - 1):
-            # import pdb
-            # pdb.set_trace()
+        for mtx_gene_idx in range(int(self.mtx_description[0]) - 1):
             exp_scores = []
             exp_cells = []
             id = ObjectId()

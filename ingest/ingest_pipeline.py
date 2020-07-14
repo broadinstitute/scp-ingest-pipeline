@@ -349,7 +349,6 @@ class IngestPipeline(object):
         """
         expression_ingestor = None
         if MTXIngestor.matches_file_type(self.matrix_file_type):
-            print('made it in here')
             expression_ingestor = MTXIngestor(self.matrix_file,
                                            self.study_id,
                                            self.study_file_id,
@@ -469,7 +468,9 @@ def run_ingest(ingest, arguments, parsed_args):
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
         print('Trying to ingest expression')
-        status.append(ingest.ingest_expression())
+        hey = ingest.ingest_expression()
+        print(f'status is {hey}')
+        status.append(status)
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
             status_cell_metadata = ingest.ingest_cell_metadata()

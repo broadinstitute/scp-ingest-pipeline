@@ -102,6 +102,8 @@ class IngestTestCase(unittest.TestCase):
 
         status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
 
+        print(f'status is {status}')
+
         return ingest, arguments, status, status_cell_metadata
 
     # def test_ingest_dense_matrix(self):
@@ -242,7 +244,6 @@ class IngestTestCase(unittest.TestCase):
             '../tests/data/barcodes.tsv',
         ]
         ingest = self.setup_ingest(args)[0]
-
         models = ingest.load_args[0]
         for model in models:
             # Ensure that 'ObjectID' in model is removed
@@ -271,20 +272,23 @@ class IngestTestCase(unittest.TestCase):
             '--genome-annotation',
             'Ensembl 94',
             '--matrix-file',
-            'gs://fake-bucket/tests/data/matrix.mtx',
+            'gs://fake-bucket/tests/data/AB_toy_data_toy.matrix.mtx',
             '--matrix-file-type',
             'mtx',
             '--gene-file',
-            'gs://fake-bucket/tests/data/genes.tsv',
+            'gs://fake-bucket/tests/data/AB_toy_data_toy.genes.tsv',
             '--barcode-file',
-            'gs://fake-bucket/tests/data/barcodes.tsv',
+            'gs://fake-bucket/tests/data/AB_toy_data_toy.barcodes.tsv',
         ]
-        ingest = self.setup_ingest(args)[0]
+        ingest, arguments, status, status_cell_metadata =self.setup_ingest(args)
 
         models = ingest.load_args[0]
+        print(models)
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
+            print(model)
+        # print(model)
         self.assertEqual(models, expected_model)
 
     def test_mtx_bundle_argument_validation(self):
