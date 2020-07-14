@@ -235,13 +235,13 @@ class IngestTestCase(unittest.TestCase):
             '--genome-annotation',
             'Ensembl 94',
             '--matrix-file',
-            '../tests/data/matrix.mtx',
+            '../tests/data/AB_toy_data_toy.matrix.mtx',
             '--matrix-file-type',
             'mtx',
             '--gene-file',
-            '../tests/data/genes.tsv',
+            '../tests/data/AB_toy_data_toy.genes.tsv',
             '--barcode-file',
-            '../tests/data/barcodes.tsv',
+            '../tests/data/AB_toy_data_toy.barcodes.tsv',
         ]
         ingest = self.setup_ingest(args)[0]
         models = ingest.load_args[0]
