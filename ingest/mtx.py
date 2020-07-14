@@ -59,16 +59,14 @@ class MTXIngestor(GeneExpression):
             mtx_path)
         # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
         # is the gene index, M is the barcode index, and K is the expresion score
-        # retrieve specific line
-        self.mtx_desciption = linecache.getline(self.mtx_local_path , 2).split()
+        # for the given gene index
+        self.mtx_description = linecache.getline(self.mtx_local_path , 2).split()
         self.matrix_params = kwargs
 
     def execute_ingest(self):
-        print('about to transform')
         # import pdb
         # pdb.set_trace()
         self.extract_feature_barcode_matrices()
-        print('extracted features')
         # import pdb
         # pdb.set_trace()
         yield from self.transform()
@@ -76,7 +74,7 @@ class MTXIngestor(GeneExpression):
 
     def extract_mtx(self, value):
         """
-        Zgreps by gene index from MEX file to enhance performance/scale
+        Zgreps by gene index from mtx file to enhance performance/scale
         """
         return subprocess.run(['zgrep', f'^{value}\s', self.mtx_local_path],
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE
