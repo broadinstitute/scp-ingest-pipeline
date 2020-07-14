@@ -467,10 +467,7 @@ def run_ingest(ingest, arguments, parsed_args):
 
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
-        print('Trying to ingest expression')
-        hey = ingest.ingest_expression()
-        print(f'status is {hey}')
-        status.append(status)
+        status.append(ingest.ingest_expression())
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
             status_cell_metadata = ingest.ingest_cell_metadata()
