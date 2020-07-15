@@ -235,7 +235,7 @@ class IngestPipeline(object):
                 data_array_documents,  ordered=False
             )
         except BulkWriteError as bwe:
-            print(f"error caused by data docs : {bwe.details}")
+            print(f"error caused by data docs: {bwe.details}")
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
             raise BulkWriteError(bwe.details)
 
