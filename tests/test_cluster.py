@@ -60,18 +60,32 @@ class TestCellMetadata(unittest.TestCase):
             'testCluster',
         )
 
+        # integers, empty cell and string as inputs for numeric annotation
         assert isinstance(
             cluster.file['NA_i_n_s__grp']['group'][3], str
         ), "empty cell -> NaN, expect coercion to string"
 
+        # integers and empty cell as inputs for numeric annotation
+        assert isinstance(
+            cluster.file['NA_i_n_grp']['group'][3], str
+        ), "empty cell -> NaN, expect coercion to string"
+
+        # floats, empty cell and string as inputs for numeric annotation
         assert isinstance(
             cluster.file['NA_f_n_s__grp']['group'][3], str
         ), "empty cell -> NaN, expect coercion to string"
 
+        # floats and empty cell as inputs for numeric annotation
+        assert isinstance(
+            cluster.file['NA_f_n_grp']['group'][3], str
+        ), "empty cell -> NaN, expect coercion to string"
+
+        # integers, empty cell and string as inputs for group annotation
         assert isinstance(
             cluster.file['NA_i_n_s__num']['numeric'][3], float
         ), "empty cell -> NaN that remains float (not coerced)"
 
+        # floats, empty cell and string as inputs for group annotation
         assert isinstance(
             cluster.file['NA_f_n_s__num']['numeric'][3], float
         ), "empty cell -> NaN that remains float (not coerced)"
