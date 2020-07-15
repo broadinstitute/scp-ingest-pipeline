@@ -263,3 +263,22 @@ class Annotations(IngestFiles):
                 self.validate_against_header_count(),
             ]
         )
+
+    def validate_numeric_annots(self):
+        """Check numeric annotations are not string dtype
+        """
+        valid = True
+        for annot_header in self.file.columns[0:]:
+            annot_name = annot_header[0]
+            annot_type = annot_header[1]
+            if (
+                annot_type == 'numeric'
+                and self.file[annot_name].dtypes[annot_type] == 'O'
+            ):
+                valid = False
+                msg = f'Numeric annotation, {annot_name}, contains non-numeric data (or unidentified NA values)'
+                self.info_logger.error(
+                    msg, extra={'study_id': self.study_id, 'duration': None}
+                )
+                self.store_validation_issue('error', 'format', msg)
+        return valid
