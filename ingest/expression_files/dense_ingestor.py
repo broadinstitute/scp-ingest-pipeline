@@ -37,7 +37,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
                           "text/plain", "text/tab-separated-values"]
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
-        self.tracer = kwargs.pop("tracer")
         GeneExpression.__init__(self, file_path, study_file_id, study_id)
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
@@ -107,8 +106,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
     #         dtype=dtypes,
     #         # chunksize=100000, Save for when we chunk data
     #     )[0]
-
-    @trace
     def transform(self):
         """Transforms dense matrix into gene data model.
         """
