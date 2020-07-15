@@ -9,6 +9,7 @@ Must have python 3.6 or higher.
 
 import abc
 from collections import defaultdict
+import logging
 
 import pandas as pd
 from bson.objectid import ObjectId
@@ -16,13 +17,20 @@ from bson.objectid import ObjectId
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
+    from monitor import setup_logger
+
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
+    from .monitor import setup_logger
 
 
 class Annotations(IngestFiles):
     __metaclass__ = abc.ABCMeta
+
+    errors_logger = setup_logger(
+        __name__ + '_errors', 'errors.txt', level=logging.ERROR
+    )
 
     def __init__(
         self, file_path, allowed_file_types, study_id=None, study_file_id=None
@@ -38,6 +46,7 @@ class Annotations(IngestFiles):
         # Remove white spaces, quotes (only lowercase annot_types)
         self.headers = [header.strip().strip('\"') for header in next(csv_file)]
         self.annot_types = [type.strip().strip('\"').lower() for type in next(csv_file)]
+        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
 
     def reset_file(self):
         self.preprocess()
@@ -121,10 +130,6 @@ class Annotations(IngestFiles):
                     self.file[numeric_columns].round(3).astype(float)
                 )
             except Exception as e:
-                self.error_logger.error(
-                    "There are non-numeric values in numeric columns",
-                    extra=self.extra_log_params,
-                )
                 self.error_logger.error(e, extra=self.extra_log_params)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
@@ -277,7 +282,7 @@ class Annotations(IngestFiles):
             ):
                 valid = False
                 msg = f'Numeric annotation, {annot_name}, contains non-numeric data (or unidentified NA values)'
-                self.info_logger.error(
+                self.errors_logger.error(
                     msg, extra={'study_id': self.study_id, 'duration': None}
                 )
                 self.store_validation_issue('error', 'format', msg)
