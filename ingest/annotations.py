@@ -46,7 +46,7 @@ class Annotations(IngestFiles):
         # Remove white spaces, quotes (only lowercase annot_types)
         self.headers = [header.strip().strip('\"') for header in next(csv_file)]
         self.annot_types = [type.strip().strip('\"').lower() for type in next(csv_file)]
-        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
+        self.extra_log_params = {}
 
     def reset_file(self):
         self.preprocess()
