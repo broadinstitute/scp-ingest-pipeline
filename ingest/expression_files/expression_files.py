@@ -8,6 +8,7 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 import abc
+import sys
 import datetime
 import ntpath
 import types
@@ -20,10 +21,13 @@ from pymongo import MongoClient
 from pymongo.errors import BulkWriteError
 
 try:
+    sys.path.append("../ingest")
+    # Used when importing as external package, e.g. imports in single_cell_portal cod
     from ingest_files import DataArray
     from monitor import setup_logger
     from connection import MongoConnection
 except ImportError:
+    sys.path.append("../ingest")
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import DataArray
     from .monitor import setup_logger
@@ -114,6 +118,8 @@ class GeneExpression:
             self.study_id,
             self.study_file_id,
         ).get_data_array():
+            import pdb
+            pdb.set_trace()
             yield model
 
     def load_expression_file(self, gene_docs: List, data_array_documents: List):
@@ -125,7 +131,7 @@ class GeneExpression:
         start_time = datetime.datetime.now()
         # Try writing data_array_colection
         try:
-            self.mongo_connection.client['data_arrays'].insert_many((
+            self.mongo_connection.client['data_arrays'].insert_many(
                 data_array_documents,  ordered=False
             )
         except BulkWriteError as bwe:

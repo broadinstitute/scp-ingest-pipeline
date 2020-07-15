@@ -14,23 +14,25 @@ import sys
 from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
-from ingestor import Ingestor
 
 
 try:
     from expression_files import GeneExpression
+    sys.path.append("../ingest")
     from ingest_files import IngestFiles
-    from .monitor import trace
-    from .connection import MongoConnection
+    from monitor import trace
+    from connection import MongoConnection
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
+
+    sys.path.append("../ingest")
     from .ingest_files import IngestFiles
     from .monitor import trace
 
 
-class DenseIngestor(GeneExpression, IngestFiles, Ingestor):
+class DenseIngestor(GeneExpression, IngestFiles):
     ALLOWED_FILE_TYPES = ["text/csv",
                           "text/plain", "text/tab-separated-values"]
 
