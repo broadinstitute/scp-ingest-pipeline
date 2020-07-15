@@ -242,7 +242,7 @@ class IngestPipeline(object):
         except Exception as e:
             print(f"error caused by data docs : {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
-            raise Exception(f'{e}')
+            raise Exception(e)
         try:
             print("Try to write gene docs")
             self.db['genes'].insert_many(
