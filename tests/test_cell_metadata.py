@@ -52,7 +52,7 @@ class TestCellMetadata(unittest.TestCase):
 
         # integers and empty cell as inputs for numeric annotation
         assert isinstance(
-            cm.file['NA_i_n__grp']['group'][3], str
+            cm.file['NA_i_n_grp']['group'][3], str
         ), "empty cell -> NaN, expect coercion to string"
 
         # floats, empty cell and string as inputs for numeric annotation
@@ -62,7 +62,7 @@ class TestCellMetadata(unittest.TestCase):
 
         # floats and empty cell as inputs for numeric annotation
         assert isinstance(
-            cm.file['NA_f_n__grp']['group'][3], str
+            cm.file['NA_f_n_grp']['group'][3], str
         ), "empty cell -> NaN, expect coercion to string"
 
         # integers, empty cell and string as inputs for group annotation

@@ -38,6 +38,9 @@ class Annotations(IngestFiles):
         IngestFiles.__init__(self, file_path, allowed_file_types)
         if study_id is not None:
             self.study_id = ObjectId(study_id)
+            self.extra_log_params = {'study_id': self.study_id, 'duration': None}
+        else:
+            self.extra_log_params = {'study_id': None, 'duration': None}
         if study_file_id is not None:
             self.study_file_id = ObjectId(study_file_id)
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
@@ -46,7 +49,6 @@ class Annotations(IngestFiles):
         # Remove white spaces, quotes (only lowercase annot_types)
         self.headers = [header.strip().strip('\"') for header in next(csv_file)]
         self.annot_types = [type.strip().strip('\"').lower() for type in next(csv_file)]
-        self.extra_log_params = {}
 
     def reset_file(self):
         self.preprocess()
