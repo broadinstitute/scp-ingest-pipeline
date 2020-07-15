@@ -118,8 +118,6 @@ class GeneExpression:
             self.study_id,
             self.study_file_id,
         ).get_data_array():
-            import pdb
-            pdb.set_trace()
             yield model
 
     def load_expression_file(self, gene_docs: List, data_array_documents: List):

@@ -92,9 +92,10 @@ class TestDense(unittest.TestCase):
             '5d276a50421aa9117c982845',
             '5dd5ae25421aa910a723a337'
         )
-        for gene_models, data_arrays in expression_matrix.transform():
+        for actual_gene_models, actual_data_arrays in expression_matrix.transform():
             # _id is a unique identifier and can not be predicted
             # so we exclude it from the comparison
-            for gene_models in  gene_models:
-                del gene_model.gene_model['_id']
-            self.assertEqual(gene_model.gene_model, gene_models[gene_model.gene_name])
+            for actual_gene_model in  actual_gene_models:
+                del actual_gene_model['_id']
+                gene_name = actual_gene_model['name']
+                self.assertEqual(actual_gene_model, gene_models[gene_name])
