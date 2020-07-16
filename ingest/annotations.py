@@ -280,7 +280,7 @@ class Annotations(IngestFiles):
             annot_type = annot_header[1]
             if (
                 annot_type == 'numeric'
-                and self.file[annot_name].dtypes[annot_type] == 'O'
+                and self.file[annot_name].dtypes[annot_type] == 'object'
             ):
                 valid = False
                 msg = f'Numeric annotation, {annot_name}, contains non-numeric data (or unidentified NA values)'
