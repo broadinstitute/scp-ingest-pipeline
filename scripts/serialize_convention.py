@@ -77,6 +77,7 @@ def build_array_object(row):
         dict['type'] = row['type']
         ontology_format = r'^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'
         dict['pattern'] = ontology_format
+        dict['ontology_browser_url'] = row['ontology_browser_url']
     else:
         dict['type'] = row['type']
     return dict
@@ -102,6 +103,7 @@ def build_single_object(row, dict):
         ontology_format = r'^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'
         dict['pattern'] = ontology_format
         dict['type'] = row['type']
+        dict['ontology_browser_url'] = row['ontology_browser_url']
 
     else:
         dict['type'] = row['type']
@@ -187,16 +189,29 @@ def set_file_names(project, version):
     return filenames
 
 
-def retrieve_ontology(ontology_url):
-    """Retrieve an ontology listing from EBI OLS
-    :param ontology_term: identifier of a term in an ontology in OLS (e.g. CL_0002419)
-    :return: JSON payload of ontology, or None
+def assess_ontology_url(ontology_url):
+    """Access an ontology URL from the metadata convention
+    :param ontology_term: URL from the metadata convention
+    :return: True if successful, or None
     """
     response = requests.get(ontology_url)
     if response.status_code == 200:
-        return response.json()
+        return True
     else:
         return None
+
+
+def check_urls(urls, attribute):
+    """Check if URL is valid
+    """
+    if len(urls) > 1:
+        print(f"Checking {len(urls)} urls for {attribute}")
+    for url in urls:
+        ontology = assess_ontology_url(url)
+        if ontology:
+            print("Valid URL", url)
+        else:
+            print("***ERROR: Invalid URL", url)
 
 
 def serialize_convention(convention, input_tsv):
@@ -236,14 +251,9 @@ def serialize_convention(convention, input_tsv):
             # must allow for multiple ontologies, comma-delimited
             if row['class'] == 'ontology':
                 ontology_urls = row['ontology'].split(',')
-                if len(ontology_urls) > 1:
-                    print(f"Checking {len(ontology_urls)} urls for {row['attribute']}")
-                for url in ontology_urls:
-                    ontology = retrieve_ontology(url)
-                    if ontology:
-                        print("Valid ontology URL", url)
-                    else:
-                        print("Invalid ontology URL", url)
+                check_urls(ontology_urls, row['attribute'])
+                browse_urls = row['ontology_browser_url'].split(',')
+                check_urls(browse_urls, row['attribute'])
                 entry[row['class']] = row['ontology']
 
             # handle arrays of values

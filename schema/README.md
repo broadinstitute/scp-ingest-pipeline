@@ -21,20 +21,15 @@
 * Copy the new convention JSON and TSV files to the * &lt;project&gt;_convention directory  
   
 
-* Copy new metadata schema to appropriate EXTERNAL_JSON_CONVENTION location (use syntax below to disable public file cacheing)
-```
-gsutil -h "Cache-Control:no-cache,max-age=0" cp alexandria_convention_schema.json gs://broad-singlecellportal-public/schema/<project>_convention/<version>/<project>_convention_schema.json
-```  
-  
-* Update EXTERNAL_JSON_CONVENTION in ingest_pipeline.py
-
-* Test by running:
-```
-pytest -k test_external_metadata_convention
 ```  
 
 Notes:
 * Tests in test_validate_metadata.py use current metadata convention (except for invalid metadata convention test)
+
+* Specifically test_bigquery_json_content is expected to fail with the metadata convention is updated. The reference file, bq_test.json, must be updated (replace existing file with the generated addedfeed000000000000000.json file)
+```
+python validate_metadata.py --bq-json <path to metadata file>
+```
 
 * To create updated issues.json files to update reference files for tests, in the ingest/validation directory, run
 ```
@@ -45,3 +40,5 @@ python validate_metadata.py --issues-json <path to metadata file>
 ```
 python validate_metadata.py --convention <path to convention file> <path to metadata file>
 ```
+
+
