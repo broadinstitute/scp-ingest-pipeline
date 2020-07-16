@@ -120,7 +120,7 @@ class GeneExpression:
         ).get_data_array():
             yield model
 
-    def load_expression_file(self, gene_docs: List, data_array_documents: List):
+    def load(self, gene_docs: List, data_array_documents: List):
         """
         Load gene and data_array models into mongoDB
         """

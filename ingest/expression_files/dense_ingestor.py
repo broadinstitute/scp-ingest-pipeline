@@ -26,7 +26,6 @@ try:
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
-
     sys.path.append("../ingest")
     from .ingest_files import IngestFiles
     from .monitor import trace

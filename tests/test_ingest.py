@@ -48,6 +48,7 @@ from ingest_pipeline import (
     exit_pipeline,
     run_ingest,
 )
+from expression_files.expression_files import GeneExpression
 
 
 def mock_load(self, *args, **kwargs):
@@ -66,8 +67,8 @@ def mock_load(self, *args, **kwargs):
     self.load_kwargs = kwargs
 
 
-# Mock method that writes to database
-IngestPipeline.load_expression_file = mock_load
+# Mock method that writes to databaset
+GeneExpression.load = mock_load
 IngestPipeline.load = mock_load
 
 
