@@ -695,6 +695,10 @@ def value_is_nan(value):
     """Check if value is nan
     nan is a special dataframe value to indicate missing data
     """
+    # We coerces nan to string for group annotations (SCP-2545)
+    # string value 'nan' should also be considered value_is_nan=True
+    if value == 'nan':
+        return True
     try:
         return math.isnan(value)
     except TypeError:

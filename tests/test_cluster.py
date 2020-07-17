@@ -47,3 +47,50 @@ class TestCellMetadata(unittest.TestCase):
             'SUBCLUSTER',
             '1',
         ], 'cluster instantiation should only downcase coordinate header columns'
+
+    def test_cluster_type_inference(self):
+        """Confirm consistency of type inference behavior
+        in instantiated data frame
+        Note: metadata has similar set of tests
+        """
+        cluster = Clusters(
+            '../tests/data/cluster_NA.txt',
+            'addedfeed000000000000000',
+            'dec0dedfeed1111111111111',
+            'testCluster',
+        )
+
+        # integers, empty cell and string as inputs for numeric annotation
+        assert isinstance(
+            cluster.file['NA_i_n_s__grp']['group'][3], str
+        ), "empty cell -> NaN, expect coercion to string"
+
+        # integers and empty cell as inputs for numeric annotation
+        assert isinstance(
+            cluster.file['NA_i_n_grp']['group'][3], str
+        ), "empty cell -> NaN, expect coercion to string"
+
+        # floats, empty cell and string as inputs for numeric annotation
+        assert isinstance(
+            cluster.file['NA_f_n_s__grp']['group'][3], str
+        ), "empty cell -> NaN, expect coercion to string"
+
+        # floats and empty cell as inputs for numeric annotation
+        assert isinstance(
+            cluster.file['NA_f_n_grp']['group'][3], str
+        ), "empty cell -> NaN, expect coercion to string"
+
+        # integers, empty cell and string as inputs for group annotation
+        assert isinstance(
+            cluster.file['NA_i_n_s__num']['numeric'][3], float
+        ), "empty cell -> NaN that remains float (not coerced)"
+
+        # floats, empty cell and string as inputs for group annotation
+        assert isinstance(
+            cluster.file['NA_f_n_s__num']['numeric'][3], float
+        ), "empty cell -> NaN that remains float (not coerced)"
+
+        self.assertFalse(
+            cluster.validate_numeric_annots(),
+            'numeric annotations supplied with strings should be invalid',
+        )
