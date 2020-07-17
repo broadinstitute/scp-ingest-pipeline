@@ -111,20 +111,20 @@ class Annotations(IngestFiles):
         # coerce group annotations that pandas detects as non-object types to type string
         if 'group' in self.annot_types:
             group_columns = self.file.xs(
-                "group", axis=1, level=1, drop_level=False
+                'group', axis=1, level=1, drop_level=False
             ).columns.tolist()
             try:
                 # coerce group annotations to type string
                 self.file[group_columns] = self.file[group_columns].astype(str)
             except Exception as e:
                 self.error_logger.error(
-                    "Unable to coerce group annotation to string type",
+                    'Unable to coerce group annotation to string type',
                     extra=self.extra_log_params,
                 )
                 self.error_logger.error(e, extra=self.extra_log_params)
         if 'numeric' in self.annot_types:
             numeric_columns = self.file.xs(
-                "numeric", axis=1, level=1, drop_level=False
+                'numeric', axis=1, level=1, drop_level=False
             ).columns.tolist()
             try:
                 # Round numeric columns to 3 decimal places
@@ -156,7 +156,7 @@ class Annotations(IngestFiles):
         if self.headers[0].upper() == 'NAME':
             valid = True
             if self.headers[0] != 'NAME':
-                msg = f'Metadata file keyword "NAME" provided as ' f"{self.headers[0]}"
+                msg = f'Metadata file keyword "NAME" provided as {self.headers[0]}'
                 self.store_validation_issue('warn', 'format', msg)
         else:
             msg = 'Malformed metadata file header row, missing NAME. (Case Sensitive)'
