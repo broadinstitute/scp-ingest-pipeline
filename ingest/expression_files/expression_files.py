@@ -129,7 +129,7 @@ class GeneExpression:
         start_time = datetime.datetime.now()
         # Try writing data_array_colection
         try:
-            self.mongo_connection.client['data_arrays'].insert_many(
+            self.mongo_connection._client['data_arrays'].insert_many(
                 data_array_documents,  ordered=False
             )
         except BulkWriteError as bwe:
@@ -142,7 +142,7 @@ class GeneExpression:
 
         # Try writing gene docs
         try:
-            gene_doc_bulk_write_results = self.mongo_connection.client[self.COLLECTION_NAME].insert_many(
+            gene_doc_bulk_write_results = self.mongo_connection._client[self.COLLECTION_NAME].insert_many(
                 gene_docs,  ordered=False
             )
         except BulkWriteError as bwe:

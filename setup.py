@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setup(
     name='scp-ingest-pipeline',
-    version='1.3.8',
+    version='1.3.9',
     description='ETL pipeline for single-cell RNA-seq data',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -32,7 +32,6 @@ setup(
         'opencensus-ext-stackdriver',
         'google-cloud-trace',
         'grpcio',
-        'grpcio-tools',
     ],
     packages=find_packages(),
     classifiers=[

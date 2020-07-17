@@ -45,17 +45,21 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
 # import google.cloud.logging
 from bson.objectid import ObjectId
-from cell_metadata import CellMetadata
-from cli_parser import create_parser, validate_arguments
-from clusters import Clusters
-from expression_files.dense_ingestor import DenseIngestor
+# For tracing
+from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
+from opencensus.trace.samplers import AlwaysOnSampler
+from opencensus.trace.tracer import Tracer
+from pymongo import InsertOne, MongoClient
+from pymongo.errors import BulkWriteError
+
 # from google.cloud.logging.resource import Resource
 #
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
     from monitor import log, setup_logger, trace
-    from mtx import Mtx
+    from expression_files.mtx import MTXIngestor
+    from expression_files.dense_ingestor import DenseIngestor
     # For tracing
     from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
     from opencensus.trace.samplers import AlwaysOnSampler
@@ -66,6 +70,9 @@ try:
     from validation.validate_metadata import (report_issues,
                                               validate_input_metadata,
                                               write_metadata_to_bq)
+    from cell_metadata import CellMetadata
+    from cli_parser import create_parser, validate_arguments
+    from clusters import Clusters
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
@@ -80,7 +87,7 @@ except ImportError:
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
     from .expression_files.dense_ingestor.py import DenseIngestor
-    from .mtx import Mtx
+    from .mtx import MTXIngestor
     from .cli_parser import create_parser, validate_arguments
 
 
@@ -141,6 +148,9 @@ class IngestPipeline(object):
         if ingest_cluster:
             self.cluster = self.initialize_file_connection(
                 "cluster", cluster_file)
+        if matrix_file is None:
+            self.matrix = matrix_file
+        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
         if subsample:
             self.cluster_file = cluster_file
             self.cell_metadata_file = cell_metadata_file
@@ -175,8 +185,6 @@ class IngestPipeline(object):
         file_connections = {
             "cell_metadata": CellMetadata,
             "cluster": Clusters,
-            "mtx": Mtx,
-            "loom": Loom,
         }
 
         return file_connections.get(file_type)(
@@ -186,10 +194,6 @@ class IngestPipeline(object):
             tracer=self.tracer,
             **self.kwargs,
         )
-
-    def close_matrix(self):
-        """Closes connection to file"""
-        self.matrix.close()
 
     # @profile
     # TODO: Make @profile conditional (SCP-2081)
@@ -291,7 +295,8 @@ class IngestPipeline(object):
 
     def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        convention_file_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        convention_file_object = IngestFiles(
+            self.JSON_CONVENTION, ['application/json'])
         json_file = convention_file_object.open_file(self.JSON_CONVENTION)
         convention = json.load(json_file)
         if self.kwargs['validate_convention'] is not None:
@@ -300,7 +305,8 @@ class IngestPipeline(object):
                 and self.kwargs['bq_dataset']
                 and self.kwargs['bq_table']
             ):
-                validate_input_metadata(self.cell_metadata, convention, bq_json=True)
+                validate_input_metadata(
+                    self.cell_metadata, convention, bq_json=True)
             else:
                 validate_input_metadata(self.cell_metadata, convention)
 
@@ -322,11 +328,35 @@ class IngestPipeline(object):
                 )
                 return write_status
             else:
-                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
+                self.error_logger.error(
+                    'Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
-    # @my_debug_logger()
+
+    def ingest_expression(self) -> int:
+        """
+        Ingests expression files.
+        """
+        expression_ingestor = None
+        if MTXIngestor.matches_file_type(self.matrix_file_type):
+            expression_ingestor = MTXIngestor(self.matrix_file,
+                                              self.study_id,
+                                              self.study_file_id,
+                                              **self.kwargs,)
+        if DenseIngestor.matches_file_type(self.matrix_file_type):
+            expression_ingestor = DenseIngestor(self.matrix_file,
+                                           self.study_id,
+                                           self.study_file_id,
+                                           tracer=self.tracer,
+                                           **self.kwargs,)  # Dense receiver
+        try:
+            expression_ingestor.execute_ingest()
+        except Exception as e:
+            self.error_logger.error(e, extra=self.extra_log_params)
+            return 1
+        return 0
+
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         self.cell_metadata.preprocess()
@@ -429,9 +459,6 @@ def run_ingest(ingest, arguments, parsed_args):
     """
     status = []
     status_cell_metadata = None
-    logging.basicConfig(filename='errors.txt', level=logging.DEBUG)
-    logging.debug(f'In run_ingest: {arguments}')
-    print(f'In run_ingest: {arguments}')
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
         status.append(ingest.ingest_expression())
@@ -458,6 +485,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """
     if len(status) > 0:
         if all(i < 1 for i in status):
+            print('Finished ingest pipeline succesfully')
             sys.exit(os.EX_OK)
         else:
             # delocalize errors file
