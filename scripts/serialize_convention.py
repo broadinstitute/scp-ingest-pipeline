@@ -205,7 +205,7 @@ def check_urls(urls, attribute):
     """Check if URL is valid
     """
     if len(urls) > 1:
-        print(f"Checking {len(urls)} urls for {attribute}")
+        print(f"Checking {len(urls)} URLs for {attribute}")
     for url in urls:
         ontology = assess_ontology_url(url)
         if ontology:
