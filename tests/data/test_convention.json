@@ -41,6 +41,7 @@
         "cell_type": {
             "description": "Cell type name determined via unsupervised clustering and marker genes",
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/cl",
+            "ontology_browser_url": "https://www.ebi.ac.uk/ols/ontologies/cl",
             "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
             "type": "string"
         },
@@ -51,6 +52,7 @@
         "disease": {
             "description": "The disease state(s) of the individual donating the sample at the time of donation",
             "items": {
+                "ontology_browser_url": "https://www.ebi.ac.uk/ols/ontologies/mondo",
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
@@ -85,6 +87,7 @@
         "organism_age__unit": {
             "description": "organism_age__unit",
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
+            "ontology_browser_url": "https://www.ebi.ac.uk/ols/ontologies/uo",
             "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
             "type": "string"
         },
@@ -100,6 +103,7 @@
         "species": {
             "description": "The scientific binomial name for the species of the organism.",
             "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ncbitaxon",
+            "ontology_browser_url": "https://www.ebi.ac.uk/ols/ontologies/ncbitaxon",
             "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
             "type": "string"
         },
@@ -110,6 +114,7 @@
         "vaccination": {
             "description": "Any known vaccines administered to the donor organism. NOT a full vaccine history",
             "items": {
+                "ontology_browser_url": "https://www.ebi.ac.uk/ols/ontologies/vo",
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
