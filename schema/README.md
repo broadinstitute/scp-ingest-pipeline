@@ -26,7 +26,7 @@
 Notes:
 * Tests in test_validate_metadata.py use current metadata convention (except for invalid metadata convention test)
 
-* Specifically test_bigquery_json_content is expected to fail with the metadata convention is updated. The reference file, bq_test.json, must be updated (replace existing file with the generated addedfeed000000000000000.json file)
+* Specifically test_bigquery_json_content is expected to fail when the metadata convention is updated. The reference file, bq_test.json, must be updated (replace existing file with the generated addedfeed000000000000000.json file)
 ```
 python validate_metadata.py --bq-json <path to metadata file>
 ```
@@ -40,5 +40,4 @@ python validate_metadata.py --issues-json <path to metadata file>
 ```
 python validate_metadata.py --convention <path to convention file> <path to metadata file>
 ```
-
 
