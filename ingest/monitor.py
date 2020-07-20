@@ -3,6 +3,21 @@ import os
 import time
 from contextlib import nullcontext
 
+import sentry_sdk
+from sentry_sdk.integrations.logging import LoggingIntegration
+
+
+def before_send_to_sentry(event, hint):
+    """Edit event properties before logging to Sentry
+
+    Docs: https://docs.sentry.io/error-reporting/configuration/filtering/?platform=python#before-send
+    """
+    # Report a general logger name (`ingest_pipeline`) to Sentry,
+    # rather than the function-specific logger name (e.g. `__main___errors`)
+    # used internally within Ingest Pipeline.
+    event['logger'] = 'ingest_pipeline'
+    return event
+
 
 def setup_logger(logger_name, log_file, level=logging.DEBUG, format='default'):
     logger = logging.getLogger(logger_name)
@@ -74,3 +89,25 @@ def trace(fn):
             return fn(*args, **kwargs)
 
     return trace_fn
+
+
+# General docs:
+# https://docs.sentry.io/platforms/python/logging/
+#
+# API docs:
+# https://getsentry.github.io/sentry-python/api.html
+# https://getsentry.github.io/sentry-python/integrations.html
+#
+# See logs in Sentry:
+# https://sentry.io/organizations/broad-institute/issues/?project=1424198
+sentry_logging = LoggingIntegration(
+    level=logging.ERROR,       # Capture error and above as breadcrumbs
+    event_level=logging.ERROR  # Send errors as events
+)
+sentry_sdk.init(
+    dsn=os.environ.get('SENTRY_DSN'),
+    integrations=[sentry_logging],
+    environment='development',
+    attach_stacktrace=True,
+    before_send=before_send_to_sentry
+)
