@@ -49,7 +49,7 @@ export DATABASE_HOST="<ip from Vault (omit brackets)>"
 
 If you are developing updates for Sentry logging, then set the DSN:
 ```
-vault read secret/kdux/scp/development/$BROAD_USER/mongo/user | grep SENTRY
+vault read secret/kdux/scp/development/$BROAD_USER/scp_config.json | grep SENTRY
 
 export SENTRY_DSN="<Sentry DSN value from Vault>"
 ```
