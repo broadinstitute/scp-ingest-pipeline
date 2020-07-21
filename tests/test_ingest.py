@@ -64,18 +64,15 @@ def mock_load(self, *args, **kwargs):
     unlike here where we merely give a way to verify loading-code *inputs*.
     Doing so via integration tests will isolate us from implementation changes.
     """
+    import pdb; pdb.set_trace()
+    print(args[0])
     self.load_args = args[0]
     self.load_kwargs = kwargs
 
 
-def mock_foo(self):
-    self.test = 'foo'
-    self.load_args = args
-    print(f'This is load_args: {self.load_args}')
-    self.load_kwargs = kwargs
-
 # Mock method that writes to databaset
-IngestPipeline.load = mock_foo
+IngestPipeline.load = mock_load
+DenseIngestor.insert= mock_load
 
 
 def get_gene_model(mock_dir):
@@ -97,7 +94,7 @@ def get_gene_model(mock_dir):
 class IngestTestCase(unittest.TestCase):
     @patch('google.cloud.storage.Blob', side_effect=mock_storage_blob)
     @patch('google.cloud.storage.Client', side_effect=mock_storage_client)
-    def setup_ingest(self, args, mock_storage_client, mock_storage_blob):
+    def execute_ingest(self, args, mock_storage_client, mock_storage_blob):
 
         self.maxDiff = None
 
@@ -111,8 +108,7 @@ class IngestTestCase(unittest.TestCase):
 
         return ingest, arguments, status, status_cell_metadata
 
-    @patch('expression_files.expression_files.GeneExpression.load')
-    def test_ingest_dense_matrix(self, mock_load):
+    def test_ingest_dense_matrix(self):
         """Ingest Pipeline should extract, transform, and load dense matrices
         """
         args = [
@@ -136,13 +132,13 @@ class IngestTestCase(unittest.TestCase):
             '--matrix-file-type',
             'dense',
         ]
-        ingest = self.setup_ingest(args)[0]
+        ingest = self.execute_ingest(args)[0]
 
-        print(models)
-        for model in models:
-            # Ensure that 'ObjectID' in model is removed
-            del model['_id']
-            self.assertEqual(model, gene_models[model['name']])
+        print(ingest.expression_ingestor.study_id)
+        # for model in models:
+        #     # Ensure that 'ObjectID' in model is removed
+        #     del model['_id']
+        #     self.assertEqual(model, gene_models[model['name']])
         # print(models)
 
         # Verify gene model looks as expected

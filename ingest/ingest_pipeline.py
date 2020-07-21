@@ -338,20 +338,20 @@ class IngestPipeline(object):
         """
         Ingests expression files.
         """
-        expression_ingestor = None
+        self.expression_ingestor = None
         if MTXIngestor.matches_file_type(self.matrix_file_type):
-            expression_ingestor = MTXIngestor(self.matrix_file,
+            self.expression_ingestor = MTXIngestor(self.matrix_file,
                                               self.study_id,
                                               self.study_file_id,
                                               **self.kwargs,)
         if DenseIngestor.matches_file_type(self.matrix_file_type):
-            expression_ingestor = DenseIngestor(self.matrix_file,
+            self.expression_ingestor = DenseIngestor(self.matrix_file,
                                            self.study_id,
                                            self.study_file_id,
                                            tracer=self.tracer,
                                            **self.kwargs,)  # Dense receiver
         try:
-            expression_ingestor.execute_ingest()
+            self.expression_ingestor.execute_ingest()
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1

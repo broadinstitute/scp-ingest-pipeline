@@ -8,7 +8,6 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 import abc
-import sys
 import datetime
 import ntpath
 import types
@@ -17,21 +16,18 @@ from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
-from pymongo import MongoClient
+from pymongo import InsertOne, MongoClient
 from pymongo.errors import BulkWriteError
 
 try:
-    sys.path.append("../ingest")
-    # Used when importing as external package, e.g. imports in single_cell_portal cod
     from ingest_files import DataArray
     from monitor import setup_logger
     from connection import MongoConnection
 except ImportError:
-    sys.path.append("../ingest")
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import DataArray
     from .monitor import setup_logger
-    from .connection import MongoConnection
+    from connection import MongoConnection
 
 
 class GeneExpression:
@@ -127,10 +123,17 @@ class GeneExpression:
         gene_doc_bulk_write_results = None
         data_array_bulk_write_results = None
         start_time = datetime.datetime.now()
+
+        # Creating Mongo bulk operations
+        data_array_bulk_operations = list(
+            map(lambda model: InsertOne(model), data_array_documents))
+        gene_model_bulk_operations = list(
+            map(lambda model: InsertOne(model), gene_docs))
+
         # Try writing data_array_colection
         try:
-            self.mongo_connection._client['data_arrays'].insert_many(
-                data_array_documents,  ordered=False
+            self.mongo_connection.client['data_arrays'].bulk_write(
+                data_array_bulk_operations,  ordered=False
             )
         except BulkWriteError as bwe:
             print(f"error caused by data docs : {bwe.details}")
@@ -142,8 +145,8 @@ class GeneExpression:
 
         # Try writing gene docs
         try:
-            gene_doc_bulk_write_results = self.mongo_connection._client[self.COLLECTION_NAME].insert_many(
-                gene_docs,  ordered=False
+            gene_doc_bulk_write_results = self.mongo_connection.client[self.COLLECTION_NAME].bulk_write(
+                gene_model_bulk_operations,  ordered=False
             )
         except BulkWriteError as bwe:
             print(f"error caused by gene docs : {bwe.details}")

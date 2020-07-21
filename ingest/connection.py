@@ -17,7 +17,7 @@ class MongoConnection:
 
     @property
     def client(self):
-        return self._client
+        return self.client
 
     @client.setter
     def client(self):
@@ -25,7 +25,7 @@ class MongoConnection:
         # Needed in test_ingest.py to verify observable
         # output using the same input interface as PAPI
         if self.host is not None:
-            self._client = MongoClient(
+            self.client = MongoClient(
                 host,
                 username=user,
                 password=password,
@@ -35,4 +35,4 @@ class MongoConnection:
         # Needed to due to lack of database mock library for MongoDB
         # TODO: add mock, remove this
         else:
-            self._client = None
+            self.client = None

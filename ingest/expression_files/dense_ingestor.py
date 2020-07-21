@@ -47,7 +47,9 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     def execute_ingest(self):
         for gene_docs, data_array_documents in self.transform():
-            self.load_expression_file(
+            # print(gene_docs)
+            import pdb; pdb.set_trace()
+            self.load(
                 gene_docs, data_array_documents)
         self.close()
         return 0
@@ -151,11 +153,13 @@ class DenseIngestor(GeneExpression, IngestFiles):
             )
             )
             if len(valid_expression_scores) > 0:
+                print('ere')
                 for gene_cell_model in self.set_data_array_gene_cell_names(gene, id, cells):
                     data_arrays.append(gene_cell_model)
                 for gene_expression_values in self.set_data_array_gene_expression_values(gene, id, valid_expression_scores):
                     data_arrays.append(gene_expression_values)
                 if len(gene_models) > 5:
+
                     num_processed += len(gene_models)
                     yield (gene_models, data_arrays)
                     print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
@@ -163,6 +167,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     gene_models = []
                     data_arrays = []
         yield (gene_models, data_arrays)
+        print('last call')
         num_processed += len(gene_models)
         print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
         gene_models = []
