@@ -47,6 +47,15 @@ vault read secret/kdux/scp/development/$BROAD_USER/mongo/hostname
 export DATABASE_HOST="<ip from Vault (omit brackets)>"
 ```
 
+If you are developing updates for Sentry logging, then set the DSN:
+```
+vault read secret/kdux/scp/development/$BROAD_USER/mongo/user | grep SENTRY
+
+export SENTRY_DSN="<Sentry DSN value from Vault>"
+```
+
+Be sure to `unset SENTRY_DSN` when your updates are done, so development logs are not always sent to Sentry.
+
 ## Git hooks
 After installing Ingest Pipeline, add Git hooks to help ensure code quality:
 ```
