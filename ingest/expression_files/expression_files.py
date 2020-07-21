@@ -118,21 +118,17 @@ class GeneExpression:
             self.study_id,
             self.study_file_id,
         ).get_data_array():
-            import pdb
-            pdb.set_trace()
             yield model
 
-    def load_expression_file(self, gene_docs: List, data_array_documents: List):
+    def load(self, gene_docs: List, data_array_docs: List):
         """
         Load gene and data_array models into mongoDB
         """
-        gene_doc_bulk_write_results = None
-        data_array_bulk_write_results = None
         start_time = datetime.datetime.now()
         # Try writing data_array_colection
         try:
-            self.mongo_connection.client['data_arrays'].insert_many(
-                data_array_documents,  ordered=False
+            self.mongo_connection._client['data_arrays'].insert_many(
+                data_array_docs,  ordered=False
             )
         except BulkWriteError as bwe:
             print(f"error caused by data docs : {bwe.details}")
@@ -144,7 +140,7 @@ class GeneExpression:
 
         # Try writing gene docs
         try:
-            gene_doc_bulk_write_results = self.mongo_connection.client[self.COLLECTION_NAME].insert_many(
+            gene_doc_bulk_write_results = self.mongo_connection._client[self.COLLECTION_NAME].insert_many(
                 gene_docs,  ordered=False
             )
         except BulkWriteError as bwe:
@@ -154,4 +150,4 @@ class GeneExpression:
         except Exception as e:
             print(f"error caused by gene docs : {e}")
             raise Exception(f'{e}')
-        print(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}')
+        print(f'Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}')

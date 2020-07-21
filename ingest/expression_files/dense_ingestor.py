@@ -17,7 +17,7 @@ from bson.objectid import ObjectId
 
 
 try:
-    from expression_files import GeneExpression
+    from .expression_files import GeneExpression
     sys.path.append("../ingest")
     from ingest_files import IngestFiles
     from monitor import trace
@@ -26,10 +26,8 @@ try:
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
-
     sys.path.append("../ingest")
     from .ingest_files import IngestFiles
-    from .monitor import trace
 
 
 class DenseIngestor(GeneExpression, IngestFiles):
@@ -49,7 +47,9 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     def execute_ingest(self):
         for gene_docs, data_array_documents in self.transform():
-            load_status = self.load_expression_file(
+            import pdb
+            pdb.set_trace()
+            load_status = self.load(
                 gene_docs, data_array_documents)
         self.close()
         return 0

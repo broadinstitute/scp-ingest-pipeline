@@ -14,24 +14,18 @@ class MongoConnection:
         self.user = os.environ['MONGODB_USERNAME']
         self.password = os.environ['MONGODB_PASSWORD']
         self.db_name = os.environ['DATABASE_NAME']
-
-    @property
-    def client(self):
-        return self._client
-
-    @client.setter
-    def client(self):
         # Needed to run tests in test_ingest.py in CircleCI.
         # Needed in test_ingest.py to verify observable
         # output using the same input interface as PAPI
         if self.host is not None:
-            self._client = MongoClient(
-                host,
-                username=user,
-                password=password,
-                authSource=db_name,
+            client = MongoClient(
+                self.host,
+                username=self.user,
+                password=self.password,
+                authSource=self.db_name,
                 authMechanism='SCRAM-SHA-1',
             )
+            self._client=client[self.db_name]
         # Needed to due to lack of database mock library for MongoDB
         # TODO: add mock, remove this
         else:
