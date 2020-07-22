@@ -120,10 +120,10 @@ class GeneExpression:
             yield model
 
     def load(self, gene_docs: List, data_array_docs: List):
-        start_load_time = datetime.datetime.now()
+        start_time = datetime.datetime.now()
         self.insert(gene_docs, self.COLLECTION_NAME)
         self.insert(data_array_docs, 'data_array')
-        print(f'Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_load_time)}')
+        print(f'Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}')
 
 
     def insert(self, docs: List, collection_name: str):

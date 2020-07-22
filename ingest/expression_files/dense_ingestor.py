@@ -43,7 +43,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.header = next(self.csv_file)
 
     def execute_ingest(self):
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         for gene_docs, data_array_documents in self.transform():
             self.load(gene_docs, data_array_documents)
         return 0

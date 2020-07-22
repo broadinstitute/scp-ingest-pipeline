@@ -3,9 +3,9 @@ from unittest.mock import patch
 import sys
 from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_models
 
-sys.path.append("../ingest/expression_files")
-from dense_ingestor import DenseIngestor
-from expression_files import GeneExpression
+sys.path.append("../ingest")
+from expression_files.mtx import MTXIngestor
+from expression_files.dense_ingestor import DenseIngestor
 
 
 class TestDense(unittest.TestCase):
@@ -84,8 +84,8 @@ class TestDense(unittest.TestCase):
     #         tracer=None,
     #     )
     #     self.assertTrue(expression_matrix.validate_format())
-    @patch('expression_files.GeneExpression.load')
-    @patch('dense_ingestor.DenseIngestor.transform')
+    @patch('expression_files.expression_files.GeneExpression.load')
+    @patch('expression_files.dense_ingestor.DenseIngestor.transform')
     def test_execute_ingest(self, mock_load, mock_transform):
         "Validates functions in execute_ingest() are called "
         expression_matrix = DenseIngestor(
