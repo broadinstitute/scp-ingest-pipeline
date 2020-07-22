@@ -29,4 +29,4 @@ class MongoConnection:
         # Needed to due to lack of database mock library for MongoDB
         # TODO: add mock, remove this
         else:
-            self._client = None
+            self.client = None

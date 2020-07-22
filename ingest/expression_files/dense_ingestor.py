@@ -35,7 +35,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
                           "text/plain", "text/tab-separated-values"]
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
-        self.tracer = kwargs.pop("tracer")
         GeneExpression.__init__(self, file_path, study_file_id, study_id)
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
@@ -47,8 +46,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     def execute_ingest(self):
         for gene_docs, data_array_documents in self.transform():
-            # import pdb
-            # pdb.set_trace()
             self.load(gene_docs, data_array_documents)
         return 0
 
@@ -105,8 +102,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
     #         dtype=dtypes,
     #         # chunksize=100000, Save for when we chunk data
     #     )[0]
-
-    @trace
     def transform(self):
         """Transforms dense matrix into gene data model.
         """
@@ -153,6 +148,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             )
             )
             if len(valid_expression_scores) > 0:
+                print('ere')
                 for gene_cell_model in self.set_data_array_gene_cell_names(gene, id, cells):
                     data_arrays.append(gene_cell_model)
                 for gene_expression_values in self.set_data_array_gene_expression_values(gene, id, valid_expression_scores):

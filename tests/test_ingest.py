@@ -48,6 +48,8 @@ from ingest_pipeline import (
     exit_pipeline,
     run_ingest,
 )
+from expression_files.expression_files import GeneExpression
+from expression_files.dense_ingestor import DenseIngestor
 
 from expression_files.expression_files import GeneExpression
 from expression_files.dense_ingestor import DenseIngestor
@@ -64,7 +66,8 @@ def mock_load(self, *args, **kwargs):
     unlike here where we merely give a way to verify loading-code *inputs*.
     Doing so via integration tests will isolate us from implementation changes.
     """
-    self.load_args = args
+    print(args[0])
+    self.load_args = args[0]
     self.load_kwargs = kwargs
 
 def mock_load_genes(self, *args, **kwargs):
@@ -79,11 +82,8 @@ def mock_load_genes(self, *args, **kwargs):
     unlike here where we merely give a way to verify loading-code *inputs*.
     Doing so via integration tests will isolate us from implementation changes.
     """
-    print(args)
     self.gene_docs = args[0]
     self.data_arrary_docs = args[1]
-    # self.load_args = args[0]
-    # self.load_kwargs = kwargs
 
 # Mock method that writes to database
 GeneExpression.load = mock_load_genes
@@ -109,7 +109,8 @@ def get_gene_model(mock_dir):
 class IngestTestCase(unittest.TestCase):
     @patch('google.cloud.storage.Blob', side_effect=mock_storage_blob)
     @patch('google.cloud.storage.Client', side_effect=mock_storage_client)
-    def setup_ingest(self, args, mock_storage_client, mock_storage_blob):
+
+    def execute_ingest(self, args, mock_storage_client, mock_storage_blob):
 
         self.maxDiff = None
 
@@ -126,7 +127,6 @@ class IngestTestCase(unittest.TestCase):
     def test_ingest_dense_matrix(self):
         """Ingest Pipeline should extract, transform, and load dense matrices
         """
-
         args = [
             '--study-id',
             '5d276a50421aa9117c982845',
@@ -148,7 +148,7 @@ class IngestTestCase(unittest.TestCase):
             '--matrix-file-type',
             'dense',
         ]
-        ingest = self.setup_ingest(args)[0]
+        ingest = self.execute_ingest(args)[0]
         models = ingest.expression_ingestor.gene_docs
         # print(models)
         for model in models:
@@ -156,13 +156,6 @@ class IngestTestCase(unittest.TestCase):
             del model['_id']
             # Verify gene model looks as expected
             self.assertEqual(model, gene_models[model['name']])
-        # print(models)
-
-        # Verify gene model looks as expected
-        # mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-        # expected_model = get_gene_model(mock_dir)
-
-        # self.assertEqual(models, gene_models)
 
     def test_ingest_local_dense_matrix(self):
         """Ingest Pipeline should extract and transform local dense matrices
@@ -189,7 +182,7 @@ class IngestTestCase(unittest.TestCase):
             '--matrix-file-type',
             'dense',
         ]
-        ingest = self.setup_ingest(args)[0]
+        ingest = self.execute_ingest(args)[0]
 
         models = ingest.expression_ingestor.gene_docs
         for model in models:
@@ -224,7 +217,7 @@ class IngestTestCase(unittest.TestCase):
             '--matrix-file-type',
             'dense',
         ]
-        ingest = self.setup_ingest(args)[0]
+        ingest = self.execute_ingest(args)[0]
 
         models = ingest.expression_ingestor.gene_docs
         for model in models:
@@ -253,17 +246,16 @@ class IngestTestCase(unittest.TestCase):
             '--genome-annotation',
             'Ensembl 94',
             '--matrix-file',
-            '../tests/data/matrix.mtx',
+            '../tests/data/AB_toy_data_toy.matrix.mtx',
             '--matrix-file-type',
             'mtx',
             '--gene-file',
-            '../tests/data/genes.tsv',
+            '../tests/data/AB_toy_data_toy.genes.tsv',
             '--barcode-file',
-            '../tests/data/barcodes.tsv',
+            '../tests/data/AB_toy_data_toy.barcodes.tsv',
         ]
-        ingest = self.setup_ingest(args)[0]
-
-        models = ingest.load_args[0]
+        ingest = self.execute_ingest(args)[0]
+        models = ingest.expression_ingestor.gene_docs
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
@@ -291,17 +283,17 @@ class IngestTestCase(unittest.TestCase):
             '--genome-annotation',
             'Ensembl 94',
             '--matrix-file',
-            'gs://fake-bucket/tests/data/matrix.mtx',
+            'gs://fake-bucket/tests/data/AB_toy_data_toy.matrix.mtx',
             '--matrix-file-type',
             'mtx',
             '--gene-file',
-            'gs://fake-bucket/tests/data/genes.tsv',
+            'gs://fake-bucket/tests/data/AB_toy_data_toy.genes.tsv',
             '--barcode-file',
-            'gs://fake-bucket/tests/data/barcodes.tsv',
+            'gs://fake-bucket/tests/data/AB_toy_data_toy.barcodes.tsv',
         ]
-        ingest = self.setup_ingest(args)[0]
-
-        models = ingest.load_args[0]
+        ingest, arguments, status, status_cell_metadata =self.execute_ingest(args)
+        ingest = self.execute_ingest(args)[0]
+        models = ingest.expression_ingestor.gene_docs
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
@@ -333,7 +325,7 @@ class IngestTestCase(unittest.TestCase):
             'mtx',
         ]
 
-        self.assertRaises(ValueError, self.setup_ingest, args)
+        self.assertRaises(ValueError, self.execute_ingest, args)
 
         # TODO: This test does not run.  De-indent and fix.
         def test_bad_format_dense(self):
@@ -349,7 +341,7 @@ class IngestTestCase(unittest.TestCase):
                 'dense',
             ]
             with self.assertRaises(SystemExit) as cm:
-                self.setup_ingest(args)
+                self.execute_ingest(args)
             not self.assertEqual(cm.exception.code, 0)
 
     def test_good_metadata_file(self):
@@ -367,7 +359,7 @@ class IngestTestCase(unittest.TestCase):
             'SCP123',
             '--ingest-cell-metadata',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         # TODO:
         # After integrating MongoDB emulator (SCP-2000), refactor this test to
@@ -392,7 +384,7 @@ class IngestTestCase(unittest.TestCase):
             'SCP123',
             '--ingest-cell-metadata',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
@@ -414,7 +406,7 @@ class IngestTestCase(unittest.TestCase):
             'SCP123',
             '--ingest-cell-metadata',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
@@ -435,7 +427,7 @@ class IngestTestCase(unittest.TestCase):
             '--name',
             'cluster1',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         # TODO:
         # After integrating MongoDB emulator (SCP-2000), refactor this test to
@@ -460,7 +452,7 @@ class IngestTestCase(unittest.TestCase):
             '--name',
             'cluster1',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
@@ -481,7 +473,7 @@ class IngestTestCase(unittest.TestCase):
             '--name',
             'cluster1',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
@@ -513,7 +505,7 @@ class IngestTestCase(unittest.TestCase):
     #         'loom',
     #     ]
     #
-    #     ingest = self.setup_ingest(args)
+    #     ingest = self.execute_ingest(args)
     #
     #     model = ingest.load_args[0]
     #
