@@ -46,7 +46,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # import pdb; pdb.set_trace()
         for gene_docs, data_array_documents in self.transform():
             self.load(gene_docs, data_array_documents)
-        return 0
 
     def matches_file_type(file_type):
         return file_type == 'dense'

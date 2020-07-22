@@ -51,9 +51,6 @@ from ingest_pipeline import (
 from expression_files.expression_files import GeneExpression
 from expression_files.dense_ingestor import DenseIngestor
 
-from expression_files.expression_files import GeneExpression
-from expression_files.dense_ingestor import DenseIngestor
-
 def mock_load(self, *args, **kwargs):
     """Enables overwriting normal function with this placeholder.
     Returning the arguments enables tests to verify that the code invokes
@@ -66,7 +63,6 @@ def mock_load(self, *args, **kwargs):
     unlike here where we merely give a way to verify loading-code *inputs*.
     Doing so via integration tests will isolate us from implementation changes.
     """
-    print(args[0])
     self.load_args = args[0]
     self.load_kwargs = kwargs
 
@@ -228,6 +224,7 @@ class IngestTestCase(unittest.TestCase):
     def test_ingest_mtx_matrix(self):
         """Ingest Pipeline should extract and transform MTX matrix bundles
         """
+        GeneExpression.load = mock_load
 
         args = [
             '--study-id',
@@ -255,7 +252,8 @@ class IngestTestCase(unittest.TestCase):
             '../tests/data/AB_toy_data_toy.barcodes.tsv',
         ]
         ingest = self.execute_ingest(args)[0]
-        models = ingest.expression_ingestor.gene_docs
+        models = ingest.expression_ingestor.load_args
+        print(f'actual model is: {models}')
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
@@ -265,6 +263,7 @@ class IngestTestCase(unittest.TestCase):
     def test_remote_mtx_bundles(self):
         """Ingest Pipeline should handle MTX matrix files fetched from bucket
         """
+        GeneExpression.load = mock_load
 
         args = [
             '--study-id',
@@ -292,11 +291,14 @@ class IngestTestCase(unittest.TestCase):
             'gs://fake-bucket/tests/data/AB_toy_data_toy.barcodes.tsv',
         ]
         ingest, arguments, status, status_cell_metadata =self.execute_ingest(args)
-        ingest = self.execute_ingest(args)[0]
-        models = ingest.expression_ingestor.gene_docs
+
+        models = ingest.expression_ingestor.load_args
+        print(models)
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
+            print(model)
+        # print(model)
         self.assertEqual(models, expected_model)
 
     def test_mtx_bundle_argument_validation(self):

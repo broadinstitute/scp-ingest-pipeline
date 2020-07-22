@@ -337,7 +337,9 @@ class IngestPipeline(object):
                                            **self.kwargs,)  # Dense receiver
         try:
             self.expression_ingestor.execute_ingest()
+            print('finished pipeline')
         except Exception as e:
+            print('e')
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0

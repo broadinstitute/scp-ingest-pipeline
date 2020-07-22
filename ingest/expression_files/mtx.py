@@ -10,7 +10,7 @@ These are commonly provided from 10x Genomics v2.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
-import sys
+
 import collections
 import copy
 import datetime
@@ -23,14 +23,12 @@ import scipy.io
 from bson.objectid import ObjectId
 
 try:
-    from expression_files.expression_files import GeneExpression
-    sys.path.append("../ingest")
+    from .expression_files import GeneExpression
     from ingest_files import IngestFiles
     from monitor import trace
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .expression_files.expression_files import GeneExpression
-    sys.path.append("../ingest")
+    from .expression_files import GeneExpression
     from .ingest_files import IngestFiles
     from .monitor import trace
 
@@ -56,29 +54,26 @@ class MTXIngestor(GeneExpression):
             barcodes_path
         )
 
-        self.mtxIngestFile = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
-        self.mtx_file, self.mtx_local_path = self.mtxIngestFile.resolve_path(
+        mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
+        self.mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(
             mtx_path)
         # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
         # is the gene index, M is the barcode index, and K is the expresion score
         # for the given gene index
-        # self.mtx_description = subprocess.call(['sed',"3p",self.mtx_local_path]).decode('utf-8')
-        self.mtx_description = linecache.getline(self.mtx_local_path, 2).split()
-
+        self.mtx_description = linecache.getline(
+            self.mtx_local_path, 2).split()
 
     def execute_ingest(self):
         self.extract_feature_barcode_matrices()
-        # import pdb; pdb.set_trace()
         for gene_docs, data_array_documents in self.transform():
             self.load(gene_docs, data_array_documents)
-        self.close()
         return 0
 
     def extract_mtx(self, value):
         """
         Zgreps by gene index from mtx file to enhance performance/scale
         """
-        return subprocess.run(['zgrep', f'^{value}\s', self.mtx_local_path],
+        return subprocess.run(['grep', f'^{value}\s', self.mtx_local_path],
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE
                               ).stdout.decode('utf-8')
 
@@ -147,15 +142,16 @@ class MTXIngestor(GeneExpression):
                 data_arrays.append(cell_data_array)
             for gene_data_array in self.set_data_array_gene_expression_values(gene, id, exp_scores):
                 data_arrays.append(gene_data_array)
-            if len(gene_models) > 5:
+            if len(gene_models) == 5:
                 num_processed += len(gene_models)
+                print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
+                # import pdb; pdb.set_trace()
                 yield (gene_models, data_arrays)
-                print(f'Transformed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
                 gene_models = []
                 data_arrays = []
+        print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
         yield (gene_models, data_arrays)
         num_processed += len(gene_models)
-        print(f'Transformed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
         gene_models = []
         data_arrays = []
 
