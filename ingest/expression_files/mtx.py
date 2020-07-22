@@ -68,6 +68,7 @@ class MTXIngestor(GeneExpression):
 
     def execute_ingest(self):
         self.extract_feature_barcode_matrices()
+        # import pdb; pdb.set_trace()
         for gene_docs, data_array_documents in self.transform():
             self.load(gene_docs, data_array_documents)
         self.close()
