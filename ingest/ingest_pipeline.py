@@ -55,7 +55,7 @@ try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
     from monitor import log, setup_logger, trace
-    from mtx import Mtx
+    from expression_files.mtx import MTXIngestor
     # For tracing
     from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
     from opencensus.trace.samplers import AlwaysOnSampler
@@ -79,7 +79,8 @@ except ImportError:
     from .monitor import setup_logger, log, trace
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
-    from .expression_files.dense_ingestor.py import DenseIngestor
+    from .expression_files.dense_ingestor import DenseIngestor
+    from .expression_files.mtx import MTXIngestor
     from .mtx import Mtx
     from .cli_parser import create_parser, validate_arguments
 
@@ -175,8 +176,6 @@ class IngestPipeline(object):
         file_connections = {
             "cell_metadata": CellMetadata,
             "cluster": Clusters,
-            "mtx": Mtx,
-            "loom": Loom,
         }
 
         return file_connections.get(file_type)(
@@ -198,7 +197,11 @@ class IngestPipeline(object):
 
     def ingest_expression(self):
         self.expression_ingestor = None
-
+        if MTXIngestor.matches_file_type(self.matrix_file_type):
+            expression_ingestor = MTXIngestor(self.matrix_file,
+                                              self.study_id,
+                                              self.study_file_id,
+                                              **self.kwargs,)
         if DenseIngestor.matches_file_type(self.matrix_file_type):
             self.expression_ingestor = DenseIngestor(self.matrix_file,
                                            self.study_id,
