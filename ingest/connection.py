@@ -10,14 +10,14 @@ class MongoConnection:
     """
 
     def __init__(self):
-        self.host = os.environ['DATABASE_HOST']
-        self.user = os.environ['MONGODB_USERNAME']
-        self.password = os.environ['MONGODB_PASSWORD']
-        self.db_name = os.environ['DATABASE_NAME']
         # Needed to run tests in test_ingest.py in CircleCI.
         # Needed in test_ingest.py to verify observable
         # output using the same input interface as PAPI
-        if self.host is not None:
+        if os.environ.get('DATABASE_HOST') is not None:
+            self.host = os.environ['DATABASE_HOST']
+            self.user = os.environ['MONGODB_USERNAME']
+            self.password = os.environ['MONGODB_PASSWORD']
+            self.db_name = os.environ['DATABASE_NAME']
             client = MongoClient(
                 self.host,
                 username=self.user,
