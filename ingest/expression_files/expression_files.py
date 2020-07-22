@@ -126,28 +126,17 @@ class GeneExpression:
         """
         start_time = datetime.datetime.now()
         # Try writing data_array_colection
-        try:
-            self.mongo_connection._client['data_arrays'].insert_many(
-                data_array_docs,  ordered=False
-            )
-        except BulkWriteError as bwe:
-            print(f"error caused by data docs : {bwe.details}")
-            raise BulkWriteError(f'Error caused by data docs : {bwe.details}')
-
-        except Exception as e:
-            print(f"error caused by data docs : {e}")
-            raise Exception(f'{e}')
-
-        # Try writing gene docs
-        try:
-            gene_doc_bulk_write_results = self.mongo_connection._client[self.COLLECTION_NAME].insert_many(
-                gene_docs,  ordered=False
-            )
-        except BulkWriteError as bwe:
-            print(f"error caused by gene docs : {bwe.details}")
-            raise BulkWriteError(f'Error caused by gene docs : {bwe.details}')
-
-        except Exception as e:
-            print(f"error caused by gene docs : {e}")
-            raise Exception(f'{e}')
+        self.insert(gene_docs, self.COLLECTION_NAME)
+        self.insert(data_array_docs, 'data_array')
         print(f'Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}')
+
+    def insert(self, docs: List, collection_name: str):
+        try:
+            self.mongo_connection._client[collection_name].insert_many(
+                docs,  ordered=False)
+        except BulkWriteError as bwe:
+            print(f"Error caused by inserting into collection '{collection_name}': {bwe.details}")
+            raise BulkWriteError(f'Error caused by data docs : {bwe.details}')
+        except Exception as e:
+            print(f"Error caused by inserting into collection '{collection_name}': {e}")
+            raise Exception(f'{e}')

@@ -49,6 +49,8 @@ from ingest_pipeline import (
     run_ingest,
 )
 
+from expression_files.expression_files import GeneExpression
+from expression_files.dense_ingestor import DenseIngestor
 
 def mock_load(self, *args, **kwargs):
     """Enables overwriting normal function with this placeholder.
@@ -65,9 +67,26 @@ def mock_load(self, *args, **kwargs):
     self.load_args = args
     self.load_kwargs = kwargs
 
+def mock_load_genes(self, *args, **kwargs):
+    """Enables overwriting normal function with this placeholder.
+    Returning the arguments enables tests to verify that the code invokes
+    this method with expected argument values.
+
+    TODO:
+    Integrate MongoDB emulator for faster, higher-coverage tests (SCP-2000)
+
+    This will enable us to also verify (and thus cover) loading-code *outputs*,
+    unlike here where we merely give a way to verify loading-code *inputs*.
+    Doing so via integration tests will isolate us from implementation changes.
+    """
+    print(args)
+    self.gene_docs = args[0]
+    self.data_arrary_docs = args[1]
+    # self.load_args = args[0]
+    # self.load_kwargs = kwargs
 
 # Mock method that writes to database
-IngestPipeline.load_expression_file = mock_load
+GeneExpression.load = mock_load_genes
 IngestPipeline.load = mock_load
 
 
@@ -130,11 +149,12 @@ class IngestTestCase(unittest.TestCase):
             'dense',
         ]
         ingest = self.setup_ingest(args)[0]
-        models = ingest.load_args[0]
-        print(models)
+        models = ingest.expression_ingestor.gene_docs
+        # print(models)
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
+            # Verify gene model looks as expected
             self.assertEqual(model, gene_models[model['name']])
         # print(models)
 
@@ -171,7 +191,7 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)[0]
 
-        models = ingest.load_args[0]
+        models = ingest.expression_ingestor.gene_docs
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
@@ -206,7 +226,7 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.setup_ingest(args)[0]
 
-        models = ingest.load_args[0]
+        models = ingest.expression_ingestor.gene_docs
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model['_id']

@@ -197,15 +197,16 @@ class IngestPipeline(object):
         self.db[collection_name].insert_many(documents)
 
     def ingest_expression(self):
+        self.expression_ingestor = None
 
         if DenseIngestor.matches_file_type(self.matrix_file_type):
-            dense_ingestor = DenseIngestor(self.matrix_file,
+            self.expression_ingestor = DenseIngestor(self.matrix_file,
                                            self.study_id,
                                            self.study_file_id,
                                            tracer=self.tracer,
                                            **self.kwargs,)  # Dense receiver
         try:
-            dense_ingestor.execute_ingest()  # Starting the method calls
+            self.expression_ingestor.execute_ingest()  # Starting the method calls
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
