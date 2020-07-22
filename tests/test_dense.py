@@ -1,9 +1,11 @@
 import unittest
+from unittest.mock import patch
 import sys
 from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_models
 
 sys.path.append("../ingest/expression_files")
 from dense_ingestor import DenseIngestor
+from expression_files import GeneExpression
 
 
 class TestDense(unittest.TestCase):
@@ -82,6 +84,18 @@ class TestDense(unittest.TestCase):
     #         tracer=None,
     #     )
     #     self.assertTrue(expression_matrix.validate_format())
+    @patch('expression_files.GeneExpression.load')
+    @patch('dense_ingestor.DenseIngestor.transform')
+    def test_execute_ingest(self, mock_load, mock_transform):
+        "Validates functions in execute_ingest() are called "
+        expression_matrix = DenseIngestor(
+            '../tests/data/dense_matrix_19_genes_1000_cells.txt',
+            '5d276a50421aa9117c982845',
+            '5dd5ae25421aa910a723a337'
+        )
+        expression_matrix.execute_ingest()
+        print(mock_transform.called)
+        print(mock_load.called)
 
     def test_transform_fn(self):
         """ Tests to ensure transform function is creating

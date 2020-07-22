@@ -8,6 +8,7 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 import abc
+import sys
 import datetime
 import ntpath
 import types
@@ -20,14 +21,16 @@ from pymongo import InsertOne, MongoClient
 from pymongo.errors import BulkWriteError
 
 try:
+    sys.path.append("../ingest")
+    # Used when importing as external package, e.g. imports in single_cell_portal cod
     from ingest_files import DataArray
     from monitor import setup_logger
     from connection import MongoConnection
 except ImportError:
+    sys.path.append("../ingest")
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import DataArray
     from .monitor import setup_logger
-    from connection import MongoConnection
 
 
 class GeneExpression:
@@ -117,9 +120,10 @@ class GeneExpression:
             yield model
 
     def load(self, gene_docs: List, data_array_docs: List):
+        start_load_time = datetime.datetime.now()
         self.insert(gene_docs, self.COLLECTION_NAME)
         self.insert(data_array_docs, 'data_array')
-        print(f'Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}')
+        print(f'Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_load_time)}')
 
 
     def insert(self, docs: List, collection_name: str):

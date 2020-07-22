@@ -64,7 +64,6 @@ class MTXIngestor(GeneExpression):
         # for the given gene index
         # self.mtx_description = subprocess.call(['sed',"3p",self.mtx_local_path]).decode('utf-8')
         self.mtx_description = linecache.getline(self.mtx_local_path, 2).split()
-        print(self.mtx_description)
 
 
     def execute_ingest(self):
@@ -150,12 +149,12 @@ class MTXIngestor(GeneExpression):
             if len(gene_models) > 5:
                 num_processed += len(gene_models)
                 yield (gene_models, data_arrays)
-                print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
+                print(f'Transformed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
                 gene_models = []
                 data_arrays = []
         yield (gene_models, data_arrays)
         num_processed += len(gene_models)
-        print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
+        print(f'Transformed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
         gene_models = []
         data_arrays = []
 

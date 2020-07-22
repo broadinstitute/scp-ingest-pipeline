@@ -20,8 +20,6 @@ try:
     from .expression_files import GeneExpression
     sys.path.append("../ingest")
     from ingest_files import IngestFiles
-    from monitor import trace
-    from connection import MongoConnection
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
@@ -45,6 +43,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.header = next(self.csv_file)
 
     def execute_ingest(self):
+        import pdb; pdb.set_trace()
         for gene_docs, data_array_documents in self.transform():
             self.load(gene_docs, data_array_documents)
         return 0
@@ -52,29 +51,29 @@ class DenseIngestor(GeneExpression, IngestFiles):
     def matches_file_type(file_type):
         return file_type == 'dense'
 
-    def validate_unique_header(self):
-        """Validates header has no duplicate values"""
-        if len(set(self.header)) != len(self.header):
-            self.error_logger.error(
-                "Duplicated header values are not allowed", extra=self.extra_log_params
-            )
-            return False
-        return True
-
-    def validate_gene_keyword(self):
-        """Validates that 'Gene' is the first value in header"""
-        # File is an R formatted file
-        if (self.header[-1] == '') and (self.header[0].upper() != 'GENE'):
-            pass
-        else:
-            # If not R formatted file then first cell must be 'GENE'
-            if self.header[0].upper() != 'GENE':
-                self.error_logger.error(
-                    f'First cell in header must be GENE not {self.header[0]}',
-                    extra=self.extra_log_params,
-                )
-                return False
-        return True
+    # def validate_unique_header(self):
+    #     """Validates header has no duplicate values"""
+    #     if len(set(self.header)) != len(self.header):
+    #         self.error_logger.error(
+    #             "Duplicated header values are not allowed", extra=self.extra_log_params
+    #         )
+    #         return False
+    #     return True
+    #
+    # def validate_gene_keyword(self):
+    #     """Validates that 'Gene' is the first value in header"""
+    #     # File is an R formatted file
+    #     if (self.header[-1] == '') and (self.header[0].upper() != 'GENE'):
+    #         pass
+    #     else:
+    #         # If not R formatted file then first cell must be 'GENE'
+    #         if self.header[0].upper() != 'GENE':
+    #             self.error_logger.error(
+    #                 f'First cell in header must be GENE not {self.header[0]}',
+    #                 extra=self.extra_log_params,
+    #             )
+    #             return False
+    #     return True
 
     # @trace
     # def preprocess(self):
@@ -153,11 +152,11 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     data_arrays.append(gene_cell_model)
                 for gene_expression_values in self.set_data_array_gene_expression_values(gene, id, valid_expression_scores):
                     data_arrays.append(gene_expression_values)
-                if len(gene_models) > 4:
+                if len(gene_models) == 5:
                     num_processed += len(gene_models)
-                    yield (gene_models, data_arrays)
                     print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
                     self.error_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
+                    yield (gene_models, data_arrays)
                     gene_models = []
                     data_arrays = []
         yield (gene_models, data_arrays)
