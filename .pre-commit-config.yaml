@@ -1,43 +1,45 @@
 repos:
--   repo: https://github.com/ambv/black
-    rev: 19.3b0
-    hooks:
-    - id: black
-      language: system
-      # Using args here is not recommended by Black:
-      # https://black.readthedocs.io/en/stable/version_control_integration.html
-      # But since we only have one argument here, and
-      # we don't force developers to use editor plugins,
-      # putting the args here seems to be fine
-      args: [ingest/, --skip-string-normalization]
+    - repo: https://github.com/ambv/black
+      rev: 19.3b0
+      hooks:
+          - id: black
+            language: system
+            # Using args here is not recommended by Black:
+            # https://black.readthedocs.io/en/stable/version_control_integration.html
+            # But since we only have one argument here, and
+            # we don't force developers to use editor plugins,
+            # putting the args here seems to be fine
+            args: [ingest/, --skip-string-normalization]
+            stages: [commit, push]
 
--   repo: https://gitlab.com/pycqa/flake8
-    rev: 3.7.7
-    hooks:
-    -   id: flake8
--   repo: local
-    hooks:
-    -   id: tests
-        name: run tests
-        entry: cd tests && pytest -v
-        language: system
-        types: [python]
-        stages: [push]
-    -   id: git-secrets pre-commit
-        name: git-secrets (pre-commit/push hook)
-        description: git-secrets scans commits to prevent secrets being committed -- for FISMA compliance. This runs it as a pre-commit hook.
-        entry: git-secrets --pre_commit_hook --
-        language: system
-        stages: [commit, push]
-    -   id: git-secrets commit-msg
-        name: git-secrets (commit-msg hook)
-        description: git-secrets scans commits to prevent secrets being committed -- for FISMA compliance. This runs it as a commit-msg hook.
-        entry: git-secrets --commit_msg_hook --
-        language: system
-        stages: [commit-msg]
-    -   id: git-secrets prepare-commit-msg
-        name: git-secrets (prepare-commit-msg hook)
-        description: git-secrets scans commits to prevent secrets being committed -- for FISMA compliance. This runs it as a prepare-commit-msg hook.
-        entry: git-secrets --prepare_commit_msg_hook --
-        language: system
-        stages: [prepare-commit-msg]
+    - repo: https://gitlab.com/pycqa/flake8
+      rev: 3.7.7
+      hooks:
+          - id: flake8
+            stages: [commit, push]
+    - repo: local
+      hooks:
+          - id: tests
+            name: run tests
+            entry: cd tests && pytest -v
+            language: system
+            types: [python]
+            stages: [push]
+          - id: git-secrets pre-commit
+            name: git-secrets (pre-commit/push hook)
+            description: git-secrets scans commits to prevent secrets being committed -- for FISMA compliance. This runs it as a pre-commit hook.
+            entry: git-secrets --pre_commit_hook --
+            language: system
+            stages: [commit, push]
+          - id: git-secrets commit-msg
+            name: git-secrets (commit-msg hook)
+            description: git-secrets scans commits to prevent secrets being committed -- for FISMA compliance. This runs it as a commit-msg hook.
+            entry: git-secrets --commit_msg_hook --
+            language: system
+            stages: [commit-msg]
+          - id: git-secrets prepare-commit-msg
+            name: git-secrets (prepare-commit-msg hook)
+            description: git-secrets scans commits to prevent secrets being committed -- for FISMA compliance. This runs it as a prepare-commit-msg hook.
+            entry: git-secrets --prepare_commit_msg_hook --
+            language: system
+            stages: [prepare-commit-msg]
