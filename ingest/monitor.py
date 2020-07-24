@@ -111,7 +111,7 @@ def integrate_sentry():
     if sentry_DSN is None:
         # Don't log to Sentry unless its DSN is set.
         # This disables Sentry logging in development and test (i.e.,
-        # non-PAPI) environments.
+        # environments without a SENTRY_DSN in their scp_config vault secret).
         return
 
     sentry_logging = LoggingIntegration(
