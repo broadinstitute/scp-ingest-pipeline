@@ -79,7 +79,7 @@ def mock_load_genes(self, *args, **kwargs):
     Doing so via integration tests will isolate us from implementation changes.
     """
     self.gene_docs = args[0]
-    self.data_arrary_docs = args[1]
+    self.data_array_docs = args[1]
 
 # Mock method that writes to database
 GeneExpression.load = mock_load_genes
