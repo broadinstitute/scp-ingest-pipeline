@@ -94,7 +94,7 @@ class TestDense(unittest.TestCase):
     @patch('expression_files.dense_ingestor.DenseIngestor.is_valid_format', return_value= True)
     @patch('expression_files.expression_files.GeneExpression.load')
     @patch('expression_files.dense_ingestor.DenseIngestor.transform', return_value= [('foo1', 'foo2')])
-    def test_execute_ingest(self,mock_is_valid_format, mock_load, mock_transform):
+    def test_execute_ingest(self, mock_is_valid_format, mock_load, mock_transform):
         "Confirms functions in execute_ingest() are called "
         expression_matrix = DenseIngestor(
             '../tests/data/dense_matrix_19_genes_1000_cells.txt',
