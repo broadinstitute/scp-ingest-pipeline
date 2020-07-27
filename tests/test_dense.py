@@ -55,9 +55,10 @@ class TestDense(unittest.TestCase):
             '5dd5ae25421aa910a723a337',
             tracer=None,
         )
-        with self.assertRaises(ValueError):
-            for gene in expression_matrix.transform():
+        with self.assertRaises(ValueError) as error:
+            for gene_mode,data_array in expression_matrix.transform():
                 pass
+            assertEqual(error.value, "Duplicate gene: Itm2a")
 
     @patch('expression_files.dense_ingestor.DenseIngestor.has_unique_header', return_value= True)
     @patch('expression_files.dense_ingestor.DenseIngestor.has_gene_keyword', return_value= True)
@@ -69,9 +70,7 @@ class TestDense(unittest.TestCase):
         '5dd5ae25421aa910a723a337',
         tracer=None,
         )
-        expression_matrix.is_valid_format()
-        self.assertTrue(mock_transform.called)
-        self.assertTrue(mock_load.called)
+        self.assertTrue(expression_matrix.is_valid_format())
 
     def test_is_valid_format_false(self):
         expression_matrix = DenseIngestor(
@@ -105,7 +104,7 @@ class TestDense(unittest.TestCase):
         expression_matrix.execute_ingest()
         self.assertTrue(mock_transform.called)
         self.assertTrue(mock_load.called)
-        self.assertTrue(is_valid_format.called)
+        self.assertTrue(mock_is_valid_format.called)
 
     @patch('expression_files.dense_ingestor.DenseIngestor.is_valid_format', return_value= False)
     @patch('expression_files.expression_files.GeneExpression.load')
@@ -125,7 +124,7 @@ class TestDense(unittest.TestCase):
             self.assertTrue(mock_is_valid_format.called)
             self.assertFalse(mock_transform.called)
             self.assertFalse(mock_load.called)
-            assert str(error.value) == "Dense matrix has invalid format"
+            self.assertEqual(error.value,"Dense matrix has invalid format")
 
     def test_transform_fn(self):
         """ Assures transform function is creates gene data model correctly
