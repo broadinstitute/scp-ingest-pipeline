@@ -333,7 +333,7 @@ class IngestPipeline(object):
                                            self.study_id,
                                            self.study_file_id,
                                            tracer=self.tracer,
-                                           **self.kwargs,)  # Dense receiverg
+                                           **self.kwargs,)  # Dense receiver
         try:
             self.expression_ingestor.execute_ingest()
             print('finished pipeline')
