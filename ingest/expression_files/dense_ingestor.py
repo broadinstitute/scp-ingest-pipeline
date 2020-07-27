@@ -4,8 +4,6 @@ DESCRIPTION
 Module provides extract and transforms function for gene expression data for
 an dense matrix.
 
-PREREQUISITES
-Must have python 3.6 or higher.
 """
 import collections
 import csv
