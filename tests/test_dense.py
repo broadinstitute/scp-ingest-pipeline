@@ -127,7 +127,8 @@ class TestDense(unittest.TestCase):
             self.assertEqual(error.value,"Dense matrix has invalid format")
 
     def test_transform_fn(self):
-        """ Assures transform function is creates gene data model correctly
+        """
+        Assures transform function creates gene data model correctly
         """
 
         expression_matrix = DenseIngestor(
