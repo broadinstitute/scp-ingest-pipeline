@@ -74,7 +74,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # An "R formatted" file has one less entry in the header
         # row than each successive row. Also, "GENE" will not appear in header
         if self.header[0].upper() != 'GENE':
-            next_line = self.csv_file.next()
+            next_line = next(self.csv_file)
             length_of_next_line = len(next_line)
             if length_of_next_line is (len(self.header) - 1):
                 # Reset csv reader to first gene row
