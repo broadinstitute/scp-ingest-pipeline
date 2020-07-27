@@ -73,6 +73,7 @@ def build_array_object(row):
     # create exception for organ_region which does not use standard ontology_format
     elif row['class'] == 'ontology' and row['attribute'] == 'organ_region':
         dict['type'] = row['type']
+        dict['ontology_browser_url'] = row['ontology_browser_url']
     elif row['class'] == 'ontology':
         dict['type'] = row['type']
         ontology_format = r'^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'
