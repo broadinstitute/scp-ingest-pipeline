@@ -76,7 +76,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         if self.header[0].upper() != 'GENE':
             next_line = next(self.csv_file)
             length_of_next_line = len(next_line)
-            if length_of_next_line is (len(self.header) - 1):
+            if length_of_next_line == (len(self.header) - 1):
                 # Reset csv reader to first gene row
                 self.csv_file.seek(1)
                 return True
