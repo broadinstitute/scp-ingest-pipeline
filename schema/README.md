@@ -21,8 +21,6 @@
 * Copy the new convention JSON and TSV files to the * &lt;project&gt;_convention directory  
   
 
-```  
-
 Notes:
 * Tests in test_validate_metadata.py use current metadata convention (except for invalid metadata convention test)
 
