@@ -3,6 +3,16 @@ import os
 import time
 from contextlib import nullcontext
 
+
+# General docs for Sentry:
+# https://docs.sentry.io/platforms/python/logging/
+
+# API docs:
+# https://getsentry.github.io/sentry-python/api.html
+# https://getsentry.github.io/sentry-python/integrations.html
+
+# See logs in Sentry:
+# https://sentry.io/organizations/broad-institute/issues/?project=1424198
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 
@@ -94,15 +104,7 @@ def before_send_to_sentry(event, hint):
 def integrate_sentry():
     '''Log Ingest Pipeline errors to Sentry, by integrating with Python logger
 
-    General docs:
-    https://docs.sentry.io/platforms/python/logging/
-
-    API docs:
-    https://getsentry.github.io/sentry-python/api.html
-    https://getsentry.github.io/sentry-python/integrations.html
-
-    See logs in Sentry:
-    https://sentry.io/organizations/broad-institute/issues/?project=1424198
+    See also: links to Sentry resources atop this module
     '''
 
     # Ultimately stored in Vault, passed in as environmen variable to PAPI
