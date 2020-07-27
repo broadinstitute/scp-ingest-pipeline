@@ -44,8 +44,11 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     def execute_ingest(self):
         # import pdb; pdb.set_trace()
-        for gene_docs, data_array_documents in self.transform():
-            self.load(gene_docs, data_array_documents)
+        if self.is_valid_format():
+            for gene_docs, data_array_documents in self.transform():
+                self.load(gene_docs, data_array_documents)
+        else:
+             raise ValueError("Dense matrix has invalid format")
 
     def matches_file_type(file_type):
         return file_type == 'dense'
@@ -62,7 +65,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         """Validates header has no duplicate values"""
         if len(set(self.header)) != len(self.header):
             self.error_logger.error(
-                "Duplicated header values are not allowed", extra=self.extra_log_params
+                "Duplicate header values are not allowed", extra=self.extra_log_params
             )
             return False
         return True
