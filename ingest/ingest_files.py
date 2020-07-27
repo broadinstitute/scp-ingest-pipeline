@@ -95,6 +95,7 @@ class IngestFiles:
 
     @staticmethod
     def is_remote_file(file_path):
+        print(file_path)
         return file_path[:5] == "gs://"
 
     def download_from_bucket(self, file_path):

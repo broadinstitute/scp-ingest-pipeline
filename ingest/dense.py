@@ -17,14 +17,14 @@ from bson.objectid import ObjectId
 
 
 try:
-    from .expression_files import GeneExpression
-    sys.path.append("../ingest")
+    from expression_files import GeneExpression
+    # sys.path.append("../ingest")
     from ingest_files import IngestFiles
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
-    sys.path.append("../ingest")
+    # sys.path.append("../ingest")
     from .ingest_files import IngestFiles
 
 
@@ -37,15 +37,18 @@ class DenseIngestor(GeneExpression, IngestFiles):
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
+        print(file_path)
         self.matrix_params = kwargs
         self.csv_file = self.open_file(self.file_path)[0]
         self.gene_names = {}
         self.header = next(self.csv_file)
 
     def execute_ingest(self):
-        # import pdb; pdb.set_trace()
-        for gene_docs, data_array_documents in self.transform():
-            self.load(gene_docs, data_array_documents)
+        import pdb; pdb.set_trace()
+        if self.is_valid_format():
+            yield from self.transform()
+        else:
+            raise ValueError("")
 
     def matches_file_type(file_type):
         return file_type == 'dense'
@@ -82,6 +85,32 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 return False
         return True
 
+    # @trace
+    # def preprocess(self):
+    #     """Determines if file is R-formatted. Creates dataframe (df)"""
+    #     csv_file, open_file_object = self.open_file(self.file_path)
+    #     dtypes = {'GENE': object}
+    #
+    #     # # Remove white spaces and quotes
+    #     header = [col_name.strip().strip('\"') for col_name in self.header]
+    #     # See if R formatted file
+    #     if (header[-1] == '') and (header[0].upper() != 'GENE'):
+    #         header.insert(0, 'GENE')
+    #         # Although the last column in the header is empty, python treats it
+    #         # as an empty string,[ ..., ""]
+    #         header = header[0:-1]
+    #     else:
+    #         header[0] = header[0].upper()
+    #     # Set dtype for expression values to floats
+    #     dtypes.update({cell_name: 'float' for cell_name in header[1:]})
+    #     self.df = self.open_file(
+    #         self.file_path,
+    #         open_as='dataframe',
+    #         names=header,
+    #         skiprows=1,
+    #         dtype=dtypes,
+    #         # chunksize=100000, Save for when we chunk data
+    #     )[0]
     def transform(self):
         """Transforms dense matrix into gene data model.
         """
