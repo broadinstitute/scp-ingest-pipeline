@@ -53,12 +53,12 @@ class DenseIngestor(GeneExpression, IngestFiles):
     def is_valid_format(self):
         return all(
             [
-                self.validate_unique_header(),
-                self.validate_gene_keyword(),
+                self.has_unique_header(),
+                self.has_gene_keyword(),
             ]
         )
 
-    def validate_unique_header(self):
+    def has_unique_header(self):
         """Validates header has no duplicate values"""
         if len(set(self.header)) != len(self.header):
             self.error_logger.error(
@@ -67,7 +67,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             return False
         return True
 
-    def validate_gene_keyword(self):
+    def has_gene_keyword(self):
         """Validates that 'Gene' is the first value in header"""
         # File is an R formatted file
         if (self.header[-1] == '') and (self.header[0].upper() != 'GENE'):
@@ -145,17 +145,3 @@ class DenseIngestor(GeneExpression, IngestFiles):
         print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
         gene_models = []
         data_arrays = []
-
-    def validate_format(self):
-        return all([self.validate_unique_header(), self.validate_gene_keyword()])
-
-    def close(self):
-        """Closes file
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        self.csv_file.close()
