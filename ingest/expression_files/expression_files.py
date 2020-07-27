@@ -8,9 +8,9 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 import abc
-import sys
 import datetime
 import ntpath
+import sys
 import types
 from dataclasses import dataclass
 from typing import List  # noqa: F401
@@ -25,12 +25,13 @@ try:
     # Used when importing as external package, e.g. imports in single_cell_portal cod
     from ingest_files import DataArray
     from monitor import setup_logger
-    from connection import MongoConnection
+    from mongo_connection import MongoConnection
 except ImportError:
     sys.path.append("../ingest")
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import DataArray
     from .monitor import setup_logger
+    from .mongo_connection import MongoConnection
 
 
 class GeneExpression:
@@ -124,7 +125,6 @@ class GeneExpression:
         self.insert(gene_docs, self.COLLECTION_NAME)
         self.insert(data_array_docs, 'data_array')
         print(f'Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}')
-
 
     def insert(self, docs: List, collection_name: str):
         try:
