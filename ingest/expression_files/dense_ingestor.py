@@ -15,7 +15,6 @@ from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
 
-
 try:
     from .expression_files import GeneExpression
     sys.path.append("../ingest")
@@ -43,12 +42,11 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.header = next(self.csv_file)
 
     def execute_ingest(self):
-        # import pdb; pdb.set_trace()
         if self.is_valid_format():
             for gene_docs, data_array_documents in self.transform():
                 self.load(gene_docs, data_array_documents)
         else:
-             raise ValueError("Dense matrix has invalid format")
+            raise ValueError("Dense matrix has invalid format")
 
     def matches_file_type(file_type):
         return file_type == 'dense'
@@ -72,8 +70,14 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     def has_gene_keyword(self):
         """Validates that 'Gene' is the first value in header"""
-        # File is an R formatted file
-        if (self.header[-1] == '') and (self.header[0].upper() != 'GENE'):
+        # Check if file is an R formatted file
+        # An "R formatted" file has one less entry in the header
+        # row than each successive row. Also, "GENE" will not appear in header
+        next_line = self.csv_file.next()
+        length_of_next_line = len(next_line)
+        if (length_of_next_line is len(self.header) - 1) and (self.header[0].upper() != 'GENE'):
+            # Reset csv reader to first gene row
+            self.csv_file.seek(1)
             pass
         else:
             # If not R formatted file then first cell must be 'GENE'
@@ -131,7 +135,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
             )
             )
             if len(valid_expression_scores) > 0:
-                print('ere')
                 for gene_cell_model in self.set_data_array_gene_cell_names(gene, id, cells):
                     data_arrays.append(gene_cell_model)
                 for gene_expression_values in self.set_data_array_gene_expression_values(gene, id, valid_expression_scores):
