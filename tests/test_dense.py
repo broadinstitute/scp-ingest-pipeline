@@ -111,7 +111,7 @@ class TestDense(unittest.TestCase):
     @patch('expression_files.dense_ingestor.DenseIngestor.transform')
     def test_execute_ingest_raises_error(self, mock_is_valid_format, mock_load, mock_transform):
         """
-        Test if the format of a file is invalid or is_valdi_format() returns False,
+        Test if the format of a file is invalid or is_valid_format() returns False,
         a ValueError is raised
         """
         expression_matrix = DenseIngestor(
