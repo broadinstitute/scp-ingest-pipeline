@@ -4,8 +4,6 @@ DESCRIPTION
 Module provides extract and transforms function for gene expression data for
 an dense matrix.
 
-PREREQUISITES
-Must have python 3.6 or higher.
 """
 import collections
 import csv
@@ -42,12 +40,55 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.header = next(self.csv_file)
 
     def execute_ingest(self):
-        # import pdb; pdb.set_trace()
-        for gene_docs, data_array_documents in self.transform():
-            self.load(gene_docs, data_array_documents)
+        if self.is_valid_format():
+            for gene_docs, data_array_documents in self.transform():
+                self.load(gene_docs, data_array_documents)
+        else:
+            raise ValueError("Dense matrix has invalid format")
 
     def matches_file_type(file_type):
         return file_type == 'dense'
+
+    def is_valid_format(self):
+        return all(
+            [
+                self.has_unique_header(),
+                self.has_gene_keyword(),
+            ]
+        )
+
+    def has_unique_header(self):
+        """Validates header has no duplicate values"""
+        if len(set(self.header)) != len(self.header):
+            self.error_logger.error(
+                "Duplicate header values are not allowed", extra=self.extra_log_params
+            )
+            return False
+        return True
+
+    def has_gene_keyword(self):
+        """Validates that 'Gene' is the first value in header"""
+        # Check if file is an R formatted file
+        # An "R formatted" file has one less entry in the header
+        # row than each successive row. Also, "GENE" will not appear in header
+        if self.header[0].upper() != 'GENE':
+            next_line = next(self.csv_file)
+            length_of_next_line = len(next_line)
+            if length_of_next_line == (len(self.header) - 1):
+                # Reset csv reader to first gene row
+                self.csv_file.seek(1)
+                return True
+            else:
+                return False
+        else:
+            # If not R formatted file then first cell must be 'GENE'
+            if self.header[0].upper() != 'GENE':
+                self.error_logger.error(
+                    f'First cell in header must be GENE not {self.header[0]}',
+                    extra=self.extra_log_params,
+                )
+                return False
+        return True
 
     def transform(self):
         """Transforms dense matrix into gene data model.
@@ -91,7 +132,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
             )
             )
             if len(valid_expression_scores) > 0:
-                print(valid_expression_scores)
                 for gene_cell_model in self.set_data_array_gene_cell_names(gene, id, cells):
                     data_arrays.append(gene_cell_model)
                 for gene_expression_values in self.set_data_array_gene_expression_values(gene, id, valid_expression_scores):

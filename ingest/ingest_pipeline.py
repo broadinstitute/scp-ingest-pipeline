@@ -49,7 +49,7 @@ from bson.objectid import ObjectId
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
 from opencensus.trace.samplers import AlwaysOnSampler
 from opencensus.trace.tracer import Tracer
-from pymongo import InsertOne, MongoClient
+from pymongo import MongoClient
 from pymongo.errors import BulkWriteError
 
 # from google.cloud.logging.resource import Resource
@@ -89,6 +89,7 @@ except ImportError:
     from .expression_files.dense_ingestor import DenseIngestor
     from .expression_files.mtx import MTXIngestor
     from .cli_parser import create_parser, validate_arguments
+
 
 
 class IngestPipeline(object):
@@ -148,8 +149,6 @@ class IngestPipeline(object):
         if ingest_cluster:
             self.cluster = self.initialize_file_connection(
                 "cluster", cluster_file)
-        if matrix_file is None:
-            self.matrix = matrix_file
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
         if subsample:
             self.cluster_file = cluster_file
