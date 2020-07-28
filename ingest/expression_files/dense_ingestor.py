@@ -15,7 +15,6 @@ from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
 
-
 try:
     from .expression_files import GeneExpression
     sys.path.append("../ingest")
@@ -50,56 +49,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
     def matches_file_type(file_type):
         return file_type == 'dense'
 
-    # def validate_unique_header(self):
-    #     """Validates header has no duplicate values"""
-    #     if len(set(self.header)) != len(self.header):
-    #         self.error_logger.error(
-    #             "Duplicated header values are not allowed", extra=self.extra_log_params
-    #         )
-    #         return False
-    #     return True
-    #
-    # def validate_gene_keyword(self):
-    #     """Validates that 'Gene' is the first value in header"""
-    #     # File is an R formatted file
-    #     if (self.header[-1] == '') and (self.header[0].upper() != 'GENE'):
-    #         pass
-    #     else:
-    #         # If not R formatted file then first cell must be 'GENE'
-    #         if self.header[0].upper() != 'GENE':
-    #             self.error_logger.error(
-    #                 f'First cell in header must be GENE not {self.header[0]}',
-    #                 extra=self.extra_log_params,
-    #             )
-    #             return False
-    #     return True
-
-    # @trace
-    # def preprocess(self):
-    #     """Determines if file is R-formatted. Creates dataframe (df)"""
-    #     csv_file, open_file_object = self.open_file(self.file_path)
-    #     dtypes = {'GENE': object}
-    #
-    #     # # Remove white spaces and quotes
-    #     header = [col_name.strip().strip('\"') for col_name in self.header]
-    #     # See if R formatted file
-    #     if (header[-1] == '') and (header[0].upper() != 'GENE'):
-    #         header.insert(0, 'GENE')
-    #         # Although the last column in the header is empty, python treats it
-    #         # as an empty string,[ ..., ""]
-    #         header = header[0:-1]
-    #     else:
-    #         header[0] = header[0].upper()
-    #     # Set dtype for expression values to floats
-    #     dtypes.update({cell_name: 'float' for cell_name in header[1:]})
-    #     self.df = self.open_file(
-    #         self.file_path,
-    #         open_as='dataframe',
-    #         names=header,
-    #         skiprows=1,
-    #         dtype=dtypes,
-    #         # chunksize=100000, Save for when we chunk data
-    #     )[0]
     def transform(self):
         """Transforms dense matrix into gene data model.
         """
@@ -115,22 +64,18 @@ class DenseIngestor(GeneExpression, IngestFiles):
             data_arrays.append(all_cell_model)
         # Represents row as an ordered dictionary
         for row in self.csv_file:
-            numeric_scores = list(
-                map(lambda x: round(float(x.strip().strip("\'")), 3), row[1:])
-            )
-            valid_expression_scores = []
+            # import pdb
+            # pdb.set_trace()
+            numeric_scores = DenseIngestor.process_row(row)
+            valid_expression_scores, cells = DenseIngestor.filter_expression_scores(
+                numeric_scores)
             cells = []
-
-            for idx, expression_score in enumerate(numeric_scores, 1):
-                if expression_score != 0:
-                    valid_expression_scores.append(expression_score)
-                    cells.append(self.header[idx])
             gene = row[0]
             if gene in self.gene_names:
                 raise ValueError(f'Duplicate gene: {gene}')
             self.gene_names[gene] = True
             print(f'Transforming gene :{gene}')
-            formatted_gene_name = gene.strip().strip('\"')
+            formatted_gene_name = DenseIngestor.format_gene_name(gene)
             id = ObjectId()
             gene_models.append(self.Model(
                 {
@@ -146,7 +91,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             )
             )
             if len(valid_expression_scores) > 0:
-                print('ere')
+                print(valid_expression_scores)
                 for gene_cell_model in self.set_data_array_gene_cell_names(gene, id, cells):
                     data_arrays.append(gene_cell_model)
                 for gene_expression_values in self.set_data_array_gene_expression_values(gene, id, valid_expression_scores):
@@ -164,16 +109,27 @@ class DenseIngestor(GeneExpression, IngestFiles):
         gene_models = []
         data_arrays = []
 
-    def validate_format(self):
-        return all([self.validate_unique_header(), self.validate_gene_keyword()])
+    @staticmethod
+    def format_gene_name(name):
+        return gene.strip().strip('\"')
 
-    def close(self):
-        """Closes file
+    @staticmethod
+    def process_row(row: str):
+        def convert_to_float(value: str):
+            value = value.strip().strip("\'")
+            return round(float(value), 3)
+        result = map(convert_to_float, row[1:])
+        return list(result)
 
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        self.csv_file.close()
+    @staticmethod
+    def filter_expression_scores(scores: List):
+        valid_expression_scores = []
+        associated_cells = []
+        for idx, expression_score in enumerate(scores, 1):
+            if expression_score != 0:
+                valid_expression_scores.append(expression_score)
+                associated_cells.append(self.header[idx])
+        import pdb
+        pdb.set_trace()
+        print(valid_expression_scores)
+        return valid_expression_scores, associated_cells
