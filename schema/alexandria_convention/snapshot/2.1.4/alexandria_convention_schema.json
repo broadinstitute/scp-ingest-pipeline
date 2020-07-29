@@ -1,5 +1,5 @@
 {
-    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata_schemas/alexandria_convention/2.1.5/json",
+    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata_schemas/alexandria_convention/2.1.4/json",
     "$schema": "https://json-schema.org/draft-07/schema#",
     "dependencies": {
         "cell_type__custom": [
@@ -518,7 +518,6 @@
         "organ_region": {
             "description": "organ_region",
             "items": {
-                "ontology_browser_url": "http://atlas.brain-map.org/atlas?atlas=602630314",
                 "type": "string"
             },
             "ontology": "https://api.brain-map.org/api/v2/structure_graph_download/1.json",

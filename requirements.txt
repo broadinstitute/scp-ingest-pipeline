@@ -14,6 +14,7 @@ colorama==0.4.1
 pymongo==3.9.0
 backoff==1.10.0
 
+
 # Dev dependencies
 pytest==5.0.1
 coverage==4.5.3
@@ -32,5 +33,6 @@ opencensus==0.7.6
 opencensus-context==0.1.1
 opencensus-ext-stackdriver==0.7.2
 google-cloud-trace==0.23.0
+sentry-sdk==0.16.1
 
 # memory-profiler==0.57.0

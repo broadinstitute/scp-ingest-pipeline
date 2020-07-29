@@ -67,7 +67,7 @@ class CellMetadata(Annotations):
     def validate(self):
         """ Runs all validation checks
         """
-        return all([self.is_valid_format()])
+        return all([self.is_valid_format(), self.validate_numeric_annots()])
 
     def is_valid_format(self):
         """Validates format by calling all format validation methods"""
