@@ -35,7 +35,8 @@ class DenseIngestor(GeneExpression, IngestFiles):
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
         self.matrix_params = kwargs
-        self.csv_file_handler, self.file_handler = self.open_file(self.file_path)
+        self.csv_file_handler, self.file_handler = self.open_file(
+            self.file_path)
         self.gene_names = {}
         self.header = next(self.csv_file_handler)
 
@@ -44,7 +45,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         row = next(self.csv_file_handler)
         if DenseIngestor.is_valid_format(self.header, row):
             # Reset csv reader to first gene row
-            self.csv_file_handler= self.open_file(self.file_path)[0]
+            self.csv_file_handler = self.open_file(self.file_path)[0]
             next(self.csv_file_handler)
             for gene_docs, data_array_documents in self.transform():
                 self.load(gene_docs, data_array_documents)
@@ -73,7 +74,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         return list(result)
 
     @staticmethod
-    def filter_expression_scores(scores: List, cells:List):
+    def filter_expression_scores(scores: List, cells: List):
         """
         Filters non-zero gene scores and corresponding
         cell names
@@ -99,6 +100,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 DenseIngestor.has_gene_keyword(header, row),
             ]
         )
+
     @staticmethod
     def has_unique_header(header):
         """Validates header has no duplicate values"""
@@ -111,7 +113,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def has_gene_keyword(header: List, row:List):
+    def has_gene_keyword(header: List, row: List):
         """
         Validates that 'Gene' is the first value in header
 
@@ -124,7 +126,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # row than each successive row. Also, "GENE" will not appear in header
         if header[0].upper() != 'GENE':
             length_of_next_line = len(row)
-            if (length_of_next_line-1) == len(header):
+            if (length_of_next_line - 1) == len(header):
                 return True
             else:
                 return False

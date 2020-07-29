@@ -1,7 +1,6 @@
 import sys
 import unittest
-from unittest.mock import patch, Mock
-
+from unittest.mock import Mock, patch
 
 sys.path.append("../ingest")
 from expression_files.dense_ingestor import DenseIngestor
@@ -12,45 +11,44 @@ from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import \
 class TestDense(unittest.TestCase):
 
     def test_filter_expression_scores(self):
-        nums = ['Gene', 4, 0, 3]
+        scores = ['BRCA1', 4, 0, 3]
         cells = ['foo', 'foo2', 'foo3', 'foo4']
-        actual_filtered_values, actual_filtered_cells = DenseIngestor.filter_expression_scores(nums[1:], cells)
-        self.assertEqual([4,3], actual_filtered_values)
-        self.assertEqual(['foo2','foo4'], actual_filtered_cells)
+        actual_filtered_values, actual_filtered_cells = DenseIngestor.filter_expression_scores(
+            scores[1:], cells)
+        self.assertEqual([4, 3], actual_filtered_values)
+        self.assertEqual(['foo2', 'foo4'], actual_filtered_cells)
 
     def test_process_row(self):
 
-        #Positive Test case
+        # Positive Test case
         valid_row = ["BRCA1", "' 1.45678 '", '"3.45678"', '2']
         processed_row = DenseIngestor.process_row(valid_row)
         self.assertEqual([1.457, 3.457, 2.0], processed_row)
 
-        #Negative Test case
+        # Negative Test case
         invalid_row = ["BRCA1", "' 1.BRCA1 '", '"3.45678"', '2']
         error_message = "ValueError: could not convert string to float: ' 1.BRCA1 '"
         self.assertRaises(ValueError, DenseIngestor.process_row, invalid_row)
-
 
     def test_has_gene_keyword(self):
         "Validates validate_gene_keyword() returns false correctly"
         # Mimics the row following the header
         row = ["BRCA1", "' 1.45678 '", '"3.45678"', '2']
 
-        header = ["GENE",'foo', 'foo2', 'foo3']
+        header = ["GENE", 'foo', 'foo2', 'foo3']
         r_header = ['foo', 'foo2', 'foo3']
 
         self.assertTrue(DenseIngestor.has_gene_keyword(header, row))
         self.assertTrue(DenseIngestor.has_gene_keyword(r_header, row))
 
-        invalid_header= ['foo', 'foo2', 'foo3', 'foo4']
+        invalid_header = ['foo', 'foo2', 'foo3', 'foo4']
         self.assertFalse(DenseIngestor.has_gene_keyword(invalid_header, row))
-
 
     def test_has_unique_header_false(self):
         "Validates validate_unique_header() returns false correctly"
 
-        header = ["GENE",'foo', 'foo2', 'foo3']
-        invalid_header = ["GENE",'foo', 'foo', 'foo3']
+        header = ["GENE", 'foo', 'foo2', 'foo3']
+        invalid_header = ["GENE", 'foo', 'foo', 'foo3']
         self.assertFalse(DenseIngestor.has_unique_header(invalid_header))
         self.assertTrue(DenseIngestor.has_unique_header(header))
 
@@ -71,17 +69,19 @@ class TestDense(unittest.TestCase):
     def test_is_valid_format(self, mock_has_unique_header, mock_has_gene_keyword):
         "Confirms functions in is_valid_format() are called"
 
-        # Negative test case
+        # Should raise Value error
         mock_has_unique_header.return_value = False
         mock_has_gene_keyword.return_value = False
-        self.assertFalse(DenseIngestor.is_valid_format(['foo', 'foo1'] , ['foo2', 'foo3']))
+        self.assertFalse(DenseIngestor.is_valid_format(
+            ['foo', 'foo1'], ['foo2', 'foo3']))
         self.assertTrue(mock_has_unique_header.called)
         self.assertTrue(mock_has_gene_keyword.called)
 
-        # Positive test case
+        # When is_valid_format() returns true
         mock_has_unique_header.return_value = True
         mock_has_gene_keyword.return_value = True
-        self.assertTrue(DenseIngestor.is_valid_format(['foo', 'foo1'] , ['foo2', 'foo3']))
+        self.assertTrue(DenseIngestor.is_valid_format(
+            ['foo', 'foo1'], ['foo2', 'foo3']))
         self.assertTrue(mock_has_unique_header.called)
         self.assertTrue(mock_has_gene_keyword.called)
 
@@ -98,14 +98,14 @@ class TestDense(unittest.TestCase):
             '5dd5ae25421aa910a723a337'
         )
         # When is_valid_format() is false exception should be raised
-        expression_matrix.is_valid_format.return_value= False
+        expression_matrix.is_valid_format.return_value = False
         with self.assertRaises(ValueError) as error:
             expression_matrix.execute_ingest()
             self.assertFalse(mock_transform.called)
             self.assertFalse(mock_load.called)
             self.assertEqual(error.value, "Dense matrix has invalid format")
 
-        expression_matrix.is_valid_format.return_value= True
+        expression_matrix.is_valid_format.return_value = True
         expression_matrix.execute_ingest()
         self.assertTrue(mock_transform.called)
         self.assertTrue(mock_load.called)
