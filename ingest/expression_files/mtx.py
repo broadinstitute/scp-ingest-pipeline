@@ -16,6 +16,7 @@ import copy
 import datetime
 import linecache
 import os
+import sys
 import subprocess
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
@@ -23,14 +24,16 @@ import scipy.io
 from bson.objectid import ObjectId
 
 try:
-    from .expression_files import GeneExpression
+    from expression_files import GeneExpression
+    sys.path.append("../ingest")
     from ingest_files import IngestFiles
     from monitor import trace
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
-    from .ingest_files import IngestFiles
-    from .monitor import trace
+    sys.path.append("../ingest")
+    from ..ingest_files import IngestFiles
+    from ..monitor import trace
 
 
 class MTXIngestor(GeneExpression):

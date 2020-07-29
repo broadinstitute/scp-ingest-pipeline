@@ -14,7 +14,7 @@ from typing import List  # noqa: F401
 from bson.objectid import ObjectId
 
 try:
-    from .expression_files import GeneExpression
+    from expression_files import GeneExpression
     sys.path.append("../ingest")
     from ingest_files import IngestFiles
 
@@ -22,7 +22,7 @@ except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
     sys.path.append("../ingest")
-    from .ingest_files import IngestFiles
+    from ..ingest_files import IngestFiles
 
 
 class DenseIngestor(GeneExpression, IngestFiles):
@@ -62,7 +62,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
     @staticmethod
     def process_row(row: str):
         """
-        Performs pre-processing steps a single row that converts gene scores
+        Performs pre-processing steps for a single row that converts gene scores
         into floats.
         """
         def convert_to_float(value: str):
@@ -76,8 +76,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
     @staticmethod
     def filter_expression_scores(scores: List, cells: List):
         """
-        Filters non-zero gene scores and corresponding
-        cell names
+        Filters non-zero gene scores and corresponding cell names
 
         Returns:
             tuple (generator):
@@ -103,7 +102,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def has_unique_header(header):
-        """Validates header has no duplicate values"""
+        """Confirms header has no duplicate values"""
         if len(set(header)) != len(header):
             # Logger will replace this
             print(
@@ -114,8 +113,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def has_gene_keyword(header: List, row: List):
-        """
-        Validates that 'Gene' is the first value in header
+        """Validates that 'Gene' is the first value in header
 
         Parameters:
             header (List[str]): Header of the dense matrix

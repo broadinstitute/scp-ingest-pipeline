@@ -58,8 +58,6 @@ try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
     from monitor import log, setup_logger, trace
-    from expression_files.mtx import MTXIngestor
-    from expression_files.dense_ingestor import DenseIngestor
     # For tracing
     from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
     from opencensus.trace.samplers import AlwaysOnSampler
@@ -73,6 +71,8 @@ try:
     from cell_metadata import CellMetadata
     from cli_parser import create_parser, validate_arguments
     from clusters import Clusters
+    from expression_files.mtx import MTXIngestor
+    from expression_files.dense_ingestor import DenseIngestor
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
