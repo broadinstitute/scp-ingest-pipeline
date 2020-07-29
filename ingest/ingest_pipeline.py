@@ -126,7 +126,6 @@ class IngestPipeline(object):
             # Needed to run tests in CircleCI.  TODO: add mock, remove this
             self.db = self.get_mongo_db()
         else:
-            self.error_logger.error(f"Database host is: NONE", extra=self.extra_log_params)
             self.db = None
         self.cluster_file = cluster_file
         self.kwargs = kwargs
