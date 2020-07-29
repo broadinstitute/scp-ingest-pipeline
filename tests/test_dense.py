@@ -19,7 +19,6 @@ class TestDense(unittest.TestCase):
         self.assertEqual(['foo2', 'foo4'], actual_filtered_cells)
 
     def test_process_row(self):
-
         # Positive Test case
         valid_row = ["BRCA1", "' 1.45678 '", '"3.45678"', '2']
         processed_row = DenseIngestor.process_row(valid_row)
@@ -37,14 +36,13 @@ class TestDense(unittest.TestCase):
 
         header = ["GENE", 'foo', 'foo2', 'foo3']
         r_header = ['foo', 'foo2', 'foo3']
-        empty_header = [""]
-
         self.assertTrue(DenseIngestor.has_gene_keyword(header, row))
         self.assertTrue(DenseIngestor.has_gene_keyword(r_header, row))
-        self.assertFalse(DenseIngestor.has_gene_keyword(empty_header, row))
 
+        empty_header = [""]
         invalid_header = ['foo', 'foo2', 'foo3', 'foo4']
         self.assertFalse(DenseIngestor.has_gene_keyword(invalid_header, row))
+        self.assertFalse(DenseIngestor.has_gene_keyword(empty_header, row))
 
     def test_has_unique_header(self):
         "Validates validate_unique_header() returns false correctly"
@@ -70,7 +68,6 @@ class TestDense(unittest.TestCase):
     @patch('expression_files.dense_ingestor.DenseIngestor.has_gene_keyword')
     def test_is_valid_format(self, mock_has_unique_header, mock_has_gene_keyword):
         "Confirms functions in is_valid_format() are called"
-
         # Should raise Value error
         mock_has_unique_header.return_value = False
         mock_has_gene_keyword.return_value = False
@@ -105,7 +102,6 @@ class TestDense(unittest.TestCase):
         # When is_valid_format() is false exception should be raised
         self.assertRaises(ValueError, expression_matrix.execute_ingest())
 
-        # TODO fix file destination
         expression_matrix = DenseIngestor(
             '../tests/data/dense_matrix_19_genes_1000_cells.txt',
             '5d276a50421aa9117c982845',
@@ -119,7 +115,6 @@ class TestDense(unittest.TestCase):
         """
         Assures transform function creates gene data model correctly
         """
-
         expression_matrix = DenseIngestor(
             '../tests/data/dense_matrix_19_genes_1000_cells.txt',
             '5d276a50421aa9117c982845',

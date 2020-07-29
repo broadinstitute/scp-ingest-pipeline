@@ -179,8 +179,6 @@ class IngestPipeline(object):
             Returns:
                 File object.
         """
-        print(f'Trying to initialize file')
-        # Mtx file types not included because class declaration is different
         file_connections = {
             "cell_metadata": CellMetadata,
             "cluster": Clusters,
@@ -510,7 +508,6 @@ def main() -> None:
     Returns:
         None
     """
-    logging.basicConfig(filename='errors.txt', level=logging.DEBUG)
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
