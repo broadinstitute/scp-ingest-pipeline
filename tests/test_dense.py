@@ -49,7 +49,6 @@ class TestDense(unittest.TestCase):
     def test_has_unique_header(self):
         "Validates validate_unique_header() returns false correctly"
 
-        # TODO: Handle empty strings
         header = ["GENE", 'foo', 'foo2', 'foo3']
         invalid_header = ["GENE", 'foo', 'foo', 'foo3']
         self.assertFalse(DenseIngestor.has_unique_header(invalid_header))
@@ -62,11 +61,10 @@ class TestDense(unittest.TestCase):
             '5dd5ae25421aa910a723a337',
             tracer=None,
         )
-        # Double check this works
         with self.assertRaises(ValueError) as error:
             for gene_mode, data_array in expression_matrix.transform():
                 pass
-            assertEqual(error.value, "Duplicate gene: Itm2a")
+        self.assertEqual(str(error.exception), 'Duplicate gene: Itm2a')
 
     @patch('expression_files.dense_ingestor.DenseIngestor.has_unique_header')
     @patch('expression_files.dense_ingestor.DenseIngestor.has_gene_keyword')
