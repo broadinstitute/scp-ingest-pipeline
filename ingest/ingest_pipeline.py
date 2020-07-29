@@ -124,8 +124,6 @@ class IngestPipeline(object):
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
         if os.environ.get('DATABASE_HOST') is not None:
             # Needed to run tests in CircleCI.  TODO: add mock, remove this
-            self.error_logger.error(f"Database host is: {os.environ.get('DATABASE_HOST')}", extra=self.extra_log_params)
-            print(f"Database host is: {os.environ.get('DATABASE_HOST')}")
             self.db = self.get_mongo_db()
         else:
             self.error_logger.error(f"Database host is: NONE", extra=self.extra_log_params)
@@ -161,8 +159,6 @@ class IngestPipeline(object):
         user = os.environ['MONGODB_USERNAME']
         password = os.environ['MONGODB_PASSWORD']
         db_name = os.environ['DATABASE_NAME']
-        print(f'db_name:{db_name},  user:{user}, host:{host}')
-        self.error_logger.error(f'db_name:{db_name},  user:{user}, host:{host}', extra=self.extra_log_params)
         client = MongoClient(
             host,
             username=user,
@@ -333,9 +329,7 @@ class IngestPipeline(object):
                                                      **self.kwargs,)  # Dense receiver
         try:
             self.expression_ingestor.execute_ingest()
-            print('finished pipeline')
         except Exception as e:
-            print('e')
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
@@ -468,7 +462,6 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """
     if len(status) > 0:
         if all(i < 1 for i in status):
-            print('Finished ingest pipeline succesfully')
             sys.exit(os.EX_OK)
         else:
             # delocalize errors file

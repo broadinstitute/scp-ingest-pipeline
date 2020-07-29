@@ -136,7 +136,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
         start_time = datetime.datetime.now()
         self.error_logger.info('Starting run at ' +
                                str(start_time), extra=self.extra_log_params)
-        print('Starting run at ' + str(start_time))
         num_processed = 0
         gene_models = []
         data_arrays = []
@@ -177,13 +176,12 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     data_arrays.append(gene_expression_values)
                 if len(gene_models) == 5:
                     num_processed += len(gene_models)
-                    print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
                     self.error_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
                     yield (gene_models, data_arrays)
                     gene_models = []
                     data_arrays = []
         yield (gene_models, data_arrays)
         num_processed += len(gene_models)
-        print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
+        self.error_logger.info(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed', extra=self.extra_log_params)
         gene_models = []
         data_arrays = []
