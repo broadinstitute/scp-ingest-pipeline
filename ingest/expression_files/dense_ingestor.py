@@ -101,7 +101,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         )
 
     @staticmethod
-    def has_unique_header(header):
+    def has_unique_header(header:List):
         """Confirms header has no duplicate values"""
         if len(set(header)) != len(header):
             # Logger will replace this

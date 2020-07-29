@@ -37,9 +37,11 @@ class TestDense(unittest.TestCase):
 
         header = ["GENE", 'foo', 'foo2', 'foo3']
         r_header = ['foo', 'foo2', 'foo3']
+        empty_header = [""]
 
         self.assertTrue(DenseIngestor.has_gene_keyword(header, row))
         self.assertTrue(DenseIngestor.has_gene_keyword(r_header, row))
+        self.assertFalse(DenseIngestor.has_gene_keyword(empty_header, row))
 
         invalid_header = ['foo', 'foo2', 'foo3', 'foo4']
         self.assertFalse(DenseIngestor.has_gene_keyword(invalid_header, row))
@@ -93,7 +95,7 @@ class TestDense(unittest.TestCase):
 
     @patch('expression_files.expression_files.GeneExpression.load')
     @patch('expression_files.dense_ingestor.DenseIngestor.transform', return_value=[('foo1', 'foo2')])
-    def test_execute_ingest(self, mock_is_valid_format, mock_load, mock_transform):
+    def test_execute_ingest(self,mock_load, mock_transform):
         """
         Integration test for execute_ingest()
         """
@@ -103,15 +105,11 @@ class TestDense(unittest.TestCase):
             '5dd5ae25421aa910a723a337'
         )
         # When is_valid_format() is false exception should be raised
-        with self.assertRaises(ValueError) as error:
-            expression_matrix.execute_ingest()
-            self.assertFalse(mock_transform.called)
-            self.assertFalse(mock_load.called)
-            self.assertEqual(error.value, "Dense matrix has invalid format")
+        self.assertRaises(ValueError, expression_matrix.execute_ingest())
 
         # TODO fix file destination
         expression_matrix = DenseIngestor(
-            '../tests/data/expression_matrix_bad_duplicate_gene.txt',
+            '../tests/data/dense_matrix_19_genes_1000_cells.txt',
             '5d276a50421aa9117c982845',
             '5dd5ae25421aa910a723a337'
         )
