@@ -101,12 +101,12 @@ class MTXIngestor(GeneExpression):
                     if last_idx != 0:
                         # Cell names that had significant (i.e. non-zero)
                         # expression for gene
-                        print(len(exp_cells))
-                        data_arrays.extend(self.create_data_array(gene,
-                                                                  f'{gene} Cells', exp_cells, 'Study', model_id))
+                        dr_models = self.create_data_array(gene, f'{gene} Cells', exp_cells, 'Study', model_id)
+                        data_arrays.extend(dr_models)
                         # Significant (i.e. non-zero) expression values for
                         # gene
-                        data_arrays.extend(self.create_data_array(gene, f'{gene} Expression', exp_scores, 'Gene', model_id))
+                        dr_models = self.create_data_array(gene, f'{gene} Expression', exp_scores, 'Gene', model_id)
+                        data_arrays.extend(dr_models)
                         # Reset variables so values will be associated w/new
                         # gene
                         exp_cells = []
@@ -133,8 +133,11 @@ class MTXIngestor(GeneExpression):
             exp_score = round(float(raw_exp_score), 3)
             exp_cells.append(exp_cell)
             exp_scores.append(exp_score)
-        # Create data array for final gene
         yield gene_models, data_arrays
+        num_processed += len(gene_models)
+        print(f'Processed {num_processed} models, '
+              f'{str(datetime.datetime.now() - start_time)} '
+              f'elapsed')
 
     def execute_ingest(self):
         self.extract_feature_barcode_matrices()

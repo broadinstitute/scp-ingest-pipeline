@@ -228,10 +228,9 @@ class IngestPipeline(object):
         self.error_logger.error(
             f'Starting to load expression file', extra=self.extra_log_params
         )
-        print(f'Starting to load expression file')
         start_time = datetime.datetime.now()
         try:
-            print('Trying to upload data_array_colection')
+            print("Try to write data array docs")
             self.db['data_arrays'].insert_many(data_array_documents, ordered= False)
         except BulkWriteError as bwe:
             print(f"error caused by data docs: {bwe.details}")
