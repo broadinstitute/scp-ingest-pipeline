@@ -70,20 +70,37 @@ class TestDense(unittest.TestCase):
 
     @patch("expression_files.dense_ingestor.DenseIngestor.has_unique_header")
     @patch("expression_files.dense_ingestor.DenseIngestor.has_gene_keyword")
-    def test_is_valid_format(self, mock_has_unique_header, mock_has_gene_keyword):
+    @patch("expression_files.dense_ingestor.DenseIngestor.header_has_valid_values")
+    def test_is_valid_format(
+        self,
+        mock_has_unique_header,
+        mock_has_gene_keyword,
+        mock_header_has_valid_values,
+    ):
         """Confirms functions in is_valid_format() are called"""
         # Should raise Value error
         mock_has_unique_header.return_value = False
         mock_has_gene_keyword.return_value = False
+        mock_header_has_valid_values.return_value = False
         self.assertFalse(
             DenseIngestor.is_valid_format(["foo", "foo1"], ["foo2", "foo3"])
         )
         self.assertTrue(mock_has_unique_header.called)
         self.assertTrue(mock_has_gene_keyword.called)
+        self.assertTrue(mock_header_has_valid_values.called)
 
         # Should raise Value error
         mock_has_unique_header.return_value = True
         mock_has_gene_keyword.return_value = False
+        mock_header_has_valid_values.return_value = False
+        self.assertFalse(
+            DenseIngestor.is_valid_format(["foo", "foo1"], ["foo2", "foo3"])
+        )
+
+        # Should raise Value error
+        mock_has_unique_header.return_value = True
+        mock_has_gene_keyword.return_value = True
+        mock_header_has_valid_values.return_value = False
         self.assertFalse(
             DenseIngestor.is_valid_format(["foo", "foo1"], ["foo2", "foo3"])
         )
@@ -91,6 +108,7 @@ class TestDense(unittest.TestCase):
         # When is_valid_format() returns true
         mock_has_unique_header.return_value = True
         mock_has_gene_keyword.return_value = True
+        mock_header_has_valid_values.return_value = True
         self.assertTrue(
             DenseIngestor.is_valid_format(["foo", "foo1"], ["foo2", "foo3"])
         )
