@@ -42,7 +42,7 @@ class MTXIngestor(GeneExpression):
         self.barcodes_file, barcodes_local_path = barcodes_ingest_file.resolve_path(
             barcodes_path
         )
-
+        print("initialize mtx")
         mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
         self.mtx_file = mtx_ingest_file.resolve_path(mtx_path)[0]
         # Only known way to traverse through zipped files w/o unzipping

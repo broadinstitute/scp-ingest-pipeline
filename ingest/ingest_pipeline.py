@@ -152,6 +152,7 @@ class IngestPipeline(object):
         user = os.environ["MONGODB_USERNAME"]
         password = os.environ["MONGODB_PASSWORD"]
         db_name = os.environ["DATABASE_NAME"]
+        print(f"Environment variables: {host}, {user}, {password}, {db_name}")
 
         client = MongoClient(
             host,
@@ -225,9 +226,7 @@ class IngestPipeline(object):
         return 0
 
     def load_expression_file(self, gene_docs, data_array_documents):
-        self.error_logger.error(
-            f"Starting to load expression file", extra=self.extra_log_params
-        )
+        print(f"Starting to load expression file")
         start_time = datetime.datetime.now()
         try:
             print("Try to write data array docs")
@@ -345,6 +344,7 @@ class IngestPipeline(object):
         """
         Ingests expression files.
         """
+        print("trying to ingest expression file")
         expression_ingestor = None
         if MTXIngestor.matches_file_type(self.matrix_file_type):
             expression_ingestor = MTXIngestor(
@@ -461,10 +461,13 @@ def run_ingest(ingest, arguments, parsed_args):
     """
     status = []
     status_cell_metadata = None
+    print("Running ingest")
 
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
-        status.append(ingest.ingest_expression())
+        stat = ingest.ingest_expression()
+        print(f"status is {stat}")
+        status.append(stat)
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
             status_cell_metadata = ingest.ingest_cell_metadata()
