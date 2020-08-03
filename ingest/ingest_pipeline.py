@@ -91,11 +91,11 @@ except ImportError:
 class IngestPipeline(object):
     # File location for metadata json convention
     JSON_CONVENTION = (
-        '../schema/alexandria_convention/alexandria_convention_schema.json'
+        "../schema/alexandria_convention/alexandria_convention_schema.json"
     )
     logger = logging.getLogger(__name__)
-    error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
-    info_logger = setup_logger(__name__, 'info.txt')
+    error_logger = setup_logger(__name__ + "_errors", "errors.txt", level=logging.ERROR)
+    info_logger = setup_logger(__name__, "info.txt")
     my_debug_logger = log(error_logger)
 
     def __init__(
@@ -116,7 +116,7 @@ class IngestPipeline(object):
         self.study_file_id = study_file_id
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
-        if os.environ.get('DATABASE_HOST') is not None:
+        if os.environ.get("DATABASE_HOST") is not None:
             # Needed to run tests in CircleCI.  TODO: add mock, remove this
             self.db = self.get_mongo_db()
         else:
@@ -124,10 +124,10 @@ class IngestPipeline(object):
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
-        if 'GOOGLE_CLOUD_PROJECT' in os.environ:
+        if "GOOGLE_CLOUD_PROJECT" in os.environ:
             # instantiate trace exporter
             exporter = StackdriverExporter(
-                project_id=os.environ['GOOGLE_CLOUD_PROJECT']
+                project_id=os.environ["GOOGLE_CLOUD_PROJECT"]
             )
             self.tracer = Tracer(exporter=exporter, sampler=AlwaysOnSampler())
 
@@ -141,24 +141,24 @@ class IngestPipeline(object):
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
         if matrix_file is None:
             self.matrix = matrix_file
-        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
+        self.extra_log_params = {"study_id": self.study_id, "duration": None}
         if subsample:
             self.cluster_file = cluster_file
             self.cell_metadata_file = cell_metadata_file
 
     @my_debug_logger()
     def get_mongo_db(self):
-        host = os.environ['DATABASE_HOST']
-        user = os.environ['MONGODB_USERNAME']
-        password = os.environ['MONGODB_PASSWORD']
-        db_name = os.environ['DATABASE_NAME']
+        host = os.environ["DATABASE_HOST"]
+        user = os.environ["MONGODB_USERNAME"]
+        password = os.environ["MONGODB_PASSWORD"]
+        db_name = os.environ["DATABASE_NAME"]
 
         client = MongoClient(
             host,
             username=user,
             password=password,
             authSource=db_name,
-            authMechanism='SCRAM-SHA-1',
+            authMechanism="SCRAM-SHA-1",
         )
 
         return client[db_name]
@@ -205,9 +205,9 @@ class IngestPipeline(object):
             # hack to avoid inserting invalid CellMetadata object from first column
             # TODO: implement method similar to kwargs solution in ingest_expression
             if (
-                collection_name == 'cell_metadata'
-                and model['name'] == 'NAME'
-                and model['annotation_type'] == 'TYPE'
+                collection_name == "cell_metadata"
+                and model["name"] == "NAME"
+                and model["annotation_type"] == "TYPE"
             ):
                 linear_id = ObjectId(self.study_id)
             else:
@@ -218,7 +218,7 @@ class IngestPipeline(object):
                 documents.append(data_array_model)
             # only insert documents if present
             if len(documents) > 0:
-                self.insert_many('data_arrays', documents)
+                self.insert_many("data_arrays", documents)
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
@@ -226,12 +226,12 @@ class IngestPipeline(object):
 
     def load_expression_file(self, gene_docs, data_array_documents):
         self.error_logger.error(
-            f'Starting to load expression file', extra=self.extra_log_params
+            f"Starting to load expression file", extra=self.extra_log_params
         )
         start_time = datetime.datetime.now()
         try:
             print("Try to write data array docs")
-            self.db['data_arrays'].insert_many(data_array_documents, ordered= False)
+            self.db["data_arrays"].insert_many(data_array_documents, ordered=False)
         except BulkWriteError as bwe:
             print(f"error caused by data docs: {bwe.details}")
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
@@ -243,7 +243,7 @@ class IngestPipeline(object):
             raise Exception(e)
         try:
             print("Try to write gene docs")
-            self.db['genes'].insert_many(gene_docs, ordered= False)
+            self.db["genes"].insert_many(gene_docs, ordered=False)
         except BulkWriteError as bwe:
             print(f"error caused by gene docs : {bwe.details}")
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
@@ -252,12 +252,12 @@ class IngestPipeline(object):
         except Exception as e:
             print(f"error caused by gene docs : {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
-            raise Exception(f'{e}')
+            raise Exception(f"{e}")
         print(
-            f'Time to load {len(gene_docs) + len(data_array_documents)} models: {str(datetime.datetime.now() - start_time)}'
+            f"Time to load {len(gene_docs) + len(data_array_documents)} models: {str(datetime.datetime.now() - start_time)}"
         )
         self.error_logger.error(
-            f'Time to load {len(gene_docs) + len(data_array_documents)} models: {str(datetime.datetime.now() - start_time)}',
+            f"Time to load {len(gene_docs) + len(data_array_documents)} models: {str(datetime.datetime.now() - start_time)}",
             extra=self.extra_log_params,
         )
 
@@ -272,31 +272,31 @@ class IngestPipeline(object):
                 annot_type = subsampled_data[1][1]
                 sample_size = subsampled_data[2]
                 query = {
-                    'study_id': ObjectId(self.study_id),
-                    'study_file_id': ObjectId(self.study_file_id),
+                    "study_id": ObjectId(self.study_id),
+                    "study_file_id": ObjectId(self.study_file_id),
                 }
                 # Query mongo for linear_id and 'name' of parent
                 # Then return 'name' and 'id' fields from query results
                 parent_data = self.db[parent_collection_name].find_one(
-                    query, {'name': 1}
+                    query, {"name": 1}
                 )
                 for model in set_data_array_fn(
                     (
                         key_value[0],  # NAMES, x, y, or z
                         # Cluster name provided from parent
-                        parent_data['name'],
+                        parent_data["name"],
                         key_value[1],  # Subsampled data/values
                         ObjectId(self.study_file_id),
                         ObjectId(self.study_id),
-                        parent_data['_id'],
+                        parent_data["_id"],
                     ),
                     {
-                        'subsample_annotation': f"{annot_name}--{annot_type}--{scope}",
-                        'subsample_threshold': sample_size,
+                        "subsample_annotation": f"{annot_name}--{annot_type}--{scope}",
+                        "subsample_threshold": sample_size,
                     },
                 ):
                     documents.append(model)
-            self.db['data_arrays'].insert_many(documents)
+            self.db["data_arrays"].insert_many(documents)
 
         except Exception as e:
             # TODO: Log this error
@@ -306,14 +306,14 @@ class IngestPipeline(object):
 
     def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        convention_file_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
+        convention_file_object = IngestFiles(self.JSON_CONVENTION, ["application/json"])
         json_file = convention_file_object.open_file(self.JSON_CONVENTION)
         convention = json.load(json_file)
-        if self.kwargs['validate_convention'] is not None:
+        if self.kwargs["validate_convention"] is not None:
             if (
-                self.kwargs['validate_convention']
-                and self.kwargs['bq_dataset']
-                and self.kwargs['bq_table']
+                self.kwargs["validate_convention"]
+                and self.kwargs["bq_dataset"]
+                and self.kwargs["bq_table"]
             ):
                 validate_input_metadata(self.cell_metadata, convention, bq_json=True)
             else:
@@ -324,20 +324,20 @@ class IngestPipeline(object):
 
     def upload_metadata_to_bq(self):
         """Uploads metadata to BigQuery"""
-        if self.kwargs['validate_convention'] is not None:
+        if self.kwargs["validate_convention"] is not None:
             if (
-                self.kwargs['validate_convention']
-                and self.kwargs['bq_dataset']
-                and self.kwargs['bq_table']
+                self.kwargs["validate_convention"]
+                and self.kwargs["bq_dataset"]
+                and self.kwargs["bq_table"]
             ):
                 write_status = write_metadata_to_bq(
                     self.cell_metadata,
-                    self.kwargs['bq_dataset'],
-                    self.kwargs['bq_table'],
+                    self.kwargs["bq_dataset"],
+                    self.kwargs["bq_table"],
                 )
                 return write_status
             else:
-                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
+                self.error_logger.error("Erroneous call to upload_metadata_to_bq")
                 return 1
         return 0
 
@@ -364,14 +364,14 @@ class IngestPipeline(object):
         self.cell_metadata.preprocess()
         if self.cell_metadata.validate():
             self.info_logger.info(
-                f'Cell metadata file format valid', extra=self.extra_log_params
+                f"Cell metadata file format valid", extra=self.extra_log_params
             )
             # Check file against metadata convention
-            if self.kwargs['validate_convention'] is not None:
-                if self.kwargs['validate_convention']:
+            if self.kwargs["validate_convention"] is not None:
+                if self.kwargs["validate_convention"]:
                     if self.conforms_to_metadata_convention():
                         self.info_logger.info(
-                            f'Cell metadata file conforms to metadata convention',
+                            f"Cell metadata file conforms to metadata convention",
                             extra=self.extra_log_params,
                         )
                         pass
@@ -381,7 +381,7 @@ class IngestPipeline(object):
             self.cell_metadata.reset_file()
             for metadataModel in self.cell_metadata.transform():
                 self.info_logger.info(
-                    f'Attempting to load cell metadata header : {metadataModel.annot_header}',
+                    f"Attempting to load cell metadata header : {metadataModel.annot_header}",
                     extra=self.extra_log_params,
                 )
                 status = self.load(
@@ -392,7 +392,7 @@ class IngestPipeline(object):
                 )
                 if status != 0:
                     self.error_logger.error(
-                        f'Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program',
+                        f"Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program",
                         extra=self.extra_log_params,
                     )
                     return status
@@ -400,7 +400,7 @@ class IngestPipeline(object):
         else:
             report_issues(self.cell_metadata)
             self.error_logger.error(
-                f'Cell metadata file format invalid', extra=self.extra_log_params
+                f"Cell metadata file format invalid", extra=self.extra_log_params
             )
             return 1
 
@@ -419,7 +419,7 @@ class IngestPipeline(object):
         # Incorrect file format
         else:
             self.error_logger.error(
-                f'Cluster file format invalid', extra=self.extra_log_params
+                f"Cluster file format invalid", extra=self.extra_log_params
             )
             return 1
         return status
@@ -430,9 +430,9 @@ class IngestPipeline(object):
         subsample = SubSample(
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
         )
-        for data in subsample.subsample('cluster'):
+        for data in subsample.subsample("cluster"):
             load_status = self.load_subsample(
-                Clusters.COLLECTION_NAME, data, subsample.set_data_array, 'cluster'
+                Clusters.COLLECTION_NAME, data, subsample.set_data_array, "cluster"
             )
 
             if load_status != 0:
@@ -441,12 +441,12 @@ class IngestPipeline(object):
         if self.cell_metadata_file is not None:
             try:
                 subsample.prepare_cell_metadata()
-                for data in subsample.subsample('study'):
+                for data in subsample.subsample("study"):
                     load_status = self.load_subsample(
                         Clusters.COLLECTION_NAME,
                         data,
                         subsample.set_data_array,
-                        'study',
+                        "study",
                     )
                     if load_status != 0:
                         return load_status
@@ -488,23 +488,23 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """
     if len(status) > 0:
         if all(i < 1 for i in status):
-            print('Finished ingest pipeline succesfully')
+            print("Finished ingest pipeline succesfully")
             sys.exit(os.EX_OK)
         else:
             # delocalize errors file
             for argument in list(arguments.keys()):
                 captured_argument = re.match("(\w*file)$", argument)
                 if captured_argument is not None:
-                    study_file_id = arguments['study_file_id']
+                    study_file_id = arguments["study_file_id"]
                     matched_argument = captured_argument.groups()[0]
                     file_path = arguments[matched_argument]
                     if IngestFiles.is_remote_file(file_path):
                         IngestFiles.delocalize_file(
                             study_file_id,
-                            arguments['study_id'],
+                            arguments["study_id"],
                             file_path,
-                            'errors.txt',
-                            f'parse_logs/{study_file_id}/errors.txt',
+                            "errors.txt",
+                            f"parse_logs/{study_file_id}/errors.txt",
                         )
                     # Need 1 argument that has a path to identify google bucket
                     # Break after first argument

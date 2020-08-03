@@ -45,16 +45,17 @@ class GeneExpression:
         self.cluster_name = self.tail or ntpath.basename(self.head)
         self.extra_log_params = {"study_id": self.study_id, "duration": None}
 
-    def create_gene_model(self, gene_name: str, study_file_id, study_id,
-                          gene_id: int, model_id: int):
+    def create_gene_model(
+        self, gene_name: str, study_file_id, study_id, gene_id: int, model_id: int
+    ):
         return self.Model(
             {
-                'name': gene_name,
-                'searchable_name': gene_name.lower(),
-                'study_file_id': study_file_id,
-                'study_id': study_id,
-                'gene_id': gene_id,
-                '_id': model_id,
+                "name": gene_name,
+                "searchable_name": gene_name.lower(),
+                "study_file_id": study_file_id,
+                "study_id": study_id,
+                "gene_id": gene_id,
+                "_id": model_id,
             }
         )
 
@@ -62,7 +63,9 @@ class GeneExpression:
     def transform(self):
         """Abstract method for transforming expression data into Gene data model"""
 
-    def set_data_array(self, name, array_type, values: List, linear_data_type,linear_data_id):
+    def set_data_array(
+        self, name: str, array_type: str, values: List, linear_data_type, linear_data_id
+    ):
         """
         Sets annotation array
         """
