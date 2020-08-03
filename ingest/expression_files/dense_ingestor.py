@@ -42,21 +42,20 @@ class DenseIngestor(GeneExpression, IngestFiles):
     def execute_ingest(self):
         # Row after header is needed for R format validation
         row = next(self.csv_file_handler)
-        if DenseIngestor.is_valid_format(self.header, row):
-            # Reset csv reader to first gene row
-            self.csv_file_handler = self.open_file(self.file_path)[0]
-            next(self.csv_file_handler)
-            for gene_docs, data_array_documents in self.transform():
-                self.load(gene_docs, data_array_documents)
-        else:
+        if not DenseIngestor.is_valid_format(self.header, row):
             raise ValueError("Dense matrix has invalid format")
+        # Reset csv reader to first gene row
+        self.csv_file_handler = self.open_file(self.file_path)[0]
+        next(self.csv_file_handler)
+        for gene_docs, data_array_documents in self.transform():
+            self.load(gene_docs, data_array_documents)
 
     def matches_file_type(file_type):
         return file_type == "dense"
 
     @staticmethod
     def format_gene_name(gene):
-        return gene.strip().strip('"')
+        return gene.strip().strip("'\",")
 
     @staticmethod
     def process_header(header):
@@ -66,8 +65,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
     def process_row(row: str):
         """
         Performs pre-processing steps for a single row that converts gene
-        scores
-        into floats.
+        scores into floats.
         """
 
         def convert_to_float(value: str):
@@ -108,6 +106,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             [
                 DenseIngestor.has_unique_header(header),
                 DenseIngestor.has_gene_keyword(header, row),
+                DenseIngestor.header_has_valid_values(header),
             ]
         )
 
@@ -169,7 +168,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
             if gene in self.gene_names:
                 raise ValueError(f"Duplicate gene: {gene}")
             self.gene_names[gene] = True
-            print(f"Transforming gene :{gene}")
             formatted_gene_name = DenseIngestor.format_gene_name(gene)
             id = ObjectId()
             if "gene_id" in self.matrix_params:
