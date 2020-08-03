@@ -29,17 +29,18 @@ except ImportError:
 class DenseIngestor(GeneExpression, IngestFiles):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
-    def __init__(self, file_path, study_file_id, study_id, **kwargs):
+    def __init__(self, file_path, study_file_id, study_id, **matrix_kwargs):
         GeneExpression.__init__(self, file_path, study_file_id, study_id)
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
-        self.matrix_params = kwargs
+        # To allow additional optional keyword arguments like gene_id
+        self.matrix_params = matrix_kwargs
         self.csv_file_handler, self.file_handler = self.open_file(self.file_path)
         self.gene_names = {}
-        self.header = DenseIngestor.process_header(next(self.csv_file_handler))
 
     def execute_ingest(self):
+        self.header = DenseIngestor.process_header(next(self.csv_file_handler))
         # Row after header is needed for R format validation
         row = next(self.csv_file_handler)
         if not DenseIngestor.is_valid_format(self.header, row):
