@@ -38,9 +38,9 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.matrix_params = matrix_kwargs
         self.csv_file_handler, self.file_handler = self.open_file(self.file_path)
         self.gene_names = {}
+        self.header = DenseIngestor.process_header(next(self.csv_file_handler))
 
     def execute_ingest(self):
-        self.header = DenseIngestor.process_header(next(self.csv_file_handler))
         # Row after header is needed for R format validation
         row = next(self.csv_file_handler)
         if not DenseIngestor.is_valid_format(self.header, row):
