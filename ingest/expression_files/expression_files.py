@@ -132,10 +132,10 @@ class GeneExpression:
                 docs, ordered=False
             )
         except BulkWriteError as bwe:
-            print(
+            raise BulkWriteError(
                 f"Error caused by inserting into collection '{collection_name}': {bwe.details}"
             )
-            raise BulkWriteError(f"Error caused by data docs : {bwe.details}")
         except Exception as e:
-            print(f"Error caused by inserting into collection '{collection_name}': {e}")
-            raise Exception(f"{e}")
+            raise Exception(
+                f"Error caused by inserting into collection '{collection_name}': {e}"
+            )
