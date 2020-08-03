@@ -8,6 +8,11 @@ from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_mo
 
 
 class TestDense(unittest.TestCase):
+    def test_process_header(self):
+        header = ["one", "two", '"three', "'four"]
+        actual_header = DenseIngestor.process_header(header)
+        self.assertEqual(["one", "two", "three", "four"], actual_header)
+
     def test_filter_expression_scores(self):
         scores = ["BRCA1", 4, 0, 3, None, "", "   "]
         cells = ["foo", "foo2", "foo3", "foo4", "foo5", "foo6", "foo7"]
@@ -29,7 +34,7 @@ class TestDense(unittest.TestCase):
         self.assertRaises(ValueError, DenseIngestor.process_row, invalid_row)
 
     def test_has_gene_keyword(self):
-        "Validates validate_gene_keyword() returns false correctly"
+        """Validates validate_gene_keyword() returns false correctly"""
         # Mimics the row following the header
         row = ["BRCA1", "' 1.45678 '", '"3.45678"', "2"]
 
@@ -44,7 +49,7 @@ class TestDense(unittest.TestCase):
         self.assertFalse(DenseIngestor.has_gene_keyword(empty_header, row))
 
     def test_has_unique_header(self):
-        "Validates validate_unique_header() returns false correctly"
+        """Validates validate_unique_header() returns false correctly"""
 
         header = ["GENE", "foo", "foo2", "foo3"]
         invalid_header = ["GENE", "foo", "foo", "foo3"]
@@ -66,7 +71,7 @@ class TestDense(unittest.TestCase):
     @patch("expression_files.dense_ingestor.DenseIngestor.has_unique_header")
     @patch("expression_files.dense_ingestor.DenseIngestor.has_gene_keyword")
     def test_is_valid_format(self, mock_has_unique_header, mock_has_gene_keyword):
-        "Confirms functions in is_valid_format() are called"
+        """Confirms functions in is_valid_format() are called"""
         # Should raise Value error
         mock_has_unique_header.return_value = False
         mock_has_gene_keyword.return_value = False

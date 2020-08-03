@@ -37,7 +37,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.matrix_params = kwargs
         self.csv_file_handler, self.file_handler = self.open_file(self.file_path)
         self.gene_names = {}
-        self.header = next(self.csv_file_handler)
+        self.header = DenseIngestor.process_header(next(self.csv_file_handler))
 
     def execute_ingest(self):
         # Row after header is needed for R format validation
@@ -57,6 +57,10 @@ class DenseIngestor(GeneExpression, IngestFiles):
     @staticmethod
     def format_gene_name(gene):
         return gene.strip().strip('"')
+
+    @staticmethod
+    def process_header(header):
+        return [value.strip("'\",") for value in header]
 
     @staticmethod
     def process_row(row: str):
@@ -115,6 +119,11 @@ class DenseIngestor(GeneExpression, IngestFiles):
             print("Duplicate header values are not allowed")
             return False
         return True
+
+    @staticmethod
+    def header_has_valid_values(header: List[str]):
+        """Validates there are no empty header values"""
+        return not all("" == value or value.isspace() for value in header)
 
     @staticmethod
     def has_gene_keyword(header: List, row: List):
@@ -195,14 +204,12 @@ class DenseIngestor(GeneExpression, IngestFiles):
                         f"{str(datetime.datetime.now() - start_time)} elapsed",
                         extra=self.extra_log_params,
                     )
-                    yield (gene_models, data_arrays)
+                    yield gene_models, data_arrays
                     gene_models = []
                     data_arrays = []
-        yield (gene_models, data_arrays)
+        yield gene_models, data_arrays
         num_processed += len(gene_models)
         self.error_logger.info(
             f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
             extra=self.extra_log_params,
         )
-        gene_models = []
-        data_arrays = []
