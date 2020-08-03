@@ -86,7 +86,7 @@ except ImportError:
     from .cli_parser import create_parser, validate_arguments
 
 
-class IngestPipeline(object):
+class IngestPipeline:
     # File location for metadata json convention
     JSON_CONVENTION = (
         "../schema/alexandria_convention/alexandria_convention_schema.json"
