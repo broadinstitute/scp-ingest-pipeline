@@ -144,7 +144,7 @@ class IngestPipeline(object):
             self.cell_metadata_file = cell_metadata_file
 
     @my_debug_logger()
-    # Will be replaced by MongoConnection
+    # Will be replaced by MongoConnection as defined in SCP-2629
     def get_mongo_db(self):
         host = os.environ["DATABASE_HOST"]
         user = os.environ["MONGODB_USERNAME"]
