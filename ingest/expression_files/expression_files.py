@@ -11,13 +11,11 @@ import abc
 import datetime
 import ntpath
 import sys
-import types
 from dataclasses import dataclass
 from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
-from pymongo import InsertOne, MongoClient
 from pymongo.errors import BulkWriteError
 
 try:
@@ -123,16 +121,21 @@ class GeneExpression:
     def load(self, gene_docs: List, data_array_docs: List):
         start_time = datetime.datetime.now()
         self.insert(gene_docs, self.COLLECTION_NAME)
-        self.insert(data_array_docs, 'data_array')
-        print(f'Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}')
+        self.insert(data_array_docs, "data_array")
+        print(
+            f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}"
+        )
 
     def insert(self, docs: List, collection_name: str):
         try:
             self.mongo_connection._client[collection_name].insert_many(
-                docs,  ordered=False)
+                docs, ordered=False
+            )
         except BulkWriteError as bwe:
-            print(f"Error caused by inserting into collection '{collection_name}': {bwe.details}")
-            raise BulkWriteError(f'Error caused by data docs : {bwe.details}')
+            print(
+                f"Error caused by inserting into collection '{collection_name}': {bwe.details}"
+            )
+            raise BulkWriteError(f"Error caused by data docs : {bwe.details}")
         except Exception as e:
             print(f"Error caused by inserting into collection '{collection_name}': {e}")
-            raise Exception(f'{e}')
+            raise Exception(f"{e}")

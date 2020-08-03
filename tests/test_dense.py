@@ -1,6 +1,6 @@
 import sys
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 sys.path.append("../ingest")
 from expression_files.dense_ingestor import DenseIngestor
@@ -26,7 +26,6 @@ class TestDense(unittest.TestCase):
 
         # Negative Test case
         invalid_row = ["BRCA1", "' 1.BRCA1 '", '"3.45678"', "2"]
-        error_message = "ValueError: could not convert string to float: ' 1.BRCA1 '"
         self.assertRaises(ValueError, DenseIngestor.process_row, invalid_row)
 
     def test_has_gene_keyword(self):

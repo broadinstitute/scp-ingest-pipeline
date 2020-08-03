@@ -5,8 +5,6 @@ Module provides extract and transforms function for gene expression data for
 an dense matrix.
 
 """
-import collections
-import csv
 import datetime
 import sys
 from typing import List  # noqa: F401
