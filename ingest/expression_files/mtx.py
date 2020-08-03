@@ -11,16 +11,12 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 
-import collections
-import copy
 import datetime
 import linecache
-import os
 import sys
 import subprocess
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
-import scipy.io
 from bson.objectid import ObjectId
 
 try:
@@ -146,20 +142,21 @@ class MTXIngestor(GeneExpression):
                 data_arrays.append(gene_data_array)
             if len(gene_models) == 5:
                 num_processed += len(gene_models)
-                print(
+                self.info_logger.info(
                     f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed"
                 )
-                # import pdb; pdb.set_trace()
                 yield (gene_models, data_arrays)
                 gene_models = []
                 data_arrays = []
-        print(
-            f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}"
-        )
-        yield (gene_models, data_arrays)
+                self.info_logger.info(
+                    f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}"
+                )
+        yield gene_models, data_arrays
         num_processed += len(gene_models)
-        gene_models = []
-        data_arrays = []
+        self.info_logger.info(
+            f"Processed {num_processed} models, "
+            f"{str(datetime.datetime.now() - start_time)}"
+        )
 
     @trace
     def close(self):
