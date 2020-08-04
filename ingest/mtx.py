@@ -104,47 +104,47 @@ class MTXIngestor(GeneExpression):
             current_idx = int(raw_gene_idx)
             gene_id, gene = self.genes[current_idx - 1].split("\t")
             if current_idx != last_idx:
-                is_sorted = MTXIngestor.is_sorted(current_idx, visited_expression_idx)
-                print(f"is the index sorted: {is_sorted}")
-                if is_sorted:
-                    visited_expression_idx.append(current_idx)
-                    # Create data arrays from prior gene
-                    if last_idx != 0:
-                        # Cell names that had significant (i.e. non-zero)
-                        # expression for gene
-                        dr_models = self.create_data_array(
-                            gene, f"{gene} Cells", exp_cells, "Study", model_id
-                        )
-                        data_arrays.extend(dr_models)
-                        # Significant (i.e. non-zero) expression values for
-                        # gene
-                        dr_models = self.create_data_array(
-                            gene, f"{gene} Expression", exp_scores, "Gene", model_id
-                        )
-                        data_arrays.extend(dr_models)
-                        # Reset variables so values will be associated w/new
-                        # gene
-                        exp_cells = []
-                        exp_scores = []
-                    if len(data_arrays) > 1_000:
-                        num_processed += len(gene_models)
-                        print(
-                            f"Processed {num_processed} models, "
-                            f"{str(datetime.datetime.now() - start_time)} "
-                            f"elapsed"
-                        )
-                        yield gene_models, data_arrays
-                        gene_models = []
-                        data_arrays = []
-                    model_id = ObjectId()
-                    # Add current gene's gene model
-                    gene_model = self.create_gene_model(
-                        gene, self.study_file_id, self.study_id, gene_id, model_id
+                # is_sorted = MTXIngestor.is_sorted(current_idx, visited_expression_idx)
+                # print(f"is the index sorted: {is_sorted}")
+                # if is_sorted:
+                visited_expression_idx.append(current_idx)
+                # Create data arrays from prior gene
+                if last_idx != 0:
+                    # Cell names that had significant (i.e. non-zero)
+                    # expression for gene
+                    dr_models = self.create_data_array(
+                        gene, f"{gene} Cells", exp_cells, "Study", model_id
                     )
-                    gene_models.append(gene_model)
-                    last_idx = current_idx
-                else:
-                    raise ValueError("MTX file must be sorted")
+                    data_arrays.extend(dr_models)
+                    # Significant (i.e. non-zero) expression values for
+                    # gene
+                    dr_models = self.create_data_array(
+                        gene, f"{gene} Expression", exp_scores, "Gene", model_id
+                    )
+                    data_arrays.extend(dr_models)
+                    # Reset variables so values will be associated w/new
+                    # gene
+                    exp_cells = []
+                    exp_scores = []
+                if len(data_arrays) > 1_000:
+                    num_processed += len(gene_models)
+                    print(
+                        f"Processed {num_processed} models, "
+                        f"{str(datetime.datetime.now() - start_time)} "
+                        f"elapsed"
+                    )
+                    yield gene_models, data_arrays
+                    gene_models = []
+                    data_arrays = []
+                model_id = ObjectId()
+                # Add current gene's gene model
+                gene_model = self.create_gene_model(
+                    gene, self.study_file_id, self.study_id, gene_id, model_id
+                )
+                gene_models.append(gene_model)
+                last_idx = current_idx
+                # else:
+                #     raise ValueError("MTX file must be sorted")
             exp_cell = self.cells[int(raw_barcode_idx) - 1]
             exp_score = round(float(raw_exp_score), 3)
             exp_cells.append(exp_cell)
