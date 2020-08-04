@@ -32,12 +32,14 @@ $ python3 process_genome_references.py --vault-path=secrets/service_account.json
 TODO (SCP-2470): Move /scripts/genomes (including this module) to scp-ingest-pipeline
 """
 
-# This script is basically a wrapper for:
+# This script is a CLI wrapper for:
 #   parse_genome_assemblies.py
 #   parse_genome_annotations.py
 
 import argparse
 import subprocess
+
+from .parse_genome_annotations import parse_annotations
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -96,40 +98,22 @@ def parse_assemblies():
 
 
 def parse_genome_annotations(args):
+    """Download genome annotations, transform for visualizations, upload to GCS
+    """
 
-    vault_path = args.vault_path
     input_dir = args.input_dir
     remote_output_dir = args.remote_output_dir
+    vault_path = args.vault_path
     local_output_dir = args.local_output_dir
     gcs_bucket = args.gcs_bucket
-    copy_data_from_prod_dir = args.copy_data_from_prod_dir
+    remote_prod_dir = args.remote_prod_dir
+    remote_output_dir = args.copy_data_from_prod_dir
     use_cache = args.use_cache
 
-    print('args')
-    print(args)
-
-    annotations_command = [
-        'python3',
-        'parse_genome_annotations.py',
-        '--vault_path',
-        vault_path,
-        '--input_dir',
-        input_dir,
-        '--remote_output_dir',
-        remote_output_dir,
-        '--local_output_dir',
-        local_output_dir,
-        '--gcs_bucket',
-        gcs_bucket,
-        '--copy_data_from_prod_dir',
-        copy_data_from_prod_dir,
-    ]
-    if use_cache:
-        annotations_command.append('--use_cache')
-    print('annotations_command')
-    print(annotations_command)
-    print('Calling ' + ' '.join(annotations_command))
-    subprocess.call(annotations_command)
+    parse_annotations(
+        vault_path, input_dir, local_output_dir, gcs_bucket, remote_prod_dir,
+        remote_output_dir, use_cache
+    )
 
 
 def main() -> None:

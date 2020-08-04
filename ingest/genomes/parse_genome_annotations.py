@@ -168,83 +168,46 @@ def transform_ensembl_gtfs(ensembl_metadata, scp_species, output_dir):
 
     return ensembl_metadata
 
-
-def create_parser():
-    """Creates parser for input arguments.
-    Structuring the argument parsing code like this eases automated testing.
+def parse_annotations(
+        vault_path,
+        input_dir='./',
+        local_output_dir='output/',
+        # TODO (SCP-2490): Integrate API endpoint for reference bucket
+        gcs_bucket='fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2',
+        remote_output_dir='reference_data_dev/',
+        remote_prod_dir='reference_data/',
+        use_cache=True
+    ):
+    """Download genome annotations, transform for visualizations, upload to GCS
 
     Args:
-        None
-    Returns:
-        parser: ArgumentParser object
+
+    vault_path: Path in Vault for GCS service account credentials
+    input_dir: Input directory; where to find organisms.tsv
+    local_output_dir: Local directory for output
+    gcs_bucket: Name of Google Cloud Storage bucket for upload
+    remote_output_dir: Remote directory for output in GCS bucket
+    remote_prod_dir: Remote directory from which to copy data into
+        remote_output_dir.  Use to ensure test data environment is equivalent
+        to production data environment.
+    use_cache: Whether to use cache
     """
-    parser = argparse.ArgumentParser(
-        description=__doc__,  # Use docstring at top of file for --help summary
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument('--use-cache', help='Whether to use cache', action='store_true')
-    parser.add_argument(
-        '--vault-path', help='Path in Vault for GCS service account credentials'
-    )
-    parser.add_argument(
-        '--input-dir',
-        help='Input directory; where to find organisms.tsv.  Default: ./',
-        default='./',
-    )
-    parser.add_argument(
-        '--local-output-dir',
-        help='Local directory for output.  Default: output/',
-        default='output/',
-    )
-    parser.add_argument(
-        '--gcs-bucket',
-        help='Name of GCS bucket for upload.  ' + 'Default: reference_data_dev/',
-        default='fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2',
-    )
-    parser.add_argument(
-        '--remote-output-dir',
-        help='Remote directory for output in GCS bucket.  '
-        + 'Default: reference_data_dev/',
-        default='reference_data_dev/',
-    )
-    parser.add_argument(
-        '--copy-data-from-prod-dir',
-        help='Remote directory from which to copy data into '
-        + 'remote_output_dir.  Use to ensure test data '
-        + 'environment is equivalent to production data '
-        + 'environment.  Default: reference_data/',
-        default='reference_data/',
-    )
-
-    return parser
-
-
-def main():
-    """Enables running this module via CLI
-    """
-    args = create_parser().parse_args()
-
-    use_cache = args.use_cache
-    vault_path = args.vault_path
-    input_dir = args.input_dir
-    output_dir = args.local_output_dir
-    gcs_bucket = args.gcs_bucket
-    remote_prod_dir = args.copy_data_from_prod_dir
-    remote_output_dir = args.remote_output_dir
 
     scp_species = get_species_list(input_dir + 'organisms.tsv')
 
     context = {
         'vault_path': vault_path,
         'gcs_bucket': gcs_bucket,
-        'output_dir': output_dir,
+        'output_dir': local_output_dir,
         'remote_prod_dir': remote_prod_dir,
         'remote_output_dir': remote_output_dir,
     }
 
     ensembl_metadata = get_ensembl_metadata()
-    ensembl_metadata = transform_ensembl_gtfs(ensembl_metadata, scp_species, output_dir)
+    ensembl_metadata = transform_ensembl_gtfs(ensembl_metadata, scp_species, local_output_dir)
     ensembl_metadata = upload_ensembl_gtf_products(
         ensembl_metadata, scp_species, context
     )
     record_annotation_metadata(ensembl_metadata, scp_species)
+
+
