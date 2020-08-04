@@ -182,7 +182,7 @@ class GenomeAnnotations(object):
         """Request GTF files, return their contents and updated Ensembl metadata
         """
         if ensembl_metadata is None:
-            ensembl_metadata = self.get_ensembl_metadata()
+            ensembl_metadata = get_ensembl_metadata()
 
         gtf_urls, ensembl_metadata = self.get_ensembl_gtf_urls(
             ensembl_metadata, output_dir
