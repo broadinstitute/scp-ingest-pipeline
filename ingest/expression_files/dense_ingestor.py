@@ -155,7 +155,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
         num_processed = 0
         gene_models = []
         data_arrays = []
-        gene_id = None
         for all_cell_model in self.set_data_array_cells(self.header[1:], ObjectId()):
             data_arrays.append(all_cell_model)
         # Represents row as a list
@@ -171,8 +170,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
             self.gene_names[gene] = True
             formatted_gene_name = DenseIngestor.format_gene_name(gene)
             id = ObjectId()
-            if "gene_id" in self.matrix_params:
-                gene_id = self.matrix_params["gene_id"]
             gene_models.append(
                 self.Model(
                     {
@@ -181,7 +178,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
                         "study_file_id": self.study_file_id,
                         "study_id": self.study_id,
                         "_id": id,
-                        "gene_id": gene_id,
+                        "gene_id": None,
                     }
                 )
             )
