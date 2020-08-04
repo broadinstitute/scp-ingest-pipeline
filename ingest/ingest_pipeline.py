@@ -354,6 +354,7 @@ class IngestPipeline(object):
             for gene_doc, data_array in expression_ingestor.execute_ingest():
                 self.load_expression_file(gene_doc, data_array)
         except Exception as e:
+            print(f"An exception has occurred {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
