@@ -44,24 +44,20 @@ class MTXIngestor(GeneExpression):
 
         genes_path = kwargs.pop("gene_file")
         genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
-        self.genes_file, genes_local_path = genes_ingest_file.resolve_path(
-            genes_path)
+        self.genes_file, genes_local_path = genes_ingest_file.resolve_path(genes_path)
 
         barcodes_path = kwargs.pop("barcode_file")
-        barcodes_ingest_file = IngestFiles(
-            barcodes_path, self.ALLOWED_FILE_TYPES)
+        barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
         self.barcodes_file, barcodes_local_path = barcodes_ingest_file.resolve_path(
             barcodes_path
         )
 
         mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
-        self.mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(
-            mtx_path)
+        self.mtx_file, self.mtx_local_path = mtx_ingest_file.resolve_path(mtx_path)
         # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
         # is the gene index, M is the barcode index, and K is the expresion score
         # for the given gene index
-        self.mtx_description = linecache.getline(
-            self.mtx_local_path, 2).split()
+        self.mtx_description = linecache.getline(self.mtx_local_path, 2).split()
 
     def execute_ingest(self):
         # import pdb
@@ -76,18 +72,18 @@ class MTXIngestor(GeneExpression):
         """
         Zgreps by gene index from mtx file to enhance performance/scale
         """
-        return subprocess.run(['zgrep', f'^{value}\s', self.mtx_local_path],
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                              ).stdout.decode('utf-8')
+        return subprocess.run(
+            ['zgrep', f'^{value}\s', self.mtx_local_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        ).stdout.decode('utf-8')
 
     def extract_feature_barcode_matrices(self):
         """
         Sets relevant iterables for the gene and barcode file of the MTX bundle
         """
-        self.genes = [g.strip().strip('\"')
-                      for g in self.genes_file.readlines()]
-        self.cells = [c.strip().strip('\"')
-                      for c in self.barcodes_file.readlines()]
+        self.genes = [g.strip().strip('\"') for g in self.genes_file.readlines()]
+        self.cells = [c.strip().strip('\"') for c in self.barcodes_file.readlines()]
 
     def transform(self):
         """
@@ -105,8 +101,7 @@ class MTXIngestor(GeneExpression):
         gene_models = []
         data_arrays = []
         # Create gene model for all cells available in file
-        for all_cell_model in self.set_data_array_cells(
-                self.cells, ObjectId()):
+        for all_cell_model in self.set_data_array_cells(self.cells, ObjectId()):
             data_arrays.append(all_cell_model)
         for mtx_gene_idx in range(int(self.mtx_description[0]) - 1):
             exp_scores = []
@@ -116,21 +111,22 @@ class MTXIngestor(GeneExpression):
             # matched_rows = [[N, K, M],[N, K, M],...N] where N = mtx_gene_idx
             # Rows in mtx file are 1 based and represented as strings => have
             # to add 1 to mtx_gene_idx and convert to string.
-            matched_rows = self.extract_mtx(
-                str(mtx_gene_idx + 1)).split("\n")[:-1]
+            matched_rows = self.extract_mtx(str(mtx_gene_idx + 1)).split("\n")[:-1]
             # Grab gene_id and gene from features file
             # Location of gene in features file = mtx_gene_idx + 1
             gene_id, gene = self.genes[int(mtx_gene_idx)].split('\t')
-            gene_models.append(self.Model(
-                {
-                    'name': gene,
-                    'searchable_name': gene.lower(),
-                    'study_file_id': self.study_file_id,
-                    'study_id': self.study_id,
-                    'gene_id': gene_id,
-                    '_id': id,
-                }
-            ))
+            gene_models.append(
+                self.Model(
+                    {
+                        'name': gene,
+                        'searchable_name': gene.lower(),
+                        'study_file_id': self.study_file_id,
+                        'study_id': self.study_id,
+                        'gene_id': gene_id,
+                        '_id': id,
+                    }
+                )
+            )
             # Collect all cells and expression scores associated with a gene
             for row in matched_rows:
                 raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
@@ -139,21 +135,26 @@ class MTXIngestor(GeneExpression):
                 exp_cells.append(exp_cell)
                 exp_scores.append(exp_score)
             for cell_data_array in self.set_data_array_gene_cell_names(
-                    gene,
-                    id,
-                    exp_cells):
+                gene, id, exp_cells
+            ):
                 data_arrays.append(cell_data_array)
-            for gene_data_array in self.set_data_array_gene_expression_values(gene, id, exp_scores):
+            for gene_data_array in self.set_data_array_gene_expression_values(
+                gene, id, exp_scores
+            ):
                 data_arrays.append(gene_data_array)
             if len(gene_models) > 5:
                 num_processed += len(gene_models)
                 yield (gene_models, data_arrays)
-                print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed')
+                print(
+                    f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed'
+                )
                 gene_models = []
                 data_arrays = []
         yield (gene_models, data_arrays)
         num_processed += len(gene_models)
-        print(f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}')
+        print(
+            f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}'
+        )
         gene_models = []
         data_arrays = []
 

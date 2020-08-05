@@ -44,6 +44,7 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
 # import google.cloud.logging
 from bson.objectid import ObjectId
+
 # For tracing
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
 from opencensus.trace.samplers import AlwaysOnSampler
@@ -93,8 +94,7 @@ class IngestPipeline(object):
         '../schema/alexandria_convention/alexandria_convention_schema.json'
     )
     logger = logging.getLogger(__name__)
-    error_logger = setup_logger(
-        __name__ + '_errors', 'errors.txt', level=logging.ERROR)
+    error_logger = setup_logger(__name__ + '_errors', 'errors.txt', level=logging.ERROR)
     info_logger = setup_logger(__name__, 'info.txt')
     my_debug_logger = log(error_logger)
 
@@ -138,8 +138,7 @@ class IngestPipeline(object):
                 "cell_metadata", cell_metadata_file
             )
         if ingest_cluster:
-            self.cluster = self.initialize_file_connection(
-                "cluster", cluster_file)
+            self.cluster = self.initialize_file_connection("cluster", cluster_file)
         if matrix_file is None:
             self.matrix = matrix_file
         self.extra_log_params = {'study_id': self.study_id, 'duration': None}
@@ -212,8 +211,7 @@ class IngestPipeline(object):
             ):
                 linear_id = ObjectId(self.study_id)
             else:
-                linear_id = self.db[collection_name].insert_one(
-                    model).inserted_id
+                linear_id = self.db[collection_name].insert_one(model).inserted_id
             for data_array_model in set_data_array_fn(
                 linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
@@ -227,13 +225,13 @@ class IngestPipeline(object):
         return 0
 
     def load_expression_file(self, gene_docs, data_array_documents):
-        self.error_logger.error(f'Starting to load expression file', extra=self.extra_log_params)
+        self.error_logger.error(
+            f'Starting to load expression file', extra=self.extra_log_params
+        )
         print(f'Starting to load expression file')
         try:
             print('Trying to upload data_array_colection')
-            self.db['data_arrays'].insert_many(
-                data_array_documents,  ordered=False
-            )
+            self.db['data_arrays'].insert_many(data_array_documents, ordered=False)
         except BulkWriteError as bwe:
             print(f"error caused by data docs: {bwe.details}")
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
@@ -245,9 +243,7 @@ class IngestPipeline(object):
             raise Exception(e)
         try:
             print("Try to write gene docs")
-            self.db['genes'].insert_many(
-                gene_docs,  ordered=False
-            )
+            self.db['genes'].insert_many(gene_docs, ordered=False)
         except BulkWriteError as bwe:
             print(f"error caused by gene docs : {bwe.details}")
             self.error_logger.error(bwe.details, extra=self.extra_log_params)
@@ -257,8 +253,13 @@ class IngestPipeline(object):
             print(f"error caused by gene docs : {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
             raise Exception(f'{e}')
-        print(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}')
-        self.error_logger.error(f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}', extra=self.extra_log_params)
+        print(
+            f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}'
+        )
+        self.error_logger.error(
+            f'Time to load {len(data_array_bulk_operations) + len(gene_model_bulk_operations)} models: {str(datetime.datetime.now() - start_time)}',
+            extra=self.extra_log_params,
+        )
 
     def load_subsample(
         self, parent_collection_name, subsampled_data, set_data_array_fn, scope
@@ -305,8 +306,7 @@ class IngestPipeline(object):
 
     def conforms_to_metadata_convention(self):
         """ Determines if cell metadata file follows metadata convention"""
-        convention_file_object = IngestFiles(
-            self.JSON_CONVENTION, ['application/json'])
+        convention_file_object = IngestFiles(self.JSON_CONVENTION, ['application/json'])
         json_file = convention_file_object.open_file(self.JSON_CONVENTION)
         convention = json.load(json_file)
         if self.kwargs['validate_convention'] is not None:
@@ -315,8 +315,7 @@ class IngestPipeline(object):
                 and self.kwargs['bq_dataset']
                 and self.kwargs['bq_table']
             ):
-                validate_input_metadata(
-                    self.cell_metadata, convention, bq_json=True)
+                validate_input_metadata(self.cell_metadata, convention, bq_json=True)
             else:
                 validate_input_metadata(self.cell_metadata, convention)
 
@@ -338,8 +337,7 @@ class IngestPipeline(object):
                 )
                 return write_status
             else:
-                self.error_logger.error(
-                    'Erroneous call to upload_metadata_to_bq')
+                self.error_logger.error('Erroneous call to upload_metadata_to_bq')
                 return 1
         return 0
 
@@ -349,10 +347,9 @@ class IngestPipeline(object):
         """
         expression_ingestor = None
         if MTXIngestor.matches_file_type(self.matrix_file_type):
-            expression_ingestor = MTXIngestor(self.matrix_file,
-                                              self.study_id,
-                                              self.study_file_id,
-                                              **self.kwargs,)
+            expression_ingestor = MTXIngestor(
+                self.matrix_file, self.study_id, self.study_file_id, **self.kwargs
+            )
         try:
             for gene_doc, data_array in expression_ingestor.execute_ingest():
                 self.load_expression_file(gene_doc, data_array)

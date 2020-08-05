@@ -13,7 +13,7 @@ import urllib.request as request
 
 from persist_annotation_metadata import (
     upload_ensembl_gtf_products,
-    record_annotation_metadata
+    record_annotation_metadata,
 )
 from .utils import *
 
@@ -49,8 +49,8 @@ def get_ensembl_metadata():
 
     return ensembl_metadata
 
-class GenomeAnnotations(object):
 
+class GenomeAnnotations(object):
     def __init__(
         self,
         vault_path,
@@ -60,7 +60,7 @@ class GenomeAnnotations(object):
         gcs_bucket='fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2',
         remote_output_dir='reference_data_dev/',
         remote_prod_dir='reference_data/',
-        use_cache=True
+        use_cache=True,
     ):
         """Download genome annotations, transform for visualizations, upload to GCS
 
@@ -91,7 +91,9 @@ class GenomeAnnotations(object):
         }
 
         ensembl_metadata = get_ensembl_metadata()
-        ensembl_metadata = self.transform_ensembl_gtfs(ensembl_metadata, local_output_dir)
+        ensembl_metadata = self.transform_ensembl_gtfs(
+            ensembl_metadata, local_output_dir
+        )
         ensembl_metadata = upload_ensembl_gtf_products(
             ensembl_metadata, self.scp_species, context
         )
@@ -122,7 +124,6 @@ class GenomeAnnotations(object):
             ensembl_metadata[taxid]['gtf_path'] = output_dir + filename
 
         return [gtf_urls, ensembl_metadata]
-
 
     def transform_ensembl_gtf(self, gtf_path, ref_dir):
         """Produce sorted GTF and GTF index from Ensembl GTF; needed for igv.js
@@ -155,7 +156,6 @@ class GenomeAnnotations(object):
 
         return outputs
 
-
     def make_local_reference_dirs(self, ensembl_metadata):
         """Create a folder hierarchy on this machine to mirror that planned for GCS
         """
@@ -177,7 +177,6 @@ class GenomeAnnotations(object):
 
         return ensembl_metadata
 
-
     def fetch_gtfs(self, output_dir='', ensembl_metadata=None):
         """Request GTF files, return their contents and updated Ensembl metadata
         """
@@ -193,7 +192,6 @@ class GenomeAnnotations(object):
         print('Got GTFs!  Number: ' + str(len(gtfs)))
 
         return gtfs, ensembl_metadata
-
 
     def transform_ensembl_gtfs(self, ensembl_metadata, output_dir):
         """Download raw Ensembl GTFs, write position-sorted GTF and index

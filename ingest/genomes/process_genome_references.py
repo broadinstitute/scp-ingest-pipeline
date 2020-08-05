@@ -111,8 +111,13 @@ def parse_genome_annotations(args):
     use_cache = args.use_cache
 
     parse_annotations(
-        vault_path, input_dir, local_output_dir, gcs_bucket, remote_prod_dir,
-        remote_output_dir, use_cache
+        vault_path,
+        input_dir,
+        local_output_dir,
+        gcs_bucket,
+        remote_prod_dir,
+        remote_output_dir,
+        use_cache,
     )
 
 

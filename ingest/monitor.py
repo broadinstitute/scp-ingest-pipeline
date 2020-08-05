@@ -117,14 +117,14 @@ def integrate_sentry():
         return
 
     sentry_logging = LoggingIntegration(
-        level=logging.ERROR,       # Capture error and above as breadcrumbs
-        event_level=logging.ERROR  # Send errors as events
+        level=logging.ERROR,  # Capture error and above as breadcrumbs
+        event_level=logging.ERROR,  # Send errors as events
     )
     sentry_sdk.init(
         dsn=sentry_DSN,
         integrations=[sentry_logging],
         attach_stacktrace=True,
-        before_send=before_send_to_sentry
+        before_send=before_send_to_sentry,
     )
 
 
