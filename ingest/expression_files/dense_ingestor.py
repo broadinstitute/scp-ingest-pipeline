@@ -7,6 +7,7 @@ an dense matrix.
 """
 import datetime
 import sys
+import math
 from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
@@ -97,8 +98,10 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 and not str(expression_score).isspace()
                 and expression_score != ""
             ):
-                valid_expression_scores.append(expression_score)
-                associated_cells.append(cells[idx])
+                # Can't evaluate strings for Nan values
+                if not math.isnan(float(expression_score)):
+                    valid_expression_scores.append(expression_score)
+                    associated_cells.append(cells[idx])
         return valid_expression_scores, associated_cells
 
     @staticmethod
@@ -111,19 +114,22 @@ class DenseIngestor(GeneExpression, IngestFiles):
             ]
         )
 
+    # ToDo SCP-2635
     @staticmethod
-    def has_unique_header(header: List):
-        """Confirms header has no duplicate values"""
-        if len(set(header)) != len(header):
-            # Logger will replace this
-            print("Duplicate header values are not allowed")
-            return False
-        return True
+    # def has_unique_header(header: List):
+    #     """Confirms header has no duplicate values"""
+    #     if len(set(header)) != len(header):
+    #         # Logger will replace this
+    #         print("Duplicate header values are not allowed")
+    #         return False
+    #     return True
 
     @staticmethod
     def header_has_valid_values(header: List[str]):
         """Validates there are no empty header values"""
-        return not all("" == value or value.isspace() for value in header)
+        return not all(
+            "" == value or value.isspace() or math.isnan(value) for value in header
+        )
 
     @staticmethod
     def has_gene_keyword(header: List, row: List):
