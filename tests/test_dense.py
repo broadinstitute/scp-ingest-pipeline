@@ -17,11 +17,11 @@ class TestDense(unittest.TestCase):
 
     def test_header_has_valid_values(self):
         header = ["one", "two", '"three', "'four"]
+        self.assertTrue(DenseIngestor.header_has_valid_values(header))
+
         empty_value = ["", "two"]
         space_value = ["   ", "two"]
         nan_value = ["nan", "two"]
-
-        self.assertTrue(DenseIngestor.header_has_valid_values(header))
         self.assertFalse(DenseIngestor.header_has_valid_values(empty_value))
         self.assertFalse(DenseIngestor.header_has_valid_values(space_value))
         self.assertFalse(DenseIngestor.header_has_valid_values(nan_value))
@@ -29,24 +29,25 @@ class TestDense(unittest.TestCase):
     def test_filter_expression_scores(self):
         scores = ["BRCA1", 4, 0, 3, "0", None, "", "   ", "nan", "NaN", "Nan", "NAN"]
         cells = ["foo", "foo2", "foo3", "foo4", "foo5", "foo6", "foo7"]
-        invalid_scores = ["BRCA1", 4, 0, 3, "0", None, "T"]
 
         actual_filtered_values, actual_filtered_cells = DenseIngestor.filter_expression_scores(
             scores[1:], cells
         )
         self.assertEqual([4, 3], actual_filtered_values)
         self.assertEqual(["foo2", "foo4"], actual_filtered_cells)
+
+        invalid_scores = ["BRCA1", 4, 0, 3, "0", None, "T"]
         self.assertRaises(
             ValueError, DenseIngestor.filter_expression_scores, invalid_scores, cells
         )
 
     def test_process_row(self):
-        # Positive Test case
+        # Positive test case
         valid_row = ["BRCA1", "' 1.45678 '", '"3.45678"', "2"]
         processed_row = DenseIngestor.process_row(valid_row)
         self.assertEqual([1.457, 3.457, 2.0], processed_row)
 
-        # Negative Test case
+        # Negative test case
         invalid_row = ["BRCA1", "' 1.BRCA1 '", '"3.45678"', "2"]
         self.assertRaises(ValueError, DenseIngestor.process_row, invalid_row)
 
