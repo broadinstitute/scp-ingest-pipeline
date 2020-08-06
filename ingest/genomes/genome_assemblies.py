@@ -1,16 +1,6 @@
-"""Parse genome assemblies from NCBI by their level of completion.
+"""Fetch assembly reports from NCBI and write filtered list to disk
 
-This script fetches current and historical Assembly Reports from NCBI, and
-extracts metadata on assemblies that are relevant for Single Cell Portal.
-See get_assembly_report docstring for more detail on historical Assembly
-Reports.
-
-Only assemblies that are chromosome-level or above are included.
-
-For definitions of assembly-related terms and other domain background, see:
-https://www.ncbi.nlm.nih.gov/assembly/help/#glossary
-
-TODO (SCP-2491): Add automated tests and refactor code moved from single_cell_portal
+See constructor docstring for more detail.
 """
 
 # flake8: noqa F403
@@ -23,6 +13,17 @@ from .utils import *
 class GenomeAssemblies(object):
     def __init__(self, input_dir='./', output_dir='output/'):
         """ Fetch assembly reports from NCBI and write filtered list to disk
+        Parse genome assemblies from NCBI by their level of completion.
+
+        This class fetches current and historical Assembly Reports from NCBI, and
+        extracts metadata on assemblies that are relevant for Single Cell Portal.
+        See get_assembly_report docstring for more detail on historical Assembly
+        Reports.
+
+        Only assemblies that are chromosome-level or above are included.
+
+        For definitions of assembly-related terms and other domain background, see:
+        https://www.ncbi.nlm.nih.gov/assembly/help/#glossary
 
         Args:
         * input_dir: Directory where to find organisms.tsv
