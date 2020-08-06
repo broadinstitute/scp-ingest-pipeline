@@ -19,17 +19,16 @@ from mypy_extensions import TypedDict
 from pymongo.errors import BulkWriteError
 
 try:
-    sys.path.append("../ingest")
+    sys.path.append("..")
     # Used when importing as external package, e.g. imports in single_cell_portal cod
     from ingest_files import DataArray
     from monitor import setup_logger
     from mongo_connection import MongoConnection
 except ImportError:
-    sys.path.append("../ingest")
     # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .ingest_files import DataArray
-    from .monitor import setup_logger
-    from .mongo_connection import MongoConnection
+    from ..ingest_files import DataArray
+    from ..monitor import setup_logger
+    from ..mongo_connection import MongoConnection
 
 
 class GeneExpression:
