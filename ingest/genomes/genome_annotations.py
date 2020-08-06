@@ -3,7 +3,6 @@
 TODO (SCP-2491): Add automated tests and refactor code moved from single_cell_portal
 """
 
-import argparse
 import json
 import os
 import subprocess

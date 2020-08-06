@@ -39,7 +39,7 @@ TODO (SCP-2470): Move /scripts/genomes (including this module) to scp-ingest-pip
 import argparse
 import subprocess
 
-from .parse_genome_annotations import parse_annotations
+from .genome_annotations import GenomeAnnotations
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -110,7 +110,7 @@ def parse_genome_annotations(args):
     remote_output_dir = args.copy_data_from_prod_dir
     use_cache = args.use_cache
 
-    parse_annotations(
+    GenomeAnnotations(
         vault_path,
         input_dir,
         local_output_dir,
