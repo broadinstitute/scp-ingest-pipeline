@@ -46,7 +46,6 @@ from bson.objectid import ObjectId
 
 
 # from google.cloud.logging.resource import Resource
-#
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
