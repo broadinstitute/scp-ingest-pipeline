@@ -24,10 +24,10 @@ pip3 install -r requirements.txt
 EXAMPLES
 
 # Basic usage.  Upload GTF products to reference_dev in default SCP GCS bucket.
-$ python3 process_genome_references.py --vault-path=secrets/service_account.json --input-dir ../../../lib/assets/python/genomes/
+$ python3 genomes_pipeline.py --vault-path=secrets/service_account.json --input-dir ../../../lib/assets/python/genomes/
 
 # Upload GTF products to reference_data_staging folder, using cached data from previous run
-$ python3 process_genome_references.py --vault-path=secrets/service_account.json --input-dir ../../../lib/assets/python/genomes/ --remote-output-dir reference_data_staging/ --use-cache
+$ python3 genomes_pipeline.py --vault-path=secrets/service_account.json --input-dir ../../../lib/assets/python/genomes/ --remote-output-dir reference_data_staging/ --use-cache
 """
 
 import argparse
@@ -82,6 +82,10 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def parse_assemblies(args):
+    GenomeAssemblies(input_dir=args.input_dir, output_dir=args.local_output_dir)
+
+
 def parse_genome_annotations(args):
     """Download genome annotations, transform for visualizations, upload to GCS
     """
@@ -110,7 +114,7 @@ def main() -> None:
     """Enables running Genomes Pipeline via CLI
     """
     args = create_parser().parse_args()
-    GenomeAssemblies()
+    parse_assemblies(args)
     parse_genome_annotations(args)
 
 

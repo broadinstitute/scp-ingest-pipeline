@@ -39,10 +39,10 @@ from genomes_pipeline import create_parser, parse_assemblies, parse_genome_annot
 class GenomesTestCase(unittest.TestCase):
     def setup_genomes(self, args):
         parsed_args = create_parser().parse_args(args)
-        parse_assemblies()
+        parse_assemblies(parsed_args)
         parse_genome_annotations(parsed_args)
         return
 
     def test_genomes_default(self):
-        args = []
+        args = ['--input-dir', '../ingest/genomes/', '--local-output-dir', '.']
         self.setup_genomes(args)
