@@ -8,20 +8,37 @@ from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_mo
 
 
 class TestDense(unittest.TestCase):
+    # TODO add test method after SCP-2635 implemented
+
     def test_process_header(self):
         header = ["one", "two", '"three', "'four"]
         actual_header = DenseIngestor.process_header(header)
         self.assertEqual(["one", "two", "three", "four"], actual_header)
 
+    def test_header_has_valid_values(self):
+        header = ["one", "two", '"three', "'four"]
+        empty_value = ["", "two"]
+        space_value = ["   ", "two"]
+        nan_value = ["nan", "two"]
+
+        self.assertTrue(DenseIngestor.header_has_valid_values(header))
+        self.assertFalse(DenseIngestor.header_has_valid_values(empty_value))
+        self.assertFalse(DenseIngestor.header_has_valid_values(space_value))
+        self.assertFalse(DenseIngestor.header_has_valid_values(nan_value))
+
     def test_filter_expression_scores(self):
-        scores = ["BRCA1", 4, 0, 3, None, "", "   ", "nan", "NaN", "Nan", "NAN"]
+        scores = ["BRCA1", 4, 0, 3, "0", None, "", "   ", "nan", "NaN", "Nan", "NAN"]
         cells = ["foo", "foo2", "foo3", "foo4", "foo5", "foo6", "foo7"]
+        invalid_scores = ["BRCA1", 4, 0, 3, "0", None, "T"]
 
         actual_filtered_values, actual_filtered_cells = DenseIngestor.filter_expression_scores(
             scores[1:], cells
         )
         self.assertEqual([4, 3], actual_filtered_values)
         self.assertEqual(["foo2", "foo4"], actual_filtered_cells)
+        self.assertRaises(
+            ValueError, DenseIngestor.filter_expression_scores, invalid_scores, cells
+        )
 
     def test_process_row(self):
         # Positive Test case
@@ -48,14 +65,13 @@ class TestDense(unittest.TestCase):
         self.assertFalse(DenseIngestor.has_gene_keyword(invalid_header, row))
         self.assertFalse(DenseIngestor.has_gene_keyword(empty_header, row))
 
-    # TODO after method is implemented SCP-2635
-    # def test_has_unique_header(self):
-    #     """Validates validate_unique_header() returns false correctly"""
-    #
-    #     header = ["GENE", "foo", "foo2", "foo3"]
-    #     invalid_header = ["GENE", "foo", "foo", "foo3"]
-    #     self.assertFalse(DenseIngestor.has_unique_header(invalid_header))
-    #     self.assertTrue(DenseIngestor.has_unique_header(header))
+    def test_has_unique_header(self):
+        """Validates validate_unique_header() returns false correctly"""
+
+        header = ["GENE", "foo", "foo2", "foo3"]
+        invalid_header = ["GENE", "foo", "foo", "foo3"]
+        self.assertFalse(DenseIngestor.has_unique_header(invalid_header))
+        self.assertTrue(DenseIngestor.has_unique_header(header))
 
     def test_duplicate_gene(self):
         expression_matrix = DenseIngestor(

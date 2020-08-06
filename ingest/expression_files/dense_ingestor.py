@@ -15,19 +15,18 @@ from bson.objectid import ObjectId
 try:
     from expression_files import GeneExpression
 
-    sys.path.append("../ingest")
+    sys.path.append("..")
     from ingest_files import IngestFiles
 
 except ImportError:
     # Used when importing as external package, e.g. imports in
     # single_cell_portal code
     from .expression_files import GeneExpression
-
-    sys.path.append("../ingest")
     from ..ingest_files import IngestFiles
 
 
 class DenseIngestor(GeneExpression, IngestFiles):
+    # ToDo SCP-2635
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
     def __init__(self, file_path, study_file_id, study_id, **matrix_kwargs):
@@ -42,6 +41,8 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.header = DenseIngestor.process_header(next(self.csv_file_handler))
 
     def execute_ingest(self):
+        # Method can only be executed once due to
+        # dependency on position in text file.
         # Row after header is needed for R format validation
         row = next(self.csv_file_handler)
         if not DenseIngestor.is_valid_format(self.header, row):
@@ -92,16 +93,21 @@ class DenseIngestor(GeneExpression, IngestFiles):
         associated_cells = []
         valid_expression_scores = []
         for idx, expression_score in enumerate(scores, 1):
-            if (
-                expression_score != 0
-                and expression_score is not None
-                and not str(expression_score).isspace()
-                and expression_score != ""
-            ):
-                # Can't evaluate strings for Nan values
-                if not math.isnan(float(expression_score)):
-                    valid_expression_scores.append(expression_score)
-                    associated_cells.append(cells[idx])
+            try:
+                if (
+                    expression_score != "0"
+                    and expression_score is not None
+                    and not str(expression_score).isspace()
+                    and expression_score != ""
+                ):
+                    # Can't evaluate strings for Nan values w/o breaking code
+                    if expression_score != 0 and not math.isnan(
+                        float(expression_score)
+                    ):
+                        valid_expression_scores.append(expression_score)
+                        associated_cells.append(cells[idx])
+            except Exception:
+                raise ValueError("Score '{expression_score}' is not valid")
         return valid_expression_scores, associated_cells
 
     @staticmethod
@@ -114,22 +120,30 @@ class DenseIngestor(GeneExpression, IngestFiles):
             ]
         )
 
-    # ToDo SCP-2635
     @staticmethod
-    # def has_unique_header(header: List):
-    #     """Confirms header has no duplicate values"""
-    #     if len(set(header)) != len(header):
-    #         # Logger will replace this
-    #         print("Duplicate header values are not allowed")
-    #         return False
-    #     return True
+    def has_unique_header(header: List):
+        """Confirms header has no duplicate values"""
+        if len(set(header)) != len(header):
+            # Logger will replace this
+            print("Duplicate header values are not allowed")
+            return False
+        return True
 
     @staticmethod
     def header_has_valid_values(header: List[str]):
         """Validates there are no empty header values"""
-        return not all(
-            "" == value or value.isspace() or math.isnan(value) for value in header
-        )
+        for value in header:
+            if not ("" == value or value.isspace()):
+                # If value is a string an Exception will occur because
+                # can't convert str to float
+                try:
+                    if math.isnan(float(value)):
+                        return False
+                except Exception:
+                    pass
+            else:
+                return False
+        return True
 
     @staticmethod
     def has_gene_keyword(header: List, row: List):
