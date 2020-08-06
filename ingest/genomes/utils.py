@@ -1,6 +1,4 @@
 """Common functions for genome assembly and annotation data processing.
-
-TODO (SCP-2491): Add automated tests and refactor code moved from single_cell_portal
 """
 
 import gzip

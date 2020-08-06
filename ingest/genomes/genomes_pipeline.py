@@ -28,18 +28,12 @@ $ python3 process_genome_references.py --vault-path=secrets/service_account.json
 
 # Upload GTF products to reference_data_staging folder, using cached data from previous run
 $ python3 process_genome_references.py --vault-path=secrets/service_account.json --input-dir ../../../lib/assets/python/genomes/ --remote-output-dir reference_data_staging/ --use-cache
-
-TODO (SCP-2470): Move /scripts/genomes (including this module) to scp-ingest-pipeline
 """
 
-# This script is a CLI wrapper for:
-#   parse_genome_assemblies.py
-#   parse_genome_annotations.py
-
 import argparse
-import subprocess
 
-from .genome_annotations import GenomeAnnotations
+from genome_annotations import GenomeAnnotations
+from genome_assemblies import GenomeAssemblies
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -88,15 +82,6 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def parse_assemblies():
-    # Call downstream scripts
-    # TODO: enable scripts to be used as modules
-    assemblies_command = ['python3', 'parse_genome_assemblies.py']
-    print('Calling ' + ' '.join(assemblies_command))
-
-    subprocess.call(assemblies_command)
-
-
 def parse_genome_annotations(args):
     """Download genome annotations, transform for visualizations, upload to GCS
     """
@@ -125,7 +110,7 @@ def main() -> None:
     """Enables running Genomes Pipeline via CLI
     """
     args = create_parser().parse_args()
-    parse_assemblies()
+    GenomeAssemblies()
     parse_genome_annotations(args)
 
 

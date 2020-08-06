@@ -1,11 +1,9 @@
 """Write genome annotation metadata locally, and upload transformed GTFs to GCS
-
-TODO (SCP-2491): Add automated tests and refactor code moved from single_cell_portal
 """
 
 # flake8: noqa F403
 
-from .utils import *
+import utils
 
 
 def upload_gtf_product(transformed_gtf, bucket, existing_names):
@@ -37,7 +35,7 @@ def upload_ensembl_gtf_products(ensembl_metadata, scp_species, config):
     remote_output_dir = config['remote_output_dir']
     remote_prod_dir = config['remote_prod_dir']
 
-    storage_client = get_gcs_storage_client(vault_path)
+    storage_client = utils.get_gcs_storage_client(vault_path)
 
     # FireCloud workspace for canonical SCP reference data:
     # https://portal.firecloud.org/#workspaces/single-cell-portal/scp-reference-data
@@ -47,7 +45,7 @@ def upload_ensembl_gtf_products(ensembl_metadata, scp_species, config):
     bucket = storage_client.get_bucket(reference_data_bucket)
 
     remote_dev_dir = remote_output_dir
-    copy_gcs_data_from_prod_to_dev(bucket, remote_prod_dir, remote_dev_dir)
+    utils.copy_gcs_data_from_prod_to_dev(bucket, remote_prod_dir, remote_dev_dir)
 
     existing_names = [blob.name for blob in bucket.list_blobs()]
 

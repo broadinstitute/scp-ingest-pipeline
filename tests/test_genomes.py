@@ -28,19 +28,15 @@ pytest --cov=../ingest/
 """
 
 import unittest
+
 # from unittest.mock import patch
 import sys
 
 sys.path.append('../ingest/genomes')
-from process_genome_references import (
-    create_parser,
-    parse_assemblies,
-    parse_genome_annotations
-)
+from genomes_pipeline import create_parser, parse_assemblies, parse_genome_annotations
 
 
 class GenomesTestCase(unittest.TestCase):
-
     def setup_genomes(self, args):
         parsed_args = create_parser().parse_args(args)
         parse_assemblies()

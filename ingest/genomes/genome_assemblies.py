@@ -7,7 +7,7 @@ See constructor docstring for more detail.
 
 import os
 
-from .utils import *
+import utils
 
 
 class GenomeAssemblies(object):
@@ -33,7 +33,7 @@ class GenomeAssemblies(object):
         self.input_dir = input_dir
         self.output_dir = output_dir
 
-        self.species_list = get_species_list(input_dir + 'organisms.tsv')
+        self.species_list = utils.get_species_list(input_dir + 'organisms.tsv')
 
         if os.path.exists(output_dir) is False:
             os.mkdir(output_dir)
@@ -74,8 +74,10 @@ class GenomeAssemblies(object):
         assembly_report_url = domain + path + report_filename
         assembly_report_path = self.output_dir + report_filename
 
-        # TODO: Refactor fetch_content so this is less gross.
-        assembly_report = fetch_content([[assembly_report_url, assembly_report_path]])
+        # To consider: Refactor fetch_content so this is less gross.
+        assembly_report = utils.fetch_content(
+            [[assembly_report_url, assembly_report_path]]
+        )
         assembly_report = list(assembly_report.values())[0]
 
         return assembly_report

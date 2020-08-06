@@ -1,6 +1,4 @@
 """Download genome annotations, transform for visualizations, upload to GCS
-
-TODO (SCP-2491): Add automated tests and refactor code moved from single_cell_portal
 """
 
 import json
@@ -10,11 +8,11 @@ import urllib.request as request
 
 # flake8: noqa F403
 
-from persist_annotation_metadata import (
+from genome_annotation_metadata import (
     upload_ensembl_gtf_products,
     record_annotation_metadata,
 )
-from .utils import *
+import utils
 
 
 def get_ensembl_metadata():
