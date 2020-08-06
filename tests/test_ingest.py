@@ -48,7 +48,8 @@ from ingest_pipeline import (
     exit_pipeline,
     run_ingest,
 )
-
+from expression_files.expression_files import GeneExpression
+from expression_files.dense_ingestor import DenseIngestor
 
 def mock_load(self, *args, **kwargs):
     """Enables overwriting normal function with this placeholder.
@@ -62,12 +63,26 @@ def mock_load(self, *args, **kwargs):
     unlike here where we merely give a way to verify loading-code *inputs*.
     Doing so via integration tests will isolate us from implementation changes.
     """
-    self.load_args = args
+    self.load_args = args[0]
     self.load_kwargs = kwargs
 
+def mock_load_genes(self, *args, **kwargs):
+    """Enables overwriting normal function with this placeholder.
+    Returning the arguments enables tests to verify that the code invokes
+    this method with expected argument values.
+
+    TODO:
+    Integrate MongoDB emulator for faster, higher-coverage tests (SCP-2000)
+
+    This will enable us to also verify (and thus cover) loading-code *outputs*,
+    unlike here where we merely give a way to verify loading-code *inputs*.
+    Doing so via integration tests will isolate us from implementation changes.
+    """
+    self.gene_docs = args[0]
+    self.data_array_docs = args[1]
 
 # Mock method that writes to database
-IngestPipeline.load_expression_file = mock_load
+GeneExpression.load = mock_load_genes
 IngestPipeline.load = mock_load
 
 
@@ -90,7 +105,8 @@ def get_gene_model(mock_dir):
 class IngestTestCase(unittest.TestCase):
     @patch('google.cloud.storage.Blob', side_effect=mock_storage_blob)
     @patch('google.cloud.storage.Client', side_effect=mock_storage_client)
-    def setup_ingest(self, args, mock_storage_client, mock_storage_blob):
+
+    def execute_ingest(self, args, mock_storage_client, mock_storage_blob):
 
         self.maxDiff = None
 
@@ -102,121 +118,113 @@ class IngestTestCase(unittest.TestCase):
 
         status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
 
-        print(f'status is {status}')
-
         return ingest, arguments, status, status_cell_metadata
 
-    # def test_ingest_dense_matrix(self):
-    #     """Ingest Pipeline should extract, transform, and load dense matrices
-    #     """
-    #
-    #     args = [
-    #         '--study-id',
-    #         '5d276a50421aa9117c982845',
-    #         '--study-file-id',
-    #         '5dd5ae25421aa910a723a337',
-    #         'ingest_expression',
-    #         '--taxon-name',
-    #         'Homo sapiens',
-    #         '--taxon-common-name',
-    #         'human',
-    #         '--ncbi-taxid',
-    #         '9606',
-    #         '--genome-assembly-accession',
-    #         'GCA_000001405.15',
-    #         '--genome-annotation',
-    #         'Ensembl 94',
-    #         '--matrix-file',
-    #         'gs://fake-bucket/tests/data/dense_matrix_19_genes_1000_cells.txt',
-    #         '--matrix-file-type',
-    #         'dense',
-    #     ]
-    #     ingest = self.setup_ingest(args)[0]
-    #     models = ingest.load_args[0]
-    #     print(models)
-    #     for model in models:
-    #         # Ensure that 'ObjectID' in model is removed
-    #         del model['_id']
-    #         self.assertEqual(model, gene_models[model['name']])
-    #     # print(models)
-    #
-    #     # Verify gene model looks as expected
-    #     # mock_dir = 'dense_matrix_19_genes_100k_cells_txt'
-    #     # expected_model = get_gene_model(mock_dir)
-    #
-    #     # self.assertEqual(models, gene_models)
-    #
-    # def test_ingest_local_dense_matrix(self):
-    #     """Ingest Pipeline should extract and transform local dense matrices
-    #     """
-    #
-    #     args = [
-    #         '--study-id',
-    #         '5d276a50421aa9117c982845',
-    #         '--study-file-id',
-    #         '5dd5ae25421aa910a723a337',
-    #         'ingest_expression',
-    #         '--taxon-name',
-    #         'Homo sapiens',
-    #         '--taxon-common-name',
-    #         'human',
-    #         '--ncbi-taxid',
-    #         '9606',
-    #         '--genome-assembly-accession',
-    #         'GCA_000001405.15',
-    #         '--genome-annotation',
-    #         'Ensembl 94',
-    #         '--matrix-file',
-    #         '../tests/data/dense_matrix_19_genes_1000_cells.txt',
-    #         '--matrix-file-type',
-    #         'dense',
-    #     ]
-    #     ingest = self.setup_ingest(args)[0]
-    #
-    #     models = ingest.load_args[0]
-    #     for model in models:
-    #         # Ensure that 'ObjectID' in model is removed
-    #         del model['_id']
-    #         self.assertEqual(model, gene_models[model['name']])
-    #     # print(models)
-    #
-    # def test_ingest_local_compressed_dense_matrix(self):
-    #     """Ingest Pipeline should extract and transform local dense matrices
-    #         from compressed file in the same manner as uncompressed file
-    #     """
-    #
-    #     args = [
-    #         '--study-id',
-    #         '5d276a50421aa9117c982845',
-    #         '--study-file-id',
-    #         '5dd5ae25421aa910a723a337',
-    #         'ingest_expression',
-    #         '--taxon-name',
-    #         'Homo sapiens',
-    #         '--taxon-common-name',
-    #         'human',
-    #         '--ncbi-taxid',
-    #         '9606',
-    #         '--genome-assembly-accession',
-    #         'GCA_000001405.15',
-    #         '--genome-annotation',
-    #         'Ensembl 94',
-    #         '--matrix-file',
-    #         '../tests/data/dense_matrix_19_genes_100k_cells.txt.gz',
-    #         '--matrix-file-type',
-    #         'dense',
-    #     ]
-    #     ingest = self.setup_ingest(args)[0]
-    #
-    #     models = ingest.load_args[0]
-    #     for model in models:
-    #         # Ensure that 'ObjectID' in model is removed
-    #         del model['_id']
-    #         self.assertEqual(model, gene_models[model['name']])
+    def test_ingest_dense_matrix(self):
+        """Ingest Pipeline should extract, transform, and load dense matrices
+        """
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            'gs://fake-bucket/tests/data/dense_matrix_19_genes_1000_cells.txt',
+            '--matrix-file-type',
+            'dense',
+        ]
+        ingest = self.execute_ingest(args)[0]
+        models = ingest.expression_ingestor.gene_docs
+        # print(models)
+        for model in models:
+            # Ensure that 'ObjectID' in model is removed
+            del model['_id']
+            # Verify gene model looks as expected
+            self.assertEqual(model, gene_models[model['name']])
+
+    def test_ingest_local_dense_matrix(self):
+        """Ingest Pipeline should extract and transform local dense matrices
+        """
+
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/dense_matrix_19_genes_1000_cells.txt',
+            '--matrix-file-type',
+            'dense',
+        ]
+        ingest = self.execute_ingest(args)[0]
+
+        models = ingest.expression_ingestor.gene_docs
+        for model in models:
+            # Ensure that 'ObjectID' in model is removed
+            del model['_id']
+            self.assertEqual(model, gene_models[model['name']])
+        # print(models)
+
+    def test_ingest_local_compressed_dense_matrix(self):
+        """Ingest Pipeline should extract and transform local dense matrices
+            from compressed file in the same manner as uncompressed file
+        """
+
+        args = [
+            '--study-id',
+            '5d276a50421aa9117c982845',
+            '--study-file-id',
+            '5dd5ae25421aa910a723a337',
+            'ingest_expression',
+            '--taxon-name',
+            'Homo sapiens',
+            '--taxon-common-name',
+            'human',
+            '--ncbi-taxid',
+            '9606',
+            '--genome-assembly-accession',
+            'GCA_000001405.15',
+            '--genome-annotation',
+            'Ensembl 94',
+            '--matrix-file',
+            '../tests/data/dense_matrix_19_genes_100k_cells.txt.gz',
+            '--matrix-file-type',
+            'dense',
+        ]
+        ingest = self.execute_ingest(args)[0]
+
+        models = ingest.expression_ingestor.gene_docs
+        for model in models:
+            # Ensure that 'ObjectID' in model is removed
+            del model['_id']
+            self.assertEqual(model, gene_models[model['name']])
 
     def test_ingest_mtx_matrix(self):
         """Ingest Pipeline should extract and transform MTX matrix bundles
         """
+        GeneExpression.load = mock_load
 
         args = [
             '--study-id',
@@ -243,8 +251,9 @@ class IngestTestCase(unittest.TestCase):
             '--barcode-file',
             '../tests/data/AB_toy_data_toy.barcodes.tsv',
         ]
-        ingest = self.setup_ingest(args)[0]
-        models = ingest.load_args[0]
+        ingest = self.execute_ingest(args)[0]
+        models = ingest.expression_ingestor.load_args
+        print(f'actual model is: {models}')
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model['_id']
@@ -254,6 +263,7 @@ class IngestTestCase(unittest.TestCase):
     def test_remote_mtx_bundles(self):
         """Ingest Pipeline should handle MTX matrix files fetched from bucket
         """
+        GeneExpression.load = mock_load
 
         args = [
             '--study-id',
@@ -280,9 +290,9 @@ class IngestTestCase(unittest.TestCase):
             '--barcode-file',
             'gs://fake-bucket/tests/data/AB_toy_data_toy.barcodes.tsv',
         ]
-        ingest, arguments, status, status_cell_metadata =self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata =self.execute_ingest(args)
 
-        models = ingest.load_args[0]
+        models = ingest.expression_ingestor.load_args
         print(models)
         for model in models:
             # Ensure that 'ObjectID' in model is removed
@@ -317,7 +327,7 @@ class IngestTestCase(unittest.TestCase):
             'mtx',
         ]
 
-        self.assertRaises(ValueError, self.setup_ingest, args)
+        self.assertRaises(ValueError, self.execute_ingest, args)
 
         # TODO: This test does not run.  De-indent and fix.
         def test_bad_format_dense(self):
@@ -333,7 +343,7 @@ class IngestTestCase(unittest.TestCase):
                 'dense',
             ]
             with self.assertRaises(SystemExit) as cm:
-                self.setup_ingest(args)
+                self.execute_ingest(args)
             not self.assertEqual(cm.exception.code, 0)
 
     def test_good_metadata_file(self):
@@ -351,7 +361,7 @@ class IngestTestCase(unittest.TestCase):
             'SCP123',
             '--ingest-cell-metadata',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         # TODO:
         # After integrating MongoDB emulator (SCP-2000), refactor this test to
@@ -376,7 +386,7 @@ class IngestTestCase(unittest.TestCase):
             'SCP123',
             '--ingest-cell-metadata',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
@@ -398,7 +408,7 @@ class IngestTestCase(unittest.TestCase):
             'SCP123',
             '--ingest-cell-metadata',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
@@ -419,7 +429,7 @@ class IngestTestCase(unittest.TestCase):
             '--name',
             'cluster1',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         # TODO:
         # After integrating MongoDB emulator (SCP-2000), refactor this test to
@@ -444,7 +454,7 @@ class IngestTestCase(unittest.TestCase):
             '--name',
             'cluster1',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
@@ -465,7 +475,7 @@ class IngestTestCase(unittest.TestCase):
             '--name',
             'cluster1',
         ]
-        ingest, arguments, status, status_cell_metadata = self.setup_ingest(args)
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
@@ -497,7 +507,7 @@ class IngestTestCase(unittest.TestCase):
     #         'loom',
     #     ]
     #
-    #     ingest = self.setup_ingest(args)
+    #     ingest = self.execute_ingest(args)
     #
     #     model = ingest.load_args[0]
     #
