@@ -115,7 +115,8 @@ class IngestPipeline:
         self.matrix_file_type = matrix_file_type
         self.extra_log_params = {"study_id": self.study_id, "duration": None}
         if os.environ.get("DATABASE_HOST") is not None:
-            # Needed to run tests in CircleCI.  TODO: add mock, remove this
+            # Needed to run tests in CircleCI.
+            # TODO (SCP-2000): Integrate MongoDB emulator to test_ingest.py, then remove this
             self.db = self.get_mongo_db()
         else:
             self.db = None
