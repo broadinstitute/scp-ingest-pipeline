@@ -29,7 +29,6 @@ class TestDense(unittest.TestCase):
     def test_filter_expression_scores(self):
         scores = ["BRCA1", 4, 0, 3, "0", None, "", "   ", "nan", "NaN", "Nan", "NAN"]
         cells = ["foo", "foo2", "foo3", "foo4", "foo5", "foo6", "foo7"]
-
         actual_filtered_values, actual_filtered_cells = DenseIngestor.filter_expression_scores(
             scores[1:], cells
         )
@@ -68,11 +67,11 @@ class TestDense(unittest.TestCase):
 
     def test_has_unique_header(self):
         """Validates validate_unique_header() returns false correctly"""
-
         header = ["GENE", "foo", "foo2", "foo3"]
+        self.assertTrue(DenseIngestor.has_unique_header(header))
+
         invalid_header = ["GENE", "foo", "foo", "foo3"]
         self.assertFalse(DenseIngestor.has_unique_header(invalid_header))
-        self.assertTrue(DenseIngestor.has_unique_header(header))
 
     def test_duplicate_gene(self):
         expression_matrix = DenseIngestor(
