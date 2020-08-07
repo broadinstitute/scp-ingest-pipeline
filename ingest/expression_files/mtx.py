@@ -11,33 +11,34 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 
-import collections
-import copy
 import datetime
 import linecache
-import os
+import sys
 import subprocess
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
-import scipy.io
 from bson.objectid import ObjectId
 
 try:
     from expression_files import GeneExpression
+
+    sys.path.append("../ingest")
     from ingest_files import IngestFiles
     from monitor import trace
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .expression_files import GeneExpression
-    from .ingest_files import IngestFiles
-    from .monitor import trace
+
+    sys.path.append("../ingest")
+    from ..ingest_files import IngestFiles
+    from ..monitor import trace
 
 
 class MTXIngestor(GeneExpression):
     ALLOWED_FILE_TYPES = ["text/tab-separated-values"]
 
     def matches_file_type(file_type):
-        return 'mtx' == file_type
+        return "mtx" == file_type
 
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
@@ -60,30 +61,27 @@ class MTXIngestor(GeneExpression):
         self.mtx_description = linecache.getline(self.mtx_local_path, 2).split()
 
     def execute_ingest(self):
-        # import pdb
-        # pdb.set_trace()
         self.extract_feature_barcode_matrices()
-        # import pdb
-        # pdb.set_trace()
-        yield from self.transform()
-        self.close()
+        for gene_docs, data_array_documents in self.transform():
+            self.load(gene_docs, data_array_documents)
+        return 0
 
     def extract_mtx(self, value):
         """
-        Zgreps by gene index from mtx file to enhance performance/scale
+        Greps by gene index from mtx file to enhance performance/scale
         """
         return subprocess.run(
-            ['zgrep', f'^{value}\s', self.mtx_local_path],
+            ["grep", f"^{value}\s", self.mtx_local_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-        ).stdout.decode('utf-8')
+        ).stdout.decode("utf-8")
 
     def extract_feature_barcode_matrices(self):
         """
         Sets relevant iterables for the gene and barcode file of the MTX bundle
         """
-        self.genes = [g.strip().strip('\"') for g in self.genes_file.readlines()]
-        self.cells = [c.strip().strip('\"') for c in self.barcodes_file.readlines()]
+        self.genes = [g.strip().strip('"') for g in self.genes_file.readlines()]
+        self.cells = [c.strip().strip('"') for c in self.barcodes_file.readlines()]
 
     def transform(self):
         """
@@ -114,16 +112,16 @@ class MTXIngestor(GeneExpression):
             matched_rows = self.extract_mtx(str(mtx_gene_idx + 1)).split("\n")[:-1]
             # Grab gene_id and gene from features file
             # Location of gene in features file = mtx_gene_idx + 1
-            gene_id, gene = self.genes[int(mtx_gene_idx)].split('\t')
+            gene_id, gene = self.genes[int(mtx_gene_idx)].split("\t")
             gene_models.append(
                 self.Model(
                     {
-                        'name': gene,
-                        'searchable_name': gene.lower(),
-                        'study_file_id': self.study_file_id,
-                        'study_id': self.study_id,
-                        'gene_id': gene_id,
-                        '_id': id,
+                        "name": gene,
+                        "searchable_name": gene.lower(),
+                        "study_file_id": self.study_file_id,
+                        "study_id": self.study_id,
+                        "gene_id": gene_id,
+                        "_id": id,
                     }
                 )
             )
@@ -142,21 +140,23 @@ class MTXIngestor(GeneExpression):
                 gene, id, exp_scores
             ):
                 data_arrays.append(gene_data_array)
-            if len(gene_models) > 5:
+            if len(gene_models) == 5:
                 num_processed += len(gene_models)
-                yield (gene_models, data_arrays)
-                print(
-                    f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed'
+                self.info_logger.info(
+                    f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed"
                 )
+                yield (gene_models, data_arrays)
                 gene_models = []
                 data_arrays = []
-        yield (gene_models, data_arrays)
+                self.info_logger.info(
+                    f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}"
+                )
+        yield gene_models, data_arrays
         num_processed += len(gene_models)
-        print(
-            f'Processed {num_processed} models, {str(datetime.datetime.now() - start_time)}'
+        self.info_logger.info(
+            f"Processed {num_processed} models, "
+            f"{str(datetime.datetime.now() - start_time)}"
         )
-        gene_models = []
-        data_arrays = []
 
     @trace
     def close(self):

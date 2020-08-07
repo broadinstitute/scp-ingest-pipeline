@@ -8,19 +8,27 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 import abc
-from dataclasses import dataclass
-from mypy_extensions import TypedDict
-from typing import List  # noqa: F401
+import datetime
 import ntpath
+import sys
+from dataclasses import dataclass
+from typing import List  # noqa: F401
+
 from bson.objectid import ObjectId
+from mypy_extensions import TypedDict
+from pymongo.errors import BulkWriteError
 
 try:
+    sys.path.append("..")
+    # Used when importing as external package, e.g. imports in single_cell_portal cod
     from ingest_files import DataArray
     from monitor import setup_logger
+    from mongo_connection import MongoConnection
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .ingest_files import DataArray
-    from .monitor import setup_logger
+    from ..ingest_files import DataArray
+    from ..monitor import setup_logger
+    from ..mongo_connection import MongoConnection
 
 
 class GeneExpression:
@@ -41,9 +49,10 @@ class GeneExpression:
     def __init__(self, file_path: str, study_id: str, study_file_id: str):
         self.study_id = ObjectId(study_id)
         self.study_file_id = ObjectId(study_file_id)
-        self.head, self.tail = ntpath.split(file_path)
-        self.cluster_name = self.tail or ntpath.basename(self.head)
+        head, tail = ntpath.split(file_path)
+        self.cluster_name = tail or ntpath.basename(head)
         self.extra_log_params = {"study_id": self.study_id, "duration": None}
+        self.mongo_connection = MongoConnection()
 
     @abc.abstractmethod
     def transform(self):
@@ -56,10 +65,8 @@ class GeneExpression:
         DataArray with expression data."""
 
     def set_data_array_cells(self, values: List, linear_data_id):
-        """
-        Sets DataArray for cells that were observed in an
-        expression matrix.
-        """
+        """Sets DataArray for cells that were observed in an
+        expression matrix."""
         for model in DataArray(
             f"{self.cluster_name} Cells",
             self.cluster_name,
@@ -109,3 +116,25 @@ class GeneExpression:
             self.study_file_id,
         ).get_data_array():
             yield model
+
+    def load(self, gene_docs: List, data_array_docs: List):
+        start_time = datetime.datetime.now()
+        self.insert(gene_docs, self.COLLECTION_NAME)
+        self.insert(data_array_docs, "data_arrays")
+        self.info_logger.info(
+            f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}"
+        )
+
+    def insert(self, docs: List, collection_name: str):
+        try:
+            self.mongo_connection._client[collection_name].insert_many(
+                docs, ordered=False
+            )
+        except BulkWriteError as bwe:
+            raise BulkWriteError(
+                f"Error caused by inserting into collection '{collection_name}': {bwe.details}"
+            )
+        except Exception as e:
+            raise Exception(
+                f"Error caused by inserting into collection '{collection_name}': {e}"
+            )
