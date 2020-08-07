@@ -183,7 +183,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 row[1:], self.header
             )
             numeric_scores = DenseIngestor.process_row(valid_expression_scores)
-            cells = []
             gene = row[0]
             if gene in self.gene_names:
                 raise ValueError(f"Duplicate gene: {gene}")
