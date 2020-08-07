@@ -25,9 +25,9 @@ jobs:
             - v3-dependencies-
 
       - run:
-        name: Install SAMtools (to test Genomes Pipeline)
-        command: |
-          sudo apt-get install -y samtools
+          name: Install SAMtools to test Genomes Pipeline
+          command: |
+            sudo apt-get install -y samtools
 
       - run:
           name: Install Python dependencies
