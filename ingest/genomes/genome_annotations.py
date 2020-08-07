@@ -6,12 +6,7 @@ import os
 import subprocess
 import urllib.request as request
 
-# flake8: noqa F403
-
-from genome_annotation_metadata import (
-    upload_ensembl_gtf_products,
-    record_annotation_metadata,
-)
+import genome_annotation_metadata
 import utils
 
 
@@ -74,7 +69,7 @@ class GenomeAnnotations(object):
         use_cache: Whether to use cache
         """
 
-        self.scp_species = get_species_list(input_dir + 'organisms.tsv')
+        self.scp_species = utils.get_species_list(input_dir + 'organisms.tsv')
 
         self.output_dir = local_output_dir
         self.remote_output_dir = remote_output_dir
@@ -91,10 +86,12 @@ class GenomeAnnotations(object):
         ensembl_metadata = self.transform_ensembl_gtfs(
             ensembl_metadata, local_output_dir
         )
-        ensembl_metadata = upload_ensembl_gtf_products(
+        ensembl_metadata = genome_annotation_metadata.upload_ensembl_gtf_products(
             ensembl_metadata, self.scp_species, context
         )
-        record_annotation_metadata(ensembl_metadata, self.scp_species)
+        genome_annotation_metadata.record_annotation_metadata(
+            ensembl_metadata, self.scp_species
+        )
 
     def get_ensembl_gtf_urls(self, ensembl_metadata, output_dir):
         """Construct the URL of an Ensembl genome annotation GTF file.
@@ -185,7 +182,7 @@ class GenomeAnnotations(object):
         )
 
         print('Fetching GTFs')
-        gtfs = batch_fetch(gtf_urls, output_dir)
+        gtfs = utils.batch_fetch(gtf_urls, output_dir)
         print('Got GTFs!  Number: ' + str(len(gtfs)))
 
         return gtfs, ensembl_metadata

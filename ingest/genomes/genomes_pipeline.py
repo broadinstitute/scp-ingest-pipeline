@@ -95,7 +95,6 @@ def parse_genome_annotations(args):
     vault_path = args.vault_path
     local_output_dir = args.local_output_dir
     gcs_bucket = args.gcs_bucket
-    remote_prod_dir = args.remote_prod_dir
     remote_output_dir = args.copy_data_from_prod_dir
     use_cache = args.use_cache
 
@@ -104,7 +103,6 @@ def parse_genome_annotations(args):
         input_dir,
         local_output_dir,
         gcs_bucket,
-        remote_prod_dir,
         remote_output_dir,
         use_cache,
     )

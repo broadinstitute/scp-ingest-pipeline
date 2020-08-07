@@ -29,20 +29,38 @@ pytest --cov=../ingest/
 
 import unittest
 
-# from unittest.mock import patch
+from unittest.mock import patch
 import sys
 
 sys.path.append('../ingest/genomes')
 from genomes_pipeline import create_parser, parse_assemblies, parse_genome_annotations
 
 
+def mock_upload_ensembl_gtf_products(ensembl_metadata, scp_species, config):
+    return
+
+
+def mock_record_annotation_metadata(ensembl_metadata, scp_species):
+    return
+
+
 class GenomesTestCase(unittest.TestCase):
-    def setup_genomes(self, args):
+    @patch(
+        'genome_annotation_metadata.upload_ensembl_gtf_products',
+        side_effect=mock_upload_ensembl_gtf_products,
+    )
+    @patch(
+        'genome_annotation_metadata.record_annotation_metadata',
+        side_effect=mock_record_annotation_metadata,
+    )
+    def execute_genomes_pipeline(
+        self, args, mock_record_annotation_metadata, mock_upload_ensembl_gtf_products
+    ):
         parsed_args = create_parser().parse_args(args)
         parse_assemblies(parsed_args)
         parse_genome_annotations(parsed_args)
         return
 
     def test_genomes_default(self):
-        args = ['--input-dir', '../ingest/genomes/', '--local-output-dir', '.']
-        self.setup_genomes(args)
+        args = ['--input-dir', 'mock_data/genomes/', '--local-output-dir', '/tmp/']
+        self.execute_genomes_pipeline(args)
