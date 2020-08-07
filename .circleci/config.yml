@@ -25,9 +25,9 @@ jobs:
             - v3-dependencies-
 
       - run:
-          name: Install SAMtools to test Genomes Pipeline
+          name: Install system dependencies for Genomes Pipeline
           command: |
-            sudo apt-get install -y samtools
+            sudo apt-get install -y tabix
 
       - run:
           name: Install Python dependencies
