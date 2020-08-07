@@ -1,4 +1,5 @@
 # scp-ingest-pipeline
+
 File Ingest Pipeline for Single Cell Portal
 
 [![Build status](https://img.shields.io/circleci/build/github/broadinstitute/scp-ingest-pipeline.svg)](https://circleci.com/gh/broadinstitute/scp-ingest-pipeline)
@@ -7,13 +8,16 @@ File Ingest Pipeline for Single Cell Portal
 The SCP Ingest Pipeline is an ETL pipeline for single-cell RNA-seq data.
 
 # Prerequisites
-* Python 3.7+
-* Google Cloud Platform project
-* Suitable service account (SA) and MongoDB VM in GCP.  SA needs roles "Editor", "Genomics Pipelines Runner", and "Storage Object Admin".  Broad Institute engineers: see instructions [here](https://github.com/broadinstitute/single_cell_portal_configs/tree/master/terraform-mongodb).
-* SAMTools, if using `ingest/make_toy_data.py`
+
+- Python 3.7+
+- Google Cloud Platform project
+- Suitable service account (SA) and MongoDB VM in GCP. SA needs roles "Editor", "Genomics Pipelines Runner", and "Storage Object Admin". Broad Institute engineers: see instructions [here](https://github.com/broadinstitute/single_cell_portal_configs/tree/master/terraform-mongodb).
+- SAMTools, if using `ingest/make_toy_data.py`
 
 # Install
+
 Fetch the code, boot your virtualenv, install dependencies:
+
 ```
 git clone git@github.com:broadinstitute/scp-ingest-pipeline.git
 cd scp-ingest-pipeline
@@ -22,12 +26,20 @@ source env/bin/activate
 pip install -r requirements.txt
 ```
 
-And if using `ingest/make_toy_data.py`:
+To use `ingest/make_toy_data.py`:
+
 ```
 brew install samtools
 ```
 
+To use `ingest/genomes/genomes_pipeline.py`:
+
+```
+brew install tabix
+```
+
 Now get secrets from Vault to set environment variables needed to write to the database:
+
 ```
 export BROAD_USER="<username in your email address>"
 
@@ -48,6 +60,7 @@ export DATABASE_HOST="<ip from Vault (omit brackets)>"
 ```
 
 If you are developing updates for Sentry logging, then set the DSN:
+
 ```
 vault read secret/kdux/scp/production/scp_config.json | grep SENTRY
 
@@ -57,27 +70,35 @@ export SENTRY_DSN="<Sentry DSN value from Vault>"
 Be sure to `unset SENTRY_DSN` when your updates are done, so development logs are not always sent to Sentry.
 
 ## Git hooks
+
 After installing Ingest Pipeline, add Git hooks to help ensure code quality:
+
 ```
 pre-commit install && pre-commit install -t pre-push
 ```
+
 The hooks will expect that [git-secrets](https://github.com/awslabs/git-secrets) has been set up. If you are a Broad Institute employee who has not done this yet, please see: [broadinstitute/single_cell_portal_configs](https://github.com/broadinstitute/single_cell_portal_configs) for specific guidance.
 
 ### Bypass hooks
+
 In rare cases, you might need to skip Git hooks, like so:
 
-* Skip commit hooks: `git commit ... --no-verify`
-* Skip pre-push hooks: `git push ... --no-verify`
+- Skip commit hooks: `git commit ... --no-verify`
+- Skip pre-push hooks: `git push ... --no-verify`
 
 # Test
+
 After installing:
+
 ```
 source env/bin/activate
 cd tests; pytest
 ```
 
 # Use
+
 Run this every time you start a new terminal to work on this project:
+
 ```
 source env/bin/activate
 ```
