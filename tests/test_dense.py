@@ -1,6 +1,7 @@
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+from bson.objectid import ObjectId
 
 sys.path.append("../ingest")
 from expression_files.dense_ingestor import DenseIngestor
@@ -8,7 +9,17 @@ from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_mo
 
 
 class TestDense(unittest.TestCase):
-    # TODO add test method after SCP-2635 implemented
+    def test_has_unique_cells(self):
+        client_mock = MagicMock()
+        header = ["GENE", "foo", "foo2", "foo3"]
+
+        client_mock["data_arrays"].find.return_value = ["foo3", "foo4", "foo5"]
+        self.assertTrue(DenseIngestor.has_unique_cells(header, ObjectId(), client_mock))
+
+        client_mock["data_arrays"].find.return_value = ["foo4", "foo5", "foo6"]
+        self.assertFalse(
+            DenseIngestor.has_unique_cells(header, ObjectId(), client_mock)
+        )
 
     def test_process_header(self):
         header = ["one", "two", '"three', "'four"]
