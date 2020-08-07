@@ -120,7 +120,7 @@ class GeneExpression:
     def load(self, gene_docs: List, data_array_docs: List):
         start_time = datetime.datetime.now()
         self.insert(gene_docs, self.COLLECTION_NAME)
-        self.insert(data_array_docs, "data_array")
+        self.insert(data_array_docs, "data_arrays")
         self.info_logger.info(
             f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}"
         )
