@@ -40,12 +40,19 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.gene_names = {}
         self.header = DenseIngestor.process_header(next(self.csv_file_handler))
 
+    def matches_file_type(file_type):
+        return file_type == "dense"
+
     def execute_ingest(self):
         # Method can only be executed once due to
         # dependency on position in text file.
         # Row after header is needed for R format validation
         row = next(self.csv_file_handler)
-        if not DenseIngestor.is_valid_format(self.header, row):
+        if not DenseIngestor.is_valid_format(
+            self.header,
+            row,
+            query_params=(self.mongo_connection._client, self.study_id),
+        ):
             raise ValueError("Dense matrix has invalid format")
         # Reset csv reader to first gene row
         self.csv_file_handler = self.open_file(self.file_path)[0]
@@ -53,8 +60,15 @@ class DenseIngestor(GeneExpression, IngestFiles):
         for gene_docs, data_array_documents in self.transform():
             self.load(gene_docs, data_array_documents)
 
-    def matches_file_type(file_type):
-        return file_type == "dense"
+    @staticmethod
+    def is_valid_format(header, row, query_params):
+        return all(
+            [
+                DenseIngestor.has_unique_header(header, **query_params),
+                DenseIngestor.has_gene_keyword(header, row),
+                DenseIngestor.header_has_valid_values(header),
+            ]
+        )
 
     @staticmethod
     def format_gene_name(gene):
@@ -111,17 +125,22 @@ class DenseIngestor(GeneExpression, IngestFiles):
         return valid_expression_scores, associated_cells
 
     @staticmethod
-    def is_valid_format(header, row):
-        return all(
-            [
-                DenseIngestor.has_unique_header(header),
-                DenseIngestor.has_gene_keyword(header, row),
-                DenseIngestor.header_has_valid_values(header),
+    def has_unique_cells(header: List, study_id, client):
+        query = {
+            "$and": [
+                {"linear_data_type": "Study"},
+                {"array_type": "cells"},
+                {"study_id": study_id},
             ]
-        )
+        }
+        # Needed fields query
+        field_names = {"values": 1, "_id": 0}
+        existing_cells = client["data_arrays"].find(query, field_names)
+        return not any(cell in existing_cells for cell in header)
 
     @staticmethod
     def has_unique_header(header: List):
+        # client, cluster_name, linear_data_id
         """Confirms header has no duplicate values"""
         if len(set(header)) != len(header):
             # Logger will replace this
