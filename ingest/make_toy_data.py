@@ -206,7 +206,7 @@ def fetch_genes():
             print('Preloaded', '{:,}'.format(len(genes)), 'genes')
             return genes, ids
     else:
-        gtfs, ensembl_metadata = GenomeAnnotations(scp_species=scp_species).fetch_gtfs()
+        gtfs = GenomeAnnotations(scp_species=scp_species).fetch_gtfs()
         gtf_filename = gtfs[0][0]
 
         with gzip.open(gtf_filename, mode='rt') as f:

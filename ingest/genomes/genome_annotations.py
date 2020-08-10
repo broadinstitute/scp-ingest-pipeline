@@ -125,7 +125,7 @@ class GenomeAnnotations(object):
             gtf_urls.append(gtf_url)
             self.ensembl_metadata[taxid]['gtf_path'] = output_dir + filename
 
-        return [gtf_urls]
+        return gtf_urls
 
     def transform_ensembl_gtf(self, gtf_path, ref_dir):
         """Produce sorted GTF and GTF index from Ensembl GTF; needed for igv.js
