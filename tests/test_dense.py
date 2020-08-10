@@ -9,27 +9,6 @@ from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_mo
 
 
 class TestDense(unittest.TestCase):
-    def test_has_unique_cells(self):
-        client_mock = MagicMock()
-        header = ["GENE", "foo", "foo2", "foo3"]
-
-        client_mock["data_arrays"].find.return_value = [
-            {"values": ["foo3", "foo4", "foo5"]},
-            {"values": ["foo6", "foo7", "foo8"]},
-        ]
-        self.assertFalse(
-            DenseIngestor.has_unique_cells(header, ObjectId(), client_mock)
-        )
-
-        client_mock["data_arrays"].find.return_value = [
-            {"values": ["foo4", "foo5", "foo6"]},
-            {"values": ["foo9", "foo7", "foo8"]},
-        ]
-        self.assertTrue(DenseIngestor.has_unique_cells(header, ObjectId(), client_mock))
-
-        client_mock["data_arrays"].find.return_value = []
-        self.assertTrue(DenseIngestor.has_unique_cells(header, ObjectId(), client_mock))
-
     def test_process_header(self):
         header = ["one", "two", '"three', "'four"]
         actual_header = DenseIngestor.process_header(header)
@@ -108,38 +87,61 @@ class TestDense(unittest.TestCase):
     @patch("expression_files.dense_ingestor.DenseIngestor.has_unique_header")
     @patch("expression_files.dense_ingestor.DenseIngestor.has_gene_keyword")
     @patch("expression_files.dense_ingestor.DenseIngestor.header_has_valid_values")
+    @patch("expression_files.expression_files.GeneExpression.has_unique_cells")
     def test_is_valid_format(
         self,
         mock_has_unique_header,
         mock_has_gene_keyword,
         mock_header_has_valid_values,
+        mock_has_unique_cells,
     ):
         """Confirms functions in is_valid_format() are called"""
+        query_params = (ObjectId("5dd5ae25421aa910a723a337"), MagicMock())
         # Should raise Value error
         mock_has_unique_header.return_value = False
         mock_has_gene_keyword.return_value = False
         mock_header_has_valid_values.return_value = False
+        mock_has_unique_cells.return_value = False
         self.assertFalse(
-            DenseIngestor.is_valid_format(["foo", "foo1"], ["foo2", "foo3"])
+            DenseIngestor.is_valid_format(
+                ["foo", "foo1"], ["foo2", "foo3"], query_params=query_params
+            )
         )
         self.assertTrue(mock_has_unique_header.called)
         self.assertTrue(mock_has_gene_keyword.called)
         self.assertTrue(mock_header_has_valid_values.called)
+        self.assertTrue(mock_has_unique_cells.called)
 
         # Should raise Value error
         mock_has_unique_header.return_value = True
         mock_has_gene_keyword.return_value = False
         mock_header_has_valid_values.return_value = False
+        mock_has_unique_cells.return_value = False
         self.assertFalse(
-            DenseIngestor.is_valid_format(["foo", "foo1"], ["foo2", "foo3"])
+            DenseIngestor.is_valid_format(
+                ["foo", "foo1"], ["foo2", "foo3"], query_params=query_params
+            )
         )
 
         # Should raise Value error
         mock_has_unique_header.return_value = True
         mock_has_gene_keyword.return_value = True
-        mock_header_has_valid_values.return_value = False
+        mock_header_has_valid_values.return_value = True
+        mock_has_unique_cells.return_value = False
         self.assertFalse(
-            DenseIngestor.is_valid_format(["foo", "foo1"], ["foo2", "foo3"])
+            DenseIngestor.is_valid_format(
+                ["foo", "foo1"], ["foo2", "foo3"], query_params=query_params
+            )
+        )
+        # Should raise Value error
+        mock_has_unique_header.return_value = False
+        mock_has_gene_keyword.return_value = False
+        mock_header_has_valid_values.return_value = False
+        mock_has_unique_cells.return_value = True
+        self.assertFalse(
+            DenseIngestor.is_valid_format(
+                ["foo", "foo1"], ["foo2", "foo3"], query_params=query_params
+            )
         )
 
         # When is_valid_format() returns true
@@ -147,7 +149,9 @@ class TestDense(unittest.TestCase):
         mock_has_gene_keyword.return_value = True
         mock_header_has_valid_values.return_value = True
         self.assertTrue(
-            DenseIngestor.is_valid_format(["foo", "foo1"], ["foo2", "foo3"])
+            DenseIngestor.is_valid_format(
+                ["foo", "foo1"], ["foo2", "foo3"], query_params=query_params
+            )
         )
 
     @patch("expression_files.expression_files.GeneExpression.load")
@@ -155,7 +159,11 @@ class TestDense(unittest.TestCase):
         "expression_files.dense_ingestor.DenseIngestor.transform",
         return_value=[("foo1", "foo2")],
     )
-    def test_execute_ingest(self, mock_load, mock_transform):
+    @patch(
+        "expression_files.expression_files.GeneExpression.has_unique_cells",
+        return_value=True,
+    )
+    def test_execute_ingest(self, mock_load, mock_transform, mock_has_unique_cells):
         """
         Integration test for execute_ingest()
         """
