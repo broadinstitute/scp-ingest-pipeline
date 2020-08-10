@@ -13,12 +13,21 @@ class TestDense(unittest.TestCase):
         client_mock = MagicMock()
         header = ["GENE", "foo", "foo2", "foo3"]
 
-        client_mock["data_arrays"].find.return_value = ["foo3", "foo4", "foo5"]
+        client_mock["data_arrays"].find.return_value = [
+            {"values": ["foo3", "foo4", "foo5"]},
+            {"values": ["foo6", "foo7", "foo8"]},
+        ]
         self.assertFalse(
             DenseIngestor.has_unique_cells(header, ObjectId(), client_mock)
         )
 
-        client_mock["data_arrays"].find.return_value = ["foo4", "foo5", "foo6"]
+        client_mock["data_arrays"].find.return_value = [
+            {"values": ["foo4", "foo5", "foo6"]},
+            {"values": ["foo9", "foo7", "foo8"]},
+        ]
+        self.assertTrue(DenseIngestor.has_unique_cells(header, ObjectId(), client_mock))
+
+        client_mock["data_arrays"].find.return_value = []
         self.assertTrue(DenseIngestor.has_unique_cells(header, ObjectId(), client_mock))
 
     def test_process_header(self):

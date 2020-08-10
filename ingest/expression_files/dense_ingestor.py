@@ -9,6 +9,7 @@ import datetime
 import sys
 import math
 from typing import List  # noqa: F401
+from typing import Dict
 
 from bson.objectid import ObjectId
 
@@ -51,7 +52,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         if not DenseIngestor.is_valid_format(
             self.header,
             row,
-            query_params=(self.mongo_connection._client, self.study_id),
+            query_params=(self.study_id, self.mongo_connection._client),
         ):
             raise ValueError("Dense matrix has invalid format")
         # Reset csv reader to first gene row
@@ -64,9 +65,10 @@ class DenseIngestor(GeneExpression, IngestFiles):
     def is_valid_format(header, row, query_params):
         return all(
             [
-                DenseIngestor.has_unique_header(header, **query_params),
+                DenseIngestor.has_unique_header(header),
                 DenseIngestor.has_gene_keyword(header, row),
                 DenseIngestor.header_has_valid_values(header),
+                DenseIngestor.has_unique_cells(header, *query_params),
             ]
         )
 
@@ -125,7 +127,16 @@ class DenseIngestor(GeneExpression, IngestFiles):
         return valid_expression_scores, associated_cells
 
     @staticmethod
-    def has_unique_cells(header: List, study_id, client):
+    def has_unique_cells(cell_names: List, study_id, client):
+        """Checks cell names against database to confirm matrix contains unique
+            cell names
+
+         Parameters:
+            cell_names (List[str]): List of cell names in matrix
+            study_id (ObjectId): The study id the cell names belong to
+            client : MongoDB client
+        """
+        COLLECTION_NAME = "data_arrays"
         query = {
             "$and": [
                 {"linear_data_type": "Study"},
@@ -133,14 +144,25 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 {"study_id": study_id},
             ]
         }
-        # Needed fields query
+        # Returned fields from query results
         field_names = {"values": 1, "_id": 0}
-        existing_cells = client["data_arrays"].find(query, field_names)
-        return not any(cell in existing_cells for cell in header)
+        # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
+        query_results: List[Dict] = list(
+            client[COLLECTION_NAME].find(query, field_names)
+        )
+        # Query did not return results
+        if not query_results:
+            return True
+        # Flatten query results
+        existing_cells = [
+            values
+            for cell_values in query_results
+            for values in cell_values.get("values")
+        ]
+        return not any(name in existing_cells for name in cell_names)
 
     @staticmethod
     def has_unique_header(header: List):
-        # client, cluster_name, linear_data_id
         """Confirms header has no duplicate values"""
         if len(set(header)) != len(header):
             # Logger will replace this
