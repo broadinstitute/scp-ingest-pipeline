@@ -7,7 +7,7 @@ sys.path.append("../ingest")
 from expression_files.expression_files import GeneExpression
 
 
-class TestGeneExpression(unittest.TestCase):
+class TestExpressionFiles(unittest.TestCase):
     def test_has_unique_cells(self):
         client_mock = MagicMock()
         header = ["GENE", "foo", "foo2", "foo3"]

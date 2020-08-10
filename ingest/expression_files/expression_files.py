@@ -12,7 +12,7 @@ import datetime
 import ntpath
 import sys
 from dataclasses import dataclass
-from typing import List  # noqa: F401
+from typing import List, Dict  # noqa: F401
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
@@ -63,6 +63,41 @@ class GeneExpression:
         """An abstract method that will be implemented by inherrited classes.
         Each expression file will have its own implementation of setting the
         DataArray with expression data."""
+
+    @staticmethod
+    def has_unique_cells(cell_names: List, study_id, client):
+        """Checks cell names against database to confirm matrix contains unique
+            cell names
+
+         Parameters:
+            cell_names (List[str]): List of cell names in matrix
+            study_id (ObjectId): The study id the cell names belong to
+            client : MongoDB client
+        """
+        COLLECTION_NAME = "data_arrays"
+        query = {
+            "$and": [
+                {"linear_data_type": "Study"},
+                {"array_type": "cells"},
+                {"study_id": study_id},
+            ]
+        }
+        # Returned fields from query results
+        field_names = {"values": 1, "_id": 0}
+        # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
+        query_results: List[Dict] = list(
+            client[COLLECTION_NAME].find(query, field_names)
+        )
+        # Query did not return results
+        if not query_results:
+            return True
+        # Flatten query results
+        existing_cells = [
+            values
+            for cell_values in query_results
+            for values in cell_values.get("values")
+        ]
+        return not any(name in existing_cells for name in cell_names)
 
     def set_data_array_cells(self, values: List, linear_data_id):
         """Sets DataArray for cells that were observed in an
