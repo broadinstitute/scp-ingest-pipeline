@@ -48,7 +48,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # dependency on position in text file.
         # Row after header is needed for R format validation
         row = next(self.csv_file_handler)
-        if not DenseIngestor.is_valid_format(
+        if not DenseIngestor.is_valid(
             self.header,
             row,
             query_params=(self.study_id, self.mongo_connection._client),
@@ -61,7 +61,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             self.load(gene_docs, data_array_documents)
 
     @staticmethod
-    def is_valid_format(header, row, query_params):
+    def is_valid(header, row, query_params):
         return all(
             [
                 DenseIngestor.has_unique_header(header),

@@ -88,7 +88,7 @@ class TestDense(unittest.TestCase):
     @patch("expression_files.dense_ingestor.DenseIngestor.has_gene_keyword")
     @patch("expression_files.dense_ingestor.DenseIngestor.header_has_valid_values")
     @patch("expression_files.expression_files.GeneExpression.has_unique_cells")
-    def test_is_valid_format(
+    def test_is_valid(
         self,
         mock_has_unique_header,
         mock_has_gene_keyword,
@@ -103,7 +103,7 @@ class TestDense(unittest.TestCase):
         mock_header_has_valid_values.return_value = False
         mock_has_unique_cells.return_value = False
         self.assertFalse(
-            DenseIngestor.is_valid_format(
+            DenseIngestor.is_valid(
                 ["foo", "foo1"], ["foo2", "foo3"], query_params=query_params
             )
         )
@@ -118,7 +118,7 @@ class TestDense(unittest.TestCase):
         mock_header_has_valid_values.return_value = False
         mock_has_unique_cells.return_value = False
         self.assertFalse(
-            DenseIngestor.is_valid_format(
+            DenseIngestor.is_valid(
                 ["foo", "foo1"], ["foo2", "foo3"], query_params=query_params
             )
         )
@@ -129,7 +129,7 @@ class TestDense(unittest.TestCase):
         mock_header_has_valid_values.return_value = True
         mock_has_unique_cells.return_value = False
         self.assertFalse(
-            DenseIngestor.is_valid_format(
+            DenseIngestor.is_valid(
                 ["foo", "foo1"], ["foo2", "foo3"], query_params=query_params
             )
         )
@@ -139,7 +139,7 @@ class TestDense(unittest.TestCase):
         mock_header_has_valid_values.return_value = False
         mock_has_unique_cells.return_value = True
         self.assertFalse(
-            DenseIngestor.is_valid_format(
+            DenseIngestor.is_valid(
                 ["foo", "foo1"], ["foo2", "foo3"], query_params=query_params
             )
         )
@@ -149,7 +149,7 @@ class TestDense(unittest.TestCase):
         mock_has_gene_keyword.return_value = True
         mock_header_has_valid_values.return_value = True
         self.assertTrue(
-            DenseIngestor.is_valid_format(
+            DenseIngestor.is_valid(
                 ["foo", "foo1"], ["foo2", "foo3"], query_params=query_params
             )
         )
