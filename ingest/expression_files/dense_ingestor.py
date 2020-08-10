@@ -92,7 +92,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         """
         associated_cells = []
         valid_expression_scores = []
-        for idx, expression_score in enumerate(scores, 1):
+        for idx, expression_score in enumerate(scores):
             try:
                 if (
                     expression_score != "0"
@@ -105,7 +105,8 @@ class DenseIngestor(GeneExpression, IngestFiles):
                         float(expression_score)
                     ):
                         valid_expression_scores.append(expression_score)
-                        associated_cells.append(cells[idx])
+                        # add one to account for gene name in scores list
+                        associated_cells.append(cells[idx + 1])
             except Exception:
                 raise ValueError("Score '{expression_score}' is not valid")
         return valid_expression_scores, associated_cells
