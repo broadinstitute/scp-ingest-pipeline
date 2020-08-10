@@ -180,7 +180,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # Represents row as a list
         for row in self.csv_file_handler:
             valid_expression_scores, cells = DenseIngestor.filter_expression_scores(
-                row[1:], self.header
+                row[1:], self.header[1:]
             )
             numeric_scores = DenseIngestor.process_row(valid_expression_scores)
             gene = row[0]
