@@ -45,7 +45,7 @@ def get_ensembl_metadata():
 class GenomeAnnotations(object):
     def __init__(
         self,
-        vault_path,
+        vault_path='',
         input_dir='./',
         local_output_dir='output/',
         # TODO (SCP-2490): Integrate API endpoint for reference bucket
@@ -53,6 +53,7 @@ class GenomeAnnotations(object):
         remote_output_dir='reference_data_dev/',
         remote_prod_dir='reference_data/',
         use_cache=True,
+        scp_species=None,
     ):
         """Download genome annotations, transform for visualizations, upload to GCS
 
@@ -67,14 +68,19 @@ class GenomeAnnotations(object):
             remote_output_dir.  Use to ensure test data environment is equivalent
             to production data environment.
         use_cache: Whether to use cache
+        scp_species: List of lists of species identifiers
         """
 
-        self.scp_species = utils.get_species_list(input_dir + 'organisms.tsv')
+        if scp_species is None:
+            self.scp_species = utils.get_species_list(input_dir + 'organisms.tsv')
+        else:
+            # As used in make_toy_data.py
+            self.scp_species = scp_species
 
         self.output_dir = local_output_dir
         self.remote_output_dir = remote_output_dir
 
-        context = {
+        self.context = {
             'vault_path': vault_path,
             'gcs_bucket': gcs_bucket,
             'output_dir': local_output_dir,
@@ -82,19 +88,21 @@ class GenomeAnnotations(object):
             'remote_output_dir': remote_output_dir,
         }
 
-        ensembl_metadata = get_ensembl_metadata()
-        ensembl_metadata = self.transform_ensembl_gtfs(
-            ensembl_metadata, local_output_dir
-        )
+        self.ensembl_metadata = get_ensembl_metadata()
+
+    def transform_and_load_annotations(self):
+        self.transform_ensembl_gtfs(self.output_dir)
         ensembl_metadata = genome_annotation_metadata.upload_ensembl_gtf_products(
-            ensembl_metadata, self.scp_species, context
+            self.ensembl_metadata, self.scp_species, self.context
         )
         genome_annotation_metadata.record_annotation_metadata(
             ensembl_metadata, self.scp_species
         )
 
-    def get_ensembl_gtf_urls(self, ensembl_metadata, output_dir):
+    def get_ensembl_gtf_urls(self, output_dir):
         """Construct the URL of an Ensembl genome annotation GTF file.
+
+        Returns GTF URLs, and sets local GTF path in Ensembl metadata
 
         Example URL:
         http://ftp.ensembl.org/pub/release-94/gtf/homo_sapiens/Homo_sapiens.GRCh38.94.gtf.gz
@@ -103,7 +111,7 @@ class GenomeAnnotations(object):
         gtf_urls = []
         for species in self.scp_species:
             taxid = species[2]
-            organism_metadata = ensembl_metadata[taxid]
+            organism_metadata = self.ensembl_metadata[taxid]
             release = organism_metadata['release']
             organism = organism_metadata['organism']
             organism_upper = organism[0].upper() + organism[1:]
@@ -115,9 +123,9 @@ class GenomeAnnotations(object):
 
             gtf_url = origin + dir + filename
             gtf_urls.append(gtf_url)
-            ensembl_metadata[taxid]['gtf_path'] = output_dir + filename
+            self.ensembl_metadata[taxid]['gtf_path'] = output_dir + filename
 
-        return [gtf_urls, ensembl_metadata]
+        return [gtf_urls]
 
     def transform_ensembl_gtf(self, gtf_path, ref_dir):
         """Produce sorted GTF and GTF index from Ensembl GTF; needed for igv.js
@@ -157,7 +165,7 @@ class GenomeAnnotations(object):
 
         for species in self.scp_species:
             taxid = species[2]
-            organism_metadata = ensembl_metadata[taxid]
+            organism_metadata = self.ensembl_metadata[taxid]
             organism = organism_metadata['organism']
             asm_name = organism_metadata['assembly_name']
             asm_acc = organism_metadata['assembly_accession']
@@ -167,36 +175,28 @@ class GenomeAnnotations(object):
 
             os.makedirs(folder, exist_ok=True)
 
-            ensembl_metadata[taxid]['reference_dir'] = folder
+            self.ensembl_metadata[taxid]['reference_dir'] = folder
 
-        return ensembl_metadata
-
-    def fetch_gtfs(self, output_dir='', ensembl_metadata=None):
-        """Request GTF files, return their contents and updated Ensembl metadata
+    def fetch_gtfs(self, output_dir=''):
+        """Download GTF files in parallel
         """
-        if ensembl_metadata is None:
-            ensembl_metadata = get_ensembl_metadata()
 
-        gtf_urls, ensembl_metadata = self.get_ensembl_gtf_urls(
-            ensembl_metadata, output_dir
-        )
+        gtf_urls = self.get_ensembl_gtf_urls(output_dir)
 
         print('Fetching GTFs')
         gtfs = utils.batch_fetch(gtf_urls, output_dir)
         print('Got GTFs!  Number: ' + str(len(gtfs)))
 
-        return gtfs, ensembl_metadata
+        return gtfs
 
-    def transform_ensembl_gtfs(self, ensembl_metadata, output_dir):
+    def transform_ensembl_gtfs(self, output_dir):
         """Download raw Ensembl GTFs, write position-sorted GTF and index
         """
         transformed_gtfs = []
 
-        gtfs, ensembl_metadata = self.fetch_gtfs(
-            output_dir=output_dir, ensembl_metadata=ensembl_metadata
-        )
+        self.fetch_gtfs(output_dir=output_dir)
 
-        ensembl_metadata = self.make_local_reference_dirs(ensembl_metadata)
+        ensembl_metadata = self.make_local_reference_dirs()
 
         print('Transforming GTFs')
         for species in self.scp_species:

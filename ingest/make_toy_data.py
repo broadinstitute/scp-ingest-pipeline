@@ -34,7 +34,7 @@ import numpy as np
 
 sys.path.append('.')
 sys.path.append('genomes')
-from genomes.parse_genome_annotations import fetch_gtfs
+from genomes.genome_annotations import GenomeAnnotations
 
 # To consider: Add --species as a CLI argument
 scp_species = [['Homo sapiens', 'human', '9606']]
@@ -206,7 +206,7 @@ def fetch_genes():
             print('Preloaded', '{:,}'.format(len(genes)), 'genes')
             return genes, ids
     else:
-        gtfs, ensembl_metadata = fetch_gtfs(scp_species)
+        gtfs, ensembl_metadata = GenomeAnnotations(scp_species=scp_species).fetch_gtfs()
         gtf_filename = gtfs[0][0]
 
         with gzip.open(gtf_filename, mode='rt') as f:
