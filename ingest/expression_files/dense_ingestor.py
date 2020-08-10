@@ -105,7 +105,8 @@ class DenseIngestor(GeneExpression, IngestFiles):
                         float(expression_score)
                     ):
                         valid_expression_scores.append(expression_score)
-                        associated_cells.append(cells[idx])
+                        # add one to account for gene name in scores list
+                        associated_cells.append(cells[idx + 1])
             except Exception:
                 raise ValueError("Score '{expression_score}' is not valid")
         return valid_expression_scores, associated_cells
@@ -180,7 +181,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # Represents row as a list
         for row in self.csv_file_handler:
             valid_expression_scores, cells = DenseIngestor.filter_expression_scores(
-                row[1:], self.header[1:]
+                row[1:], self.header
             )
             numeric_scores = DenseIngestor.process_row(valid_expression_scores)
             gene = row[0]
