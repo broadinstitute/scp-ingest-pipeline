@@ -13,6 +13,7 @@ The SCP Ingest Pipeline is an ETL pipeline for single-cell RNA-seq data.
 - Google Cloud Platform project
 - Suitable service account (SA) and MongoDB VM in GCP. SA needs roles "Editor", "Genomics Pipelines Runner", and "Storage Object Admin". Broad Institute engineers: see instructions [here](https://github.com/broadinstitute/single_cell_portal_configs/tree/master/terraform-mongodb).
 - SAMtools, if using `ingest/make_toy_data.py`
+- Tabix, if using `ingest/genomes/genomes_pipeline.py`
 
 # Install
 
