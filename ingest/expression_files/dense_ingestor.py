@@ -92,7 +92,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         """
         associated_cells = []
         valid_expression_scores = []
-        for idx, expression_score in enumerate(scores, 1):
+        for idx, expression_score in enumerate(scores):
             try:
                 if (
                     expression_score != "0"
