@@ -42,12 +42,12 @@ class TestDense(unittest.TestCase):
 
     def test_process_row(self):
         # Positive test case
-        valid_row = ["BRCA1", "' 1.45678 '", '"3.45678"', "2"]
+        valid_row = ["' 1.45678 '", '"3.45678"', "2"]
         processed_row = DenseIngestor.process_row(valid_row)
         self.assertEqual([1.457, 3.457, 2.0], processed_row)
 
         # Negative test case
-        invalid_row = ["BRCA1", "' 1.BRCA1 '", '"3.45678"', "2"]
+        invalid_row = ["' 1.BRCA1 '", '"3.45678"', "2"]
         self.assertRaises(ValueError, DenseIngestor.process_row, invalid_row)
 
     def test_has_gene_keyword(self):

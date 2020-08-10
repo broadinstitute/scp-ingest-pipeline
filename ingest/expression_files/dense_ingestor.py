@@ -77,7 +77,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             # Convert string to float and round 3 places
             return round(float(value), 3)
 
-        result = map(convert_to_float, row[1:])
+        result = map(convert_to_float, row)
         return list(result)
 
     @staticmethod
