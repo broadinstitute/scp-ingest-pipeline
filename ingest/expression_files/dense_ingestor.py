@@ -58,8 +58,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.csv_file_handler = self.open_file(self.file_path)[0]
         next(self.csv_file_handler)
         for gene_docs, data_array_documents in self.transform():
-            # self.load(gene_docs, data_array_documents)
-            pass
+            self.load(gene_docs, data_array_documents)
 
     @staticmethod
     def is_valid_format(header, row, query_params):
