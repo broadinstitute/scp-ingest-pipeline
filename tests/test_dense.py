@@ -28,12 +28,12 @@ class TestDense(unittest.TestCase):
 
     def test_filter_expression_scores(self):
         scores = ["BRCA1", 4, 0, 3, "0", None, "", "   ", "nan", "NaN", "Nan", "NAN"]
-        cells = ["foo", "foo2", "foo3", "foo4", "foo5", "foo6", "foo7"]
+        cells = ["foo", "foo2", "foo3", "foo4", "foo5"]
         actual_filtered_values, actual_filtered_cells = DenseIngestor.filter_expression_scores(
             scores[1:], cells
         )
         self.assertEqual([4, 3], actual_filtered_values)
-        self.assertEqual(["foo2", "foo4"], actual_filtered_cells)
+        self.assertEqual(["foo", "foo3"], actual_filtered_cells)
 
         invalid_scores = ["BRCA1", 4, 0, 3, "0", None, "T"]
         self.assertRaises(
@@ -64,6 +64,16 @@ class TestDense(unittest.TestCase):
         invalid_header = ["foo", "foo2", "foo3", "foo4"]
         self.assertFalse(DenseIngestor.has_gene_keyword(invalid_header, row))
         self.assertFalse(DenseIngestor.has_gene_keyword(empty_header, row))
+
+    def test_is_r_formatted_file(self):
+        # Mimics the row following the header
+        row = ["BRCA1", "' 1.45678 '", '"3.45678"', "2"]
+
+        r_header = ["foo", "foo2", "foo3"]
+        self.assertTrue(DenseIngestor.is_r_formatted_file(r_header, row))
+
+        dense_header = ["GENE", "foo", "foo2", "foo3"]
+        self.assertFalse(DenseIngestor.is_r_formatted_file(dense_header, row))
 
     def test_has_unique_header(self):
         """Validates validate_unique_header() returns false correctly"""

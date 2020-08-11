@@ -54,8 +54,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.csv_file_handler = self.open_file(self.file_path)[0]
         next(self.csv_file_handler)
         for gene_docs, data_array_documents in self.transform():
-            # self.load(gene_docs, data_array_documents)
-            pass
+            self.load(gene_docs, data_array_documents)
 
     @staticmethod
     def matches_file_type(file_type):
@@ -87,7 +86,12 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def is_r_formatted_file(header, row):
-        # Check if file is an R formatted file
+        """Checks if file is an R file
+
+        Parameters:
+            header (List[str]): Header of the dense matrix
+            row (List): A single row from the dense matrix
+        """
         # An "R formatted" file has one less entry in the header
         # row than each successive row. Also, "GENE" will not appear in header
         if header[0].upper() != "GENE":
@@ -172,17 +176,11 @@ class DenseIngestor(GeneExpression, IngestFiles):
             row (List): A single row from the dense matrix needed for R
             format validation
         """
-        # Check if file is an R formatted file
-        # An "R formatted" file has one less entry in the header
-        # row than each successive row. Also, "GENE" will not appear in header
-        if header[0].upper() != "GENE":
-            length_of_next_line = len(row)
-            if (length_of_next_line - 1) == len(header):
-                return True
-            else:
-                return False
-        else:
+        if header[0].upper() == "GENE":
             return True
+        if DenseIngestor.is_r_formatted_file(header, row):
+            return True
+        return False
 
     def transform(self):
         """Transforms dense matrix into gene data model."""
@@ -204,6 +202,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             )
             numeric_scores = DenseIngestor.process_row(valid_expression_scores)
             gene = row[0]
+            print(self.gene_names)
             if gene in self.gene_names:
                 raise ValueError(f"Duplicate gene: {gene}")
             self.gene_names[gene] = True
