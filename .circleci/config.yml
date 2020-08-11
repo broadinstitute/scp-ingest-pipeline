@@ -47,7 +47,7 @@ jobs:
           command: |
             . venv/bin/activate
             cd tests
-            pytest -n auto --cov-report=xml --cov=../ingest/
+            pytest --cov-report=xml --cov=../ingest/
 
       - codecov/upload:
           file: tests/coverage.xml
