@@ -379,24 +379,6 @@ def pool_processing(
 ):
     """ Function called by each CPU core in our pool of available CPUs.
     """
-    # print(
-    #     prefix,
-    #     filename_leaf,
-    #     sparse,
-    #     dense,
-    #     visualize,
-    #     crush,
-    #     gzip_files,
-    #     num_rows,
-    #     num_columns,
-    #     preloaded_genes,
-    #     preloaded_barcodes,
-    #     max_write_size,
-    #     is_explicit_num_column,
-    #     bytes_per_file,
-    #     genes,
-    #     ids,
-    # )
 
     print(prefix, filename_leaf)
 
