@@ -21,10 +21,12 @@ python3 -m venv env
 source env/bin/activate
 pip3 install -r requirements.txt
 
+cd ingest/genomes
+
 EXAMPLES
 
 # Basic usage.  Upload GTF products to reference_dev in default SCP GCS bucket.
-$ python3 genomes_pipeline.py --vault-path=secrets/service_account.json --input-dir ../../../lib/assets/python/genomes/
+$ python3 genomes_pipeline.py --vault-path=secrets/service_account.json
 
 # Upload GTF products to reference_data_staging folder, using cached data from previous run
 $ python3 genomes_pipeline.py --vault-path=secrets/service_account.json --input-dir ../../../lib/assets/python/genomes/ --remote-output-dir reference_data_staging/ --use-cache
