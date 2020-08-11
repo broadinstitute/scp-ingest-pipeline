@@ -39,6 +39,9 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.csv_file_handler, self.file_handler = self.open_file(self.file_path)
         self.gene_names = {}
         self.header = DenseIngestor.process_header(next(self.csv_file_handler))
+        self.is_r_file = DenseIngestor.is_r_formatted_file(
+            self.header, next(self.csv_file_handler)
+        )
 
     def execute_ingest(self):
         # Method can only be executed once due to
@@ -51,8 +54,10 @@ class DenseIngestor(GeneExpression, IngestFiles):
         self.csv_file_handler = self.open_file(self.file_path)[0]
         next(self.csv_file_handler)
         for gene_docs, data_array_documents in self.transform():
-            self.load(gene_docs, data_array_documents)
+            # self.load(gene_docs, data_array_documents)
+            pass
 
+    @staticmethod
     def matches_file_type(file_type):
         return file_type == "dense"
 
@@ -81,6 +86,18 @@ class DenseIngestor(GeneExpression, IngestFiles):
         return list(result)
 
     @staticmethod
+    def is_r_formatted_file(header, row):
+        # Check if file is an R formatted file
+        # An "R formatted" file has one less entry in the header
+        # row than each successive row. Also, "GENE" will not appear in header
+        if header[0].upper() != "GENE":
+            length_of_next_line = len(row)
+            if (length_of_next_line - 1) == len(header):
+                return True
+        else:
+            return False
+
+    @staticmethod
     def filter_expression_scores(scores: List, cells: List):
         """
         Filters non-zero gene scores and corresponding cell names
@@ -106,7 +123,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     ):
                         valid_expression_scores.append(expression_score)
                         # add one to account for gene name in scores list
-                        associated_cells.append(cells[idx + 1])
+                        associated_cells.append(cells[idx])
             except Exception:
                 raise ValueError("Score '{expression_score}' is not valid")
         return valid_expression_scores, associated_cells
@@ -176,12 +193,14 @@ class DenseIngestor(GeneExpression, IngestFiles):
         num_processed = 0
         gene_models = []
         data_arrays = []
-        for all_cell_model in self.set_data_array_cells(self.header[1:], ObjectId()):
+        # Cell names are formatted differently in R files
+        cell_names = self.header if self.is_r_file else self.header[1:]
+        for all_cell_model in self.set_data_array_cells(cell_names, ObjectId()):
             data_arrays.append(all_cell_model)
         # Represents row as a list
         for row in self.csv_file_handler:
             valid_expression_scores, cells = DenseIngestor.filter_expression_scores(
-                row[1:], self.header
+                row[1:], cell_names
             )
             numeric_scores = DenseIngestor.process_row(valid_expression_scores)
             gene = row[0]
