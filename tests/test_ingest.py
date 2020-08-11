@@ -122,10 +122,10 @@ class IngestTestCase(unittest.TestCase):
         return ingest, arguments, status, status_cell_metadata
 
     @patch(
-        "expression_files.expression_files.GeneExpression.has_unique_cells",
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_ingest_dense_matrix(self, mock_has_unique_cells):
+    def test_ingest_dense_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract, transform, and load dense matrices
         """
         args = [
@@ -159,10 +159,10 @@ class IngestTestCase(unittest.TestCase):
             self.assertEqual(model, gene_models[model["name"]])
 
     @patch(
-        "expression_files.expression_files.GeneExpression.has_unique_cells",
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_ingest_local_dense_matrix(self, mock_has_unique_cells):
+    def test_ingest_local_dense_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract and transform local dense matrices
         """
 
@@ -197,10 +197,10 @@ class IngestTestCase(unittest.TestCase):
         # print(models)
 
     @patch(
-        "expression_files.expression_files.GeneExpression.has_unique_cells",
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_ingest_local_compressed_dense_matrix(self, mock_has_unique_cells):
+    def test_ingest_local_compressed_dense_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract and transform local dense matrices
             from compressed file in the same manner as uncompressed file
         """

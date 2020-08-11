@@ -47,13 +47,12 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # Method can only be executed once due to
         # dependency on position in text file.
         # Row after header is needed for R format validation
-        row = next(self.csv_file_handler)
-        if not DenseIngestor.is_valid(
+        first_row = next(self.csv_file_handler)
+        DenseIngestor.check_valid(
             self.header,
-            row,
+            first_row,
             query_params=(self.study_id, self.mongo_connection._client),
-        ):
-            raise ValueError("Dense matrix has invalid format")
+        )
         # Reset csv reader to first gene row
         self.csv_file_handler = self.open_file(self.file_path)[0]
         next(self.csv_file_handler)
@@ -61,15 +60,33 @@ class DenseIngestor(GeneExpression, IngestFiles):
             self.load(gene_docs, data_array_documents)
 
     @staticmethod
-    def is_valid(header, row, query_params):
-        return all(
-            [
-                DenseIngestor.has_unique_header(header),
-                DenseIngestor.has_gene_keyword(header, row),
-                DenseIngestor.header_has_valid_values(header),
-                GeneExpression.has_unique_cells(header, *query_params),
-            ]
-        )
+    def check_valid(header, first_row, query_params):
+      error_messages = []
+
+      try:
+          DenseIngestor.check_unique_header(header)
+      except ValueError as v:
+          error_messages.append(str(v))
+      try:
+          DenseIngestor.check_gene_keyword(header, first_row)
+      except ValueError as v:
+          error_messages.append(str(v))
+
+      try:
+          DenseIngestor.check_header_valid_values(header)
+      except ValueError as v:
+          error_messages.append(str(v))
+
+      try:
+          GeneExpression.check_unique_cells(header, *query_params)
+      except ValueError as v:
+          error_messages.append(str(v))
+
+      if len(error_messages) != 0:
+          raise ValueError('; '.join(error_messages))
+
+      return True
+
 
     @staticmethod
     def format_gene_name(gene):
@@ -126,32 +143,25 @@ class DenseIngestor(GeneExpression, IngestFiles):
         return valid_expression_scores, associated_cells
 
     @staticmethod
-    def has_unique_header(header: List):
+    def check_unique_header(header: List):
         """Confirms header has no duplicate values"""
         if len(set(header)) != len(header):
-            # Logger will replace this
-            print("Duplicate header values are not allowed")
-            return False
+            raise ValueError("Duplicate header values are not allowed")
         return True
 
     @staticmethod
-    def header_has_valid_values(header: List[str]):
+    def check_header_valid_values(header: List[str]):
         """Validates there are no empty header values"""
         for value in header:
-            if not ("" == value or value.isspace()):
-                # If value is a string an Exception will occur because
-                # can't convert str to float
-                try:
-                    if math.isnan(float(value)):
-                        return False
-                except Exception:
-                    pass
-            else:
-                return False
+            if "" == value or value.isspace():
+                raise ValueError("Header values cannot be blank")
+            if value.lower() == "nan":
+                raise ValueError("nan is not allowed as a header value")
+
         return True
 
     @staticmethod
-    def has_gene_keyword(header: List, row: List):
+    def check_gene_keyword(header: List, row: List):
         """Validates that 'Gene' is the first value in header
 
         Parameters:
@@ -167,7 +177,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             if (length_of_next_line - 1) == len(header):
                 return True
             else:
-                return False
+                raise ValueError("Required 'GENE' header is not present")
         else:
             return True
 
