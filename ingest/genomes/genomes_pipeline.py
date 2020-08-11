@@ -89,7 +89,6 @@ def parse_assemblies(args):
 def parse_genome_annotations(args):
     """Download genome annotations, transform for visualizations, upload to GCS
     """
-    print('In parse_genome_annotations')
     input_dir = args.input_dir
     remote_output_dir = args.remote_output_dir
     vault_path = args.vault_path
@@ -105,7 +104,7 @@ def parse_genome_annotations(args):
         gcs_bucket,
         remote_output_dir,
         use_cache,
-    )
+    ).load()
 
 
 def main() -> None:

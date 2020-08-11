@@ -31,6 +31,8 @@ from make_toy_data import create_parser, make_toy_data
 
 class MakeToyTestCase(unittest.TestCase):
     def execute_make_toy(self, args):
+        """Matches main() in make_toy_data.py, but called as module
+        """
         parsed_args = create_parser().parse_args(args)
         make_toy_data(parsed_args)
         return

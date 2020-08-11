@@ -43,7 +43,6 @@ def mock_upload_ensembl_gtf_products(ensembl_metadata, scp_species, config):
 
 
 def mock_record_annotation_metadata(output_dir, ensembl_metadata, scp_species):
-    print('in mock_record_annotation_metadata')
     return
 
 
@@ -59,18 +58,20 @@ class GenomesTestCase(unittest.TestCase):
     def execute_genomes_pipeline(
         self, args, mock_record_annotation_metadata, mock_upload_ensembl_gtf_products
     ):
+        """Matches main() in genomes_pipeline.py, but called as module
+        """
         parsed_args = create_parser().parse_args(args)
         parse_assemblies(parsed_args)
         parse_genome_annotations(parsed_args)
         return
 
     def test_genomes_default(self):
+        """Genomes Pipeline should extract and transform reference data
+        """
         out_dir = f'/tmp/test_genomes_{randrange(100_000)}/'
         args = ['--input-dir', 'mock_data/genomes/', '--local-output-dir', out_dir]
         self.execute_genomes_pipeline(args)
 
-        gtfs = glob(f'{out_dir}*.gtf')
-        self.assertEqual(len(gtfs), 2)
-
+        # There should be two gzipped GTF files
         gzipped_gtfs = glob(f'{out_dir}*.gtf.gz')
         self.assertEqual(len(gzipped_gtfs), 2)
