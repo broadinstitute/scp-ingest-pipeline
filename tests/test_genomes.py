@@ -54,7 +54,7 @@ def mock_record_annotation_metadata(output_dir, ensembl_metadata, scp_species):
     return
 
 
-output_dir = f'/tmp/test_genomes_{randrange(100_000)}/'
+output_dir = f'tmp/test_genomes_{randrange(100_000)}/'
 
 
 class GenomesTestCase(unittest.TestCase):

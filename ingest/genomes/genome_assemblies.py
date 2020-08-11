@@ -36,7 +36,7 @@ class GenomeAssemblies(object):
         self.species_list = utils.get_species_list(input_dir + 'organisms.tsv')
 
         if os.path.exists(output_dir) is False:
-            os.mkdir(output_dir)
+            os.makedirs(output_dir)
 
         assembly_report = self.get_assembly_report()
         historical_assembly_report = self.get_assembly_report(use_historical=True)

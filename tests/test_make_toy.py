@@ -29,7 +29,7 @@ sys.path.append('../ingest')
 sys.path.append('../ingest/genomes')
 from make_toy_data import create_parser, make_toy_data
 
-output_dir = f'/tmp/test_make_toy_{randrange(100_000)}/'
+output_dir = f'tmp/test_make_toy_{randrange(100_000)}/'
 
 
 class MakeToyTestCase(unittest.TestCase):
