@@ -1,8 +1,6 @@
 """Write genome annotation metadata locally, and upload transformed GTFs to GCS
 """
 
-# flake8: noqa F403
-
 import utils
 
 
@@ -40,7 +38,7 @@ def upload_ensembl_gtf_products(ensembl_metadata, scp_species, config):
     # FireCloud workspace for canonical SCP reference data:
     # https://portal.firecloud.org/#workspaces/single-cell-portal/scp-reference-data
     reference_data_bucket = gcs_bucket
-    target_folder = remote_output_dir
+    # target_folder = remote_output_dir
 
     bucket = storage_client.get_bucket(reference_data_bucket)
 

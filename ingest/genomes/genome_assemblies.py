@@ -3,8 +3,6 @@
 See constructor docstring for more detail.
 """
 
-# flake8: noqa F403
-
 import os
 
 import utils
@@ -112,7 +110,7 @@ class GenomeAssemblies(object):
         """ Determine if assembly is suitable for SCP
         """
 
-        if (rel_type in 'Major' and asm_level == 'Chromosome') == False:
+        if (rel_type in 'Major' and asm_level == 'Chromosome') is False:
             # Exclude patch assemblies, and genomes that lack assembled chromosomes
             return False
 
@@ -124,7 +122,7 @@ class GenomeAssemblies(object):
             if (
                 refseq_category
                 in ('representative genome', 'reference genome')
-                == False
+                is False
             ):
                 return False
 
