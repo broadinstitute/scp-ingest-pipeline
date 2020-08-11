@@ -5,6 +5,7 @@ from unittest.mock import patch
 sys.path.append("../ingest")
 from expression_files.dense_ingestor import DenseIngestor
 from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_models
+from mock_data.dense_matrix_19_genes_100k_cells_txt.data_arrays import data_arrays
 
 
 class TestDense(unittest.TestCase):
@@ -172,3 +173,7 @@ class TestDense(unittest.TestCase):
                 del actual_gene_model["_id"]
                 gene_name = actual_gene_model["name"]
                 self.assertEqual(actual_gene_model, gene_models[gene_name])
+            for actual_data_array in actual_data_arrays:
+                del actual_data_array["linear_data_id"]
+                data_array_name = actual_data_array["name"]
+                self.assertEqual(actual_data_array, data_arrays[data_array_name])
