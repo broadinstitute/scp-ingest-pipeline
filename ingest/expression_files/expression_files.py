@@ -65,7 +65,7 @@ class GeneExpression:
         DataArray with expression data."""
 
     @staticmethod
-    def has_unique_cells(cell_names: List, study_id, client):
+    def check_unique_cells(cell_names: List, study_id, client):
         """Checks cell names against database to confirm matrix contains unique
             cell names
 
@@ -97,7 +97,14 @@ class GeneExpression:
             for cell_values in query_results
             for values in cell_values.get("values")
         ]
-        return not any(name in existing_cells for name in cell_names)
+        dupes = set(existing_cells) & set(cell_names)
+        if len(dupes) > 0:
+            error_string = f'Expression file contains {len(dupes)} cells that also exist in another expression file. '
+            # add the first 3 duplicates to the error message
+            error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
+            raise ValueError(error_string)
+        return True
+
 
     def set_data_array_cells(self, values: List, linear_data_id):
         """Sets DataArray for cells that were observed in an
