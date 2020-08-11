@@ -54,7 +54,7 @@ def split_seq(li, cols=5):
         start = stop
 
 
-def fetch_genes(preloaded_genes, num_rows):
+def fetch_genes(preloaded_genes, num_rows, output_dir):
     """
     Retrieve names (i.e. HUGO symbols) for all given for a species from Ensembl GTF
 
@@ -91,7 +91,9 @@ def fetch_genes(preloaded_genes, num_rows):
         # To consider: Add --species as a CLI argument
         scp_species = [['Homo sapiens', 'human', '9606']]
 
-        gtfs = GenomeAnnotations(scp_species=scp_species).fetch_gtfs()
+        gtfs = GenomeAnnotations(
+            local_output_dir=output_dir, scp_species=scp_species
+        ).fetch_gtfs()
         gtf_filename = gtfs[0][0]
 
         with gzip.open(gtf_filename, mode='rt') as f:
@@ -375,20 +377,20 @@ def pool_processing(
     bytes_per_file,
     genes,
     ids,
+    output_dir,
     prefix,
 ):
     """ Function called by each CPU core in our pool of available CPUs.
     """
 
-    print(prefix, filename_leaf)
-
     # potential file names
-    dense_name = prefix + '_toy_data_' + filename_leaf + '.txt'
-    genes_name = prefix + '_toy_data_' + filename_leaf + '.genes.tsv'
-    barcodes_name = prefix + '_toy_data_' + filename_leaf + '.barcodes.tsv'
-    matrix_name = prefix + '_toy_data_' + filename_leaf + '.matrix.mtx'
-    cluster_name = prefix + '_toy_data_' + filename_leaf + '.cluster.txt'
-    metadata_name = prefix + '_toy_data_' + filename_leaf + '.metadata.txt'
+    stem = f'{output_dir + prefix}_toy_data_{filename_leaf}'
+    dense_name = stem + '.txt'
+    genes_name = stem + '.genes.tsv'
+    barcodes_name = stem + '.barcodes.tsv'
+    matrix_name = stem + '.matrix.mtx'
+    cluster_name = stem + '.cluster.txt'
+    metadata_name = stem + '.metadata.txt'
 
     # get list of files we are creating
     files_to_write = []
@@ -641,6 +643,7 @@ def create_parser():
     parser.add_argument(
         '--visualize', action='store_true', help=('Generate cluster and metadata files')
     )
+    parser.add_argument('--output-dir', default='output/', help=('Output directory'))
 
     return parser
 
@@ -660,6 +663,7 @@ def make_toy_data(args):
     max_write_size = args.max_write_size
     random_seed = args.random_seed
     visualize = args.visualize
+    output_dir = args.output_dir
 
     bytes_per_file = parse_filesize_string(size_per_file)
     prefixes = []
@@ -681,7 +685,7 @@ def make_toy_data(args):
     if not num_columns:
         num_columns = int(bytes_per_file / bytes_per_column)
 
-    genes, ids, num_rows = fetch_genes(preloaded_genes, num_rows)
+    genes, ids, num_rows = fetch_genes(preloaded_genes, num_rows, output_dir)
 
     # Available prefix characters for output toy data file names
     alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -717,6 +721,7 @@ def make_toy_data(args):
             bytes_per_file,
             genes,
             ids,
+            output_dir,
         ),
         prefixes,
     )

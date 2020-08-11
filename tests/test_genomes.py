@@ -39,11 +39,22 @@ from genomes_pipeline import create_parser, parse_assemblies, parse_genome_annot
 
 
 def mock_upload_ensembl_gtf_products(ensembl_metadata, scp_species, config):
+    """Avoids call that requires credentials and long-running upload
+    """
     return
 
 
 def mock_record_annotation_metadata(output_dir, ensembl_metadata, scp_species):
+    """Avoids call that (upstream) requires credentials and long-running upload
+
+    To consider:
+    Refactor `record_annotation_metadata` to be *before* upload_ensembl_gtf_products,
+    then remove this mock.
+    """
     return
+
+
+output_dir = f'/tmp/test_genomes_{randrange(100_000)}/'
 
 
 class GenomesTestCase(unittest.TestCase):
@@ -68,10 +79,9 @@ class GenomesTestCase(unittest.TestCase):
     def test_genomes_default(self):
         """Genomes Pipeline should extract and transform reference data
         """
-        out_dir = f'/tmp/test_genomes_{randrange(100_000)}/'
-        args = ['--input-dir', 'mock_data/genomes/', '--local-output-dir', out_dir]
+        args = ['--input-dir', 'mock_data/genomes/', '--local-output-dir', output_dir]
         self.execute_genomes_pipeline(args)
 
         # There should be two gzipped GTF files
-        gzipped_gtfs = glob(f'{out_dir}*.gtf.gz')
+        gzipped_gtfs = glob(f'{output_dir}*.gtf.gz')
         self.assertEqual(len(gzipped_gtfs), 2)

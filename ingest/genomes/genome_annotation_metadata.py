@@ -131,9 +131,6 @@ def record_annotation_metadata(output_dir, ensembl_metadata, scp_species):
     """
     new_metadata_ref = []
 
-    print('output_dir')
-    print(output_dir)
-
     ref_file = f'{output_dir}species_metadata_reference.tsv'
 
     with open(ref_file) as f:

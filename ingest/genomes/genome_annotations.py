@@ -80,6 +80,9 @@ class GenomeAnnotations(object):
         self.output_dir = local_output_dir
         self.remote_output_dir = remote_output_dir
 
+        if os.path.exists(local_output_dir) is False:
+            os.mkdir(local_output_dir)
+
         self.context = {
             'vault_path': vault_path,
             'gcs_bucket': gcs_bucket,
