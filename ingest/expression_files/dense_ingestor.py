@@ -82,7 +82,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
       except ValueError as v:
           error_messages.append(str(v))
 
-      if len(error_messages) != 0:
+      if len(error_messages) > 0:
           raise ValueError('; '.join(error_messages))
 
       return True
@@ -153,10 +153,10 @@ class DenseIngestor(GeneExpression, IngestFiles):
     def check_header_valid_values(header: List[str]):
         """Validates there are no empty header values"""
         for value in header:
-            if "" == value or value.isspace():
+            if value == "" or value.isspace():
                 raise ValueError("Header values cannot be blank")
             if value.lower() == "nan":
-                raise ValueError("nan is not allowed as a header value")
+                raise ValueError(f"{value} is not allowed as a header value")
 
         return True
 
