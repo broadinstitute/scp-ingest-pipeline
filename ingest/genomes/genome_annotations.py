@@ -55,7 +55,7 @@ class GenomeAnnotations(object):
         use_cache=True,
         scp_species=None,
     ):
-        """Download genome annotations, transform for visualizations, upload to GCS
+        """Download genome annotations, transform for visualizations
 
         Args:
 
@@ -89,9 +89,14 @@ class GenomeAnnotations(object):
         }
 
         self.ensembl_metadata = get_ensembl_metadata()
+        self.fetch_gtfs(output_dir=self.output_dir)
+        self.make_local_reference_dirs()
 
-    def transform_and_load_annotations(self):
-        self.transform_ensembl_gtfs(self.output_dir)
+        self.transform()
+
+    def load(self):
+        """Upload transformed GTFs to Google Cloud Storage
+        """
         ensembl_metadata = genome_annotation_metadata.upload_ensembl_gtf_products(
             self.ensembl_metadata, self.scp_species, self.context
         )
@@ -158,7 +163,7 @@ class GenomeAnnotations(object):
 
         return outputs
 
-    def make_local_reference_dirs(self, ensembl_metadata):
+    def make_local_reference_dirs(self):
         """Create a folder hierarchy on this machine to mirror that planned for GCS
         """
         print('Making local reference directories')
@@ -189,23 +194,19 @@ class GenomeAnnotations(object):
 
         return gtfs
 
-    def transform_ensembl_gtfs(self, output_dir):
-        """Download raw Ensembl GTFs, write position-sorted GTF and index
+    def transform(self):
+        """Transform each local raw Ensembl GTF to position-sorted GTF and index
         """
         transformed_gtfs = []
-
-        self.fetch_gtfs(output_dir=output_dir)
-
-        ensembl_metadata = self.make_local_reference_dirs()
 
         print('Transforming GTFs')
         for species in self.scp_species:
             taxid = species[2]
-            organism_metadata = ensembl_metadata[taxid]
+            organism_metadata = self.ensembl_metadata[taxid]
             gtf_path = organism_metadata['gtf_path'].replace('.gz', '')
             ref_dir = organism_metadata['reference_dir']
             transformed_gtfs = self.transform_ensembl_gtf(gtf_path, ref_dir)
 
-            ensembl_metadata[taxid]['transformed_gtfs'] = transformed_gtfs
+            self.ensembl_metadata[taxid]['transformed_gtfs'] = transformed_gtfs
 
-        return ensembl_metadata
+        return self.ensembl_metadata
