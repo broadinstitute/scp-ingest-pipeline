@@ -96,7 +96,7 @@ class GenomeAnnotations(object):
             self.ensembl_metadata, self.scp_species, self.context
         )
         genome_annotation_metadata.record_annotation_metadata(
-            ensembl_metadata, self.scp_species
+            self.output_dir, ensembl_metadata, self.scp_species
         )
 
     def get_ensembl_gtf_urls(self, output_dir):

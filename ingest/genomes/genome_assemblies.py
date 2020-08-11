@@ -212,7 +212,7 @@ class GenomeAssemblies(object):
             assemblies_str.append('\t'.join(assembly))
         assemblies_str = '\n'.join(assemblies_str)
 
-        output_path = 'species_metadata_reference.tsv'
+        output_path = f'{self.output_dir}species_metadata_reference.tsv'
         with open(output_path, 'w') as f:
             f.write(assemblies_str)
         print('Wrote assemblies to ' + output_path)

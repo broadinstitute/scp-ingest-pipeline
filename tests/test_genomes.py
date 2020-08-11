@@ -1,4 +1,4 @@
-"""Integration tests for Genomes Pipeline; isolated tests for observable output
+"""Integration tests for Genomes Pipeline
 
 These tests verify that reference genome data can be extracted from upstream
 sources (e.g. NCBI, Ensembl) transformed, as expected by code that loads
@@ -31,6 +31,8 @@ import unittest
 
 from unittest.mock import patch
 import sys
+from random import randrange
+from glob import glob
 
 sys.path.append('../ingest/genomes')
 from genomes_pipeline import create_parser, parse_assemblies, parse_genome_annotations
@@ -40,7 +42,8 @@ def mock_upload_ensembl_gtf_products(ensembl_metadata, scp_species, config):
     return
 
 
-def mock_record_annotation_metadata(ensembl_metadata, scp_species):
+def mock_record_annotation_metadata(output_dir, ensembl_metadata, scp_species):
+    print('in mock_record_annotation_metadata')
     return
 
 
@@ -62,5 +65,12 @@ class GenomesTestCase(unittest.TestCase):
         return
 
     def test_genomes_default(self):
-        args = ['--input-dir', 'mock_data/genomes/', '--local-output-dir', '/tmp/']
+        out_dir = f'/tmp/test_genomes_{randrange(100_000)}/'
+        args = ['--input-dir', 'mock_data/genomes/', '--local-output-dir', out_dir]
         self.execute_genomes_pipeline(args)
+
+        gtfs = glob(f'{out_dir}*.gtf')
+        self.assertEqual(len(gtfs), 2)
+
+        gzipped_gtfs = glob(f'{out_dir}*.gtf.gz')
+        self.assertEqual(len(gzipped_gtfs), 2)

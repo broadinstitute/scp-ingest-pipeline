@@ -1,4 +1,4 @@
-"""Integration tests for make_toy_data.py; isolated tests for observable output
+"""Integration tests for make_toy_data.py
 
 PREREQUISITES
 See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
