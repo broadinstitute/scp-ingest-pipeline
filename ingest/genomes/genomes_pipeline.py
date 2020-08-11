@@ -109,7 +109,7 @@ def parse_genome_annotations(args):
 
 
 def main() -> None:
-    """Enables running Genomes Pipeline via CLI
+    """Enables running via module or CLI
     """
     args = create_parser().parse_args()
     parse_assemblies(args)

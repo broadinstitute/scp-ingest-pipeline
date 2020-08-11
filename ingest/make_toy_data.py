@@ -723,8 +723,8 @@ def make_toy_data(args):
 
 
 def main():
-
-    # load arg parser
+    """Enables running via module or CLI
+    """
     args = create_parser().parse_args()
     make_toy_data(args)
 
