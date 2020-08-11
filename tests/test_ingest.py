@@ -147,10 +147,10 @@ class IngestTestCase(unittest.TestCase):
             "dense",
         ]
         ingest = self.execute_ingest(args)[0]
-        gene_models = ingest.expression_ingestor.gene_docs
+        models = ingest.expression_ingestor.gene_docs
         actual_data_arrays = ingest.expression_ingestor.data_array_docs
         # print(models)
-        for model in gene_models:
+        for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model["_id"]
             # Verify gene model looks as expected
@@ -225,14 +225,10 @@ class IngestTestCase(unittest.TestCase):
         ingest = self.execute_ingest(args)[0]
 
         models = ingest.expression_ingestor.gene_docs
-        actual_data_arrays = ingest.expression_ingestor.data_array_docs
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model["_id"]
             self.assertEqual(model, gene_models[model["name"]])
-        for dr in actual_data_arrays:
-            del dr["linear_data_id"]
-            self.assertEqual(dr, data_arrays[dr["name"]])
 
     def test_ingest_mtx_matrix(self):
         """Ingest Pipeline should extract and transform MTX matrix bundles
