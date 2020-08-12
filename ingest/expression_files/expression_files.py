@@ -72,7 +72,7 @@ class GeneExpression:
          Parameters:
             cell_names (List[str]): List of cell names in matrix
             study_id (ObjectId): The study id the cell names belong to
-            client : MongoDB client
+            client: MongoDB client
         """
         COLLECTION_NAME = "data_arrays"
         query = {
