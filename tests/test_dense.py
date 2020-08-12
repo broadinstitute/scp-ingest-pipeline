@@ -6,6 +6,7 @@ from bson.objectid import ObjectId
 sys.path.append("../ingest")
 from expression_files.dense_ingestor import DenseIngestor
 from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_models
+from mock_data.dense_matrix_19_genes_100k_cells_txt.data_arrays import data_arrays
 
 
 class TestDense(unittest.TestCase):
@@ -47,12 +48,12 @@ class TestDense(unittest.TestCase):
 
     def test_process_row(self):
         # Positive test case
-        valid_row = ["BRCA1", "' 1.45678 '", '"3.45678"', "2"]
+        valid_row = ["' 1.45678 '", '"3.45678"', "2"]
         processed_row = DenseIngestor.process_row(valid_row)
         self.assertEqual([1.457, 3.457, 2.0], processed_row)
 
         # Negative test case
-        invalid_row = ["BRCA1", "' 1.BRCA1 '", '"3.45678"', "2"]
+        invalid_row = ["' 1.BRCA1 '", '"3.45678"', "2"]
         self.assertRaises(ValueError, DenseIngestor.process_row, invalid_row)
 
     def test_check_gene_keyword(self):
@@ -172,3 +173,7 @@ class TestDense(unittest.TestCase):
                 del actual_gene_model["_id"]
                 gene_name = actual_gene_model["name"]
                 self.assertEqual(actual_gene_model, gene_models[gene_name])
+            for actual_data_array in actual_data_arrays:
+                del actual_data_array["linear_data_id"]
+                data_array_name = actual_data_array["name"]
+                self.assertEqual(actual_data_array, data_arrays[data_array_name])

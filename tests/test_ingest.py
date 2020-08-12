@@ -49,6 +49,8 @@ from ingest_pipeline import (
     run_ingest,
 )
 from expression_files.expression_files import GeneExpression
+from mock_data.dense_matrix_19_genes_100k_cells_txt.data_arrays import data_arrays
+
 
 
 def mock_load(self, *args, **kwargs):
@@ -151,12 +153,16 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest = self.execute_ingest(args)[0]
         models = ingest.expression_ingestor.gene_docs
+        actual_data_arrays = ingest.expression_ingestor.data_array_docs
         # print(models)
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model["_id"]
             # Verify gene model looks as expected
             self.assertEqual(model, gene_models[model["name"]])
+        for actual_data_array in actual_data_arrays:
+            del actual_data_array["linear_data_id"]
+            self.assertEqual(actual_data_array, data_arrays[actual_data_array["name"]])
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
@@ -190,11 +196,15 @@ class IngestTestCase(unittest.TestCase):
         ingest = self.execute_ingest(args)[0]
 
         models = ingest.expression_ingestor.gene_docs
+        actual_data_arrays = ingest.expression_ingestor.data_array_docs
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model["_id"]
             self.assertEqual(model, gene_models[model["name"]])
         # print(models)
+        for actual_data_array in actual_data_arrays:
+            del actual_data_array["linear_data_id"]
+            self.assertEqual(actual_data_array, data_arrays[actual_data_array["name"]])
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
