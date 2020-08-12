@@ -33,7 +33,6 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 # Ingest mtx files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
-import datetime
 import json
 import logging
 import os
@@ -45,36 +44,33 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 # import google.cloud.logging
 from bson.objectid import ObjectId
 
-# For tracing
-from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
-from opencensus.trace.samplers import AlwaysOnSampler
-from opencensus.trace.tracer import Tracer
-from pymongo import MongoClient
-from pymongo.errors import BulkWriteError
-
 # from google.cloud.logging.resource import Resource
-
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
+    from monitor import log, setup_logger, trace
+
+    # For tracing
+    from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
+    from opencensus.trace.samplers import AlwaysOnSampler
+    from opencensus.trace.tracer import Tracer
+    from pymongo import MongoClient
     from subsample import SubSample
-    from loom import Loom
     from validation.validate_metadata import (
-        validate_input_metadata,
         report_issues,
+        validate_input_metadata,
         write_metadata_to_bq,
     )
-    from monitor import setup_logger, log, trace
     from cell_metadata import CellMetadata
-    from clusters import Clusters
-    from dense import Dense
-    from mtx import MTXIngestor
     from cli_parser import create_parser, validate_arguments
+    from clusters import Clusters
+    from expression_files.mtx import MTXIngestor
+    from expression_files.dense_ingestor import DenseIngestor
+
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
     from .subsample import SubSample
-    from .loom import Loom
     from .validation.validate_metadata import (
         validate_input_metadata,
         report_issues,
@@ -83,12 +79,12 @@ except ImportError:
     from .monitor import setup_logger, log, trace
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
-    from .dense import Dense
-    from .mtx import MTXIngestor
+    from .expression_files.dense_ingestor import DenseIngestor
+    from .expression_files.mtx import MTXIngestor
     from .cli_parser import create_parser, validate_arguments
 
 
-class IngestPipeline(object):
+class IngestPipeline:
     # File location for metadata json convention
     JSON_CONVENTION = (
         "../schema/alexandria_convention/alexandria_convention_schema.json"
@@ -116,8 +112,10 @@ class IngestPipeline(object):
         self.study_file_id = study_file_id
         self.matrix_file = matrix_file
         self.matrix_file_type = matrix_file_type
+        self.extra_log_params = {"study_id": self.study_id, "duration": None}
         if os.environ.get("DATABASE_HOST") is not None:
-            # Needed to run tests in CircleCI.  TODO: add mock, remove this
+            # Needed to run tests in CircleCI.
+            # TODO (SCP-2000): Integrate MongoDB emulator to test_ingest.py, then remove this
             self.db = self.get_mongo_db()
         else:
             self.db = None
@@ -139,20 +137,18 @@ class IngestPipeline(object):
             )
         if ingest_cluster:
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
-        if matrix_file is None:
-            self.matrix = matrix_file
         self.extra_log_params = {"study_id": self.study_id, "duration": None}
         if subsample:
             self.cluster_file = cluster_file
             self.cell_metadata_file = cell_metadata_file
 
     @my_debug_logger()
+    # Will be replaced by MongoConnection as defined in SCP-2629
     def get_mongo_db(self):
         host = os.environ["DATABASE_HOST"]
         user = os.environ["MONGODB_USERNAME"]
         password = os.environ["MONGODB_PASSWORD"]
         db_name = os.environ["DATABASE_NAME"]
-        print(f"Environment variables: {host}, {user}, {password}, {db_name}")
 
         client = MongoClient(
             host,
@@ -170,13 +166,7 @@ class IngestPipeline(object):
             Returns:
                 File object.
         """
-        # Mtx file types not included because class declaration is different
-        file_connections = {
-            "dense": Dense,
-            "cell_metadata": CellMetadata,
-            "cluster": Clusters,
-            "loom": Loom,
-        }
+        file_connections = {"cell_metadata": CellMetadata, "cluster": Clusters}
 
         return file_connections.get(file_type)(
             file_path,
@@ -224,41 +214,6 @@ class IngestPipeline(object):
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
-
-    def load_expression_file(self, gene_docs, data_array_documents):
-        print(f"Starting to load expression file")
-        start_time = datetime.datetime.now()
-        try:
-            print("Try to write data array docs")
-            self.db["data_arrays"].insert_many(data_array_documents, ordered=False)
-        except BulkWriteError as bwe:
-            print(f"error caused by data docs: {bwe.details}")
-            self.error_logger.error(bwe.details, extra=self.extra_log_params)
-            raise BulkWriteError(bwe.details)
-
-        except Exception as e:
-            print(f"error caused by data docs : {e}")
-            self.error_logger.error(e, extra=self.extra_log_params)
-            raise Exception(e)
-        try:
-            print("Try to write gene docs")
-            self.db["genes"].insert_many(gene_docs, ordered=False)
-        except BulkWriteError as bwe:
-            print(f"error caused by gene docs : {bwe.details}")
-            self.error_logger.error(bwe.details, extra=self.extra_log_params)
-            raise BulkWriteError(bwe.details)
-
-        except Exception as e:
-            print(f"error caused by gene docs : {e}")
-            self.error_logger.error(e, extra=self.extra_log_params)
-            raise Exception(f"{e}")
-        print(
-            f"Time to load {len(gene_docs) + len(data_array_documents)} models: {str(datetime.datetime.now() - start_time)}"
-        )
-        self.error_logger.error(
-            f"Time to load {len(gene_docs) + len(data_array_documents)} models: {str(datetime.datetime.now() - start_time)}",
-            extra=self.extra_log_params,
-        )
 
     def load_subsample(
         self, parent_collection_name, subsampled_data, set_data_array_fn, scope
@@ -344,22 +299,27 @@ class IngestPipeline(object):
         """
         Ingests expression files.
         """
-        print("trying to ingest expression file")
-        expression_ingestor = None
+
+        self.expression_ingestor = None
         if MTXIngestor.matches_file_type(self.matrix_file_type):
-            expression_ingestor = MTXIngestor(
+            self.expression_ingestor = MTXIngestor(
                 self.matrix_file, self.study_id, self.study_file_id, **self.kwargs
             )
+        if DenseIngestor.matches_file_type(self.matrix_file_type):
+            self.expression_ingestor = DenseIngestor(
+                self.matrix_file,
+                self.study_id,
+                self.study_file_id,
+                tracer=self.tracer,
+                **self.kwargs,
+            )  # Dense receiver
         try:
-            for gene_doc, data_array in expression_ingestor.execute_ingest():
-                self.load_expression_file(gene_doc, data_array)
+            self.expression_ingestor.execute_ingest()
         except Exception as e:
-            print(f"An exception has occurred {e}")
             self.error_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
 
-    # @my_debug_logger()
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         self.cell_metadata.preprocess()
@@ -462,7 +422,6 @@ def run_ingest(ingest, arguments, parsed_args):
     """
     status = []
     status_cell_metadata = None
-    print("Running ingest")
 
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
@@ -492,7 +451,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """
     if len(status) > 0:
         if all(i < 1 for i in status):
-            print("Finished ingest pipeline succesfully")
+
             sys.exit(os.EX_OK)
         else:
             # delocalize errors file

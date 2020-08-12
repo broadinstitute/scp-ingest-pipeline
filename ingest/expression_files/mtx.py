@@ -11,17 +11,23 @@ These are commonly provided from 10x Genomics v2.
 
 import datetime
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+import sys
 
 from bson.objectid import ObjectId
 
 try:
     from expression_files import GeneExpression
+
+    sys.path.append("../ingest")
     from ingest_files import IngestFiles
 except ImportError:
     # Used when importing as external package, e.g. imports in
     # single_cell_portal code
     from .expression_files import GeneExpression
-    from .ingest_files import IngestFiles
+
+    sys.path.append("../ingest")
+    from ..ingest_files import IngestFiles
+    from ..monitor import trace
 
 
 class MTXIngestor(GeneExpression):
@@ -44,18 +50,19 @@ class MTXIngestor(GeneExpression):
         )
         mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
         self.mtx_file = mtx_ingest_file.resolve_path(mtx_path)[0]
-        # Only known way to traverse through zipped files w/o unzipping
-        next(self.mtx_file)
-        next(self.mtx_file)
         # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
         # is the gene index, M is the barcode index, and K is the expression
         # score for the given gene index
-        self.mtx_description = next(self.mtx_file)
-        print("finished initializing mtx")
+        self.mtx_description = MTXIngestor.get_matrix_dimensions(self.mtx_file)
 
     @staticmethod
-    def is_sorted(idx: int, visited_expression_idx: int):
-        print("made it into is sorted")
+    def get_matrix_dimensions(file_handler) -> List:
+        for line in file_handler:
+            if not line.startswith("%"):
+                return line
+
+    @staticmethod
+    def is_sorted(idx: int, visited_expression_idx: List[int]):
         last_visited_idx = visited_expression_idx[-1]
         if idx not in visited_expression_idx:
             if idx == (last_visited_idx + 1):
@@ -77,6 +84,19 @@ class MTXIngestor(GeneExpression):
         ):
             data_arrays.append(model)
         return data_arrays
+
+    def execute_ingest(self):
+        self.extract_feature_barcode_matrices()
+        for gene_docs, data_array_documents in self.transform():
+            self.load(gene_docs, data_array_documents)
+        return 0
+
+    def extract_feature_barcode_matrices(self):
+        """
+        Sets relevant iterables for the gene and barcode file of the MTX bundle
+        """
+        self.genes = [g.strip().strip('"') for g in self.genes_file.readlines()]
+        self.cells = [c.strip().strip('"') for c in self.barcodes_file.readlines()]
 
     def transform(self):
         start_time = datetime.datetime.now()
@@ -104,28 +124,27 @@ class MTXIngestor(GeneExpression):
             current_idx = int(raw_gene_idx)
             gene_id, gene = self.genes[current_idx - 1].split("\t")
             if current_idx != last_idx:
-                # is_sorted = MTXIngestor.is_sorted(current_idx, visited_expression_idx)
-                # print(f"is the index sorted: {is_sorted}")
-                # if is_sorted:
-                visited_expression_idx.append(current_idx)
-                # Create data arrays from prior gene
-                if last_idx != 0:
-                    # Cell names that had significant (i.e. non-zero)
-                    # expression for gene
-                    dr_models = self.create_data_array(
-                        gene, f"{gene} Cells", exp_cells, "Study", model_id
-                    )
-                    data_arrays.extend(dr_models)
-                    # Significant (i.e. non-zero) expression values for
-                    # gene
-                    dr_models = self.create_data_array(
-                        gene, f"{gene} Expression", exp_scores, "Gene", model_id
-                    )
-                    data_arrays.extend(dr_models)
-                    # Reset variables so values will be associated w/new
-                    # gene
-                    exp_cells = []
-                    exp_scores = []
+                is_sorted = MTXIngestor.is_sorted(current_idx, visited_expression_idx)
+                if not is_sorted:
+                    raise ValueError("MTX file must be sorted")
+                else:
+                    visited_expression_idx.append(current_idx)
+                    # Create data arrays from prior gene
+                    if last_idx != 0:
+                        # Data array for Cell names
+                        dr_models = self.create_data_array(
+                            gene, f"{gene} Cells", exp_cells, "Study", model_id
+                        )
+                        data_arrays.extend(dr_models)
+                        # Data array for expression values
+                        dr_models = self.create_data_array(
+                            gene, f"{gene} Expression", exp_scores, "Gene", model_id
+                        )
+                        data_arrays.extend(dr_models)
+                        # Reset variables so values will be associated w/new
+                        # gene
+                        exp_cells = []
+                        exp_scores = []
                 if len(data_arrays) > 1_000:
                     num_processed += len(gene_models)
                     print(
@@ -143,8 +162,6 @@ class MTXIngestor(GeneExpression):
                 )
                 gene_models.append(gene_model)
                 last_idx = current_idx
-                # else:
-                #     raise ValueError("MTX file must be sorted")
             exp_cell = self.cells[int(raw_barcode_idx) - 1]
             exp_score = round(float(raw_exp_score), 3)
             exp_cells.append(exp_cell)
@@ -158,7 +175,6 @@ class MTXIngestor(GeneExpression):
         )
 
     def execute_ingest(self):
-        print(f"Executing ingest starting")
         self.extract_feature_barcode_matrices()
         for gene, data_arrays in self.transform():
             yield gene, data_arrays
