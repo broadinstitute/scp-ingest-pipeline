@@ -52,6 +52,7 @@ from expression_files.expression_files import GeneExpression
 from mock_data.dense_matrix_19_genes_100k_cells_txt.data_arrays import data_arrays
 
 
+
 def mock_load(self, *args, **kwargs):
     """Enables overwriting normal function with this placeholder.
     Returning the arguments enables tests to verify that the code invokes
@@ -122,7 +123,11 @@ class IngestTestCase(unittest.TestCase):
 
         return ingest, arguments, status, status_cell_metadata
 
-    def test_ingest_dense_matrix(self):
+    @patch(
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
+        return_value=True,
+    )
+    def test_ingest_dense_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract, transform, and load dense matrices
         """
         args = [
@@ -155,11 +160,15 @@ class IngestTestCase(unittest.TestCase):
             del model["_id"]
             # Verify gene model looks as expected
             self.assertEqual(model, gene_models[model["name"]])
-        for dr in actual_data_arrays:
-            del dr["linear_data_id"]
-            self.assertEqual(dr, data_arrays[dr["name"]])
+        for actual_data_array in actual_data_arrays:
+            del actual_data_array["linear_data_id"]
+            self.assertEqual(actual_data_array, data_arrays[actual_data_array["name"]])
 
-    def test_ingest_local_dense_matrix(self):
+    @patch(
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
+        return_value=True,
+    )
+    def test_ingest_local_dense_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract and transform local dense matrices
         """
 
@@ -192,11 +201,16 @@ class IngestTestCase(unittest.TestCase):
             # Ensure that 'ObjectID' in model is removed
             del model["_id"]
             self.assertEqual(model, gene_models[model["name"]])
-        for dr in actual_data_arrays:
-            del dr["linear_data_id"]
-            self.assertEqual(dr, data_arrays[dr["name"]])
+        # print(models)
+        for actual_data_array in actual_data_arrays:
+            del actual_data_array["linear_data_id"]
+            self.assertEqual(actual_data_array, data_arrays[actual_data_array["name"]])
 
-    def test_ingest_local_compressed_dense_matrix(self):
+    @patch(
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
+        return_value=True,
+    )
+    def test_ingest_local_compressed_dense_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract and transform local dense matrices
             from compressed file in the same manner as uncompressed file
         """
