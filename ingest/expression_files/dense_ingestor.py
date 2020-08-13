@@ -28,6 +28,8 @@ except ImportError:
 class DenseIngestor(GeneExpression, IngestFiles):
     # ToDo SCP-2635
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
+    GENE_BATCH_SIZE = 5
+    DATA_ARRAY_BATCH_SIZE = 1000
 
     def __init__(self, file_path, study_file_id, study_id, **matrix_kwargs):
         GeneExpression.__init__(self, file_path, study_file_id, study_id)
@@ -228,19 +230,26 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     gene, id, numeric_scores
                 ):
                     data_arrays.append(gene_expression_values)
-                if len(gene_models) == 5:
-                    num_processed += len(gene_models)
-                    self.info_logger.info(
-                        f"Processed {num_processed} models, "
-                        f"{str(datetime.datetime.now() - start_time)} elapsed",
-                        extra=self.extra_log_params,
-                    )
-                    yield gene_models, data_arrays
-                    gene_models = []
-                    data_arrays = []
-        yield gene_models, data_arrays
-        num_processed += len(gene_models)
-        self.info_logger.info(
-            f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
-            extra=self.extra_log_params,
-        )
+            if (
+                len(gene_models) >= self.GENE_BATCH_SIZE or
+                len(data_arrays) >= self.DATA_ARRAY_BATCH_SIZE
+            ):
+                num_processed += len(gene_models)
+                self.info_logger.info(
+                    f"Processed {num_processed} models, "
+                    f"{str(datetime.datetime.now() - start_time)} elapsed",
+                    extra=self.extra_log_params,
+                )
+                yield gene_models, data_arrays
+                gene_models = []
+                data_arrays = []
+
+        # load any remaining models (this is necessary here since there isn't an easy way to detect the
+        # last line of the file in the iteration above
+        if len(gene_models) > 0:
+            yield gene_models, data_arrays
+            num_processed += len(gene_models)
+            self.info_logger.info(
+                f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
+                extra=self.extra_log_params,
+            )

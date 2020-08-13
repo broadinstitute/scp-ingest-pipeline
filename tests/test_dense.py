@@ -177,3 +177,15 @@ class TestDense(unittest.TestCase):
                 del actual_data_array["linear_data_id"]
                 data_array_name = actual_data_array["name"]
                 self.assertEqual(actual_data_array, data_arrays[data_array_name])
+
+        """
+        Assures transform function creates gene data model correctly for files
+        with a number of genes that is a multiple of GENE_BATCH_SIZE (SCP-2669)
+        """
+        expression_matrix = DenseIngestor(
+            "../tests/data/dense_matrix_10_genes_15_cells.txt",
+            "5d276a50421aa9117c982845",
+            "5dd5ae25421aa910a723a337",
+        )
+        for actual_gene_models, actual_data_arrays in expression_matrix.transform():
+            self.assertEqual(DenseIngestor.GENE_BATCH_SIZE, len(actual_gene_models))
