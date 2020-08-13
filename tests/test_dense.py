@@ -84,12 +84,17 @@ class TestDense(unittest.TestCase):
         self.assertFalse(DenseIngestor.has_unique_header(invalid_header))
 
     def test_duplicate_gene(self):
+        FILE_PATH = "../tests/data/expression_matrix_bad_duplicate_gene.txt"
         expression_matrix = DenseIngestor(
-            "../tests/data/expression_matrix_bad_duplicate_gene.txt",
+            FILE_PATH,
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
             tracer=None,
         )
+        # Return file handler to correct position
+        expression_matrix.csv_file_handler = expression_matrix.open_file(FILE_PATH)[0]
+        # Skip header
+        next(expression_matrix.csv_file_handler)
         with self.assertRaises(ValueError) as error:
             for gene_mode, data_array in expression_matrix.transform():
                 pass
