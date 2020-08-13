@@ -12,7 +12,7 @@ import datetime
 import ntpath
 import sys
 from dataclasses import dataclass
-from typing import List, Dict  # noqa: F401
+from typing import List, Dict, Generator  # noqa: F401
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
@@ -46,6 +46,9 @@ class GeneExpression:
         _id: ObjectId
         gene_id: str = None
 
+    def get_inner_object(self):
+        return self.Model(self)
+
     def __init__(self, file_path: str, study_id: str, study_file_id: str):
         self.study_id = ObjectId(study_id)
         self.study_file_id = ObjectId(study_file_id)
@@ -56,13 +59,70 @@ class GeneExpression:
 
     @abc.abstractmethod
     def transform(self):
-        """Abstract method for transforming expression data into Gene data model"""
+        """Abstract method for transforming expression data into data models"""
 
     @abc.abstractmethod
-    def set_dataArray(self):
-        """An abstract method that will be implemented by inherrited classes.
-        Each expression file will have its own implementation of setting the
-        DataArray with expression data."""
+    def execute_ingest(self):
+        """Abstract method for parsing expression data into MongoDB"""
+
+    @staticmethod
+    @abc.abstractmethod
+    def check_valid():
+        """Abstract method for validating expression matrices"""
+
+    @staticmethod
+    def set_data_array(
+        name: str,
+        cluster_name: str,
+        array_type: str,
+        values: Generator,
+        linear_data_type: str,
+        linear_data_id,
+        *args,
+    ):
+        """
+        Sets data array
+        """
+        for model in DataArray(
+            name,
+            cluster_name,
+            array_type,
+            values,
+            linear_data_type,
+            linear_data_id,
+            *args,
+        ).get_data_array():
+            yield model
+
+    def set_data_array_cells(self, values: List, linear_data_id):
+        """Sets DataArray for cells that were observed in an
+        expression matrix."""
+        for model in DataArray(
+            f"{self.cluster_name} Cells",
+            self.cluster_name,
+            "cells",
+            values,
+            "Study",
+            linear_data_id,
+            self.study_id,
+            self.study_file_id,
+        ).get_data_array():
+            yield model
+
+    @staticmethod
+    def create_gene_model(
+        gene_name: str, study_file_id, study_id, gene_id: int, model_id: int
+    ):
+        return GeneExpression.Model(
+            {
+                "name": gene_name,
+                "searchable_name": gene_name.lower(),
+                "study_file_id": study_file_id,
+                "study_id": study_id,
+                "gene_id": gene_id,
+                "_id": model_id,
+            }
+        )
 
     @staticmethod
     def check_unique_cells(cell_names: List, study_id, client):
@@ -80,6 +140,7 @@ class GeneExpression:
                 {"linear_data_type": "Study"},
                 {"array_type": "cells"},
                 {"study_id": study_id},
+                {"linear_data_id": study_id},
             ]
         }
         # Returned fields from query results
@@ -99,12 +160,11 @@ class GeneExpression:
         ]
         dupes = set(existing_cells) & set(cell_names)
         if len(dupes) > 0:
-            error_string = f'Expression file contains {len(dupes)} cells that also exist in another expression file. '
+            error_string = f"Expression file contains {len(dupes)} cells that also exist in another expression file. "
             # add the first 3 duplicates to the error message
             error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
             raise ValueError(error_string)
         return True
-
 
     def set_data_array_cells(self, values: List, linear_data_id):
         """Sets DataArray for cells that were observed in an
