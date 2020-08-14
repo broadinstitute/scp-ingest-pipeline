@@ -1,10 +1,11 @@
 import sys
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, PropertyMock
 from bson.objectid import ObjectId
 
 sys.path.append("../ingest")
 from expression_files.dense_ingestor import DenseIngestor
+from expression_files.expression_files import GeneExpression
 from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_models
 from mock_data.dense_matrix_19_genes_100k_cells_txt.data_arrays import data_arrays
 
@@ -178,14 +179,36 @@ class TestDense(unittest.TestCase):
                 data_array_name = actual_data_array["name"]
                 self.assertEqual(actual_data_array, data_arrays[data_array_name])
 
+    def test_transform_fn_batch(self):
         """
-        Assures transform function creates gene data model correctly for files
-        with a number of genes that is a multiple of GENE_BATCH_SIZE (SCP-2669)
+        Assures transform function batches data array creation
+        the +1 fudge factor is because we only check for batch size after a full row
+        has been processed
         """
+        GeneExpression.DATA_ARRAY_BATCH_SIZE = 4
         expression_matrix = DenseIngestor(
             "../tests/data/dense_matrix_10_genes_15_cells.txt",
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
         )
-        for actual_gene_models, actual_data_arrays in expression_matrix.transform():
-            self.assertEqual(DenseIngestor.GENE_BATCH_SIZE, len(actual_gene_models))
+        with patch('expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE',
+                   new_callable=PropertyMock,
+                   return_value=4):
+            for actual_gene_models, actual_data_arrays in expression_matrix.transform():
+                self.assertTrue(GeneExpression.DATA_ARRAY_BATCH_SIZE + 1 >= len(actual_data_arrays))
+
+        """
+        Assures transform function creates gene data model correctly for files
+        with a number of data arrays that is a multiple of DATA_ARRAY_BATCH_SIZE (SCP-2669)
+        """
+        GeneExpression.DATA_ARRAY_BATCH_SIZE = 21
+        expression_matrix = DenseIngestor(
+            "../tests/data/dense_matrix_10_genes_15_cells.txt",
+            "5d276a50421aa9117c982845",
+            "5dd5ae25421aa910a723a337",
+        )
+        with patch('expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE',
+                   new_callable=PropertyMock,
+                   return_value=21):
+            for actual_gene_models, actual_data_arrays in expression_matrix.transform():
+                self.assertEqual(GeneExpression.DATA_ARRAY_BATCH_SIZE, len(actual_data_arrays))

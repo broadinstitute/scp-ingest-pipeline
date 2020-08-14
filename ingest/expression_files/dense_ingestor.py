@@ -28,8 +28,6 @@ except ImportError:
 class DenseIngestor(GeneExpression, IngestFiles):
     # ToDo SCP-2635
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
-    GENE_BATCH_SIZE = 5
-    DATA_ARRAY_BATCH_SIZE = 1000
 
     def __init__(self, file_path, study_file_id, study_id, **matrix_kwargs):
         GeneExpression.__init__(self, file_path, study_file_id, study_id)
@@ -63,32 +61,31 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def check_valid(header, first_row, query_params):
-      error_messages = []
+        error_messages = []
 
-      try:
-          DenseIngestor.check_unique_header(header)
-      except ValueError as v:
-          error_messages.append(str(v))
-      try:
-          DenseIngestor.check_gene_keyword(header, first_row)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            DenseIngestor.check_unique_header(header)
+        except ValueError as v:
+            error_messages.append(str(v))
+        try:
+            DenseIngestor.check_gene_keyword(header, first_row)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      try:
-          DenseIngestor.check_header_valid_values(header)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            DenseIngestor.check_header_valid_values(header)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      try:
-          GeneExpression.check_unique_cells(header, *query_params)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            GeneExpression.check_unique_cells(header, *query_params)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      if len(error_messages) > 0:
-          raise ValueError('; '.join(error_messages))
+        if len(error_messages) > 0:
+            raise ValueError('; '.join(error_messages))
 
-      return True
-
+        return True
 
     @staticmethod
     def format_gene_name(gene):
@@ -231,8 +228,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 ):
                     data_arrays.append(gene_expression_values)
             if (
-                len(gene_models) >= self.GENE_BATCH_SIZE or
-                len(data_arrays) >= self.DATA_ARRAY_BATCH_SIZE
+                len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE
             ):
                 num_processed += len(gene_models)
                 self.info_logger.info(

@@ -34,6 +34,7 @@ except ImportError:
 class GeneExpression:
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = "genes"
+    DATA_ARRAY_BATCH_SIZE = 1000
     info_logger = setup_logger(__name__, "info.txt")
 
     @dataclass
@@ -104,7 +105,6 @@ class GeneExpression:
             error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
             raise ValueError(error_string)
         return True
-
 
     def set_data_array_cells(self, values: List, linear_data_id):
         """Sets DataArray for cells that were observed in an
