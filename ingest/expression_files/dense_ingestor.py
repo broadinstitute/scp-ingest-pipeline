@@ -61,32 +61,31 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def check_valid(header, first_row, query_params):
-      error_messages = []
+        error_messages = []
 
-      try:
-          DenseIngestor.check_unique_header(header)
-      except ValueError as v:
-          error_messages.append(str(v))
-      try:
-          DenseIngestor.check_gene_keyword(header, first_row)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            DenseIngestor.check_unique_header(header)
+        except ValueError as v:
+            error_messages.append(str(v))
+        try:
+            DenseIngestor.check_gene_keyword(header, first_row)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      try:
-          DenseIngestor.check_header_valid_values(header)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            DenseIngestor.check_header_valid_values(header)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      try:
-          GeneExpression.check_unique_cells(header, *query_params)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            GeneExpression.check_unique_cells(header, *query_params)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      if len(error_messages) > 0:
-          raise ValueError('; '.join(error_messages))
+        if len(error_messages) > 0:
+            raise ValueError("; ".join(error_messages))
 
-      return True
-
+        return True
 
     @staticmethod
     def format_gene_name(gene):
@@ -191,44 +190,57 @@ class DenseIngestor(GeneExpression, IngestFiles):
         num_processed = 0
         gene_models = []
         data_arrays = []
-        for all_cell_model in self.set_data_array_cells(self.header[1:], ObjectId()):
+        for all_cell_model in GeneExpression.create_data_array(
+            **self.da_kwargs,
+            name=f"{self.cluster_name} Cells",
+            array_type="Cells",
+            values=self.header[1:],
+            linear_data_type="Study",
+            linear_data_id=ObjectId(),
+        ):
             data_arrays.append(all_cell_model)
         # Represents row as a list
         for row in self.csv_file_handler:
-            valid_expression_scores, cells = DenseIngestor.filter_expression_scores(
+            valid_expression_scores, exp_cells = DenseIngestor.filter_expression_scores(
                 row[1:], self.header
             )
-            numeric_scores = DenseIngestor.process_row(valid_expression_scores)
+            exp_scores = DenseIngestor.process_row(valid_expression_scores)
             gene = row[0]
             if gene in self.gene_names:
                 raise ValueError(f"Duplicate gene: {gene}")
             self.gene_names[gene] = True
             formatted_gene_name = DenseIngestor.format_gene_name(gene)
-            id = ObjectId()
-            gene_models.append(
-                self.Model(
-                    {
-                        "name": formatted_gene_name,
-                        "searchable_name": formatted_gene_name.lower(),
-                        "study_file_id": self.study_file_id,
-                        "study_id": self.study_id,
-                        "_id": id,
-                        "gene_id": None,
-                    }
-                )
+            _id = ObjectId()
+            gene_model = GeneExpression.create_gene_model(
+                gene_name=formatted_gene_name,
+                study_file_id=self.study_file_id,
+                study_id=self.study_id,
+                gene_id=None,
+                _id=_id,
             )
+            gene_models.append(gene_model)
             if len(valid_expression_scores) > 0:
-                for gene_cell_model in self.set_data_array_gene_cell_names(
-                    gene, id, cells
+                # Data array for cell names
+                for da in GeneExpression.create_data_array(
+                    name=f"{gene} Cells",
+                    array_type="cells",
+                    values=exp_cells,
+                    linear_data_type="Gene",
+                    linear_data_id=_id,
+                    **self.da_kwargs,
                 ):
-                    data_arrays.append(gene_cell_model)
-                for (
-                    gene_expression_values
-                ) in self.set_data_array_gene_expression_values(
-                    gene, id, numeric_scores
+                    data_arrays.append(da)
+                # Data array for expression values
+                for da in GeneExpression.create_data_array(
+                    name=f"{gene} Expression",
+                    array_type="expression",
+                    linear_data_type="Gene",
+                    values=exp_scores,
+                    linear_data_id=_id,
+                    **self.da_kwargs,
                 ):
-                    data_arrays.append(gene_expression_values)
-                if len(gene_models) == 5:
+                    data_arrays.append(da)
+                if len(data_arrays) > 1_000:
                     num_processed += len(gene_models)
                     self.info_logger.info(
                         f"Processed {num_processed} models, "
@@ -238,9 +250,10 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     yield gene_models, data_arrays
                     gene_models = []
                     data_arrays = []
-        yield gene_models, data_arrays
-        num_processed += len(gene_models)
-        self.info_logger.info(
-            f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
-            extra=self.extra_log_params,
-        )
+        if gene_models:
+            yield gene_models, data_arrays
+            num_processed += len(gene_models)
+            self.info_logger.info(
+                f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
+                extra=self.extra_log_params,
+            )

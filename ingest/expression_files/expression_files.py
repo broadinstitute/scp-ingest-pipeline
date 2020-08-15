@@ -56,6 +56,12 @@ class GeneExpression:
         self.cluster_name = tail or ntpath.basename(head)
         self.extra_log_params = {"study_id": self.study_id, "duration": None}
         self.mongo_connection = MongoConnection()
+        # Common data array kwargs
+        self.da_kwargs = {
+            "cluster_name": self.cluster_name,
+            "study_file_id": self.study_file_id,
+            "study_id": self.study_id,
+        }
 
     @abc.abstractmethod
     def transform(self):
@@ -94,25 +100,13 @@ class GeneExpression:
         ).get_data_array():
             yield model
 
-    def set_data_array_cells(self, values: List, linear_data_id):
-        """Sets DataArray for cells that were observed in an
-        expression matrix."""
-        for model in DataArray(
-            f"{self.cluster_name} Cells",
-            self.cluster_name,
-            "cells",
-            values,
-            "Study",
-            linear_data_id,
-            self.study_id,
-            self.study_file_id,
-        ).get_data_array():
-            yield model
-
     @staticmethod
     def create_gene_model(
-        gene_name: str, study_file_id, study_id, gene_id: int, model_id: int
+        *ignore, gene_name: str, study_file_id, study_id, gene_id: int, _id: int
     ):
+        # Positional arguments passed in
+        if ignore:
+            raise TypeError("Position arguments are not accepted.")
         return GeneExpression.Model(
             {
                 "name": gene_name,
@@ -120,7 +114,7 @@ class GeneExpression:
                 "study_file_id": study_file_id,
                 "study_id": study_id,
                 "gene_id": gene_id,
-                "_id": model_id,
+                "_id": _id,
             }
         )
 
@@ -160,62 +154,44 @@ class GeneExpression:
         ]
         dupes = set(existing_cells) & set(cell_names)
         if len(dupes) > 0:
-            error_string = f"Expression file contains {len(dupes)} cells that also exist in another expression file. "
+            error_string = (
+                f"Expression file contains {len(dupes)} cells "
+                "that also exist in another expression file."
+            )
             # add the first 3 duplicates to the error message
             error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
             raise ValueError(error_string)
         return True
 
-    def set_data_array_cells(self, values: List, linear_data_id):
-        """Sets DataArray for cells that were observed in an
-        expression matrix."""
-        for model in DataArray(
-            f"{self.cluster_name} Cells",
-            self.cluster_name,
-            "cells",
-            values,
-            "Study",
-            linear_data_id,
-            self.study_id,
-            self.study_file_id,
-        ).get_data_array():
-            yield model
-
-    def set_data_array_gene_cell_names(
-        self, name: str, linear_data_id: str, values: List
-    ):
-        """Sets DataArray for cell names associated to a single gene. This
-        DataArray contains cell names that had significant (i.e. non-zero)
-        expression for a gene.
-        """
-        for model in DataArray(
-            f"{name} Cells",
-            self.cluster_name,
-            "cells",
-            values,
-            "Gene",
-            linear_data_id,
-            self.study_id,
-            self.study_file_id,
-        ).get_data_array():
-            yield model
-
-    def set_data_array_gene_expression_values(
-        self, name: str, linear_data_id: str, values: List
+    @staticmethod
+    def create_data_array(
+        *ignore,
+        # keyword arguments
+        name: str,
+        cluster_name: str,
+        array_type: str,
+        values: Generator,
+        linear_data_type: str,
+        linear_data_id,
+        study_id,
+        study_file_id,
     ):
         """
-        Sets DataArray for expression values for a gene. This is an array of
-        significant (i.e. non-zero) expression values for a gene.
+        Sets data array.
+        Only allows keyword arguments
         """
+        # Positional arguments passed in
+        if ignore:
+            raise TypeError("Position arguments are not accepted.")
         for model in DataArray(
-            f"{name} Expression",
-            self.cluster_name,
-            "expression",
+            name,
+            cluster_name,
+            array_type,
             values,
-            "Gene",
+            linear_data_type,
             linear_data_id,
-            self.study_id,
-            self.study_file_id,
+            study_id,
+            study_file_id,
         ).get_data_array():
             yield model
 
