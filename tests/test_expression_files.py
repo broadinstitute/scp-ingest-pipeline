@@ -5,6 +5,8 @@ from bson.objectid import ObjectId
 
 sys.path.append("../ingest")
 from expression_files.expression_files import GeneExpression
+from ingest_files import DataArray
+from typing import Dict
 
 
 class TestExpressionFiles(unittest.TestCase):
@@ -37,3 +39,24 @@ class TestExpressionFiles(unittest.TestCase):
         self.assertTrue(
             GeneExpression.check_unique_cells(header, ObjectId(), client_mock)
         )
+
+    def test_create_data_array(self):
+        _id = ObjectId()
+        study_id = ObjectId()
+        study_file_id = ObjectId()
+        kwargs = {
+            "name": "foo",
+            "cluster_name": "foo_name",
+            "array_type": "foo_type",
+            "values": [1, 2, 3, 4, 5],
+            "linear_data_type": "data_dtype",
+            "linear_data_id": _id,
+            "study_id": study_id,
+            "study_file_id": study_file_id,
+        }
+
+        self.assertRaises(
+            TypeError, [GeneExpression.create_data_array], "bad_position_arg", **kwargs
+        )
+        actual_da: Dict = next(GeneExpression.create_data_array(**kwargs))
+        self.assertEqual(DataArray(**kwargs), actual_da)
