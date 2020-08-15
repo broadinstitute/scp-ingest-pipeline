@@ -11,6 +11,7 @@ import abc
 import datetime
 import ntpath
 import sys
+import copy
 from dataclasses import dataclass
 from typing import List, Dict, Generator  # noqa: F401
 
@@ -75,30 +76,6 @@ class GeneExpression:
     @abc.abstractmethod
     def check_valid():
         """Abstract method for validating expression matrices"""
-
-    @staticmethod
-    def set_data_array(
-        name: str,
-        cluster_name: str,
-        array_type: str,
-        values: Generator,
-        linear_data_type: str,
-        linear_data_id,
-        *args,
-    ):
-        """
-        Sets data array
-        """
-        for model in DataArray(
-            name,
-            cluster_name,
-            array_type,
-            values,
-            linear_data_type,
-            linear_data_id,
-            *args,
-        ).get_data_array():
-            yield model
 
     @staticmethod
     def create_gene_model(
@@ -180,19 +157,12 @@ class GeneExpression:
         Sets data array.
         Only allows keyword arguments
         """
+        fn_kwargs = copy.copy(locals())
         # Positional arguments passed in
         if ignore:
             raise TypeError("Position arguments are not accepted.")
-        for model in DataArray(
-            name,
-            cluster_name,
-            array_type,
-            values,
-            linear_data_type,
-            linear_data_id,
-            study_id,
-            study_file_id,
-        ).get_data_array():
+        del fn_kwargs["ignore"]
+        for model in DataArray(**fn_kwargs).get_data_array():
             yield model
 
     def load(self, gene_docs: List, data_array_docs: List):
