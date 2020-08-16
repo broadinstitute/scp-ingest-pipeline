@@ -60,3 +60,25 @@ class TestExpressionFiles(unittest.TestCase):
         )
         actual_da: Dict = next(GeneExpression.create_data_array(**kwargs))
         self.assertEqual(DataArray(**kwargs), actual_da)
+
+    def test_create_gene_model(self):
+        _id = ObjectId()
+        study_id = ObjectId()
+        study_file_id = ObjectId()
+        kwargs = {
+            "name": "foo",
+            "study_file_id": study_file_id,
+            "study_id": study_id,
+            "_id": _id,
+        }
+        self.assertRaises(
+            TypeError, [GeneExpression.create_gene_model], "bad_position_arg", **kwargs
+        )
+        self.assertRaises(
+            TypeError, [GeneExpression.create_gene_model], hi="bad_kwarg", **kwargs
+        )
+        actual_gene_model = GeneExpression.create_gene_model(**kwargs)
+        expected_gene_model = GeneExpression.Model(
+            searchable_name="foo", gene_id=None, **kwargs
+        )
+        self.assertEqual(actual_gene_model, expected_gene_model)
