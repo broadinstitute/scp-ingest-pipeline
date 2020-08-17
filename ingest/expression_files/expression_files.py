@@ -35,6 +35,7 @@ except ImportError:
 class GeneExpression:
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = "genes"
+    DATA_ARRAY_BATCH_SIZE = 1000
     info_logger = setup_logger(__name__, "info.txt")
 
     @dataclass
@@ -135,6 +136,7 @@ class GeneExpression:
                 f"Expression file contains {len(dupes)} cells "
                 "that also exist in another expression file."
             )
+
             # add the first 3 duplicates to the error message
             error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
             raise ValueError(error_string)
