@@ -185,7 +185,7 @@ class TestDense(unittest.TestCase):
         the +1 fudge factor is because we only check for batch size after a full row
         has been processed
         """
-        GeneExpression.DATA_ARRAY_BATCH_SIZE = 4
+
         expression_matrix = DenseIngestor(
             "../tests/data/dense_matrix_10_genes_15_cells.txt",
             "5d276a50421aa9117c982845",
@@ -200,8 +200,8 @@ class TestDense(unittest.TestCase):
         """
         Assures transform function creates gene data model correctly for files
         with a number of data arrays that is a multiple of DATA_ARRAY_BATCH_SIZE (SCP-2669)
+        (note that the number of data_arrays is (number of genes) * 2 + 1)
         """
-        GeneExpression.DATA_ARRAY_BATCH_SIZE = 21
         expression_matrix = DenseIngestor(
             "../tests/data/dense_matrix_10_genes_15_cells.txt",
             "5d276a50421aa9117c982845",
