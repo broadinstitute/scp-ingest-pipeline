@@ -56,11 +56,11 @@ class MTXIngestor(GeneExpression):
         self.mtx_dimensions: List[int] = MTXIngestor.get_mtx_dimensions(self.mtx_file)
 
     @staticmethod
-    def check_valid(cell_names: List[str], barcodes, genes):
+    def check_valid(barcodes: List[str], genes: List[str], mtx_dimensions):
         error_messages = []
 
         try:
-            MTXIngestor.check_bundle(barcodes, genes, cell_names)
+            MTXIngestor.check_bundle(barcodes, genes, mtx_dimensions)
         except ValueError as v:
             error_messages.append(str(v))
         try:
@@ -68,7 +68,7 @@ class MTXIngestor(GeneExpression):
         except ValueError as v:
             error_messages.append(str(v))
         try:
-            GeneExpression.check_unique_cells(cell_names)
+            GeneExpression.check_unique_cells(barcodes)
         except ValueError as v:
             error_messages.append(str(v))
 
@@ -80,23 +80,26 @@ class MTXIngestor(GeneExpression):
     def check_bundle(barcodes, genes, mtx_dimensions):
         """Confirms barcode and gene files have expected length of values"""
         expected_genes = mtx_dimensions[0]
-        expected_barcodes = mtx_dimensions[1]
-        actual_genes = len(barcodes)
-        actual_barcodes = len(genes)
+        actual_genes = len(genes)
 
-        if actual_barcodes == expected_barcodes and actual_genes == expected_genes:
+        expected_barcodes = mtx_dimensions[1]
+        actual_barcodes = len(barcodes)
+
+        if (actual_barcodes == expected_barcodes) and (actual_genes == expected_genes):
+
+            return True
+        else:
             msg = (
-                f"Expected {expected_barcodes} cells and {expected_genes}. "
-                f"Got {actual_barcodes} cells and {actual_genes}"
+                f"Expected {expected_barcodes} cells and {expected_genes} genes. "
+                f"Got {actual_barcodes} cells and {actual_genes} genes."
             )
             raise ValueError(msg)
-        return True
 
     @staticmethod
     def check_duplicate_genes(gene_names: List):
         unique_gene_names: List[str] = set(gene_names)
         if len(unique_gene_names) != len(gene_names):
-            amount_of_duplicates = unique_gene_names - len(gene_names)
+            amount_of_duplicates = len(unique_gene_names) - len(gene_names)
             msg = (
                 "Duplicate header values are not allowed."
                 f"There are {amount_of_duplicates} duplicates"
@@ -129,7 +132,7 @@ class MTXIngestor(GeneExpression):
     def execute_ingest(self):
         self.extract_feature_barcode_matrices()
         if MTXIngestor.check_valid(self.cells, self.genes, self.mtx_dimensions):
-            for gene_docs, data_array_documents in self.transform:
+            for gene_docs, data_array_documents in self.transform():
                 self.load(gene_docs, data_array_documents)
 
     def extract_feature_barcode_matrices(self):
@@ -215,7 +218,7 @@ class MTXIngestor(GeneExpression):
                 model_id = ObjectId()
                 # Add current gene's gene model
                 gene_model = GeneExpression.create_gene_model(
-                    gene_name=gene,
+                    name=gene,
                     study_file_id=self.study_file_id,
                     study_id=self.study_id,
                     gene_id=gene_id,
