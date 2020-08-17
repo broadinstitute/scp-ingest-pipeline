@@ -212,8 +212,8 @@ class DenseIngestor(GeneExpression, IngestFiles):
         for all_cell_model in GeneExpression.create_data_array(
             **self.da_kwargs,
             name=f"{self.cluster_name} Cells",
-            array_type="Cells",
-            values=self.header[1:],
+            array_type="cells",
+            values=self.header,
             linear_data_type="Study",
             linear_data_id=ObjectId(),
         ):
@@ -232,7 +232,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             formatted_gene_name = DenseIngestor.format_gene_name(gene)
             _id = ObjectId()
             gene_model = GeneExpression.create_gene_model(
-                gene_name=formatted_gene_name,
+                name=formatted_gene_name,
                 study_file_id=self.study_file_id,
                 study_id=self.study_id,
                 gene_id=None,
@@ -260,7 +260,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     **self.da_kwargs,
                 ):
                     data_arrays.append(da)
-                if len(data_arrays) > 1_000:
+                if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
                     num_processed += len(gene_models)
                     self.info_logger.info(
                         f"Processed {num_processed} models, "
