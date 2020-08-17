@@ -69,4 +69,5 @@ class TestMTXIngestor(unittest.TestCase):
             if num not in visited_nums:
                 visited_nums.append(num)
 
-        self.assertRaises(ValueError, MTXIngestor.is_sorted, num, visited_nums)
+        unsorted = [1, 2, 2, 4]
+        self.assertRaises(ValueError, MTXIngestor.is_sorted, unsorted, visited_nums)
