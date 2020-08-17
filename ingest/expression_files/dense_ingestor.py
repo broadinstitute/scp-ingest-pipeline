@@ -35,13 +35,21 @@ class DenseIngestor(GeneExpression, IngestFiles):
         )
         # To allow additional optional keyword arguments like gene_id
         self.matrix_params = matrix_kwargs
-        self.csv_file_handler, self.file_handler = self.open_file(self.file_path)
         self.gene_names = {}
-        self.header = DenseIngestor.process_header(next(self.csv_file_handler))
-        self.is_r_file = DenseIngestor.is_r_formatted_file(
-            self.header, next(self.csv_file_handler)
-        )
+        self.header = self.set_header()
+        self.csv_file_handler, self.file_handler = self.open_file(self.file_path)
+        # Reset csv reader to first gene row
+        next(self.csv_file_handler)
 
+    def set_header(self):
+        csv_file_handler = self.open_file(self.file_path)[0]
+        header = next(csv_file_handler)
+        row = next(csv_file_handler)
+        is_r_file = DenseIngestor.is_r_formatted_file(header, row)
+        # Cell names are formatted differently in R files
+        return header if is_r_file else header[1:]
+
+    @staticmethod
     def matches_file_type(file_type):
         return file_type == "dense"
 
@@ -202,18 +210,15 @@ class DenseIngestor(GeneExpression, IngestFiles):
         num_processed = 0
         gene_models = []
         data_arrays = []
-        # Cell names are formatted differently in R files
-        cell_names = self.header if self.is_r_file else self.header[1:]
-        for all_cell_model in self.set_data_array_cells(cell_names, ObjectId()):
+        for all_cell_model in self.set_data_array_cells(self.header, ObjectId()):
             data_arrays.append(all_cell_model)
         # Represents row as a list
         for row in self.csv_file_handler:
             valid_expression_scores, cells = DenseIngestor.filter_expression_scores(
-                row[1:], cell_names
+                row[1:], self.header
             )
             numeric_scores = DenseIngestor.process_row(valid_expression_scores)
             gene = row[0]
-            print(self.gene_names)
             if gene in self.gene_names:
                 raise ValueError(f"Duplicate gene: {gene}")
             self.gene_names[gene] = True
@@ -242,19 +247,23 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     gene, id, numeric_scores
                 ):
                     data_arrays.append(gene_expression_values)
-                if len(gene_models) == 5:
-                    num_processed += len(gene_models)
-                    self.info_logger.info(
-                        f"Processed {num_processed} models, "
-                        f"{str(datetime.datetime.now() - start_time)} elapsed",
-                        extra=self.extra_log_params,
-                    )
-                    yield gene_models, data_arrays
-                    gene_models = []
-                    data_arrays = []
-        yield gene_models, data_arrays
-        num_processed += len(gene_models)
-        self.info_logger.info(
-            f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
-            extra=self.extra_log_params,
-        )
+            if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
+                num_processed += len(gene_models)
+                self.info_logger.info(
+                    f"Processed {num_processed} models, "
+                    f"{str(datetime.datetime.now() - start_time)} elapsed",
+                    extra=self.extra_log_params,
+                )
+                yield gene_models, data_arrays
+                gene_models = []
+                data_arrays = []
+
+        # load any remaining models (this is necessary here since there isn't an easy way to detect the
+        # last line of the file in the iteration above
+        if len(gene_models) > 0:
+            yield gene_models, data_arrays
+            num_processed += len(gene_models)
+            self.info_logger.info(
+                f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
+                extra=self.extra_log_params,
+            )
