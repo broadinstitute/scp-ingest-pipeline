@@ -126,23 +126,6 @@ class MTXIngestor(GeneExpression):
             else:
                 raise ValueError("MTX file must be sorted")
 
-    def create_data_array(
-        self, gene: str, array_type: str, values: List[str], linear_data_type: str, id
-    ) -> List:
-        data_arrays = []
-        for model in GeneExpression.set_data_array(
-            gene,
-            self.cluster_name,
-            array_type,
-            values,
-            linear_data_type,
-            id,
-            self.study_id,
-            self.study_file_id,
-        ):
-            data_arrays.append(model)
-        return data_arrays
-
     def execute_ingest(self):
         self.extract_feature_barcode_matrices()
         if MTXIngestor.check_valid(self.cells, self.genes, self.mtx_dimensions):
@@ -160,7 +143,6 @@ class MTXIngestor(GeneExpression):
             c.strip().strip('"') for c in self.barcodes_file.readlines()
         ]
 
-    @property
     def transform(self):
         start_time = datetime.datetime.now()
         num_processed = 0
@@ -174,12 +156,13 @@ class MTXIngestor(GeneExpression):
 
         # All observed cells
         data_arrays.extend(
-            self.create_data_array(
-                f"{self.cluster_name} Cells",
-                "cells",
-                self.cells,
-                "Study",
-                self.study_file_id,
+            GeneExpression.create_data_array(
+                name=f"{self.cluster_name} Cells",
+                array_type="cells",
+                values=self.cells,
+                linear_data_type="Study",
+                linear_data_id=self.study_file_id,
+                **self.da_kwargs,
             )
         )
         for row in self.mtx_file:
@@ -195,13 +178,23 @@ class MTXIngestor(GeneExpression):
                     # Create data arrays from prior gene
                     if last_idx != 0:
                         # Data array for cell names
-                        da_cells = self.create_data_array(
-                            gene, f"{gene} Cells", exp_cells, "Study", model_id
+                        da_cells = GeneExpression.create_data_array(
+                            name=gene,
+                            array_type=f"{gene} Cells",
+                            values=exp_cells,
+                            linear_data_type="Study",
+                            linear_data_id=model_id,
+                            **self.da_kwargs,
                         )
                         data_arrays.extend(da_cells)
                         # Data array for expression values
-                        da_exp = self.create_data_array(
-                            gene, f"{gene} Expression", exp_scores, "Gene", model_id
+                        da_exp = GeneExpression.create_data_array(
+                            name=gene,
+                            array_type=f"{gene} Expression",
+                            values=exp_scores,
+                            linear_data_type="Gene",
+                            linear_data_id=model_id,
+                            **self.da_kwargs,
                         )
                         data_arrays.extend(da_exp)
                         # Reset variables so values will be associated w/new
@@ -222,7 +215,11 @@ class MTXIngestor(GeneExpression):
                 model_id = ObjectId()
                 # Add current gene's gene model
                 gene_model = GeneExpression.create_gene_model(
-                    gene, self.study_file_id, self.study_id, gene_id, model_id
+                    gene_name=gene,
+                    study_file_id=self.study_file_id,
+                    study_id=self.study_id,
+                    gene_id=gene_id,
+                    _id=model_id,
                 )
                 gene_models.append(gene_model)
                 last_idx = current_idx
@@ -230,7 +227,7 @@ class MTXIngestor(GeneExpression):
             exp_score = round(float(raw_exp_score), 3)
             exp_cells.append(exp_cell)
             exp_scores.append(exp_score)
-        if gene_models:
+        if len(gene_models) > 0:
             yield gene_models, data_arrays
             num_processed += len(gene_models)
             print(
