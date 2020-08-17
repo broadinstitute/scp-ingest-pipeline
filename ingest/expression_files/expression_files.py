@@ -100,7 +100,7 @@ class GeneExpression:
         ]
         dupes = set(existing_cells) & set(cell_names)
         if len(dupes) > 0:
-            error_string = f'Expression file contains {len(dupes)} cells that also exist in another expression file. '
+            error_string = f"Expression file contains {len(dupes)} cells that also exist in another expression file. "
             # add the first 3 duplicates to the error message
             error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
             raise ValueError(error_string)
