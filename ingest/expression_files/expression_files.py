@@ -34,6 +34,7 @@ except ImportError:
 class GeneExpression:
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = "genes"
+    DATA_ARRAY_BATCH_SIZE = 1000
     info_logger = setup_logger(__name__, "info.txt")
 
     @dataclass
