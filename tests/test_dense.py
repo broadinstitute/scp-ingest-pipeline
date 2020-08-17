@@ -34,7 +34,19 @@ class TestDense(unittest.TestCase):
 
     def test_filter_expression_scores(self):
         scores = ["BRCA1", 4, 0, 3, "0", None, "", "   ", "nan", "NaN", "Nan", "NAN"]
-        cells = ["foo", "foo2", "foo3", "foo4", "foo5"]
+        cells = [
+            "foo",
+            "foo2",
+            "foo3",
+            "foo4",
+            "foo5",
+            "foo6",
+            "foo7",
+            "foo8",
+            "foo9",
+            "foo10",
+            "foo11",
+        ]
         actual_filtered_values, actual_filtered_cells = DenseIngestor.filter_expression_scores(
             scores[1:], cells
         )

@@ -155,7 +155,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
                         float(expression_score)
                     ):
                         valid_expression_scores.append(expression_score)
-                        # add one to account for gene name in scores list
                         associated_cells.append(cells[idx])
             except Exception:
                 raise ValueError("Score '{expression_score}' is not valid")
