@@ -34,7 +34,7 @@ class TestDense(unittest.TestCase):
         )
 
     def test_filter_expression_scores(self):
-        scores = ["BRCA1", 4, 0, 3, "0", None, "", "   ", "nan", "NaN", "Nan", "NAN"]
+        scores = ["BRCA1", 4, 0, "0", None, "", "   ", "nan", "NaN", "Nan", "NAN", 3]
         cells = [
             "foo",
             "foo2",
@@ -52,7 +52,7 @@ class TestDense(unittest.TestCase):
             scores[1:], cells
         )
         self.assertEqual([4, 3], actual_filtered_values)
-        self.assertEqual(["foo", "foo3"], actual_filtered_cells)
+        self.assertEqual(["foo", "foo11"], actual_filtered_cells)
 
         invalid_scores = ["BRCA1", 4, 0, 3, "0", None, "T"]
         self.assertRaises(
@@ -211,11 +211,15 @@ class TestDense(unittest.TestCase):
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
         )
-        with patch('expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE',
-                   new_callable=PropertyMock,
-                   return_value=4):
+        with patch(
+            "expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE",
+            new_callable=PropertyMock,
+            return_value=4,
+        ):
             for actual_gene_models, actual_data_arrays in expression_matrix.transform():
-                self.assertTrue(GeneExpression.DATA_ARRAY_BATCH_SIZE + 1 >= len(actual_data_arrays))
+                self.assertTrue(
+                    GeneExpression.DATA_ARRAY_BATCH_SIZE + 1 >= len(actual_data_arrays)
+                )
 
         """
         Assures transform function creates gene data model correctly for files
@@ -227,8 +231,12 @@ class TestDense(unittest.TestCase):
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
         )
-        with patch('expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE',
-                   new_callable=PropertyMock,
-                   return_value=21):
+        with patch(
+            "expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE",
+            new_callable=PropertyMock,
+            return_value=21,
+        ):
             for actual_gene_models, actual_data_arrays in expression_matrix.transform():
-                self.assertEqual(GeneExpression.DATA_ARRAY_BATCH_SIZE, len(actual_data_arrays))
+                self.assertEqual(
+                    GeneExpression.DATA_ARRAY_BATCH_SIZE, len(actual_data_arrays)
+                )
