@@ -48,9 +48,6 @@ class GeneExpression:
         _id: ObjectId
         gene_id: str = None
 
-    def get_inner_object(self):
-        return self.Model(self)
-
     def __init__(self, file_path: str, study_id: str, study_file_id: str):
         self.study_id = ObjectId(study_id)
         self.study_file_id = ObjectId(study_file_id)
