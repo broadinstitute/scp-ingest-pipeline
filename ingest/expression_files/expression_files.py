@@ -79,15 +79,15 @@ class GeneExpression:
 
     @staticmethod
     def create_gene_model(
-        *ignore, gene_name: str, study_file_id, study_id, gene_id: int, _id: int
+        *ignore, name: str, study_file_id, study_id, _id: int, gene_id: int = None
     ):
-        # Positional arguments passed in
+        # Positional arguments passed in,
         if ignore:
             raise TypeError("Position arguments are not accepted.")
         return GeneExpression.Model(
             {
-                "name": gene_name,
-                "searchable_name": gene_name.lower(),
+                "name": name,
+                "searchable_name": name.lower(),
                 "study_file_id": study_file_id,
                 "study_id": study_id,
                 "gene_id": gene_id,
@@ -147,12 +147,12 @@ class GeneExpression:
         name: str,
         cluster_name: str,
         array_type: str,
-        values: Generator,
+        values: List,
         linear_data_type: str,
         linear_data_id,
         study_id,
         study_file_id,
-    ):
+    ) -> Generator:
         """
         Sets data array.
         Only allows keyword arguments
@@ -160,24 +160,15 @@ class GeneExpression:
         fn_kwargs = copy.copy(locals())
         # Positional arguments passed in
         if ignore:
-            raise TypeError("Position arguments are not accepted.")
+            raise TypeError("Positional arguments are not accepted.")
         del fn_kwargs["ignore"]
         for model in DataArray(**fn_kwargs).get_data_array():
             yield model
 
-    def load(self, gene_docs: List, data_array_docs: List):
-        start_time = datetime.datetime.now()
-        self.insert(gene_docs, self.COLLECTION_NAME)
-        self.insert(data_array_docs, "data_arrays")
-        self.info_logger.info(
-            f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}"
-        )
-
-    def insert(self, docs: List, collection_name: str):
+    @staticmethod
+    def insert(docs: List, collection_name: str, client):
         try:
-            self.mongo_connection._client[collection_name].insert_many(
-                docs, ordered=False
-            )
+            client[collection_name].insert_many(docs, ordered=False)
         except BulkWriteError as bwe:
             raise BulkWriteError(
                 f"Error caused by inserting into collection '{collection_name}': {bwe.details}"
@@ -186,3 +177,11 @@ class GeneExpression:
             raise Exception(
                 f"Error caused by inserting into collection '{collection_name}': {e}"
             )
+
+    def load(self, gene_docs: List, data_array_docs: List):
+        start_time = datetime.datetime.now()
+        GeneExpression.insert(gene_docs, self.COLLECTION_NAME, self.mongo_connection)
+        GeneExpression.insert(data_array_docs, "data_arrays", self.mongo_connection)
+        self.info_logger.info(
+            f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}"
+        )
