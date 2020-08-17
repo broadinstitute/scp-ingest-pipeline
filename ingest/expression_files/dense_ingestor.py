@@ -61,32 +61,31 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def check_valid(header, first_row, query_params):
-      error_messages = []
+        error_messages = []
 
-      try:
-          DenseIngestor.check_unique_header(header)
-      except ValueError as v:
-          error_messages.append(str(v))
-      try:
-          DenseIngestor.check_gene_keyword(header, first_row)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            DenseIngestor.check_unique_header(header)
+        except ValueError as v:
+            error_messages.append(str(v))
+        try:
+            DenseIngestor.check_gene_keyword(header, first_row)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      try:
-          DenseIngestor.check_header_valid_values(header)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            DenseIngestor.check_header_valid_values(header)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      try:
-          GeneExpression.check_unique_cells(header, *query_params)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            GeneExpression.check_unique_cells(header, *query_params)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      if len(error_messages) > 0:
-          raise ValueError('; '.join(error_messages))
+        if len(error_messages) > 0:
+            raise ValueError('; '.join(error_messages))
 
-      return True
-
+        return True
 
     @staticmethod
     def format_gene_name(gene):
@@ -228,19 +227,25 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     gene, id, numeric_scores
                 ):
                     data_arrays.append(gene_expression_values)
-                if len(gene_models) == 5:
-                    num_processed += len(gene_models)
-                    self.info_logger.info(
-                        f"Processed {num_processed} models, "
-                        f"{str(datetime.datetime.now() - start_time)} elapsed",
-                        extra=self.extra_log_params,
-                    )
-                    yield gene_models, data_arrays
-                    gene_models = []
-                    data_arrays = []
-        yield gene_models, data_arrays
-        num_processed += len(gene_models)
-        self.info_logger.info(
-            f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
-            extra=self.extra_log_params,
-        )
+            if (
+                len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE
+            ):
+                num_processed += len(gene_models)
+                self.info_logger.info(
+                    f"Processed {num_processed} models, "
+                    f"{str(datetime.datetime.now() - start_time)} elapsed",
+                    extra=self.extra_log_params,
+                )
+                yield gene_models, data_arrays
+                gene_models = []
+                data_arrays = []
+
+        # load any remaining models (this is necessary here since there isn't an easy way to detect the
+        # last line of the file in the iteration above
+        if len(gene_models) > 0:
+            yield gene_models, data_arrays
+            num_processed += len(gene_models)
+            self.info_logger.info(
+                f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
+                extra=self.extra_log_params,
+            )
