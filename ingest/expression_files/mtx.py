@@ -2,7 +2,7 @@
 Module for ingesting MTX files
 
 DESCRIPTION
-This module provides extract and transforms function for a MTX file bundle. A
+This module provides extract and transforms function for an MTX file bundle. An
 MTX file bundle consists of A) an .mtx file in Matrix
 Market matrix coordinate format, B) a genes.tsv file, and a barcodes.tsv file.
 These are commonly provided from 10x Genomics v2.
