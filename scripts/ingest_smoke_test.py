@@ -12,7 +12,7 @@ EXAMPLE
 Creates N new study/ies in staging
 python ingest_smoke_test.py --token=$ACCESS_TOKEN -n <number of studies>
 
-Uses existing study, 'createTest' (SCP88 in staging), uploads 8K data set
+Uses existing study, 'smoke-default' (SCP138 in staging), uploads 8K data set
 # Usage conditions: must have VPN access to staging server
 #                   files being uploaded cannot already exist in createTest
 python ingest_smoke_test.py --token=$ACCESS_TOKEN --dev-run
@@ -75,9 +75,7 @@ def create_parser():
     )
 
     parser.add_argument(
-        '--dev-run',
-        action='store_true',
-        help='Run using stress_20200810-1357030 as study.',
+        '--dev-run', action='store_true', help='Run using existing study.'
     )
 
     parser.add_argument(
@@ -127,7 +125,7 @@ class ManageStudyAction:
                 '--study-name',
                 study,
                 '--description',
-                'stress test study',
+                'test study for smoke or stress test',
                 '--is-private',
             ],
             "upload_cluster": [
@@ -215,7 +213,7 @@ if __name__ == '__main__':
 
     # if a dev-run, limit ingest jobs to single, pre-created test study
     if args.dev_run:
-        study_names = ['createTest']
+        study_names = ['smoke-default']
 
     print('Using the following study/ies for file upload', study_names)
     # obtain study file info
