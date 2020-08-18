@@ -1,6 +1,6 @@
 import sys
 import unittest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 from bson.objectid import ObjectId
 
 
@@ -87,36 +87,36 @@ class TestExpressionFiles(unittest.TestCase):
         )
         self.assertEqual(actual_gene_model, expected_gene_model)
 
-    @patch("expression_files.expression_files.GeneExpression.insert")
-    def test_load(self, mock_insert):
-        client_mock = MagicMock()
-        study_id = ObjectId()
-        study_file_id = ObjectId()
-        expression_matrix = GeneExpression(
-            "../tests/data/dense_matrix_19_genes_1000_cells.txt",
-            study_file_id,
-            study_id,
-        )
-        expression_matrix.mongo_connection = client_mock
-        gene_docs = [
-            {"name": "foo_study"},
-            {"study_file_id": study_file_id},
-            {"study_id": study_id},
-        ]
-        da_docs = [
-            {"phi": study_file_id},
-            {"fye": study_id},
-            {"foo": study_id},
-            {"phom": study_id},
-        ]
-        expected_calls = [
-            # GeneExpression.insert() possible arguments
-            call(gene_docs, expression_matrix.COLLECTION_NAME, client_mock),
-            call(da_docs, "data_arrays", client_mock),
-        ]
-
-        expression_matrix.load(gene_docs, da_docs)
-        expression_matrix.insert.assert_has_calls(expected_calls, any_order=False)
+    # @patch("expression_files.expression_files.GeneExpression.insert")
+    # def test_load(self, mock_insert):
+    #     client_mock = MagicMock()
+    #     study_id = ObjectId()
+    #     study_file_id = ObjectId()
+    #     expression_matrix = GeneExpression(
+    #         "../tests/data/dense_matrix_19_genes_1000_cells.txt",
+    #         study_file_id,
+    #         study_id,
+    #     )
+    #     expression_matrix.mongo_connection = client_mock
+    #     gene_docs = [
+    #         {"name": "foo_study"},
+    #         {"study_file_id": study_file_id},
+    #         {"study_id": study_id},
+    #     ]
+    #     da_docs = [
+    #         {"phi": study_file_id},
+    #         {"fye": study_id},
+    #         {"foo": study_id},
+    #         {"phom": study_id},
+    #     ]
+    #     expected_calls = [
+    #         # GeneExpression.insert() possible arguments
+    #         call(gene_docs, expression_matrix.COLLECTION_NAME, client_mock),
+    #         call(da_docs, "data_arrays", client_mock),
+    #     ]
+    #
+    #     expression_matrix.load(gene_docs, da_docs)
+    #     expression_matrix.insert.assert_has_calls(expected_calls, any_order=False)
 
     def test_insert(self):
 
