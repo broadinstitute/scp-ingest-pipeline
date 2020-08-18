@@ -1,6 +1,8 @@
 """Write genome annotation metadata locally, and upload transformed GTFs to GCS
 """
 
+import os
+
 import utils
 
 
@@ -38,6 +40,8 @@ def upload_ensembl_gtf_products(ensembl_metadata, scp_species, config):
     # FireCloud workspace for canonical SCP reference data:
     # https://portal.firecloud.org/#workspaces/single-cell-portal/scp-reference-data
     reference_data_bucket = gcs_bucket
+
+    # TODO: Uncomment or remove line below as part of SCP-2662
     # target_folder = remote_output_dir
 
     bucket = storage_client.get_bucket(reference_data_bucket)
@@ -129,7 +133,7 @@ def record_annotation_metadata(output_dir, ensembl_metadata, scp_species):
     """
     new_metadata_ref = []
 
-    ref_file = f'{output_dir}species_metadata_reference.tsv'
+    ref_file = os.path.join(output_dir, 'species_metadata_reference.tsv')
 
     with open(ref_file) as f:
         metadata_ref = [line.strip().split('\t') for line in f.readlines()]

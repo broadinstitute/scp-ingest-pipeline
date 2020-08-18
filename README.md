@@ -89,12 +89,29 @@ In rare cases, you might need to skip Git hooks, like so:
 
 # Test
 
-After installing:
+After [installing](#Install):
 
 ```
 source env/bin/activate
-cd tests; pytest
+cd tests
+
+# Run all tests
+pytest
 ```
+
+Some common `pytest` usage examples (run in `/tests`):
+```
+# Run all tests and see print() output
+pytest -s
+
+# Run only tests in test_ingest.py
+pytest test_ingest.py
+
+# Run all tests, show code coverage metrics
+pytest --cov=../ingest/
+```
+
+For more, see https://docs.pytest.org/en/stable/usage.html.
 
 # Use
 

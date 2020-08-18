@@ -384,7 +384,7 @@ def pool_processing(
     """
 
     # potential file names
-    stem = f'{output_dir + prefix}_toy_data_{filename_leaf}'
+    stem = os.path.join(output_dir, f"{prefix}_toy_data_{filename_leaf}")
     dense_name = stem + '.txt'
     genes_name = stem + '.genes.tsv'
     barcodes_name = stem + '.barcodes.tsv'

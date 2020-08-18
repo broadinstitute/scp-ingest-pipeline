@@ -6,25 +6,9 @@ transformed data to Google Cloud Storage.
 
 Test doubles are used for test speed and isolation.
 
-PREREQUISITES
-See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
-
-Also, `cd tests` before running the examples below.
-
 EXAMPLES
 
-# Run all tests
-pytest
-
-# Run all tests and see print() output
-pytest -s
-
-# Run only tests in test_genomes.py
-pytest test_genomes.py
-
-# Run all tests, show code coverage metrics
-pytest --cov=../ingest/
-
+See https://github.com/broadinstitute/scp-ingest-pipeline#test.
 """
 
 import unittest

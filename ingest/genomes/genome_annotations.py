@@ -131,7 +131,9 @@ class GenomeAnnotations(object):
 
             gtf_url = origin + dir + filename
             gtf_urls.append(gtf_url)
-            self.ensembl_metadata[taxid]['gtf_path'] = output_dir + filename
+            self.ensembl_metadata[taxid]['gtf_path'] = os.path.join(
+                output_dir, filename
+            )
 
         return gtf_urls
 
@@ -178,7 +180,7 @@ class GenomeAnnotations(object):
             asm_name = organism_metadata['assembly_name']
             asm_acc = organism_metadata['assembly_accession']
             release = 'ensembl_' + organism_metadata['release']
-            folder = self.output_dir + self.remote_output_dir
+            folder = os.path.join(self.output_dir, self.remote_output_dir)
             folder += organism + '/' + asm_name + '_' + asm_acc + '/' + release + '/'
 
             os.makedirs(folder, exist_ok=True)

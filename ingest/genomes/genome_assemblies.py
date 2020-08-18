@@ -70,7 +70,7 @@ class GenomeAssemblies(object):
         else:
             report_filename = 'assembly_summary_genbank.txt'
         assembly_report_url = domain + path + report_filename
-        assembly_report_path = self.output_dir + report_filename
+        assembly_report_path = os.path.join(self.output_dir, report_filename)
 
         # To consider: Refactor fetch_content so this is less gross.
         assembly_report = utils.fetch_content(
@@ -210,7 +210,7 @@ class GenomeAssemblies(object):
             assemblies_str.append('\t'.join(assembly))
         assemblies_str = '\n'.join(assemblies_str)
 
-        output_path = f'{self.output_dir}species_metadata_reference.tsv'
+        output_path = os.path.join(self.output_dir, 'species_metadata_reference.tsv')
         with open(output_path, 'w') as f:
             f.write(assemblies_str)
         print('Wrote assemblies to ' + output_path)

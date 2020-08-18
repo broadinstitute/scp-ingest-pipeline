@@ -1,23 +1,8 @@
 """Integration tests for make_toy_data.py
 
-PREREQUISITES
-See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
-
-Also, `cd tests` before running the examples below.
-
 EXAMPLES
 
-# Run all tests
-pytest
-
-# Run all tests and see print() output
-pytest -s
-
-# Run only tests in test_genomes.py
-pytest test_make_toy.py
-
-# Run all tests, show code coverage metrics
-pytest --cov=../ingest/
+See See https://github.com/broadinstitute/scp-ingest-pipeline#test.
 
 """
 
