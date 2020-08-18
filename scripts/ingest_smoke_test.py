@@ -2,7 +2,7 @@
 
 DESCRIPTION
 Launch single study creation followed by file upload using manage-study
-OR concurrent ingest requests for X studies (stress test)
+OR concurrent ingest requests for N studies (stress test)
 
 PREREQUISITES
 set up access token on command line
@@ -87,6 +87,12 @@ def create_parser():
     )
 
     parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Show upload command results for troubleshooting',
+    )
+
+    parser.add_argument(
         '--dry-run',
         action='store_true',
         help='Show upload commands without running upload request.',
@@ -168,13 +174,17 @@ class ManageStudyAction:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-
-        print(result)
+        if args.debug:
+            print(result)
         if result.returncode == 0:
             print('Success', result.stdout.decode('utf-8'))
             return True
-        # for "study_exists", failure to confirm a study exists is not an error
+        # for "study_exists" action, failure to confirm a study exists is not an error
         elif action == "study_exists":
+            return False
+        elif result.stdout.decode('utf-8') == "Error 403: Forbidden\n":
+            print(result.stdout.decode('utf-8'))
+            print("Check that you have access (ie. VPN) to the Portal server")
             return False
         else:
             print('Error', result.stdout.decode('utf-8'), result.stderr.decode('utf-8'))
@@ -219,14 +229,13 @@ if __name__ == '__main__':
             study, "upload_dense_expression"
         )
         if not upload_dense_expression:
-            print('Expression upload failed for ', study, ". Exiting")
+            print('Expression matrix upload failed for', study, "- Exit")
             exit(1)
         upload_cluster = msaction.send_request(study, "upload_cluster")
         if not upload_cluster:
-            print('Cluster upload failed for ', study, ". Exiting")
+            print('Cluster upload failed for', study, "- Exit")
             exit(1)
         upload_metadata = msaction.send_request(study, "upload_metadata")
         if not upload_metadata:
-            print('Metadata upload failed for ', study, ". Exiting")
+            print('Metadata upload failed for', study, "- Exit")
             exit(1)
-
