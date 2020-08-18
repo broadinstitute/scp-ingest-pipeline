@@ -21,6 +21,7 @@ build
 coverage.xml
 issues.json
 htmlcov/
+tmp/
 
 errors.txt
 info.txt
