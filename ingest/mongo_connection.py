@@ -25,7 +25,7 @@ class MongoConnection:
                 authSource=self.db_name,
                 authMechanism='SCRAM-SHA-1',
             )
-            self._client=client[self.db_name]
+            self._client = client[self.db_name]
         # Needed to due to lack of database mock library for MongoDB
         # TODO: add mock, remove this
         else:

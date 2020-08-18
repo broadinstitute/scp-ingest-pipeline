@@ -105,7 +105,6 @@ class GeneExpression:
             raise ValueError(error_string)
         return True
 
-
     def set_data_array_cells(self, values: List, linear_data_id):
         """Sets DataArray for cells that were observed in an
         expression matrix."""

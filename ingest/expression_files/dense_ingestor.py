@@ -61,32 +61,31 @@ class DenseIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def check_valid(header, first_row, query_params):
-      error_messages = []
+        error_messages = []
 
-      try:
-          DenseIngestor.check_unique_header(header)
-      except ValueError as v:
-          error_messages.append(str(v))
-      try:
-          DenseIngestor.check_gene_keyword(header, first_row)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            DenseIngestor.check_unique_header(header)
+        except ValueError as v:
+            error_messages.append(str(v))
+        try:
+            DenseIngestor.check_gene_keyword(header, first_row)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      try:
-          DenseIngestor.check_header_valid_values(header)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            DenseIngestor.check_header_valid_values(header)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      try:
-          GeneExpression.check_unique_cells(header, *query_params)
-      except ValueError as v:
-          error_messages.append(str(v))
+        try:
+            GeneExpression.check_unique_cells(header, *query_params)
+        except ValueError as v:
+            error_messages.append(str(v))
 
-      if len(error_messages) > 0:
-          raise ValueError('; '.join(error_messages))
+        if len(error_messages) > 0:
+            raise ValueError('; '.join(error_messages))
 
-      return True
-
+        return True
 
     @staticmethod
     def format_gene_name(gene):
