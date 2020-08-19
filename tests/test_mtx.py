@@ -11,7 +11,6 @@ import sys
 
 sys.path.append("../ingest")
 from expression_files.mtx import MTXIngestor
-import sys
 
 
 class TestMTXIngestor(unittest.TestCase):

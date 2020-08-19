@@ -18,7 +18,6 @@ from bson.objectid import ObjectId
 try:
     from expression_files import GeneExpression
 
-    sys.path.append("../ingest")
     from ingest_files import IngestFiles
 except ImportError:
     # Used when importing as external package, e.g. imports in
@@ -56,7 +55,9 @@ class MTXIngestor(GeneExpression):
         self.mtx_dimensions: List[int] = MTXIngestor.get_mtx_dimensions(self.mtx_file)
 
     @staticmethod
-    def check_valid(barcodes: List[str], genes: List[str], mtx_dimensions):
+    def check_valid(
+        barcodes: List[str], genes: List[str], mtx_dimensions, query_params
+    ):
         error_messages = []
 
         try:
@@ -68,7 +69,7 @@ class MTXIngestor(GeneExpression):
         except ValueError as v:
             error_messages.append(str(v))
         try:
-            GeneExpression.check_unique_cells(barcodes)
+            GeneExpression.check_unique_cells(barcodes, *query_params)
         except ValueError as v:
             error_messages.append(str(v))
 
@@ -131,7 +132,12 @@ class MTXIngestor(GeneExpression):
 
     def execute_ingest(self):
         self.extract_feature_barcode_matrices()
-        if MTXIngestor.check_valid(self.cells, self.genes, self.mtx_dimensions):
+        if MTXIngestor.check_valid(
+            self.cells,
+            self.genes,
+            self.mtx_dimensions,
+            query_params=(self.study_id, self.mongo_connection._client),
+        ):
             for gene_docs, data_array_documents in self.transform():
                 self.load(gene_docs, data_array_documents)
 
@@ -159,13 +165,13 @@ class MTXIngestor(GeneExpression):
 
         # All observed cells
         data_arrays.extend(
-            GeneExpression.create_data_array(
+            GeneExpression.create_data_arrays(
                 name=f"{self.cluster_name} Cells",
                 array_type="cells",
                 values=self.cells,
                 linear_data_type="Study",
                 linear_data_id=self.study_file_id,
-                **self.da_kwargs,
+                **self.data_array_kwargs,
             )
         )
         for row in self.mtx_file:
@@ -181,23 +187,23 @@ class MTXIngestor(GeneExpression):
                     # Create data arrays from prior gene
                     if last_idx != 0:
                         # Data array for cell names
-                        da_cells = GeneExpression.create_data_array(
+                        da_cells = GeneExpression.create_data_arrays(
                             name=gene,
                             array_type=f"{gene} Cells",
                             values=exp_cells,
                             linear_data_type="Study",
                             linear_data_id=model_id,
-                            **self.da_kwargs,
+                            **self.data_array_kwargs,
                         )
                         data_arrays.extend(da_cells)
                         # Data array for expression values
-                        da_exp = GeneExpression.create_data_array(
+                        da_exp = GeneExpression.create_data_arrays(
                             name=gene,
                             array_type=f"{gene} Expression",
                             values=exp_scores,
                             linear_data_type="Gene",
                             linear_data_id=model_id,
-                            **self.da_kwargs,
+                            **self.data_array_kwargs,
                         )
                         data_arrays.extend(da_exp)
                         # Reset variables so values will be associated w/new

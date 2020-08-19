@@ -149,6 +149,12 @@ class DenseIngestor(GeneExpression, IngestFiles):
         """
         associated_cells = []
         valid_expression_scores = []
+        if len(scores) != len(cells):
+            raise ValueError(
+                "Number of cell and expression values must be the same. "
+                f"Found row with {len(scores)} expression values."
+                f"Header contains {len(cells)} cells"
+            )
         for idx, expression_score in enumerate(scores):
             try:
                 if (
@@ -209,13 +215,13 @@ class DenseIngestor(GeneExpression, IngestFiles):
         num_processed = 0
         gene_models = []
         data_arrays = []
-        for all_cell_model in GeneExpression.create_data_array(
-            **self.da_kwargs,
+        for all_cell_model in GeneExpression.create_data_arrays(
             name=f"{self.cluster_name} Cells",
             array_type="cells",
             values=self.header,
             linear_data_type="Study",
             linear_data_id=ObjectId(),
+            **self.data_array_kwargs,
         ):
 
             data_arrays.append(all_cell_model)
@@ -241,35 +247,35 @@ class DenseIngestor(GeneExpression, IngestFiles):
             gene_models.append(gene_model)
             if len(valid_expression_scores) > 0:
                 # Data array for cell names
-                for da in GeneExpression.create_data_array(
+                for data_array in GeneExpression.create_data_arrays(
                     name=f"{gene} Cells",
                     array_type="cells",
                     values=exp_cells,
                     linear_data_type="Gene",
                     linear_data_id=_id,
-                    **self.da_kwargs,
+                    **self.data_array_kwargs,
                 ):
-                    data_arrays.append(da)
+                    data_arrays.append(data_array)
                 # Data array for expression values
-                for da in GeneExpression.create_data_array(
+                for data_array in GeneExpression.create_data_arrays(
                     name=f"{gene} Expression",
                     array_type="expression",
                     linear_data_type="Gene",
                     values=exp_scores,
                     linear_data_id=_id,
-                    **self.da_kwargs,
+                    **self.data_array_kwargs,
                 ):
-                    data_arrays.append(da)
-                if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
-                    num_processed += len(gene_models)
-                    self.info_logger.info(
-                        f"Processed {num_processed} models, "
-                        f"{str(datetime.datetime.now() - start_time)} elapsed",
-                        extra=self.extra_log_params,
-                    )
-                    yield gene_models, data_arrays
-                    gene_models = []
-                    data_arrays = []
+                    data_arrays.append(data_array)
+            if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
+                num_processed += len(gene_models)
+                self.info_logger.info(
+                    f"Processed {num_processed} models, "
+                    f"{str(datetime.datetime.now() - start_time)} elapsed",
+                    extra=self.extra_log_params,
+                )
+                yield gene_models, data_arrays
+                gene_models = []
+                data_arrays = []
 
         # load any remaining models (this is necessary here since there isn't
         # an easy way to detect the last line of the file in the iteration above

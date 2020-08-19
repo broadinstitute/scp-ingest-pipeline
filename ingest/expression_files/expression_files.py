@@ -56,7 +56,7 @@ class GeneExpression:
         self.extra_log_params = {"study_id": self.study_id, "duration": None}
         self.mongo_connection = MongoConnection()
         # Common data array kwargs
-        self.da_kwargs = {
+        self.data_array_kwargs = {
             "cluster_name": self.cluster_name,
             "study_file_id": self.study_file_id,
             "study_id": self.study_id,
@@ -77,7 +77,7 @@ class GeneExpression:
 
     @staticmethod
     def create_gene_model(
-        *ignore, name: str, study_file_id, study_id, _id: int, gene_id: int = None
+        *ignore, name: str, study_file_id, study_id, _id: int, gene_id: str = None
     ):
         # Positional arguments passed in,
         if ignore:
@@ -140,7 +140,7 @@ class GeneExpression:
         return True
 
     @staticmethod
-    def create_data_array(
+    def create_data_arrays(
         *ignore,
         # keyword arguments
         name: str,
