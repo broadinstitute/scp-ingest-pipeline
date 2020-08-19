@@ -109,8 +109,8 @@ class GeneExpression:
                 {"linear_data_type": "Study"},
                 {"array_type": "cells"},
                 {"study_id": study_id},
-                {"linear_data_id": study_id},
-            ]
+            ],
+            "$nor": [{"name": "All Cells"}],
         }
         # Returned fields from query results
         field_names = {"values": 1, "_id": 0}
@@ -166,6 +166,7 @@ class GeneExpression:
 
     @staticmethod
     def insert(docs: List, collection_name: str, client):
+
         try:
             client[collection_name].insert_many(docs, ordered=False)
         except BulkWriteError as bwe:
