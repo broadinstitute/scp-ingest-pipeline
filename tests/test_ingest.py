@@ -242,6 +242,37 @@ class IngestTestCase(unittest.TestCase):
             del model["_id"]
             self.assertEqual(model, gene_models[model["name"]])
 
+    def test_empty_dense_file(self):
+        """Ingest Pipeline should fail gracefully when an empty file is given
+        """
+
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_expression",
+            "--taxon-name",
+            "Homo sapiens",
+            "--taxon-common-name",
+            "human",
+            "--ncbi-taxid",
+            "9606",
+            "--genome-assembly-accession",
+            "GCA_000001405.15",
+            "--genome-annotation",
+            "Ensembl 94",
+            "--matrix-file",
+            "../tests/data/empty_file.txt",
+            "--matrix-file-type",
+            "dense",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
