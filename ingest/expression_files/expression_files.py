@@ -81,7 +81,8 @@ class GeneExpression:
                 {"linear_data_type": "Study"},
                 {"array_type": "cells"},
                 {"study_id": study_id},
-            ]
+            ],
+            "$nor": [{"name": "All Cells"}],
         }
         # Returned fields from query results
         field_names = {"values": 1, "_id": 0}
@@ -164,7 +165,8 @@ class GeneExpression:
         self.insert(gene_docs, self.COLLECTION_NAME)
         self.insert(data_array_docs, "data_arrays")
         self.info_logger.info(
-            f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}"
+            f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}",
+            extra=self.extra_log_params,
         )
 
     def insert(self, docs: List, collection_name: str):
