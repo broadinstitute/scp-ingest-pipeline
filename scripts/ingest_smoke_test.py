@@ -1,21 +1,21 @@
-"""Launch ingest pipeline smoke test
+"""Launch ingest pipeline stress test
 
 DESCRIPTION
-Launch single study creation followed by file upload using manage-study
+(Internal use only) Launch single study creation followed by file upload using manage-study
 OR concurrent ingest requests for N studies (stress test)
 
 PREREQUISITES
-set up access token on command line
+set up access token on command line (Script requires access to non-public Google bucket)
 ACCESS_TOKEN=`gcloud auth print-access-token`
 
 EXAMPLE
 Creates N new study/ies in staging
-python ingest_smoke_test.py --token=$ACCESS_TOKEN -n <number of studies>
+python ingest_stress_test.py --token=$ACCESS_TOKEN -n <number of studies>
 
 Uses existing study, 'smoke-default' (SCP138 in staging), uploads 8K data set
 # Usage conditions: must have VPN access to staging server
 #                   files being uploaded cannot already exist in createTest
-python ingest_smoke_test.py --token=$ACCESS_TOKEN --dev-run
+python ingest_stress_test.py --token=$ACCESS_TOKEN --dev-run
 """
 
 import argparse
@@ -23,26 +23,26 @@ import subprocess
 from datetime import datetime
 
 DATA = {
-    # matrix has ~8K cells, ~20K genes (aka "mult-bcl" data set); SCP23 and SCP31 in staging
-    # baseline ingest for dense TBD
+    # matrix has ~8K cells, ~20K genes
+    # baseline ingest for dense 3.6m
     "small": {
-        "dense": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/launch_ingest_test_data/mult_bcl_out/mult_bcl_out.scp.expr.txt.gz",
-        "cluster": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/launch_ingest_test_data/mult_bcl_out/mult_bcl_out.scp.X_tsne.coords.txt",
-        "metadata": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/launch_ingest_test_data/mult_bcl_out/mult_bcl_out.scp.metadata.txt",
+        "dense": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/small_expr.txt.gz",
+        "cluster": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/small_coords.txt",
+        "metadata": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/small_metadata.txt",
     },
-    # matrix has ~18.7K cells, ~25K genes (aka "PolypScrape" data from Nasal polyps)
-    # baseline ingest for dense ~4.5m
+    # matrix has ~18.7K cells, ~25K genes
+    # baseline ingest for dense 4.5m
     "medium": {
-        "dense": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/test_data_for_production_ingest/nasal_polyps/20180921_PolypScrape_cleaned_data.txt.gz",
-        "cluster": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/test_data_for_production_ingest/nasal_polyps/20180921_PolypScrape_cleaned_tsnecoord.txt",
-        "metadata": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/test_data_for_production_ingest/nasal_polyps/alexandria_structured_metadata.txt",
+        "dense": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/medium_expr.txt.gz",
+        "cluster": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/medium_coords.txt",
+        "metadata": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/medium/metadata.txt",
     },
-    # matrix has ~220K cells, ~16K genes from SCP947 in prod
+    # matrix has ~220K cells, ~16K genes
     # baseline ingest for dense ~25.5m
     "large": {
-        "dense": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/launch_ingest_test_data/SCP947/All.exp.tsv",
-        "cluster": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/launch_ingest_test_data/SCP947/All.cluster.tsv",
-        "metadata": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/launch_ingest_test_data/SCP947/metadata.tsv",
+        "dense": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/large_expr.txt",
+        "cluster": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/large/coords.txt",
+        "metadata": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/large/metadata.txt",
     },
 }
 
@@ -200,7 +200,7 @@ if __name__ == '__main__':
         test_type = "smoke"
     else:
         test_type = "stress"
-    study_names = [test_type + '-' + test_id + '-' + str(i) for i in range(args.number)]
+    study_names = [f'{test_type}-{test_id}-{i}' for i in range(args.number)]
 
     # create studies unless it is a dev-run
     if not args.dev_run and not msaction.send_request(study_names[0], "study_exists"):
