@@ -8,11 +8,11 @@ PREREQUISITES
 set up access token on command line (Script requires access to non-public Google bucket)
 ACCESS_TOKEN=`gcloud auth print-access-token`
 
-EXAMPLE
+EXAMPLES
 Creates N new study/ies in staging
 python ingest_stress_test.py --token=$ACCESS_TOKEN -n <number of studies>
 
-Uses existing study, 'smoke-default' (SCP138 in staging), uploads 8K data set
+Uses existing study, 'stress-dev' (SCP138 in staging), uploads 8K data set
 # Usage conditions: must have VPN access to staging server
 #                   files being uploaded cannot already exist in createTest
 python ingest_stress_test.py --token=$ACCESS_TOKEN --dev-run
@@ -57,31 +57,36 @@ def create_parser():
     parser.add_argument(
         '-n',
         '--number',
-        help='number of studies to create for stress test',
+        help='Number of studies to create for stress test',
         type=int,
         default=1,
     )
 
     parser.add_argument(
         '--environment',
-        help='server to test against [development,staging,production]',
+        choices=['development', 'staging', 'production'],
+        help='Server to test against',
         default='staging',
     )
 
     parser.add_argument(
         '--token',
         default=None,
+        required=True,
         help='Personal token after logging into Google (OAuth2).  This token is not persisted after the finish of the script.',
     )
 
     parser.add_argument(
-        '--dev-run', action='store_true', help='Run using existing study.'
+        '--dev-run',
+        action='store_true',
+        help='Run using existing study, "stress-dev" (SCP138)',
     )
 
     parser.add_argument(
         '--data-set',
+        choices=['small', 'medium', 'large'],
         default='small',
-        help='Select data set for stress test [small, medium, large].',
+        help='Data set for stress test',
     )
 
     parser.add_argument(
@@ -93,7 +98,7 @@ def create_parser():
     parser.add_argument(
         '--dry-run',
         action='store_true',
-        help='Show upload commands without running upload request.',
+        help='Show upload commands without running upload request',
     )
 
     return parser
@@ -153,7 +158,7 @@ class ManageStudyAction:
                 '--species',
                 "human",
                 '--genome',
-                "hg19",
+                "GRCh37",
             ],
         }
 
@@ -205,17 +210,17 @@ if __name__ == '__main__':
     # create studies unless it is a dev-run
     if not args.dev_run and not msaction.send_request(study_names[0], "study_exists"):
         for study in study_names:
-            print('Requesting creation of', study)
+            print(f'Requesting creation of {study}')
             create = msaction.send_request(study, "create_study")
             if not create:
-                print('Failed to create', study.Exiting)
+                print(f'Failed to create {study}. Exiting')
                 exit(1)
 
     # if a dev-run, limit ingest jobs to single, pre-created test study
     if args.dev_run:
-        study_names = ['smoke-default']
+        study_names = ['stress-dev']
 
-    print('Using the following study/ies for file upload', study_names)
+    print(f'Using the following study/ies for file upload {study_names}')
     # obtain study file info
 
     # launch ingest jobs for expression matrix, metadata and cluster files
@@ -227,13 +232,13 @@ if __name__ == '__main__':
             study, "upload_dense_expression"
         )
         if not upload_dense_expression:
-            print('Expression matrix upload failed for', study, "- Exit")
+            print(f'Expression matrix upload failed for {study}. Exiting')
             exit(1)
         upload_cluster = msaction.send_request(study, "upload_cluster")
         if not upload_cluster:
-            print('Cluster upload failed for', study, "- Exit")
+            print(f'Cluster upload failed for {study}. Exiting')
             exit(1)
         upload_metadata = msaction.send_request(study, "upload_metadata")
         if not upload_metadata:
-            print('Metadata upload failed for', study, "- Exit")
+            print(f'Metadata upload failed for {study}. Exiting')
             exit(1)
