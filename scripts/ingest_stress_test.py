@@ -12,7 +12,7 @@ EXAMPLES
 Creates N new study/ies in staging
 python ingest_stress_test.py --token=$ACCESS_TOKEN -n <number of studies>
 
-Uses existing study, 'stress-dev' (SCP138 in staging), uploads 8K data set
+Uses existing study, 'stress-devel-study' (SCP138 in staging), uploads 8K data set
 # Usage conditions: must have VPN access to staging server
 #                   files being uploaded cannot already exist in createTest
 python ingest_stress_test.py --token=$ACCESS_TOKEN --dev-run
@@ -41,8 +41,8 @@ DATA = {
     # baseline ingest for dense ~25.5m
     "large": {
         "dense": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/large_expr.txt",
-        "cluster": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/large/coords.txt",
-        "metadata": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/large/metadata.txt",
+        "cluster": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/large_coords.txt",
+        "metadata": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/large_metadata.txt",
     },
 }
 
@@ -79,7 +79,7 @@ def create_parser():
     parser.add_argument(
         '--dev-run',
         action='store_true',
-        help='Run using existing study, "stress-dev" (SCP138)',
+        help='Run using existing study, "stress-devel-study" (SCP138)',
     )
 
     parser.add_argument(
@@ -170,7 +170,7 @@ class ManageStudyAction:
                     self.stdout = b''
 
             result = Result()
-            print(self.action_setup + study_actions.get(action))
+            print(f'{self.action_setup} {study_actions.get(action)}')
         else:
             result = subprocess.run(
                 self.action_setup + study_actions.get(action),
@@ -180,7 +180,7 @@ class ManageStudyAction:
         if args.debug:
             print(result)
         if result.returncode == 0:
-            print('Success', result.stdout.decode('utf-8'))
+            print(f"Success {result.stdout.decode('utf-8')}")
             return True
         # for "study_exists" action, failure to confirm a study exists is not an error
         elif action == "study_exists":
@@ -190,7 +190,9 @@ class ManageStudyAction:
             print("Check that you have access (ie. VPN) to the Portal server")
             return False
         else:
-            print('Error', result.stdout.decode('utf-8'), result.stderr.decode('utf-8'))
+            print(
+                f"Error :{result.stdout.decode('utf-8')} {result.stderr.decode('utf-8')}"
+            )
             return False
 
 
@@ -218,7 +220,7 @@ if __name__ == '__main__':
 
     # if a dev-run, limit ingest jobs to single, pre-created test study
     if args.dev_run:
-        study_names = ['stress-dev']
+        study_names = ['stress-devel-study']
 
     print(f'Using the following study/ies for file upload {study_names}')
     # obtain study file info
