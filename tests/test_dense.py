@@ -58,6 +58,19 @@ class TestDense(unittest.TestCase):
         self.assertRaises(
             ValueError, DenseIngestor.filter_expression_scores, invalid_scores, cells
         )
+        not_enough_scores = ["BRCA1", 4, 0, "0"]
+        with self.assertRaises(ValueError) as error:
+            DenseIngestor.filter_expression_scores(not_enough_scores, cells)
+
+        too_many_scores = ["BRCA1", 4, 0, "0", 5, 6]
+        with self.assertRaises(ValueError) as error:
+            DenseIngestor.filter_expression_scores(too_many_scores, cells)
+        expected_msg = (
+            "Number of cell and expression values must be the same. "
+            f"Found row with {len(too_many_scores)} expression values."
+            f"Header contains {len(cells)} cells"
+        )
+        self.assertEqual(expected_msg, str(error.exception))
 
     def test_process_row(self):
         # Positive test case
