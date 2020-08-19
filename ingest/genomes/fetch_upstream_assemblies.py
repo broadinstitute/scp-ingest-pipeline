@@ -240,7 +240,7 @@ asm_list.insert(0, header)
 
 content = '\n'.join(asm_list)
 
-output_file = output_dir + 'assemblies.tsv'
+output_file = os.path.join(output_dir, 'assemblies.tsv')
 
 open(output_file, 'w').write(content)
 
