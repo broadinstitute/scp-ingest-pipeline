@@ -10,9 +10,12 @@ import sys
 from unittest.mock import patch, MagicMock, PropertyMock
 from bson.objectid import ObjectId
 
+
 sys.path.append("../ingest")
 from expression_files.mtx import MTXIngestor
 from expression_files.expression_files import GeneExpression
+from mock_data.matrix_mtx.gene_model_0 import expected_model
+from mock_data.matrix_mtx.data_arrays import data_arrays
 
 
 class TestMTXIngestor(unittest.TestCase):
@@ -152,15 +155,40 @@ class TestMTXIngestor(unittest.TestCase):
         self.assertTrue(mock_transform.called)
         self.assertTrue(mock_load.called)
 
+    def test_transform_fn(self):
+        """
+        Assures transform function creates gene data model correctly
+        """
+        expression_matrix = MTXIngestor(
+            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "5d276a50421aa9117c982845",
+            "5dd5ae25421aa910a723a337",
+            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
+            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+        )
+        expression_matrix.extract_feature_barcode_matrices()
+        for actual_gene_models, actual_data_arrays in expression_matrix.transform():
+            # _id is a unique identifier and can not be predicted
+            # so we exclude it from the comparison
+            for actual_gene_model in actual_gene_models:
+                del actual_gene_model["_id"]
+                gene_name = actual_gene_model["name"]
+                self.assertEqual(actual_gene_model, expected_model[gene_name])
+            for actual_data_array in actual_data_arrays:
+                data_array_name = actual_data_array["name"]
+                del actual_data_array["linear_data_id"]
+                del data_arrays[data_array_name]["linear_data_id"]
+                self.assertEqual(actual_data_array, data_arrays[data_array_name])
+
     def test_transform_fn_batch(self):
         """
         Assures transform function batches data array creation
         the +1 fudge factor is because we only check for batch size after a full row
         has been processed
         """
-        GeneExpression.DATA_ARRAY_BATCH_SIZE = 16
-        expression_matrix = expression_matrix = MTXIngestor(
-            "../tests/data/matrix.mtx",
+        GeneExpression.DATA_ARRAY_BATCH_SIZE = 7
+        expression_matrix = MTXIngestor(
+            "../tests/data/AB_toy_data_toy.matrix.mtx",
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
             gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
@@ -169,8 +197,9 @@ class TestMTXIngestor(unittest.TestCase):
         with patch(
             "expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE",
             new_callable=PropertyMock,
-            return_value=4,
+            return_value=7,
         ):
+            expression_matrix.extract_feature_barcode_matrices()
             for actual_gene_models, actual_data_arrays in expression_matrix.transform():
                 self.assertTrue(
                     GeneExpression.DATA_ARRAY_BATCH_SIZE + 1 >= len(actual_data_arrays)

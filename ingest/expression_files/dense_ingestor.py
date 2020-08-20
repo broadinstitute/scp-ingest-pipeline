@@ -260,16 +260,16 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     **self.da_kwargs,
                 ):
                     data_arrays.append(da)
-                if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
-                    num_processed += len(gene_models)
-                    self.info_logger.info(
-                        f"Processed {num_processed} models, "
-                        f"{str(datetime.datetime.now() - start_time)} elapsed",
-                        extra=self.extra_log_params,
-                    )
-                    yield gene_models, data_arrays
-                    gene_models = []
-                    data_arrays = []
+            if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
+                num_processed += len(gene_models)
+                self.info_logger.info(
+                    f"Processed {num_processed} models, "
+                    f"{str(datetime.datetime.now() - start_time)} elapsed",
+                    extra=self.extra_log_params,
+                )
+                yield gene_models, data_arrays
+                gene_models = []
+                data_arrays = []
 
         # load any remaining models (this is necessary here since there isn't
         # an easy way to detect the last line of the file in the iteration above

@@ -173,7 +173,7 @@ class MTXIngestor(GeneExpression):
         num_processed = 0
         last_idx = 0
         gene_models = []
-        data_arrays = {}
+        data_arrays = []
         exp_cells = []
         exp_scores = []
         visited_expression_idx = [0]
@@ -238,18 +238,18 @@ class MTXIngestor(GeneExpression):
                         _id=model_id,
                     )
                     gene_models.append(gene_model)
-                if len(data_arrays) > 1_000:
-                    yield gene_models, data_arrays
-                    num_processed += len(gene_models)
-                    print(
-                        f"Processed {num_processed} genes. "
-                        f"{str(datetime.datetime.now() - start_time)} "
-                        f"elapsed"
-                    )
-                    num_processed += len(gene_models)
-                    gene_models = []
-                    data_arrays = []
-                last_idx = current_idx
+                    if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
+                        yield gene_models, data_arrays
+                        num_processed += len(gene_models)
+                        print(
+                            f"Processed {num_processed} genes. "
+                            f"{str(datetime.datetime.now() - start_time)} "
+                            f"elapsed"
+                        )
+                        num_processed += len(gene_models)
+                        gene_models = []
+                        data_arrays = []
+                    last_idx = current_idx
             exp_cell = self.cells[int(raw_barcode_idx) - 1]
             exp_score = round(float(raw_exp_score), 3)
             exp_cells.append(exp_cell)
@@ -263,7 +263,7 @@ class MTXIngestor(GeneExpression):
             linear_data_id=model_id,
             **self.da_kwargs,
         ):
-            data_arrays[data_array["name"]] = data_array
+            data_arrays.append(data_array)
         # Data array for expression values
         for data_array in GeneExpression.create_data_array(
             name=f"{gene} Expression",
