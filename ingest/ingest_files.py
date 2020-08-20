@@ -62,7 +62,7 @@ class DataArray:
         if self.linear_data_type == "Study":
             self.linear_data_id = self.study_id
 
-    def get_data_array(self):
+    def get_data_arrays(self):
         if len(self.values) > self.MAX_ENTRIES:
             values = self.values
             for idx, i in enumerate(range(0, len(self.values), self.MAX_ENTRIES)):
