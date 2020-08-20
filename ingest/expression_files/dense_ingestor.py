@@ -150,6 +150,12 @@ class DenseIngestor(GeneExpression, IngestFiles):
         """
         associated_cells = []
         valid_expression_scores = []
+        if len(scores) != len(cells):
+            raise ValueError(
+                "Number of cell and expression values must be the same. "
+                f"Found row with {len(scores)} expression values."
+                f"Header contains {len(cells)} cells"
+            )
         for idx, expression_score in enumerate(scores):
             try:
                 if (
