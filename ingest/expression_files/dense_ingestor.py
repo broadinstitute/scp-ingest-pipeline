@@ -91,7 +91,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
             GeneExpression.check_unique_cells(header, *query_params)
         except ValueError as v:
             error_messages.append(str(v))
-
         if len(error_messages) > 0:
             raise ValueError("; ".join(error_messages))
 
@@ -216,43 +215,57 @@ class DenseIngestor(GeneExpression, IngestFiles):
         num_processed = 0
         gene_models = []
         data_arrays = []
-        for all_cell_model in self.set_data_array_cells(self.header, ObjectId()):
+        for all_cell_model in GeneExpression.create_data_arrays(
+            name=f"{self.cluster_name} Cells",
+            array_type="cells",
+            values=self.header,
+            linear_data_type="Study",
+            linear_data_id=ObjectId(),
+            **self.data_array_kwargs,
+        ):
+
             data_arrays.append(all_cell_model)
         # Represents row as a list
         for row in self.csv_file_handler:
-            valid_expression_scores, cells = DenseIngestor.filter_expression_scores(
+            valid_expression_scores, exp_cells = DenseIngestor.filter_expression_scores(
                 row[1:], self.header
             )
-            numeric_scores = DenseIngestor.process_row(valid_expression_scores)
+            exp_scores = DenseIngestor.process_row(valid_expression_scores)
             gene = row[0]
             if gene in self.gene_names:
                 raise ValueError(f"Duplicate gene: {gene}")
             self.gene_names[gene] = True
             formatted_gene_name = DenseIngestor.format_gene_name(gene)
-            id = ObjectId()
-            gene_models.append(
-                self.Model(
-                    {
-                        "name": formatted_gene_name,
-                        "searchable_name": formatted_gene_name.lower(),
-                        "study_file_id": self.study_file_id,
-                        "study_id": self.study_id,
-                        "_id": id,
-                        "gene_id": None,
-                    }
-                )
+            _id = ObjectId()
+            gene_model = GeneExpression.create_gene_model(
+                name=formatted_gene_name,
+                study_file_id=self.study_file_id,
+                study_id=self.study_id,
+                gene_id=None,
+                _id=_id,
             )
+            gene_models.append(gene_model)
             if len(valid_expression_scores) > 0:
-                for gene_cell_model in self.set_data_array_gene_cell_names(
-                    gene, id, cells
+                # Data array for cell names
+                for data_array in GeneExpression.create_data_arrays(
+                    name=f"{gene} Cells",
+                    array_type="cells",
+                    values=exp_cells,
+                    linear_data_type="Gene",
+                    linear_data_id=_id,
+                    **self.data_array_kwargs,
                 ):
-                    data_arrays.append(gene_cell_model)
-                for (
-                    gene_expression_values
-                ) in self.set_data_array_gene_expression_values(
-                    gene, id, numeric_scores
+                    data_arrays.append(data_array)
+                # Data array for expression values
+                for data_array in GeneExpression.create_data_arrays(
+                    name=f"{gene} Expression",
+                    array_type="expression",
+                    linear_data_type="Gene",
+                    values=exp_scores,
+                    linear_data_id=_id,
+                    **self.data_array_kwargs,
                 ):
-                    data_arrays.append(gene_expression_values)
+                    data_arrays.append(data_array)
             if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
                 num_processed += len(gene_models)
                 self.info_logger.info(
@@ -264,8 +277,8 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 gene_models = []
                 data_arrays = []
 
-        # load any remaining models (this is necessary here since there isn't an easy way to detect the
-        # last line of the file in the iteration above
+        # load any remaining models (this is necessary here since there isn't
+        # an easy way to detect the last line of the file in the iteration above
         if len(gene_models) > 0:
             yield gene_models, data_arrays
             num_processed += len(gene_models)
