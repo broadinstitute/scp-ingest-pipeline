@@ -1,5 +1,6 @@
 from bson.objectid import ObjectId
 
+
 expected_model = {
     "TP53": {
         "name": "TP53",

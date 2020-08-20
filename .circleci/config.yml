@@ -25,6 +25,11 @@ jobs:
             - v3-dependencies-
 
       - run:
+          name: Install system dependencies for Genomes Pipeline
+          command: |
+            sudo apt-get install -y tabix
+
+      - run:
           name: Install Python dependencies
           command: |
             python3 -m venv venv

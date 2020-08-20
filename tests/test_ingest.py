@@ -38,7 +38,7 @@ from unittest.mock import patch
 from bson.objectid import ObjectId
 from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_models
 from mock_data.matrix_mtx.gene_model_0 import expected_model
-from gcp_mocks import mock_storage_client, mock_storage_blob
+from mock_gcp import mock_storage_client, mock_storage_blob
 
 sys.path.append("../ingest")
 from ingest_pipeline import (

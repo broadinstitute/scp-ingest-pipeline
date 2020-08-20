@@ -64,22 +64,25 @@ class GeneExpression:
 
     @abc.abstractmethod
     def transform(self):
-        """Abstract method for transforming expression data into data models"""
+        """Abstract method for transforming expression data into data models."""
 
     @abc.abstractmethod
     def execute_ingest(self):
-        """Abstract method for parsing expression data into MongoDB"""
+        """Abstract method for parsing expression data into MongoDB."""
 
     @staticmethod
     @abc.abstractmethod
     def check_valid():
-        """Abstract method for validating expression matrices"""
+        """Abstract method for validating expression matrices."""
 
     @staticmethod
     def create_gene_model(
         *ignore, name: str, study_file_id, study_id, _id: int, gene_id: str = None
     ):
-        # Positional arguments passed in,
+        """Creates a gene model for a single gene.
+            This function accepts keyword arguments only. An error will be raise
+                when positional or additional keyword arguments are passed in.
+        """
         if ignore:
             raise TypeError("Position arguments are not accepted.")
         return GeneExpression.Model(
@@ -96,7 +99,7 @@ class GeneExpression:
     @staticmethod
     def check_unique_cells(cell_names: List, study_id, client):
         """Checks cell names against database to confirm matrix contains unique
-            cell names
+            cell names.
 
          Parameters:
             cell_names (List[str]): List of cell names in matrix
@@ -109,8 +112,8 @@ class GeneExpression:
                 {"linear_data_type": "Study"},
                 {"array_type": "cells"},
                 {"study_id": study_id},
-                {"linear_data_id": study_id},
-            ]
+            ],
+            "$nor": [{"name": "All Cells"}],
         }
         # Returned fields from query results
         field_names = {"values": 1, "_id": 0}
@@ -153,8 +156,9 @@ class GeneExpression:
         study_file_id,
     ) -> Generator:
         """
-        Sets data array.
-        Only allows keyword arguments
+        Sets data array for expression data.
+        This function accepts keyword arguments only. An error will be raise
+                when positional or additional keyword arguments are passed in.
         """
         fn_kwargs = copy.copy(locals())
         # Positional arguments passed in
