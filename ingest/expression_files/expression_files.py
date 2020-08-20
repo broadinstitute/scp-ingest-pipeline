@@ -165,7 +165,7 @@ class GeneExpression:
         if ignore:
             raise TypeError("Positional arguments are not accepted.")
         del fn_kwargs["ignore"]
-        for model in DataArray(**fn_kwargs).get_data_array():
+        for model in DataArray(**fn_kwargs).get_data_arrays():
             yield model
 
     @staticmethod
