@@ -34,6 +34,7 @@ except ImportError:
 class GeneExpression:
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = "genes"
+    DATA_ARRAY_BATCH_SIZE = 1000
     info_logger = setup_logger(__name__, "info.txt")
 
     @dataclass
@@ -80,7 +81,8 @@ class GeneExpression:
                 {"linear_data_type": "Study"},
                 {"array_type": "cells"},
                 {"study_id": study_id},
-            ]
+            ],
+            "$nor": [{"name": "All Cells"}],
         }
         # Returned fields from query results
         field_names = {"values": 1, "_id": 0}
@@ -99,7 +101,7 @@ class GeneExpression:
         ]
         dupes = set(existing_cells) & set(cell_names)
         if len(dupes) > 0:
-            error_string = f'Expression file contains {len(dupes)} cells that also exist in another expression file. '
+            error_string = f"Expression file contains {len(dupes)} cells that also exist in another expression file. "
             # add the first 3 duplicates to the error message
             error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
             raise ValueError(error_string)
@@ -163,7 +165,8 @@ class GeneExpression:
         self.insert(gene_docs, self.COLLECTION_NAME)
         self.insert(data_array_docs, "data_arrays")
         self.info_logger.info(
-            f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}"
+            f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}",
+            extra=self.extra_log_params,
         )
 
     def insert(self, docs: List, collection_name: str):

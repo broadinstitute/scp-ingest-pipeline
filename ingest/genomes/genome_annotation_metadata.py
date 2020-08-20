@@ -1,11 +1,9 @@
 """Write genome annotation metadata locally, and upload transformed GTFs to GCS
-
-TODO (SCP-2491): Add automated tests and refactor code moved from single_cell_portal
 """
 
-# flake8: noqa F403
+import os
 
-from .utils import *
+import utils
 
 
 def upload_gtf_product(transformed_gtf, bucket, existing_names):
@@ -37,17 +35,19 @@ def upload_ensembl_gtf_products(ensembl_metadata, scp_species, config):
     remote_output_dir = config['remote_output_dir']
     remote_prod_dir = config['remote_prod_dir']
 
-    storage_client = get_gcs_storage_client(vault_path)
+    storage_client = utils.get_gcs_storage_client(vault_path)
 
     # FireCloud workspace for canonical SCP reference data:
     # https://portal.firecloud.org/#workspaces/single-cell-portal/scp-reference-data
     reference_data_bucket = gcs_bucket
-    target_folder = remote_output_dir
+
+    # TODO: Uncomment or remove line below as part of SCP-2662
+    # target_folder = remote_output_dir
 
     bucket = storage_client.get_bucket(reference_data_bucket)
 
     remote_dev_dir = remote_output_dir
-    copy_gcs_data_from_prod_to_dev(bucket, remote_prod_dir, remote_dev_dir)
+    utils.copy_gcs_data_from_prod_to_dev(bucket, remote_prod_dir, remote_dev_dir)
 
     existing_names = [blob.name for blob in bucket.list_blobs()]
 
@@ -128,12 +128,12 @@ def update_meta_row(row, org_metadata, annot_metadata):
     return new_row
 
 
-def record_annotation_metadata(ensembl_metadata, scp_species):
+def record_annotation_metadata(output_dir, ensembl_metadata, scp_species):
     """Write annotation URLs, etc. to species metadata reference TSV file
     """
     new_metadata_ref = []
 
-    ref_file = 'species_metadata_reference.tsv'
+    ref_file = os.path.join(output_dir, 'species_metadata_reference.tsv')
 
     with open(ref_file) as f:
         metadata_ref = [line.strip().split('\t') for line in f.readlines()]

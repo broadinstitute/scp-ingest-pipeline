@@ -1,4 +1,3 @@
-import abc
 import os
 
 from pymongo import MongoClient
