@@ -62,7 +62,7 @@ class DataArray:
         if self.linear_data_type == "Study":
             self.linear_data_id = self.study_id
 
-    def get_data_array(self):
+    def get_data_arrays(self):
         if len(self.values) > self.MAX_ENTRIES:
             values = self.values
             for idx, i in enumerate(range(0, len(self.values), self.MAX_ENTRIES)):
@@ -83,7 +83,7 @@ class IngestFiles:
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
         self.is_remote_file = IngestFiles.is_remote_file(file_path)
-        self.is_gzip_file = self.get_file_type(file_path)[1] == 'gzip'
+        self.is_gzip_file = self.get_file_type(file_path)[1] == "gzip"
 
         self.verify_file_exists(file_path)
         # Allowed files for a given file type (expression file, cluster files, etc.)
@@ -151,7 +151,7 @@ class IngestFiles:
         if self.is_gzip_file:
             open_file = gzip.open(file_path, "rt", encoding="utf-8-sig")
         else:
-            open_file = open(file_path, 'rt', encoding="utf-8-sig")
+            open_file = open(file_path, "rt", encoding="utf-8-sig")
         return open_file, file_path
 
     def reset_file(self, file_path, start_point, open_as=None):
@@ -202,6 +202,9 @@ class IngestFiles:
     def open_file(self, file_path, open_as=None, start_point: int = 0, **kwargs):
         """ A wrapper function for opening txt (txt is expected to be tsv or csv), csv, or tsv formatted files"""
         open_file, file_path = self.resolve_path(file_path)
+        file_size = os.path.getsize(file_path)
+        if file_size == 0:
+            raise ValueError(f"{file_path} is empty: " + str(file_size))
         file_connections = {
             "text/csv": self.open_csv,
             "text/plain": self.open_txt,
@@ -289,12 +292,12 @@ class IngestFiles:
             return csv.reader(open_file_object, csv_dialect)
         except Exception:
             raise ValueError(
-                f'Could not determine delimiter. Please save file with appropriate suffix (.tsv or .csv) and try again.'
+                f"Could not determine delimiter. Please save file with appropriate suffix (.tsv or .csv) and try again."
             )
 
     def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
-        open_file_object = kwargs.pop('open_file_object')
+        open_file_object = kwargs.pop("open_file_object")
         if file_type in self.allowed_file_types:
             # Determine delimiter based on file type
             if file_type == "text/tab-separated-values":
@@ -319,7 +322,7 @@ class IngestFiles:
             delimiter=",",
             quotechar='"',
             skipinitialspace=True,
-            escapechar='\\',
+            escapechar="\\",
         )
         return csv.reader(opened_file_object, dialect="csvDialect")
 

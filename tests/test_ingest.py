@@ -36,16 +36,18 @@ import sys
 import unittest
 from unittest.mock import patch
 from bson.objectid import ObjectId
-from mock_data.expression.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import (
-    gene_models,
+from mock_data.expression.dense_matrices.dense_matrix_19_genes_100k_cells_txt.gene_models import (
+    dense_19_100k_gene_models,
 )
 from mock_data.expression.dense_matrices.dense_matrix_19_genes_100k_cells_txt.data_arrays import (
-    data_arrays,
+    dense_19_100k_data_arrays,
 )
-from mock_data.expression.matrix_mtx.gene_model_0 import expected_model
-from mock_data.expression.r_format.models import gene_models, data_arrays
-from mock_data.expression.matrix_mtx.data_arrays import data_arrays
-from gcp_mocks import mock_storage_client, mock_storage_blob
+from mock_data.expression.matrix_mtx.gene_models import mtx_gene_models
+from mock_data.expression.matrix_mtx.data_arrays import mtx_data_arrays
+from mock_data.expression.r_format.models import r_gene_models
+from mock_data.expression.r_format.data_arrays import r_data_arrays
+from mock_gcp import mock_storage_client, mock_storage_blob
+
 
 sys.path.append("../ingest")
 from ingest_pipeline import (
@@ -74,7 +76,7 @@ def mock_load(self, *args, **kwargs):
     self.load_kwargs = kwargs
 
 
-def mock_load_genes(self, *args, **kwargs):
+def mock_load_genes(self, documents, collection_name):
     """Enables overwriting normal function with this placeholder.
     Returning the arguments enables tests to verify that the code invokes
     this method with expected argument values.
@@ -86,8 +88,8 @@ def mock_load_genes(self, *args, **kwargs):
     unlike here where we merely give a way to verify loading-code *inputs*.
     Doing so via integration tests will isolate us from implementation changes.
     """
-    self.gene_docs = args[0]
-    self.data_array_docs = args[1]
+    self.documents = documents
+    self.collection_name = collection_name
 
 
 # Mock method that writes to database
@@ -157,17 +159,18 @@ class IngestTestCase(unittest.TestCase):
             "dense",
         ]
         ingest = self.execute_ingest(args)[0]
-        models = ingest.expression_ingestor.gene_docs
-        actual_data_arrays = ingest.expression_ingestor.data_array_docs
+        models = ingest.expression_ingestor.documents
         # print(models)
-        for model in models:
-            # Ensure that 'ObjectID' in model is removed
-            del model["_id"]
-            # Verify gene model looks as expected
-            self.assertEqual(model, gene_models[model["name"]])
-        for actual_data_array in actual_data_arrays:
-            del actual_data_array["linear_data_id"]
-            self.assertEqual(actual_data_array, data_arrays[actual_data_array["name"]])
+        if ingest.expression_ingestor.collection_name == GeneExpression.COLLECTION_NAME:
+            for model in models:
+                # Ensure that 'ObjectID' in model is removed
+                del model["_id"]
+                # Verify gene model looks as expected
+                self.assertEqual(model, dense_19_100k_gene_models[model["name"]])
+        else:
+            for model in models:
+                del model["linear_data_id"]
+                self.assertEqual(model, dense_19_100k_data_arrays[model["name"]])
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
@@ -199,17 +202,18 @@ class IngestTestCase(unittest.TestCase):
             "dense",
         ]
         ingest = self.execute_ingest(args)[0]
-
-        models = ingest.expression_ingestor.gene_docs
-        actual_data_arrays = ingest.expression_ingestor.data_array_docs
-        for model in models:
-            # Ensure that 'ObjectID' in model is removed
-            del model["_id"]
-            self.assertEqual(model, gene_models[model["name"]])
+        models = ingest.expression_ingestor.documents
         # print(models)
-        for actual_data_array in actual_data_arrays:
-            del actual_data_array["linear_data_id"]
-            self.assertEqual(actual_data_array, data_arrays[actual_data_array["name"]])
+        if ingest.expression_ingestor.collection_name == GeneExpression.COLLECTION_NAME:
+            for model in models:
+                # Ensure that 'ObjectID' in model is removed
+                del model["_id"]
+                # Verify gene model looks as expected
+                self.assertEqual(model, dense_19_100k_gene_models[model["name"]])
+        else:
+            for model in models:
+                del model["linear_data_id"]
+                self.assertEqual(model, dense_19_100k_data_arrays[model["name"]])
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
@@ -242,11 +246,79 @@ class IngestTestCase(unittest.TestCase):
             "dense",
         ]
         ingest = self.execute_ingest(args)[0]
-        models = ingest.expression_ingestor.gene_docs
-        for model in models:
-            # Ensure that 'ObjectID' in model is removed
-            del model["_id"]
-            self.assertEqual(model, gene_models[model["name"]])
+        models = ingest.expression_ingestor.documents
+        if ingest.expression_ingestor.collection_name == GeneExpression.COLLECTION_NAME:
+            for model in models:
+                # Ensure that 'ObjectID' in model is removed
+                del model["_id"]
+                # Verify gene model looks as expected
+                self.assertEqual(model, dense_19_100k_gene_models[model["name"]])
+
+    def test_empty_dense_file(self):
+        """Ingest Pipeline should fail gracefully when an empty file is given
+        """
+
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_expression",
+            "--taxon-name",
+            "Homo sapiens",
+            "--taxon-common-name",
+            "human",
+            "--ncbi-taxid",
+            "9606",
+            "--genome-assembly-accession",
+            "GCA_000001405.15",
+            "--genome-annotation",
+            "Ensembl 94",
+            "--matrix-file",
+            "../tests/data/empty_file.txt",
+            "--matrix-file-type",
+            "dense",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+
+    def test_empty_mtx_file(self):
+        """Ingest Pipeline should fail gracefully when an empty file is given
+        """
+
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_expression",
+            "--taxon-name",
+            "Homo sapiens",
+            "--taxon-common-name",
+            "human",
+            "--ncbi-taxid",
+            "9606",
+            "--genome-assembly-accession",
+            "GCA_000001405.15",
+            "--genome-annotation",
+            "Ensembl 94",
+            "--matrix-file",
+            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "--matrix-file-type",
+            "mtx",
+            "--gene-file",
+            "../tests/data/empty_file.txt",
+            "--barcode-file",
+            "../tests/data/AB_toy_data_toy.barcodes.tsv",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
@@ -283,17 +355,20 @@ class IngestTestCase(unittest.TestCase):
             "../tests/data/AB_toy_data_toy.barcodes.tsv",
         ]
         ingest = self.execute_ingest(args)[0]
-        models = ingest.expression_ingestor.gene_docs
+        models = ingest.expression_ingestor.documents
         print(f"actual model is: {models}")
-        for model in models:
-            # Ensure that 'ObjectID' in model is removed
-            del model["_id"]
-            self.assertEqual(model, expected_model[model["name"]])
-        for actual_data_array in actual_data_arrays:
-            data_array_name = actual_data_array["name"]
-            del actual_data_array["linear_data_id"]
-            del data_arrays[data_array_name]["linear_data_id"]
-            self.assertEqual(actual_data_array, data_arrays[data_array_name])
+        if ingest.expression_ingestor.collection_name == GeneExpression.COLLECTION_NAME:
+            for model in models:
+                # Ensure that 'ObjectID' in model is removed
+                del model["_id"]
+            self.assertEqual(model, mtx_gene_models[model["name"]])
+        else:
+            for model in models:
+                data_array_name = model["name"]
+                # Ensure that 'ObjectID' in model is remove
+                del model["linear_data_id"]
+                del mtx_data_arrays[data_array_name]["linear_data_id"]
+                self.assertEqual(model, mtx_data_arrays[data_array_name])
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
@@ -330,17 +405,19 @@ class IngestTestCase(unittest.TestCase):
         ]
 
         ingest = self.execute_ingest(args)[0]
-        models = ingest.expression_ingestor.gene_docs
-        print(f"actual model is: {models}")
-        for model in models:
-            # Ensure that 'ObjectID' in model is removed
-            del model["_id"]
-            self.assertEqual(model, expected_model[model["name"]])
-        for actual_data_array in actual_data_arrays:
-            data_array_name = actual_data_array["name"]
-            del actual_data_array["linear_data_id"]
-            del data_arrays[data_array_name]["linear_data_id"]
-            self.assertEqual(actual_data_array, data_arrays[data_array_name])
+        models = ingest.expression_ingestor.documents
+        if ingest.expression_ingestor.collection_name == GeneExpression.COLLECTION_NAME:
+            for model in models:
+                # Ensure that 'ObjectID' in model is removed
+                del model["_id"]
+            self.assertEqual(model, mtx_gene_models[model["name"]])
+        else:
+            for model in models:
+                data_array_name = model["name"]
+                # Ensure that 'ObjectID' in model is remove
+                del model["linear_data_id"]
+                del mtx_data_arrays[data_array_name]["linear_data_id"]
+                self.assertEqual(model, mtx_data_arrays[data_array_name])
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
@@ -386,13 +463,23 @@ class IngestTestCase(unittest.TestCase):
             "5dd5ae25421aa910a723a337",
             "ingest_expression",
             "--matrix-file",
-            "../tests/data/expression_matrix_bad_missing_keyword.txt",
+            "../tests/data/r_format_text.txt",
             "--matrix-file-type",
             "dense",
         ]
-        with self.assertRaises(SystemExit) as cm:
-            self.execute_ingest(args)
-        not self.assertEqual(cm.exception.code, 0)
+        ingest = self.execute_ingest(args)[0]
+        models = ingest.expression_ingestor.documents
+        # print(models)
+        if ingest.expression_ingestor.collection_name == GeneExpression.COLLECTION_NAME:
+            for model in models:
+                # Ensure that 'ObjectID' in model is removed
+                del model["_id"]
+                # Verify gene model looks as expected
+                self.assertEqual(model, r_gene_models[model["name"]])
+        else:
+            for model in models:
+                del model["linear_data_id"]
+                self.assertEqual(model, r_data_arrays[model["name"]])
 
     def test_good_metadata_file(self):
         """Ingest Pipeline should succeed for properly formatted metadata file

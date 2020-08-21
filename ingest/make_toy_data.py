@@ -29,131 +29,13 @@ import gzip
 import shutil
 import os
 import sys
+from functools import partial
 
 import numpy as np
 
 sys.path.append('.')
 sys.path.append('genomes')
-from genomes.parse_genome_annotations import fetch_gtfs
-
-# To consider: Add --species as a CLI argument
-scp_species = [['Homo sapiens', 'human', '9606']]
-
-args = argparse.ArgumentParser(
-    prog='make_toy_data.py',
-    description=__doc__,
-    formatter_class=argparse.RawDescriptionHelpFormatter,
-)
-args.add_argument(
-    '--num-files', default=3, type=int, help='Number of toy data files to output'
-)
-args.add_argument(
-    '--filename-leaf',
-    default='toy',
-    help=(
-        '"Leaf" to distinguish this file set from others.  '
-        + 'File naming pattern: AB_<leaf>.txt, CD_<leaf>.txt, ...'
-    ),
-)
-args.add_argument(
-    '--size-per-file',
-    default="25_MiB",
-    help=(
-        '<filesize_value>_<filesize_unit_symbol>, '
-        + 'e.g. 300_MiB means 300 mebibytes per file.'
-    ),
-)
-args.add_argument(
-    '--gzip',
-    action='store_true',
-    dest='gzip_files',
-    help='Flag: compress files with gzip?',
-)
-args.add_argument(
-    '--num-cores',
-    default=None,
-    type=int,
-    help=(
-        'Number of CPUs to use.  '
-        + 'Defaults to number of CPUs in machine, minus 1 (if multicore).'
-    ),
-)
-args.add_argument(
-    '--matrix-types',
-    nargs='+',
-    choices=['dense', 'sparse'],
-    default=['dense'],
-    help=('Format(s) of output expression matrix files.'),
-)
-args.add_argument(
-    '--crush', default=0.8, type=float, help=('Fraction of cells with zero expression')
-)
-args.add_argument('--num-genes', default=80, type=int, help=('Number of genes (rows)'))
-args.add_argument(
-    '--num-cells', default=None, type=int, help=('Number of cells (columns)')
-)
-args.add_argument(
-    '--preloaded-genes',
-    default=None,
-    help=(
-        'A preloaded file of gene names (e.g. gene TSV file from sparse '
-        + 'matrix output).  Two possible use cases:'
-        + ''
-        + 'Use case 1: Generate a matrix that has more genes than the most '
-        + 'current human Ensembl annotation. (make_toy_data.py currently '
-        + 'limits the generated toy matrix to the number of genes in '
-        + 'the fetched human Ensembl annotation). '
-        + ''
-        + 'Use case 2: simulate/replicate visualization with a specific list '
-        + 'of gene names (e.g. non-human gene names or an expression matrix '
-        + 'for nonRNAseq data, scATAC-seq "gene names" would be genome '
-        + 'coordinate ranges) for troubleshooting.'
-    ),
-)
-args.add_argument(
-    '--preloaded-barcodes',
-    default=None,
-    help=(
-        'A preloaded file of barcode names (e.g. barcodes TSV file from sparse matrix output)'
-    ),
-)
-args.add_argument(
-    '--max-write-size',
-    default=8e7,
-    type=float,
-    help=('Estimated maximum chunk size for writes'),
-)
-args.add_argument(
-    '--random-seed', default=0, type=float, help=('Random seed for number generation')
-)
-args.add_argument(
-    '--visualize', action='store_true', help=('Generate cluster and metadata files')
-)
-
-# load arg parser
-parsed_args = args.parse_args()
-num_files = parsed_args.num_files
-filename_leaf = parsed_args.filename_leaf
-size_per_file = parsed_args.size_per_file
-gzip_files = parsed_args.gzip_files
-num_cores = parsed_args.num_cores
-matrix_types = parsed_args.matrix_types
-crush = parsed_args.crush
-num_rows = parsed_args.num_genes
-num_columns = parsed_args.num_cells
-preloaded_genes = parsed_args.preloaded_genes
-preloaded_barcodes = parsed_args.preloaded_barcodes
-max_write_size = parsed_args.max_write_size
-random_seed = parsed_args.random_seed
-visualize = parsed_args.visualize
-
-is_explicit_num_columns = num_columns is not None
-
-dense = 'dense' in matrix_types
-sparse = 'sparse' in matrix_types
-
-# set the seed for number generation
-np.random.seed(random_seed)
+from genomes.genome_annotations import GenomeAnnotations
 
 
 def split_seq(li, cols=5):
@@ -172,13 +54,12 @@ def split_seq(li, cols=5):
         start = stop
 
 
-def fetch_genes():
+def fetch_genes(preloaded_genes, num_rows, output_dir):
     """
     Retrieve names (i.e. HUGO symbols) for all given for a species from Ensembl GTF
 
-    :return: List of gene symbols
+    :return: List of gene symbols, list of gene IDs, number of rows
     """
-    global num_rows
 
     genes = []
 
@@ -204,9 +85,15 @@ def fetch_genes():
             genes = genes[:num_rows]
             ids = ids[:num_rows]
             print('Preloaded', '{:,}'.format(len(genes)), 'genes')
-            return genes, ids
+            return genes, ids, num_rows
     else:
-        gtfs, ensembl_metadata = fetch_gtfs(scp_species)
+
+        # To consider: Add --species as a CLI argument
+        scp_species = [['Homo sapiens', 'human', '9606']]
+
+        gtfs = GenomeAnnotations(
+            local_output_dir=output_dir, scp_species=scp_species
+        ).fetch_gtfs()
         gtf_filename = gtfs[0][0]
 
         with gzip.open(gtf_filename, mode='rt') as f:
@@ -246,24 +133,23 @@ def fetch_genes():
             print('Not enough genes in GTF, reducing gene number to', len(genes))
             num_rows = len(genes)
 
-    return genes[:num_rows], ['FAKE00' + str(i) for i in range(num_rows)]
+    genes = genes[:num_rows]
+    ids = ['FAKE00' + str(i) for i in range(num_rows)]
+
+    return genes, ids, num_rows
 
 
-def fetch_cells(prefix):
+def fetch_cells(
+    prefix, num_rows, num_columns, bytes_per_file, preloaded_barcodes, visualize, sparse
+):
     """
     Retrieve/ Generate cell names
     :param prefix: String of two uppercase letters, e.g. "AB"
-    :return: dense matrix header & list of barcodes
+    :return: dense matrix header, list of barcodes, and number of columns
     """
     print('Generating matrix')
     letters = ['A', 'B', 'C', 'D']
 
-    # ~1.65 KB (KiB) per 80 cells, uncompressed
-    bytes_per_column = 4.7 * num_rows
-
-    global num_columns
-    if not num_columns:
-        num_columns = int(bytes_per_file / bytes_per_column)
     # Generate header
     barcodes = []
     header = 'GENE\t'
@@ -322,16 +208,37 @@ def fetch_cells(prefix):
     return header, barcodes
 
 
-def get_signature_content(prefix):
+def get_signature_content(
+    prefix,
+    num_rows,
+    num_columns,
+    max_write_size,
+    is_explicit_num_columns,
+    bytes_per_file,
+    preloaded_barcodes,
+    visualize,
+    sparse,
+    crush,
+    genes,
+):
     """
     Generates "signature" data, incorporating a given prefix.
 
-    :param prefix: String of two uppercase letters, e.g. "AB"
     :return: generator for rows of dense matrix and expression scores for sparse matrix, barcodes and num_chunks
     """
+
     # get the header and barcodes for writing first row of dense matrix,
     # writing barcodes.tsv file
-    header, barcodes = fetch_cells(prefix)
+    header, barcodes = fetch_cells(
+        prefix,
+        num_rows,
+        num_columns,
+        bytes_per_file,
+        preloaded_barcodes,
+        visualize,
+        sparse,
+    )
+
     # num_chunks is how many rows of the dense matrix we write at a time
     # (basically) depending on the max_write_size, +1 in case it is 0
     num_chunks = round((num_rows * num_columns) // max_write_size) + 1
@@ -454,17 +361,36 @@ def generate_metadata_and_cluster(barcodes):
     return metadata_string, cluster_string
 
 
-def pool_processing(prefix):
+def pool_processing(
+    filename_leaf,
+    sparse,
+    dense,
+    visualize,
+    crush,
+    gzip_files,
+    num_rows,
+    num_columns,
+    preloaded_genes,
+    preloaded_barcodes,
+    max_write_size,
+    is_explicit_num_columns,
+    bytes_per_file,
+    genes,
+    ids,
+    output_dir,
+    prefix,
+):
     """ Function called by each CPU core in our pool of available CPUs.
-    :param prefix: String of two uppercase letters, e.g. "AB"
     """
+
     # potential file names
-    dense_name = prefix + '_toy_data_' + filename_leaf + '.txt'
-    genes_name = prefix + '_toy_data_' + filename_leaf + '.genes.tsv'
-    barcodes_name = prefix + '_toy_data_' + filename_leaf + '.barcodes.tsv'
-    matrix_name = prefix + '_toy_data_' + filename_leaf + '.matrix.mtx'
-    cluster_name = prefix + '_toy_data_' + filename_leaf + '.cluster.txt'
-    metadata_name = prefix + '_toy_data_' + filename_leaf + '.metadata.txt'
+    stem = os.path.join(output_dir, f"{prefix}_toy_data_{filename_leaf}")
+    dense_name = stem + '.txt'
+    genes_name = stem + '.genes.tsv'
+    barcodes_name = stem + '.barcodes.tsv'
+    matrix_name = stem + '.matrix.mtx'
+    cluster_name = stem + '.cluster.txt'
+    metadata_name = stem + '.metadata.txt'
 
     # get list of files we are creating
     files_to_write = []
@@ -481,9 +407,22 @@ def pool_processing(prefix):
     for file in files_to_write:
         if os.path.exists(file):
             os.remove(file)
+
     # get the generator function and num chunks for the given barcodes/genes
-    # (if any preloaded, otherwise randomly generate/get from ncbi)
-    row_generator, barcodes, num_chunks = get_signature_content(prefix)
+    # (if any preloaded, otherwise randomly generate/get from NCBI)
+    row_generator, barcodes, num_chunks = get_signature_content(
+        prefix,
+        num_rows,
+        num_columns,
+        max_write_size,
+        is_explicit_num_columns,
+        bytes_per_file,
+        preloaded_barcodes,
+        visualize,
+        sparse,
+        crush,
+        genes,
+    )
     # make a var for bar length for convenience
     bar_len = len(barcodes)
     # WRITE FILES
@@ -607,25 +546,193 @@ def parse_filesize_string(filesize_string):
     return num_bytes
 
 
-bytes_per_file = parse_filesize_string(size_per_file)
-prefixes = []
+def create_parser():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        '--num-files', default=3, type=int, help='Number of toy data files to output'
+    )
+    parser.add_argument(
+        '--filename-leaf',
+        default='toy',
+        help=(
+            '"Leaf" to distinguish this file set from others.  '
+            + 'File naming pattern: AB_<leaf>.txt, CD_<leaf>.txt, ...'
+        ),
+    )
+    parser.add_argument(
+        '--size-per-file',
+        default="25_MiB",
+        help=(
+            '<filesize_value>_<filesize_unit_symbol>, '
+            + 'e.g. 300_MiB means 300 mebibytes per file.'
+        ),
+    )
+    parser.add_argument(
+        '--gzip',
+        action='store_true',
+        dest='gzip_files',
+        help='Flag: compress files with gzip?',
+    )
+    parser.add_argument(
+        '--num-cores',
+        default=None,
+        type=int,
+        help=(
+            'Number of CPUs to use.  '
+            + 'Defaults to number of CPUs in machine, minus 1 (if multicore).'
+        ),
+    )
+    parser.add_argument(
+        '--matrix-types',
+        nargs='+',
+        choices=['dense', 'sparse'],
+        default=['dense'],
+        help=('Format(s) of output expression matrix files.'),
+    )
+    parser.add_argument(
+        '--crush',
+        default=0.8,
+        type=float,
+        help=('Fraction of cells with zero expression'),
+    )
+    parser.add_argument(
+        '--num-genes', default=80, type=int, help=('Number of genes (rows)')
+    )
+    parser.add_argument(
+        '--num-cells', default=None, type=int, help=('Number of cells (columns)')
+    )
+    parser.add_argument(
+        '--preloaded-genes',
+        default=None,
+        help=(
+            'A preloaded file of gene names (e.g. gene TSV file from sparse '
+            + 'matrix output).  Two possible use cases:'
+            + ''
+            + 'Use case 1: Generate a matrix that has more genes than the most '
+            + 'current human Ensembl annotation. (make_toy_data.py currently '
+            + 'limits the generated toy matrix to the number of genes in '
+            + 'the fetched human Ensembl annotation). '
+            + ''
+            + 'Use case 2: simulate/replicate visualization with a specific list '
+            + 'of gene names (e.g. non-human gene names or an expression matrix '
+            + 'for nonRNAseq data, scATAC-seq "gene names" would be genome '
+            + 'coordinate ranges) for troubleshooting.'
+        ),
+    )
+    parser.add_argument(
+        '--preloaded-barcodes',
+        default=None,
+        help=(
+            'A preloaded file of barcode names (e.g. barcodes TSV file from sparse matrix output)'
+        ),
+    )
+    parser.add_argument(
+        '--max-write-size',
+        default=8e7,
+        type=float,
+        help=('Estimated maximum chunk size for writes'),
+    )
+    parser.add_argument(
+        '--random-seed',
+        default=0,
+        type=float,
+        help=('Random seed for number generation'),
+    )
+    parser.add_argument(
+        '--visualize', action='store_true', help=('Generate cluster and metadata files')
+    )
+    parser.add_argument('--output-dir', default='output/', help=('Output directory'))
 
-genes, ids = fetch_genes()
+    return parser
 
-# Available prefix characters for output toy data file names
-alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-for i in range(0, num_files):
-    index = i * 2
-    prefix = alphabet[index : index + 2]  # e.g. 'AB' or 'CD'
-    prefixes.append(prefix)
 
-if num_cores is None:
-    num_cores = multiprocessing.cpu_count()
-    if num_cores > 1:
-        # Use all cores except 1 in machines with multiple CPUs
-        num_cores -= 1
+def make_toy_data(args):
+    num_files = args.num_files
+    filename_leaf = args.filename_leaf
+    size_per_file = args.size_per_file
+    gzip_files = args.gzip_files
+    num_cores = args.num_cores
+    matrix_types = args.matrix_types
+    crush = args.crush
+    num_rows = args.num_genes
+    num_columns = args.num_cells
+    preloaded_genes = args.preloaded_genes
+    preloaded_barcodes = args.preloaded_barcodes
+    max_write_size = args.max_write_size
+    random_seed = args.random_seed
+    visualize = args.visualize
+    output_dir = args.output_dir
 
-pool = multiprocessing.Pool(num_cores)
+    bytes_per_file = parse_filesize_string(size_per_file)
+    prefixes = []
 
-# Distribute calls to get_signature_content to multiple CPUs
-pool.map(pool_processing, prefixes)
+    is_explicit_num_column = num_columns is not None
+
+    dense = 'dense' in matrix_types
+    sparse = 'sparse' in matrix_types
+
+    # set the seed for number generation
+    np.random.seed(random_seed)
+
+    bytes_per_file = parse_filesize_string(size_per_file)
+    prefixes = []
+
+    # ~1.65 KB (KiB) per 80 cells, uncompressed
+    bytes_per_column = 4.7 * num_rows
+
+    if not num_columns:
+        num_columns = int(bytes_per_file / bytes_per_column)
+
+    genes, ids, num_rows = fetch_genes(preloaded_genes, num_rows, output_dir)
+
+    # Available prefix characters for output toy data file names
+    alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    for i in range(0, num_files):
+        index = i * 2
+        prefix = alphabet[index : index + 2]  # e.g. 'AB' or 'CD'
+        prefixes.append(prefix)
+
+    if num_cores is None:
+        num_cores = multiprocessing.cpu_count()
+        if num_cores > 1:
+            # Use all cores except 1 in machines with multiple CPUs
+            num_cores -= 1
+
+    pool = multiprocessing.Pool(num_cores)
+
+    # Distribute calls to get_signature_content to multiple CPUs
+    pool.map(
+        partial(
+            pool_processing,
+            filename_leaf,
+            sparse,
+            dense,
+            visualize,
+            crush,
+            gzip_files,
+            num_rows,
+            num_columns,
+            preloaded_genes,
+            preloaded_barcodes,
+            max_write_size,
+            is_explicit_num_column,
+            bytes_per_file,
+            genes,
+            ids,
+            output_dir,
+        ),
+        prefixes,
+    )
+
+
+def main():
+    """Enables running via module or CLI
+    """
+    args = create_parser().parse_args()
+    make_toy_data(args)
+
+
+if __name__ == "__main__":
+    main()

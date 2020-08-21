@@ -2,7 +2,7 @@
 Module for ingesting MTX files
 
 DESCRIPTION
-This module provides extract and transforms function for a MTX file bundle. A
+This module provides extract and transforms function for an MTX file bundle. An
 MTX file bundle consists of A) an .mtx file in Matrix
 Market matrix coordinate format, B) a genes.tsv file, and a barcodes.tsv file.
 These are commonly provided from 10x Genomics v2.
@@ -17,13 +17,14 @@ from bson.objectid import ObjectId
 
 try:
     from expression_files import GeneExpression
+    from ingest_files import DataArray
 
-    sys.path.append("../ingest")
     from ingest_files import IngestFiles
 except ImportError:
     # Used when importing as external package, e.g. imports in
     # single_cell_portal code
     from .expression_files import GeneExpression
+    from ..ingest_files import DataArray
 
     sys.path.append("../ingest")
     from ..ingest_files import IngestFiles
@@ -153,9 +154,8 @@ class MTXIngestor(GeneExpression):
             self.mtx_dimensions,
             query_params=(self.study_id, self.mongo_connection._client),
         )
-        for gene_docs, data_array_documents in self.transform():
-            # self.load(gene_docs, data_array_documents)
-            pass
+        for documents, collection_name in self.transform():
+            self.load(documents, collection_name)
 
     def extract_feature_barcode_matrices(self):
         """
@@ -180,13 +180,13 @@ class MTXIngestor(GeneExpression):
         model_id = None
 
         # All observed cells
-        for data_array in GeneExpression.create_data_array(
+        for data_array in GeneExpression.create_data_arrays(
             name=f"{self.cluster_name} Cells",
             array_type="cells",
             values=self.cells,
             linear_data_type="Study",
             linear_data_id=self.study_file_id,
-            **self.da_kwargs,
+            **self.data_array_kwargs,
         ):
             data_arrays.append(data_array)
         for row in self.mtx_file:
@@ -206,25 +206,43 @@ class MTXIngestor(GeneExpression):
                         last_gene_id, last_gene = self.genes[current_idx - 2].split(
                             "\t"
                         )
-                        for data_array in GeneExpression.create_data_array(
+                        current_data_arrays = []
+                        # Data arrays for cells
+                        for data_array in GeneExpression.create_data_arrays(
                             name=f"{last_gene} Cells",
                             array_type="cells",
                             values=exp_cells,
                             linear_data_type="Gene",
                             linear_data_id=model_id,
-                            **self.da_kwargs,
+                            **self.data_array_kwargs,
                         ):
-                            data_arrays.append(data_array)
-                        # Data array for expression values
-                        for data_array in GeneExpression.create_data_array(
+                            current_data_arrays.append(data_array)
+                        # Data arrays for expression values
+                        for data_array in GeneExpression.create_data_arrays(
                             name=f"{last_gene} Expression",
                             array_type=f"expression",
                             values=exp_scores,
                             linear_data_type="Gene",
                             linear_data_id=model_id,
-                            **self.da_kwargs,
+                            **self.data_array_kwargs,
                         ):
-                            data_arrays.append(data_array)
+                            current_data_arrays.append(data_array)
+                        # Determine if models should be batched
+                        if (
+                            len(data_arrays) + len(current_data_arrays)
+                            >= GeneExpression.DATA_ARRAY_BATCH_SIZE
+                        ):
+                            yield gene_models, GeneExpression.COLLECTION_NAME
+                            yield data_arrays, DataArray.COLLECTION_NAME
+                            num_processed += len(gene_models)
+                            print(
+                                f"Processed {num_processed} genes. "
+                                f"{str(datetime.datetime.now() - start_time)} "
+                                f"elapsed"
+                            )
+                            gene_models = []
+                            data_arrays = []
+                        data_arrays += current_data_arrays
                         # Reset variables so values will be associated w/new
                         # gene
                         exp_cells = []
@@ -238,48 +256,36 @@ class MTXIngestor(GeneExpression):
                         _id=model_id,
                     )
                     gene_models.append(gene_model)
-                    if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
-                        yield gene_models, data_arrays
-                        num_processed += len(gene_models)
-                        print(
-                            f"Processed {num_processed} genes. "
-                            f"{str(datetime.datetime.now() - start_time)} "
-                            f"elapsed"
-                        )
-                        num_processed += len(gene_models)
-                        gene_models = []
-                        data_arrays = []
                     last_idx = current_idx
             exp_cell = self.cells[int(raw_barcode_idx) - 1]
             exp_score = round(float(raw_exp_score), 3)
             exp_cells.append(exp_cell)
             exp_scores.append(exp_score)
         # Create data array for last row
-        for data_array in GeneExpression.create_data_array(
+        for data_array in GeneExpression.create_data_arrays(
             name=f"{gene} Cells",
             array_type="cells",
             values=exp_cells,
             linear_data_type="Gene",
             linear_data_id=model_id,
-            **self.da_kwargs,
+            **self.data_array_kwargs,
         ):
             data_arrays.append(data_array)
         # Data array for expression values
-        for data_array in GeneExpression.create_data_array(
+        for data_array in GeneExpression.create_data_arrays(
             name=f"{gene} Expression",
             array_type=f"expression",
             values=exp_scores,
             linear_data_type="Gene",
             linear_data_id=model_id,
-            **self.da_kwargs,
+            **self.data_array_kwargs,
         ):
             data_arrays.append(data_array)
+        yield data_arrays, DataArray.COLLECTION_NAME
+        num_processed += len(data_arrays)
         if len(gene_models) > 0:
-            yield gene_models, data_arrays
-
-        else:
-            yield None, data_arrays
-        num_processed += len(gene_models)
+            yield gene_models, GeneExpression.COLLECTION_NAME
+            num_processed += len(gene_models)
         print(
             f"Processed {num_processed} genes. "
             f"{str(datetime.datetime.now() - start_time)} "

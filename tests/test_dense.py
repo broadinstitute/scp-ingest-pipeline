@@ -2,15 +2,51 @@ import sys
 import unittest
 from unittest.mock import patch, MagicMock, PropertyMock
 from bson.objectid import ObjectId
+import csv
 
 sys.path.append("../ingest")
 from expression_files.dense_ingestor import DenseIngestor
 from expression_files.expression_files import GeneExpression
-from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_models
-from mock_data.dense_matrix_19_genes_100k_cells_txt.data_arrays import data_arrays
+from mock_data.expression.dense_matrices.dense_matrix_19_genes_100k_cells_txt.gene_models import (
+    dense_19_100k_gene_models,
+)
+from mock_data.expression.dense_matrices.dense_matrix_19_genes_100k_cells_txt.data_arrays import (
+    dense_19_100k_data_arrays,
+)
+from mock_data.expression.r_format.models import r_gene_models
+from mock_data.expression.r_format.data_arrays import r_data_arrays
+from ingest_files import DataArray
 
 
 class TestDense(unittest.TestCase):
+    def test_set_header(self):
+        # R File where last value is ""
+        with open("../tests/data/r_format_text.txt") as f:
+            r_file = csv.reader(f, delimiter="\t")
+            header = DenseIngestor.set_header(r_file)
+            # Reset file handle to grab expected header
+            f.seek(0)
+            expected_header = next(r_file)[:-1]
+            self.assertEqual(header, expected_header)
+
+        # R File where "GENE" isn't present
+        with open("../tests/data/r_format_text.csv") as f:
+            r_file = csv.reader(f)
+            header = DenseIngestor.set_header(r_file)
+            # Reset file handle to grab expected header
+            f.seek(0)
+            expected_header = next(r_file)
+            self.assertEqual(header, expected_header)
+
+        # Regular dense matrix
+        with open("../tests/data/dense_matrix_10_genes_15_cells.txt") as f:
+            dense_file = csv.reader(f)
+            header = DenseIngestor.set_header(dense_file)
+            # Reset file handle to grab expected header
+            f.seek(0)
+            expected_header = next(dense_file)[1:]
+            self.assertEqual(header, expected_header)
+
     def test_process_header(self):
         header = ["one", "two", '"three', "'four"]
         actual_header = DenseIngestor.process_header(header)
@@ -58,6 +94,19 @@ class TestDense(unittest.TestCase):
         self.assertRaises(
             ValueError, DenseIngestor.filter_expression_scores, invalid_scores, cells
         )
+        not_enough_scores = ["BRCA1", 4, 0, "0"]
+        with self.assertRaises(ValueError) as error:
+            DenseIngestor.filter_expression_scores(not_enough_scores, cells)
+
+        too_many_scores = ["BRCA1", 4, 0, "0", 5, 6]
+        with self.assertRaises(ValueError) as error:
+            DenseIngestor.filter_expression_scores(too_many_scores, cells)
+        expected_msg = (
+            "Number of cell and expression values must be the same. "
+            f"Found row with {len(too_many_scores)} expression values."
+            f"Header contains {len(cells)} cells"
+        )
+        self.assertEqual(expected_msg, str(error.exception))
 
     def test_process_row(self):
         # Positive test case
@@ -70,7 +119,7 @@ class TestDense(unittest.TestCase):
         self.assertRaises(ValueError, DenseIngestor.process_row, invalid_row)
 
     def test_check_gene_keyword(self):
-        """Validates validate_gene_keyword() returns false correctly"""
+        """Validates validate_gene_keyword() returns false correctly."""
         # Mimics the row following the header
         row = ["BRCA1", "' 1.45678 '", '"3.45678"', "2"]
 
@@ -93,13 +142,22 @@ class TestDense(unittest.TestCase):
         row = ["BRCA1", "' 1.45678 '", '"3.45678"', "2"]
 
         r_header = ["foo", "foo2", "foo3"]
-        self.assertTrue(DenseIngestor.is_r_formatted_file(r_header, row))
+        is_r, header = DenseIngestor.is_r_formatted_file(r_header, row)
+        self.assertTrue(is_r)
+        self.assertEqual(header, r_header)
+
+        r_header = ["foo", "foo2", "foo3", ""]
+        is_r, header = DenseIngestor.is_r_formatted_file(r_header, row)
+        self.assertTrue(is_r)
+        self.assertEqual(header, ["foo", "foo2", "foo3"])
 
         dense_header = ["GENE", "foo", "foo2", "foo3"]
-        self.assertFalse(DenseIngestor.is_r_formatted_file(dense_header, row))
+        is_r, header = DenseIngestor.is_r_formatted_file(dense_header, row)
+        self.assertFalse(is_r)
+        self.assertEqual(header, ["foo", "foo2", "foo3"])
 
     def test_check_unique_header(self):
-        """Validates validate_unique_header() returns false correctly"""
+        """Validates validate_unique_header() returns false correctly."""
         header = ["GENE", "foo", "foo2", "foo3"]
         self.assertTrue(DenseIngestor.check_unique_header(header))
 
@@ -114,10 +172,6 @@ class TestDense(unittest.TestCase):
             "5dd5ae25421aa910a723a337",
             tracer=None,
         )
-        # Return file handler to correct position
-        expression_matrix.csv_file_handler = expression_matrix.open_file(FILE_PATH)[0]
-        # Skip header
-        next(expression_matrix.csv_file_handler)
         with self.assertRaises(ValueError) as error:
             for gene_mode, data_array in expression_matrix.transform():
                 pass
@@ -125,7 +179,7 @@ class TestDense(unittest.TestCase):
 
     @patch("expression_files.expression_files.GeneExpression.check_unique_cells")
     def test_check_valid(self, mock_check_unique_cells):
-        """Confirms the errors are correctly promulgated"""
+        """Confirms the errors are correctly promulgated."""
         query_params = (ObjectId("5dd5ae25421aa910a723a337"), MagicMock())
 
         self.assertTrue(
@@ -180,24 +234,48 @@ class TestDense(unittest.TestCase):
 
     def test_transform_fn(self):
         """
-        Assures transform function creates gene data model correctly
+        Assures transform function creates data models correctly.
         """
         expression_matrix = DenseIngestor(
             "../tests/data/dense_matrix_19_genes_1000_cells.txt",
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
         )
-        for actual_gene_models, actual_data_arrays in expression_matrix.transform():
+        for documents, collection_name in expression_matrix.transform():
             # _id is a unique identifier and can not be predicted
             # so we exclude it from the comparison
-            for actual_gene_model in actual_gene_models:
-                del actual_gene_model["_id"]
-                gene_name = actual_gene_model["name"]
-                self.assertEqual(actual_gene_model, gene_models[gene_name])
-            for actual_data_array in actual_data_arrays:
-                del actual_data_array["linear_data_id"]
-                data_array_name = actual_data_array["name"]
-                self.assertEqual(actual_data_array, data_arrays[data_array_name])
+            for document in documents:
+                if collection_name == GeneExpression.COLLECTION_NAME:
+                    del document["_id"]
+                    gene_name = document["name"]
+                    self.assertEqual(document, dense_19_100k_gene_models[gene_name])
+                if collection_name == DataArray.COLLECTION_NAME:
+                    del document["linear_data_id"]
+                    data_array_name = document["name"]
+                    self.assertEqual(
+                        document, dense_19_100k_data_arrays[data_array_name]
+                    )
+
+    def test_transform_fn_r_format(self):
+        """
+            Assures transform function creates data models for r formatted
+                files correctly.
+        """
+        expression_matrix = DenseIngestor(
+            "../tests/data/r_format_text.txt",
+            "5d276a50421aa9117c982845",
+            "5dd5ae25421aa910a723a337",
+        )
+        for documents, collection_name in expression_matrix.transform():
+            for document in documents:
+                if collection_name == GeneExpression.COLLECTION_NAME:
+                    # Ensure that 'ObjectID' in model is removed
+                    del document["_id"]
+                    # Verify gene model looks as expected
+                    self.assertEqual(document, r_gene_models[document["name"]])
+                else:
+                    del document["linear_data_id"]
+                    self.assertEqual(document, r_data_arrays[document["name"]])
 
     def test_transform_fn_batch(self):
         """
@@ -205,7 +283,7 @@ class TestDense(unittest.TestCase):
         the +1 fudge factor is because we only check for batch size after a full row
         has been processed
         """
-        GeneExpression.DATA_ARRAY_BATCH_SIZE = 4
+
         expression_matrix = DenseIngestor(
             "../tests/data/dense_matrix_10_genes_15_cells.txt",
             "5d276a50421aa9117c982845",
@@ -216,16 +294,17 @@ class TestDense(unittest.TestCase):
             new_callable=PropertyMock,
             return_value=4,
         ):
-            for actual_gene_models, actual_data_arrays in expression_matrix.transform():
-                self.assertTrue(
-                    GeneExpression.DATA_ARRAY_BATCH_SIZE + 1 >= len(actual_data_arrays)
-                )
+            for documents, collection_name in expression_matrix.transform():
+                if collection_name == DataArray.COLLECTION_NAME:
+                    self.assertTrue(
+                        GeneExpression.DATA_ARRAY_BATCH_SIZE + 1 >= len(documents)
+                    )
 
         """
         Assures transform function creates gene data model correctly for files
         with a number of data arrays that is a multiple of DATA_ARRAY_BATCH_SIZE (SCP-2669)
+        (note that the number of data_arrays is (number of genes) * 2 + 1)
         """
-        GeneExpression.DATA_ARRAY_BATCH_SIZE = 21
         expression_matrix = DenseIngestor(
             "../tests/data/dense_matrix_10_genes_15_cells.txt",
             "5d276a50421aa9117c982845",
@@ -236,7 +315,8 @@ class TestDense(unittest.TestCase):
             new_callable=PropertyMock,
             return_value=21,
         ):
-            for actual_gene_models, actual_data_arrays in expression_matrix.transform():
-                self.assertEqual(
-                    GeneExpression.DATA_ARRAY_BATCH_SIZE, len(actual_data_arrays)
-                )
+            for documents, collection_name in expression_matrix.transform():
+                if collection_name == DataArray.COLLECTION_NAME:
+                    self.assertEqual(
+                        GeneExpression.DATA_ARRAY_BATCH_SIZE, len(documents)
+                    )

@@ -44,6 +44,7 @@ from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 # import google.cloud.logging
 from bson.objectid import ObjectId
 
+
 # from google.cloud.logging.resource import Resource
 try:
     # Used when importing internally and in tests
@@ -149,7 +150,6 @@ class IngestPipeline:
         user = os.environ["MONGODB_USERNAME"]
         password = os.environ["MONGODB_PASSWORD"]
         db_name = os.environ["DATABASE_NAME"]
-
         client = MongoClient(
             host,
             username=user,
@@ -299,21 +299,20 @@ class IngestPipeline:
         """
         Ingests expression files.
         """
-
         self.expression_ingestor = None
-        if MTXIngestor.matches_file_type(self.matrix_file_type):
-            self.expression_ingestor = MTXIngestor(
-                self.matrix_file, self.study_id, self.study_file_id, **self.kwargs
-            )
-        if DenseIngestor.matches_file_type(self.matrix_file_type):
-            self.expression_ingestor = DenseIngestor(
-                self.matrix_file,
-                self.study_id,
-                self.study_file_id,
-                tracer=self.tracer,
-                **self.kwargs,
-            )  # Dense receiver
         try:
+            if MTXIngestor.matches_file_type(self.matrix_file_type):
+                self.expression_ingestor = MTXIngestor(
+                    self.matrix_file, self.study_id, self.study_file_id, **self.kwargs
+                )
+            if DenseIngestor.matches_file_type(self.matrix_file_type):
+                self.expression_ingestor = DenseIngestor(
+                    self.matrix_file,
+                    self.study_id,
+                    self.study_file_id,
+                    tracer=self.tracer,
+                    **self.kwargs,
+                )  # Dense receiver
             self.expression_ingestor.execute_ingest()
         except Exception as e:
             self.error_logger.error(e, extra=self.extra_log_params)
@@ -422,12 +421,9 @@ def run_ingest(ingest, arguments, parsed_args):
     """
     status = []
     status_cell_metadata = None
-
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
-        stat = ingest.ingest_expression()
-        print(f"status is {stat}")
-        status.append(stat)
+        status.append(ingest.ingest_expression())
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
             status_cell_metadata = ingest.ingest_cell_metadata()
@@ -451,7 +447,6 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """
     if len(status) > 0:
         if all(i < 1 for i in status):
-
             sys.exit(os.EX_OK)
         else:
             # delocalize errors file

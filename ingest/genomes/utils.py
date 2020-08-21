@@ -1,6 +1,4 @@
 """Common functions for genome assembly and annotation data processing.
-
-TODO (SCP-2491): Add automated tests and refactor code moved from single_cell_portal
 """
 
 import gzip
@@ -90,7 +88,7 @@ def get_pool_args(urls, output_dir, num_cores):
     """
 
     url_and_output_paths = []
-    output_paths = [output_dir + url.split('/')[-1] for url in urls]
+    output_paths = [os.path.join(output_dir, url.split('/')[-1]) for url in urls]
     for i, url in enumerate(urls):
         url_and_output_paths.append([url, output_paths[i]])
 

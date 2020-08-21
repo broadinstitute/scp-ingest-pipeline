@@ -1,6 +1,6 @@
 from bson.objectid import ObjectId
 
-data_arrays = {
+mtx_data_arrays = {
     "AB_toy_data_toy.matrix.mtx Cells": {
         "name": "AB_toy_data_toy.matrix.mtx Cells",
         "cluster_name": "AB_toy_data_toy.matrix.mtx",

@@ -56,7 +56,7 @@ class GeneExpression:
         self.extra_log_params = {"study_id": self.study_id, "duration": None}
         self.mongo_connection = MongoConnection()
         # Common data array kwargs
-        self.da_kwargs = {
+        self.data_array_kwargs = {
             "cluster_name": self.cluster_name,
             "study_file_id": self.study_file_id,
             "study_id": self.study_id,
@@ -64,22 +64,25 @@ class GeneExpression:
 
     @abc.abstractmethod
     def transform(self):
-        """Abstract method for transforming expression data into data models"""
+        """Abstract method for transforming expression data into data models."""
 
     @abc.abstractmethod
     def execute_ingest(self):
-        """Abstract method for parsing expression data into MongoDB"""
+        """Abstract method for parsing expression data into MongoDB."""
 
     @staticmethod
     @abc.abstractmethod
     def check_valid():
-        """Abstract method for validating expression matrices"""
+        """Abstract method for validating expression matrices."""
 
     @staticmethod
     def create_gene_model(
-        *ignore, name: str, study_file_id, study_id, _id: int, gene_id: int = None
+        *ignore, name: str, study_file_id, study_id, _id: int, gene_id: str = None
     ):
-        # Positional arguments passed in,
+        """Creates a gene model for a single gene.
+            This function accepts keyword arguments only. An error will be raised
+                if positional or additional keyword arguments are passed in.
+        """
         if ignore:
             raise TypeError("Position arguments are not accepted.")
         return GeneExpression.Model(
@@ -96,7 +99,7 @@ class GeneExpression:
     @staticmethod
     def check_unique_cells(cell_names: List, study_id, client):
         """Checks cell names against database to confirm matrix contains unique
-            cell names
+            cell names.
 
          Parameters:
             cell_names (List[str]): List of cell names in matrix
@@ -109,8 +112,8 @@ class GeneExpression:
                 {"linear_data_type": "Study"},
                 {"array_type": "cells"},
                 {"study_id": study_id},
-                {"linear_data_id": study_id},
-            ]
+            ],
+            "$nor": [{"name": "All Cells"}],
         }
         # Returned fields from query results
         field_names = {"values": 1, "_id": 0}
@@ -140,7 +143,7 @@ class GeneExpression:
         return True
 
     @staticmethod
-    def create_data_array(
+    def create_data_arrays(
         *ignore,
         # keyword arguments
         name: str,
@@ -153,15 +156,16 @@ class GeneExpression:
         study_file_id,
     ) -> Generator:
         """
-        Sets data array.
-        Only allows keyword arguments
+        Sets data array for expression data.
+        This function accepts keyword arguments only. An error will be raised
+                if positional or additional keyword arguments are passed in.
         """
         fn_kwargs = copy.copy(locals())
         # Positional arguments passed in
         if ignore:
             raise TypeError("Positional arguments are not accepted.")
         del fn_kwargs["ignore"]
-        for model in DataArray(**fn_kwargs).get_data_array():
+        for model in DataArray(**fn_kwargs).get_data_arrays():
             yield model
 
     @staticmethod
@@ -177,10 +181,9 @@ class GeneExpression:
                 f"Error caused by inserting into collection '{collection_name}': {e}"
             )
 
-    def load(self, gene_docs: List, data_array_docs: List):
+    def load(self, docs: List, collection_name: List):
         start_time = datetime.datetime.now()
-        GeneExpression.insert(gene_docs, self.COLLECTION_NAME, self.mongo_connection)
-        GeneExpression.insert(data_array_docs, "data_arrays", self.mongo_connection)
+        GeneExpression.insert(docs, collection_name, self.mongo_connection)
         self.info_logger.info(
-            f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}"
+            f"Time to load {len(docs)} models: {str(datetime.datetime.now() - start_time)}"
         )

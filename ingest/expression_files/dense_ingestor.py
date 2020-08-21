@@ -14,6 +14,7 @@ from bson.objectid import ObjectId
 
 try:
     from expression_files import GeneExpression
+    from ingest_files import DataArray
 
     sys.path.append("..")
     from ingest_files import IngestFiles
@@ -36,18 +37,21 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # To allow additional optional keyword arguments like gene_id
         self.matrix_params = matrix_kwargs
         self.gene_names = {}
-        self.header = self.set_header()
+        csv_file_handler = self.open_file(self.file_path)[0]
+        self.header = DenseIngestor.set_header(csv_file_handler)
         self.csv_file_handler, self.file_handler = self.open_file(self.file_path)
-        # Reset csv reader to first gene row
         next(self.csv_file_handler)
 
-    def set_header(self):
-        csv_file_handler = self.open_file(self.file_path)[0]
+    @staticmethod
+    def set_header(csv_file_handler) -> List[str]:
+        """
+        Sets header for a dense matrix. Function assumes file reader is at
+            beginning of file.
+        """
         header = next(csv_file_handler)
         row = next(csv_file_handler)
-        is_r_file = DenseIngestor.is_r_formatted_file(header, row)
-        # Cell names are formatted differently in R files
-        return header if is_r_file else header[1:]
+        is_r_file, new_header = DenseIngestor.is_r_formatted_file(header, row)
+        return new_header
 
     @staticmethod
     def matches_file_type(file_type):
@@ -66,8 +70,8 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # Reset csv reader to first gene row
         self.csv_file_handler = self.open_file(self.file_path)[0]
         next(self.csv_file_handler)
-        for gene_docs, data_array_documents in self.transform():
-            self.load(gene_docs, data_array_documents)
+        for documents, collection_name in self.transform():
+            self.load(documents, collection_name)
 
     @staticmethod
     def check_valid(header, first_row, query_params):
@@ -128,14 +132,22 @@ class DenseIngestor(GeneExpression, IngestFiles):
             header (List[str]): Header of the dense matrix
             row (List): A single row from the dense matrix
         """
-        # An "R formatted" file has one less entry in the header
-        # row than each successive row. Also, "GENE" will not appear in header
+        # An "R formatted" file can:
+        # Not have gene in the header or
+        # Have one less entry in the header than each successive row or
+        # Have "" as the last value in header.
         if header[0].upper() != "GENE":
             length_of_next_line = len(row)
-            if (length_of_next_line - 1) == len(header):
-                return True
+            if len(header) == length_of_next_line:
+                last_value = header[-1]
+                if last_value.isspace() or last_value == "":
+                    return True, header[:-1]
+            else:
+                if (length_of_next_line - 1) == len(header):
+                    return True, header
+            return False, header[1:]
         else:
-            return False
+            return False, header[1:]
 
     @staticmethod
     def filter_expression_scores(scores: List, cells: List):
@@ -149,6 +161,12 @@ class DenseIngestor(GeneExpression, IngestFiles):
         """
         associated_cells = []
         valid_expression_scores = []
+        if len(scores) != len(cells):
+            raise ValueError(
+                "Number of cell and expression values must be the same. "
+                f"Found row with {len(scores)} expression values."
+                f"Header contains {len(cells)} cells"
+            )
         for idx, expression_score in enumerate(scores):
             try:
                 if (
@@ -196,7 +214,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         """
         if header[0].upper() == "GENE":
             return True
-        if DenseIngestor.is_r_formatted_file(header, row):
+        if DenseIngestor.is_r_formatted_file(header, row)[0]:
             return True
         raise ValueError("Required 'GENE' header is not present")
 
@@ -209,13 +227,13 @@ class DenseIngestor(GeneExpression, IngestFiles):
         num_processed = 0
         gene_models = []
         data_arrays = []
-        for all_cell_model in GeneExpression.create_data_array(
-            **self.da_kwargs,
+        for all_cell_model in GeneExpression.create_data_arrays(
             name=f"{self.cluster_name} Cells",
             array_type="cells",
             values=self.header,
             linear_data_type="Study",
             linear_data_id=ObjectId(),
+            **self.data_array_kwargs,
         ):
 
             data_arrays.append(all_cell_model)
@@ -239,42 +257,48 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 _id=_id,
             )
             gene_models.append(gene_model)
+            current_data_arrays = []
             if len(valid_expression_scores) > 0:
                 # Data array for cell names
-                for da in GeneExpression.create_data_array(
+                for data_array in GeneExpression.create_data_arrays(
                     name=f"{gene} Cells",
                     array_type="cells",
                     values=exp_cells,
                     linear_data_type="Gene",
                     linear_data_id=_id,
-                    **self.da_kwargs,
+                    **self.data_array_kwargs,
                 ):
-                    data_arrays.append(da)
+                    current_data_arrays.append(data_array)
                 # Data array for expression values
-                for da in GeneExpression.create_data_array(
+                for data_array in GeneExpression.create_data_arrays(
                     name=f"{gene} Expression",
                     array_type="expression",
                     linear_data_type="Gene",
                     values=exp_scores,
                     linear_data_id=_id,
-                    **self.da_kwargs,
+                    **self.data_array_kwargs,
                 ):
-                    data_arrays.append(da)
-            if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
-                num_processed += len(gene_models)
+                    current_data_arrays.append(data_array)
+            if (
+                len(data_arrays) + len(current_data_arrays)
+                > GeneExpression.DATA_ARRAY_BATCH_SIZE
+            ):
                 self.info_logger.info(
                     f"Processed {num_processed} models, "
                     f"{str(datetime.datetime.now() - start_time)} elapsed",
                     extra=self.extra_log_params,
                 )
-                yield gene_models, data_arrays
+                yield gene_models, GeneExpression.COLLECTION_NAME
+                yield data_arrays, DataArray.COLLECTION_NAME
+                num_processed += len(gene_models)
                 gene_models = []
                 data_arrays = []
-
+            data_arrays += current_data_arrays
         # load any remaining models (this is necessary here since there isn't
         # an easy way to detect the last line of the file in the iteration above
         if len(gene_models) > 0:
-            yield gene_models, data_arrays
+            yield gene_models, GeneExpression.COLLECTION_NAME
+            yield data_arrays, DataArray.COLLECTION_NAME
             num_processed += len(gene_models)
             self.info_logger.info(
                 f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
