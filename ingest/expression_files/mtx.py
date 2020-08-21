@@ -70,10 +70,10 @@ class MTXIngestor(GeneExpression):
             MTXIngestor.check_duplicates(barcodes, "barcodes")
         except ValueError as v:
             error_messages.append(str(v))
-        # try:
-        #     GeneExpression.check_unique_cells(barcodes, *query_params)
-        # except ValueError as v:
-        #     error_messages.append(str(v))
+        try:
+            GeneExpression.check_unique_cells(barcodes, *query_params)
+        except ValueError as v:
+            error_messages.append(str(v))
 
         if len(error_messages) > 0:
             raise ValueError("; ".join(error_messages))
