@@ -16,18 +16,14 @@ import sys
 from bson.objectid import ObjectId
 
 try:
+    sys.path.append("..")
     from expression_files import GeneExpression
-    from ingest_files import DataArray
-
-    from ingest_files import IngestFiles
+    from ingest_files import DataArray, IngestFiles
 except ImportError:
     # Used when importing as external package, e.g. imports in
     # single_cell_portal code
     from .expression_files import GeneExpression
-    from ..ingest_files import DataArray
-
-    sys.path.append("../ingest")
-    from ..ingest_files import IngestFiles
+    from ..ingest_files import DataArray, IngestFiles
 
 
 class MTXIngestor(GeneExpression):

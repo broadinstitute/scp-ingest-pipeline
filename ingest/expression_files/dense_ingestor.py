@@ -279,6 +279,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     **self.data_array_kwargs,
                 ):
                     current_data_arrays.append(data_array)
+            # Determine if models should be batched
             if (
                 len(data_arrays) + len(current_data_arrays)
                 > GeneExpression.DATA_ARRAY_BATCH_SIZE
