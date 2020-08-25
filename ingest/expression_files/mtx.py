@@ -128,20 +128,6 @@ class MTXIngestor(GeneExpression):
                 # Convert values in mtx_dimensions to int
                 return list(map(int, mtx_dimensions))
 
-    @staticmethod
-    def is_sorted(idx: int, visited_expression_idx: List[int]):
-        last_visited_idx = visited_expression_idx[-1]
-        if idx not in visited_expression_idx:
-            if idx == (last_visited_idx + 1):
-                return True
-            else:
-                raise ValueError("MTX file must be sorted")
-        else:
-            if idx == last_visited_idx:
-                return True
-            else:
-                raise ValueError("MTX file must be sorted")
-
     def execute_ingest(self):
         self.extract_feature_barcode_matrices()
         MTXIngestor.check_valid(
@@ -167,12 +153,11 @@ class MTXIngestor(GeneExpression):
     def transform(self):
         start_time = datetime.datetime.now()
         num_processed = 0
-        last_idx = 0
+        prev_idx = 0
         gene_models = []
         data_arrays = []
         exp_cells = []
         exp_scores = []
-        visited_expression_idx = [0]
         model_id = None
 
         # All observed cells
@@ -185,81 +170,51 @@ class MTXIngestor(GeneExpression):
             **self.data_array_kwargs,
         ):
             data_arrays.append(data_array)
+
         for row in self.mtx_file:
             raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
             current_idx = int(raw_gene_idx)
             gene_id, gene = self.genes[current_idx - 1].split("\t")
-            if current_idx != last_idx:
-                is_sorted = MTXIngestor.is_sorted(current_idx, visited_expression_idx)
-                if not is_sorted:
+            if current_idx != prev_idx:
+                # we've moved to a new gene
+                is_sorted = MTXIngestor.is_sorted(current_idx)
+                if not current_idx == prev_idx + 1:
                     raise ValueError("MTX file must be sorted")
-                else:
 
-                    visited_expression_idx.append(current_idx)
-                    # Add current gene's gene model
-                    # Data array for cell names
-                    if last_idx != 0:
-                        last_gene_id, last_gene = self.genes[current_idx - 2].split(
-                            "\t"
-                        )
-                        current_data_arrays = []
-                        # Data arrays for cells
-                        for data_array in GeneExpression.create_data_arrays(
-                            name=f"{last_gene} Cells",
-                            array_type="cells",
-                            values=exp_cells,
-                            linear_data_type="Gene",
-                            linear_data_id=model_id,
-                            **self.data_array_kwargs,
-                        ):
-                            current_data_arrays.append(data_array)
-                        # Data arrays for expression values
-                        for data_array in GeneExpression.create_data_arrays(
-                            name=f"{last_gene} Expression",
-                            array_type=f"expression",
-                            values=exp_scores,
-                            linear_data_type="Gene",
-                            linear_data_id=model_id,
-                            **self.data_array_kwargs,
-                        ):
-                            current_data_arrays.append(data_array)
-                        # Determine if models should be batched
-                        if (
-                            len(data_arrays) + len(current_data_arrays)
-                            >= GeneExpression.DATA_ARRAY_BATCH_SIZE
-                        ):
-                            yield gene_models, GeneExpression.COLLECTION_NAME
-                            yield data_arrays, DataArray.COLLECTION_NAME
-                            num_processed += len(gene_models)
-                            print(
-                                f"Processed {num_processed} genes. "
-                                f"{str(datetime.datetime.now() - start_time)} "
-                                f"elapsed"
-                            )
-                            gene_models = []
-                            data_arrays = []
-                        data_arrays += current_data_arrays
-                        # Reset variables so values will be associated w/new
-                        # gene
-                        exp_cells = []
-                        exp_scores = []
-                    model_id = ObjectId()
-                    gene_model = GeneExpression.create_gene_model(
-                        name=gene,
-                        study_file_id=self.study_file_id,
-                        study_id=self.study_id,
-                        gene_id=gene_id,
-                        _id=model_id,
-                    )
-                    gene_models.append(gene_model)
-                    last_idx = current_idx
+                # Data array for cell names
+                if prev_idx != 0:
+                    # if the previous gene exists, add its data arrays
+                    load_data_arrays(exp_cells,
+                                    exp_scores,
+                                    prev_gene,
+                                    prev_gene_id,
+                                    gene_models,
+                                    data_arrays,
+                                    False)
+
+                    # Reset variables so values will be associated w/new gene
+                    exp_cells = []
+                    exp_scores = []
+
             exp_cell = self.cells[int(raw_barcode_idx) - 1]
             exp_score = round(float(raw_exp_score), 3)
             exp_cells.append(exp_cell)
             exp_scores.append(exp_score)
-        # Create data array for last row
+            prev_gene, prev_gene_id = [gene, gene_id]
+            prev_idx = current_idx
+        # Create data arrays for last row
+        load_data_arrays(exp_cells,
+                         exp_scores,
+                         prev_gene,
+                         prev_gene_id,
+                         gene_models,
+                         data_arrays,
+                         True)
+
+    def load_data_arrays(exp_cells, exp_scores, gene, gene_id, gene_models, data_arrays, force=False):
+        # Data arrays for cells
         for data_array in GeneExpression.create_data_arrays(
-            name=f"{gene} Cells",
+            name=f"{prev_gene} Cells",
             array_type="cells",
             values=exp_cells,
             linear_data_type="Gene",
@@ -267,9 +222,9 @@ class MTXIngestor(GeneExpression):
             **self.data_array_kwargs,
         ):
             data_arrays.append(data_array)
-        # Data array for expression values
+        # Data arrays for expression values
         for data_array in GeneExpression.create_data_arrays(
-            name=f"{gene} Expression",
+            name=f"{prev_gene} Expression",
             array_type=f"expression",
             values=exp_scores,
             linear_data_type="Gene",
@@ -277,13 +232,28 @@ class MTXIngestor(GeneExpression):
             **self.data_array_kwargs,
         ):
             data_arrays.append(data_array)
-        yield data_arrays, DataArray.COLLECTION_NAME
-        num_processed += len(data_arrays)
-        if len(gene_models) > 0:
-            yield gene_models, GeneExpression.COLLECTION_NAME
-            num_processed += len(gene_models)
-        print(
-            f"Processed {num_processed} genes. "
-            f"{str(datetime.datetime.now() - start_time)} "
-            f"elapsed"
+
+        model_id = ObjectId()
+        gene_model = GeneExpression.create_gene_model(
+            name=gene,
+            study_file_id=self.study_file_id,
+            study_id=self.study_id,
+            gene_id=gene_id,
+            _id=model_id,
         )
+        gene_models.append(gene_model)
+        # Determine if models should be batched
+        if (
+            len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE or
+            force
+        ):
+            yield gene_models, GeneExpression.COLLECTION_NAME
+            yield data_arrays, DataArray.COLLECTION_NAME
+            num_processed += len(gene_models)
+            print(
+                f"Processed {num_processed} genes. "
+                f"{str(datetime.datetime.now() - start_time)} "
+                f"elapsed"
+            )
+            gene_models.clear()
+            data_arrays.clear()
