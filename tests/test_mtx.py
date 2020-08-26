@@ -75,6 +75,23 @@ class TestMTXIngestor(unittest.TestCase):
         )
         self.assertEqual(str(cm.exception), expected_msg)
 
+    def test_is_sorted(self):
+        visited_nums = [0]
+        sorted_nums = [2, 2, 2, 3, 4, 4, 4, 5]
+        for num in sorted_nums:
+            self.assertTrue(MTXIngestor.is_sorted(num, visited_nums))
+            if num not in visited_nums:
+                visited_nums.append(num)
+
+        visited_nums = [0]
+        unsorted_nums = [1, 2, 2, 4, 6, 5]
+        truth_values = []
+        for num in unsorted_nums:
+            truth_values.append(MTXIngestor.is_sorted(num, visited_nums))
+            if num not in visited_nums:
+                visited_nums.append(num)
+        self.assertFalse(all(truth_values))
+
     def test_get_mtx_dimensions(self):
         file_handler = open("data/AB_toy_data_toy.matrix.mtx")
         dimensions = MTXIngestor.get_mtx_dimensions(file_handler)
