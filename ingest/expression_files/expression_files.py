@@ -35,7 +35,7 @@ except ImportError:
 class GeneExpression:
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = "genes"
-    DATA_ARRAY_BATCH_SIZE = 1000
+    DATA_ARRAY_BATCH_SIZE = 1_000
     info_logger = setup_logger(__name__, "info.txt")
 
     @dataclass
@@ -188,7 +188,7 @@ class GeneExpression:
             f"Time to load {len(docs)} models: {str(datetime.datetime.now() - start_time)}"
         )
 
-    def load_data_arrays(
+    def create_models(
         self,
         exp_cells: List,
         exp_scores: List,
@@ -199,6 +199,20 @@ class GeneExpression:
         num_processed: int,
         force=False,
     ):
+        """Creates models are a given gene and batches them for loading if
+            necessary.
+
+        After creating models, the amount of data arrays are checked to see if
+        models should be loaded into the database. Data arrays and gene models
+        will be loaded if the threshold, as specified in DATA_ARRAY_BATCH_SIZE,
+        is met.
+
+        Returns:
+            data_arrays: List[str]
+            gene_models: List[str]
+            num_processed: int
+                Amount of gene models created.
+            """
         current_data_arrays = []
         start_time = datetime.datetime.now()
 

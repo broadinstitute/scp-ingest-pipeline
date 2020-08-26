@@ -183,7 +183,7 @@ class MTXIngestor(GeneExpression):
                         # Expressed cells and scores are associated with prior gene
                         prev_gene_id, prev_gene = self.genes[prev_idx - 1].split("\t")
                         # Ff the previous gene exists, load its models
-                        data_arrays, gene_models, num_processed = self.load_data_arrays(
+                        data_arrays, gene_models, num_processed = self.create_models(
                             exp_cells,
                             exp_scores,
                             prev_gene,
@@ -202,7 +202,7 @@ class MTXIngestor(GeneExpression):
             exp_scores.append(exp_score)
         # Create data array for last row
         current_gene_id, current_gene = self.genes[prev_idx - 1].split("\t")
-        self.load_data_arrays(
+        self.create_models(
             exp_cells,
             exp_scores,
             current_gene,
