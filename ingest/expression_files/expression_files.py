@@ -10,7 +10,6 @@ Must have python 3.6 or higher.
 import abc
 import datetime
 import ntpath
-import sys
 import copy
 from dataclasses import dataclass
 from typing import List, Dict, Generator  # noqa: F401
@@ -20,8 +19,6 @@ from mypy_extensions import TypedDict
 from pymongo.errors import BulkWriteError
 
 try:
-    sys.path.append("..")
-    # Used when importing as external package, e.g. imports in single_cell_portal cod
     from ingest_files import DataArray
     from monitor import setup_logger
     from mongo_connection import MongoConnection

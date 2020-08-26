@@ -10,11 +10,8 @@ These are commonly provided from 10x Genomics v2.
 """
 
 
-from typing import Dict, Generator, List, Tuple  # noqa: F401
-import sys
+from typing import Dict, Generator, List, Tuple  # noqa: F401git ad
 
-
-sys.path.append("..")
 try:
     from expression_files import GeneExpression
     from ingest_files import IngestFiles
