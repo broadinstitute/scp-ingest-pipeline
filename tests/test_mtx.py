@@ -211,6 +211,24 @@ class TestMTXIngestor(unittest.TestCase):
 
     @patch(
         "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_load_mtx,
+    )
+    def test_transform_fn(self, mock_load):
+        """
+        Assures transform function creates gene data model correctly
+        """
+        expression_matrix = MTXIngestor(
+            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "5d276a50421aa9117c982845",
+            "5dd5ae25421aa910a723a337",
+            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
+            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+        )
+        expression_matrix.extract_feature_barcode_matrices()
+        expression_matrix.transform()
+
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
         side_effect=mock_load_genes_batched,
     )
     def test_transform_fn_batch(self, mock_load):
