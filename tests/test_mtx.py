@@ -80,6 +80,9 @@ class TestMTXIngestor(unittest.TestCase):
         dimensions = MTXIngestor.get_mtx_dimensions(file_handler)
         self.assertEqual([80, 272, 4352], dimensions)
 
+        file_handler = open("data/bad_mtx.mtx.txt")
+        self.assertRaises(Exception, MTXIngestor.get_mtx_dimensions, file_handler)
+
     def test_check_duplicates(self):
 
         values = ["2", "4", "5", "7"]

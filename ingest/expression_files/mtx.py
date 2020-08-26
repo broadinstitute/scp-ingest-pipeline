@@ -124,8 +124,12 @@ class MTXIngestor(GeneExpression):
         for line in file_handler:
             if not line.startswith("%"):
                 mtx_dimensions: List[str] = line.strip().split()
-                # Convert values in mtx_dimensions to int
-                return list(map(int, mtx_dimensions))
+                try:
+                    # Convert values in mtx_dimensions to int
+                    dimensions = list(map(int, mtx_dimensions))
+                    return dimensions
+                except Exception as e:
+                    raise e
 
     def execute_ingest(self):
         """Parses MTX files"""
