@@ -34,7 +34,7 @@ pytest --cov=../ingest/
 import ast
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, call
 from bson.objectid import ObjectId
 from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_models
 from mock_data.matrix_mtx.gene_model_0 import expected_model
@@ -242,7 +242,8 @@ class IngestTestCase(unittest.TestCase):
             del model["_id"]
             self.assertEqual(model, gene_models[model["name"]])
 
-    def test_empty_dense_file(self):
+    @patch("logging.Logger.critical")
+    def test_empty_dense_file(self, mock_critical):
         """Ingest Pipeline should fail gracefully when an empty file is given
         """
 
@@ -272,12 +273,17 @@ class IngestTestCase(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
+        # Test logger
+        mock_critical.assert_called_once_with(
+            "../tests/data/empty_file.txt is empty: 0", exc_info=True
+        )
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_ingest_mtx_matrix(self, mock_check_unique_cells):
+    @patch("logging.Logger.critical")
+    def test_ingest_mtx_matrix(self, mock_check_unique_cells, mock_critical):
         """Ingest Pipeline should extract and transform MTX matrix bundles
         """
         GeneExpression.load = mock_load_genes
@@ -314,6 +320,10 @@ class IngestTestCase(unittest.TestCase):
             # Ensure that 'ObjectID' in model is removed
             del model["_id"]
             self.assertEqual(model, expected_model[model["name"]])
+        # Test logger
+        mock_critical.assert_called_once_with(
+            "../tests/data/empty_file.txt is empty: 0", exc_info=True
+        )
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
@@ -390,21 +400,31 @@ class IngestTestCase(unittest.TestCase):
         self.assertRaises(ValueError, self.execute_ingest, args)
 
         # TODO: This test does not run.  De-indent and fix.
-        def test_bad_format_dense(self):
-            args = [
-                "--study-id",
-                "5d276a50421aa9117c982845",
-                "--study-file-id",
-                "5dd5ae25421aa910a723a337",
-                "ingest_expression",
-                "--matrix-file",
-                "../tests/data/expression_matrix_bad_missing_keyword.txt",
-                "--matrix-file-type",
-                "dense",
-            ]
-            with self.assertRaises(SystemExit) as cm:
-                self.execute_ingest(args)
-            not self.assertEqual(cm.exception.code, 0)
+
+    @patch(
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
+        return_value=False,
+    )
+    @patch("logging.Logger.critical")
+    def test_bad_format_dense(self, mock_check_unique_cells, mock_critical):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_expression",
+            "--matrix-file",
+            "../tests/data/expression_matrix_bad_missing_keyword.txt",
+            "--matrix-file-type",
+            "dense",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+        # Test logger
+        mock_critical.assert_called_once_with("Duplicate gene: Itm2a", exc_info=True)
 
     def test_good_metadata_file(self):
         """Ingest Pipeline should succeed for properly formatted metadata file
@@ -582,5 +602,14 @@ class IngestTestCase(unittest.TestCase):
     #     self.assertEqual(model, expected_model)
 
 
+def main(out=sys.stderr, verbosity=2):
+    loader = unittest.TestLoader()
+
+    suite = loader.loadTestsFromModule(sys.modules[__name__])
+    unittest.TextTestRunner(out, verbosity=verbosity).run(suite)
+
+
 if __name__ == "__main__":
-    unittest.main()
+    log_file = "log_file.txt"
+    with open("log.txt", "w") as f:
+        main(f)

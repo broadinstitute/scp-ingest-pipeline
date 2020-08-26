@@ -9,6 +9,7 @@ Must have python 3.6 or higher.
 """
 import collections
 import ntpath
+import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
@@ -49,7 +50,6 @@ class CellMetadata(Annotations):
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.ontology_label = dict()
         self.cells = []
-        self.extra_log_params = {"study_id": self.study_id, "duration": None}
         self.preprocess()
 
     # This model pertains to columns from cell metadata files

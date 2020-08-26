@@ -25,15 +25,8 @@ class DomainRanges(TypedDict):
 
 class Clusters(Annotations):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
-    LINEAR_DATA_TYPE = 'ClusterGroup'
-    COLLECTION_NAME = 'cluster_groups'
-    errors_logger = setup_logger(
-        __name__ + '_errors', 'errors.txt', level=logging.ERROR
-    )
-    # General logger for class
-    info_logger = setup_logger(__name__, 'info.txt')
-
-    my_debug_logger = log(errors_logger)
+    LINEAR_DATA_TYPE = "ClusterGroup"
+    COLLECTION_NAME = "cluster_groups"
 
     @dataclass
     class Model(TypedDict):
@@ -62,23 +55,22 @@ class Clusters(Annotations):
         )
         # Lowercase coordinate headers, expected for df merge
         for i, header in enumerate(self.headers):
-            if header in ['X', 'Y', 'Z']:
+            if header in ["X", "Y", "Z"]:
                 self.headers[i] = self.headers[i].lower()
         self.preprocess()
         self.determine_coordinates_and_cell_names()
         self.source_file_type = "cluster"
         self.cluster_type = (
-            '3d'
+            "3d"
             if (
                 "z" in self.coordinates_and_cell_headers
                 or "Z" in self.coordinates_and_cell_headers
             )
-            else '2d'
+            else "2d"
         )
         self.name = name
         # Check if domain_ranges is an empty dictionary
         self.domain_ranges = domain_ranges if not (not domain_ranges) else None
-        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
 
     # Will evolve to do cross file validation
     def validate(self):
@@ -97,12 +89,12 @@ class Clusters(Annotations):
         :return: boolean True if coordinates are in header, otherwise False
         """
         lower_cased_headers = [header.lower() for header in self.headers]
-        for coordinate in ('x', 'y'):
+        for coordinate in ("x", "y"):
             if coordinate not in lower_cased_headers:
                 msg = (
                     "Header must have coordinate values 'x' and 'y' (case insensitive)"
                 )
-                self.store_validation_issue('error', 'format', msg)
+                self.store_validation_issue("error", "format", msg)
                 return False
         return True
 
@@ -113,25 +105,20 @@ class Clusters(Annotations):
         # Iterate through all extra "annotation" column headers
         # (I.E. column headers that are not coordinates or where TYPE !=NAME)
         for annot_headers in self.annot_column_headers:
-            self.info_logger.info(
-                f'Transforming header {annot_headers[0]}',
-                extra={'study_id': self.study_id, 'duration': None},
-            )
+            Annotations.logger.info(f"Transforming header {annot_headers[0]}")
             annot_name = annot_headers[0]
             annot_type = annot_headers[1]
             # column_type = annot[1]
             cell_annotations.append(
                 {
-                    'name': annot_name,
-                    'type': annot_type,
-                    'values': self.file[annot_headers].unique().tolist()
-                    if annot_type == 'group'
+                    "name": annot_name,
+                    "type": annot_type,
+                    "values": self.file[annot_headers].unique().tolist()
+                    if annot_type == "group"
                     else [],
                 }
             )
-        self.info_logger.info(
-            f'Created model for {self.study_id}', extra=self.extra_log_params
-        )
+        Annotations.logger.info(f"Created model for {self.study_id}")
         return self.Model(
             name=self.name,
             cluster_type=self.cluster_type,
@@ -145,10 +132,7 @@ class Clusters(Annotations):
 
     def get_data_array_annot(self, linear_data_id):
         for annot_header in self.file.columns:
-            self.info_logger.info(
-                f'Creating data array for header {annot_header[0]}',
-                extra={'study_id': self.study_id, 'duration': None},
-            )
+            Annotations.logger.info(f"Creating data array for header {annot_header[0]}")
             yield from Clusters.set_data_array(
                 annot_header[0],
                 self.name,
@@ -157,9 +141,8 @@ class Clusters(Annotations):
                 self.study_id,
                 linear_data_id,
             )
-            self.info_logger.info(
-                f'Attempting to load cluster header : {annot_header[0]}',
-                extra={'study_id': self.study_id, 'duration': None},
+            Annotations.logger.info(
+                f"Attempting to load cluster header : {annot_header[0]}"
             )
 
     def can_subsample(self):
@@ -183,31 +166,31 @@ class Clusters(Annotations):
     ):
         # Add any other arguments below data_array_attr
         data_array_attr = locals()
-        BASE_DICT = {'linear_data_type': Clusters.LINEAR_DATA_TYPE}
+        BASE_DICT = {"linear_data_type": Clusters.LINEAR_DATA_TYPE}
 
         def get_cluster_attr(annot_name):
             cluster_group_types = {
-                'name': {'name': "text", 'array_type': "cells"},
-                'coordinates': {
-                    'name': annot_name.lower(),
-                    'array_type': "coordinates",
+                "name": {"name": "text", "array_type": "cells"},
+                "coordinates": {
+                    "name": annot_name.lower(),
+                    "array_type": "coordinates",
                 },
-                'annot': {'name': annot_name, 'array_type': "annotations"},
+                "annot": {"name": annot_name, "array_type": "annotations"},
             }
 
             if annot_name.lower() == "name":
-                result = cluster_group_types.get('name')
+                result = cluster_group_types.get("name")
                 return result
             elif annot_name.lower() in ("x", "y", "z"):
-                result = cluster_group_types.get('coordinates')
+                result = cluster_group_types.get("coordinates")
                 return result
             else:
-                result = cluster_group_types.get('annot')
+                result = cluster_group_types.get("annot")
                 return result
 
         cluster_attr = get_cluster_attr(name)
         # Remove 'name' from function aruguments
-        del data_array_attr['name']
+        del data_array_attr["name"]
         # Merge BASE_DICT, cluster_attr & data_array_attr and return DataArray model
         return DataArray(
             **data_array_attr, **cluster_attr, **BASE_DICT

@@ -49,7 +49,6 @@ from bson.objectid import ObjectId
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
-    from monitor import log, setup_logger, trace
 
     # For tracing
     from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
@@ -67,6 +66,7 @@ try:
     from clusters import Clusters
     from expression_files.mtx import MTXIngestor
     from expression_files.dense_ingestor import DenseIngestor
+    from monitor import setup_logger
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
@@ -77,7 +77,7 @@ except ImportError:
         report_issues,
         write_metadata_to_bq,
     )
-    from .monitor import setup_logger, log, trace
+    from .monitor import setup_logger, trace
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
     from .expression_files.dense_ingestor import DenseIngestor
@@ -90,10 +90,10 @@ class IngestPipeline:
     JSON_CONVENTION = (
         "../schema/alexandria_convention/alexandria_convention_schema.json"
     )
-    logger = logging.getLogger(__name__)
-    error_logger = setup_logger(__name__ + "_errors", "errors.txt", level=logging.ERROR)
-    info_logger = setup_logger(__name__, "info.txt")
-    my_debug_logger = log(error_logger)
+
+    # Logger provides more details for trouble shooting
+    dev_logger = setup_logger(__name__, "log.txt")
+    user_logger = logging.getLogger(__name__, "user_log.txt")
 
     def __init__(
         self,
@@ -106,6 +106,7 @@ class IngestPipeline:
         subsample=False,
         ingest_cell_metadata=False,
         ingest_cluster=False,
+        log_to_console=False,
         **kwargs,
     ):
         """Initializes variables in Ingest Pipeline"""
@@ -142,8 +143,10 @@ class IngestPipeline:
         if subsample:
             self.cluster_file = cluster_file
             self.cell_metadata_file = cell_metadata_file
+        if "log_to_console":
+            logging.basicConfig(level=logging.DEBUG)
 
-    @my_debug_logger()
+    # @my_debug_logger()
     # Will be replaced by MongoConnection as defined in SCP-2629
     def get_mongo_db(self):
         host = os.environ["DATABASE_HOST"]
@@ -211,7 +214,7 @@ class IngestPipeline:
             if len(documents) > 0:
                 self.insert_many("data_arrays", documents)
         except Exception as e:
-            self.error_logger.error(e, extra=self.extra_log_params)
+            # self.error_logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -254,7 +257,7 @@ class IngestPipeline:
 
         except Exception as e:
             # TODO: Log this error
-            self.error_logger.error(e, extra=self.extra_log_params)
+            # IngestPipeline.logger.error(e, extra=self.extra_log_params)
             return 1
         return 0
 
@@ -291,7 +294,9 @@ class IngestPipeline:
                 )
                 return write_status
             else:
-                self.error_logger.error("Erroneous call to upload_metadata_to_bq")
+                IngestPipeline.dev_logger.error(
+                    "Erroneous call to upload_metadata_to_bq"
+                )
                 return 1
         return 0
 
@@ -315,7 +320,8 @@ class IngestPipeline:
                 )  # Dense receiver
             self.expression_ingestor.execute_ingest()
         except Exception as e:
-            self.error_logger.error(e, extra=self.extra_log_params)
+            IngestPipeline.dev_logger.critical(str(e), exc_info=True)
+            IngestPipeline.user_logger.critical(str(e))
             return 1
         return 0
 
@@ -323,16 +329,17 @@ class IngestPipeline:
         """Ingests cell metadata files into Firestore."""
         self.cell_metadata.preprocess()
         if self.cell_metadata.validate():
-            self.info_logger.info(
-                f"Cell metadata file format valid", extra=self.extra_log_params
-            )
+            IngestPipeline.dev_logger.info(f"Cell metadata file format valid")
+            IngestPipeline.user_logger.info(f"Cell metadata file format valid")
             # Check file against metadata convention
             if self.kwargs["validate_convention"] is not None:
                 if self.kwargs["validate_convention"]:
                     if self.conforms_to_metadata_convention():
-                        self.info_logger.info(
-                            f"Cell metadata file conforms to metadata convention",
-                            extra=self.extra_log_params,
+                        IngestPipeline.usr_logger.info(
+                            f"Cell metadata file conforms to metadata convention"
+                        )
+                        IngestPipeline.dev_logger.info(
+                            f"Cell metadata file format valid"
                         )
                         pass
                     else:
@@ -340,9 +347,11 @@ class IngestPipeline:
 
             self.cell_metadata.reset_file()
             for metadataModel in self.cell_metadata.transform():
-                self.info_logger.info(
-                    f"Attempting to load cell metadata header : {metadataModel.annot_header}",
-                    extra=self.extra_log_params,
+                IngestPipeline.logger.info(
+                    f"Attempting to load cell metadata header : {metadataModel.annot_header}"
+                )
+                IngestPipeline.usr_logger.info(
+                    f"Attempting to load cell metadata header : {metadataModel.annot_header}"
                 )
                 status = self.load(
                     self.cell_metadata.COLLECTION_NAME,
@@ -351,20 +360,21 @@ class IngestPipeline:
                     metadataModel.annot_header,
                 )
                 if status != 0:
-                    self.error_logger.error(
-                        f"Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program",
-                        extra=self.extra_log_params,
+                    IngestPipeline.dev_logger.error(
+                        f"Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program"
+                    )
+                    IngestPipeline.usr_logger.error(
+                        f"Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program"
                     )
                     return status
             return status if status is not None else 1
         else:
             report_issues(self.cell_metadata)
-            self.error_logger.error(
-                f"Cell metadata file format invalid", extra=self.extra_log_params
-            )
+            IngestPipeline.logger.error("Cell metadata file format invalid")
+            IngestPipeline.usr_logger.error("Cell metadata file format invalid")
             return 1
 
-    @my_debug_logger()
+    # @my_debug_logger()
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate():
@@ -378,13 +388,12 @@ class IngestPipeline:
                 return status
         # Incorrect file format
         else:
-            self.error_logger.error(
-                f"Cluster file format invalid", extra=self.extra_log_params
-            )
+            IngestPipeline.dev_logger.error("Cluster file format invalid")
+            IngestPipeline.usr_logger.error("Cluster file format invalid")
             return 1
         return status
 
-    @my_debug_logger()
+    # @my_debug_logger()
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
         subsample = SubSample(
@@ -411,7 +420,8 @@ class IngestPipeline:
                     if load_status != 0:
                         return load_status
             except Exception as e:
-                self.error_logger.error(e, extra=self.extra_log_params)
+                IngestPipeline.dev_logger.critical(e, exc_info=True)
+                IngestPipeline.user_logger.critical(e)
                 return 1
         return 0
 
@@ -489,6 +499,13 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
+
+    logFormatter = "%(asctime)s - %(study_id)s - %(levelname)s - %(message)s"
+    if arguments.get("log_to_console"):
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(filename="log.txt", level=logging.INFO)
+
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
