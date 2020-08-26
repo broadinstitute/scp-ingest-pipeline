@@ -80,8 +80,14 @@ class TestMTXIngestor(unittest.TestCase):
         dimensions = MTXIngestor.get_mtx_dimensions(file_handler)
         self.assertEqual([80, 272, 4352], dimensions)
 
-        file_handler = open("data/bad_mtx.mtx.txt")
+        # Dimension contains a letter
+        file_handler = open("data/bad_dimensions.mtx.txt")
         self.assertRaises(Exception, MTXIngestor.get_mtx_dimensions, file_handler)
+
+        with self.assertRaises(ValueError) as cm:
+            file_handler = open("data/no_data.mtx.txt")
+            MTXIngestor.get_mtx_dimensions(file_handler)
+        self.assertEqual("MTX file did not contain data", str(cm.exception))
 
     def test_check_duplicates(self):
 

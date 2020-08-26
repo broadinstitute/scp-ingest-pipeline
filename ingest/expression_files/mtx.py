@@ -130,6 +130,7 @@ class MTXIngestor(GeneExpression):
                     return dimensions
                 except Exception as e:
                     raise e
+        raise ValueError("MTX file did not contain data")
 
     def execute_ingest(self):
         """Parses MTX files"""
