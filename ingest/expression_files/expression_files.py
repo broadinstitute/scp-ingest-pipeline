@@ -196,7 +196,7 @@ class GeneExpression:
         num_processed: int,
         force=False,
     ):
-        """Creates models are a given gene and batches them for loading if
+        """Creates models for a given gene and batches them for loading if
             necessary.
 
         After creating models, the amount of data arrays are checked to see if
@@ -247,8 +247,8 @@ class GeneExpression:
         this_batch_size = len(data_arrays) + len(current_data_arrays)
         # Determine if models should be batched
         if this_batch_size >= GeneExpression.DATA_ARRAY_BATCH_SIZE or force:
-            # self.load(gene_models, GeneExpression.COLLECTION_NAME)
-            # self.load(data_arrays, DataArray.COLLECTION_NAME)
+            self.load(gene_models, GeneExpression.COLLECTION_NAME)
+            self.load(data_arrays, DataArray.COLLECTION_NAME)
             num_processed += len(gene_models)
             print(
                 f"Processed {num_processed} genes. "
