@@ -12,11 +12,9 @@ from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
 
+sys.path.append("..")
 try:
     from expression_files import GeneExpression
-    from ingest_files import DataArray
-
-    sys.path.append("..")
     from ingest_files import IngestFiles
 
 except ImportError:
@@ -70,8 +68,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # Reset csv reader to first gene row
         self.csv_file_handler = self.open_file(self.file_path)[0]
         next(self.csv_file_handler)
-        for documents, collection_name in self.transform():
-            self.load(documents, collection_name)
+        self.transform()
 
     @staticmethod
     def check_valid(header, first_row, query_params):
@@ -131,19 +128,24 @@ class DenseIngestor(GeneExpression, IngestFiles):
         Parameters:
             header (List[str]): Header of the dense matrix
             row (List): A single row from the dense matrix
+
+        Returns:
+             Boolean value if file is an R File or not and correct header for
+            file. (Tuple: (Boolean, List[Str]))
+
         """
         # An "R formatted" file can:
-        # Not have gene in the header or
+        # Not have GENE in the header or
         # Have one less entry in the header than each successive row or
         # Have "" as the last value in header.
         if header[0].upper() != "GENE":
-            length_of_next_line = len(row)
-            if len(header) == length_of_next_line:
+            next_line_length = len(row)
+            if len(header) == next_line_length:
                 last_value = header[-1]
                 if last_value.isspace() or last_value == "":
                     return True, header[:-1]
             else:
-                if (length_of_next_line - 1) == len(header):
+                if (next_line_length - 1) == len(header):
                     return True, header
             return False, header[1:]
         else:
@@ -247,61 +249,26 @@ class DenseIngestor(GeneExpression, IngestFiles):
             if gene in self.gene_names:
                 raise ValueError(f"Duplicate gene: {gene}")
             self.gene_names[gene] = True
-            formatted_gene_name = DenseIngestor.format_gene_name(gene)
-            _id = ObjectId()
-            gene_model = GeneExpression.create_gene_model(
-                name=formatted_gene_name,
-                study_file_id=self.study_file_id,
-                study_id=self.study_id,
-                gene_id=None,
-                _id=_id,
+            data_arrays, gene_models, num_processed = self.load_data_arrays(
+                exp_cells,
+                exp_scores,
+                gene,
+                None,
+                gene_models,
+                data_arrays,
+                num_processed,
+                False,
             )
-            gene_models.append(gene_model)
-            current_data_arrays = []
-            if len(valid_expression_scores) > 0:
-                # Data array for cell names
-                for data_array in GeneExpression.create_data_arrays(
-                    name=f"{gene} Cells",
-                    array_type="cells",
-                    values=exp_cells,
-                    linear_data_type="Gene",
-                    linear_data_id=_id,
-                    **self.data_array_kwargs,
-                ):
-                    current_data_arrays.append(data_array)
-                # Data array for expression values
-                for data_array in GeneExpression.create_data_arrays(
-                    name=f"{gene} Expression",
-                    array_type="expression",
-                    linear_data_type="Gene",
-                    values=exp_scores,
-                    linear_data_id=_id,
-                    **self.data_array_kwargs,
-                ):
-                    current_data_arrays.append(data_array)
-            # Determine if models should be batched
-            if (
-                len(data_arrays) + len(current_data_arrays)
-                > GeneExpression.DATA_ARRAY_BATCH_SIZE
-            ):
-                self.info_logger.info(
-                    f"Processed {num_processed} models, "
-                    f"{str(datetime.datetime.now() - start_time)} elapsed",
-                    extra=self.extra_log_params,
-                )
-                yield gene_models, GeneExpression.COLLECTION_NAME
-                yield data_arrays, DataArray.COLLECTION_NAME
-                num_processed += len(gene_models)
-                gene_models = []
-                data_arrays = []
-            data_arrays += current_data_arrays
         # load any remaining models (this is necessary here since there isn't
         # an easy way to detect the last line of the file in the iteration above
         if len(gene_models) > 0:
-            yield gene_models, GeneExpression.COLLECTION_NAME
-            yield data_arrays, DataArray.COLLECTION_NAME
-            num_processed += len(gene_models)
-            self.info_logger.info(
-                f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
-                extra=self.extra_log_params,
+            self.load_data_arrays(
+                exp_cells,
+                exp_scores,
+                gene,
+                None,
+                gene_models,
+                data_arrays,
+                num_processed,
+                True,
             )

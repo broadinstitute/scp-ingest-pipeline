@@ -4,18 +4,62 @@ from unittest.mock import patch, MagicMock, PropertyMock
 from bson.objectid import ObjectId
 import csv
 
-sys.path.append("../ingest")
-from expression_files.dense_ingestor import DenseIngestor
-from expression_files.expression_files import GeneExpression
+from test_expression_files import mock_load_genes_batched
+
+# Dense models
 from mock_data.expression.dense_matrices.dense_matrix_19_genes_100k_cells_txt.gene_models import (
     dense_19_100k_gene_models,
 )
 from mock_data.expression.dense_matrices.dense_matrix_19_genes_100k_cells_txt.data_arrays import (
     dense_19_100k_data_arrays,
 )
+
+# R models
 from mock_data.expression.r_format.models import r_gene_models
 from mock_data.expression.r_format.data_arrays import r_data_arrays
+
+sys.path.append("../ingest")
+from expression_files.dense_ingestor import DenseIngestor
+from expression_files.expression_files import GeneExpression
 from ingest_files import DataArray
+
+
+def mock_dense_load(documents, collection_name):
+    """Overwrites GeneExpression.load().
+
+       GeneExpression.load() is called multiple times. This method will verify
+       models in the arguments have the expected values.
+       """
+    for document in documents:
+        model_name = document["name"]
+        if collection_name == GeneExpression.COLLECTION_NAME:
+            # Ensure that 'ObjectID' in model is removed
+            del document["_id"]
+            assert document == dense_19_100k_gene_models[model_name]
+        if collection_name == DataArray.COLLECTION_NAME:
+            if document["cluster_name"] != "dense_matrix_19_genes_100k_cells.txt.gz":
+                del document["linear_data_id"]
+                assert document == dense_19_100k_data_arrays[model_name]
+
+
+def mock_load_r_files(documents, collection_name):
+    """Overwrites GeneExpression.load() for R formatted file.
+
+    GeneExpression.load() is called multiple times. This method will verify
+    models in the arguments have the expected values.
+    """
+    # _id and linear_data_id are unique identifiers and can not be predicted
+    # so we exclude it from the comparison
+    for document in documents:
+        model_name = document["name"]
+        if collection_name == GeneExpression.COLLECTION_NAME:
+            # Ensure that 'ObjectID' in model is removed
+            del document["_id"]
+            # Verify gene model looks as expected
+            assert document == r_gene_models[model_name]
+        else:
+            del document["linear_data_id"]
+            assert document == r_data_arrays[model_name]
 
 
 class TestDense(unittest.TestCase):
@@ -84,9 +128,10 @@ class TestDense(unittest.TestCase):
             "foo10",
             "foo11",
         ]
-        actual_filtered_values, actual_filtered_cells = DenseIngestor.filter_expression_scores(
-            scores[1:], cells
-        )
+        (
+            actual_filtered_values,
+            actual_filtered_cells,
+        ) = DenseIngestor.filter_expression_scores(scores[1:], cells)
         self.assertEqual([4, 3], actual_filtered_values)
         self.assertEqual(["foo", "foo11"], actual_filtered_cells)
 
@@ -232,7 +277,11 @@ class TestDense(unittest.TestCase):
         self.assertTrue(mock_transform.called)
         self.assertTrue(mock_load.called)
 
-    def test_transform_fn(self):
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_dense_load,
+    )
+    def test_transform_fn(self, mock_load):
         """
         Assures transform function creates data models correctly.
         """
@@ -241,22 +290,13 @@ class TestDense(unittest.TestCase):
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
         )
-        for documents, collection_name in expression_matrix.transform():
-            # _id is a unique identifier and can not be predicted
-            # so we exclude it from the comparison
-            for document in documents:
-                if collection_name == GeneExpression.COLLECTION_NAME:
-                    del document["_id"]
-                    gene_name = document["name"]
-                    self.assertEqual(document, dense_19_100k_gene_models[gene_name])
-                if collection_name == DataArray.COLLECTION_NAME:
-                    del document["linear_data_id"]
-                    data_array_name = document["name"]
-                    self.assertEqual(
-                        document, dense_19_100k_data_arrays[data_array_name]
-                    )
+        expression_matrix.transform()
 
-    def test_transform_fn_r_format(self):
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_load_r_files,
+    )
+    def test_transform_fn_r_format(self, mock_load):
         """
             Assures transform function creates data models for r formatted
                 files correctly.
@@ -266,18 +306,13 @@ class TestDense(unittest.TestCase):
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
         )
-        for documents, collection_name in expression_matrix.transform():
-            for document in documents:
-                if collection_name == GeneExpression.COLLECTION_NAME:
-                    # Ensure that 'ObjectID' in model is removed
-                    del document["_id"]
-                    # Verify gene model looks as expected
-                    self.assertEqual(document, r_gene_models[document["name"]])
-                else:
-                    del document["linear_data_id"]
-                    self.assertEqual(document, r_data_arrays[document["name"]])
+        expression_matrix.transform()
 
-    def test_transform_fn_batch(self):
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_load_genes_batched,
+    )
+    def test_transform_fn_batch(self, mock_load):
         """
         Assures transform function batches data array creation
         the +1 fudge factor is because we only check for batch size after a full row
@@ -294,11 +329,7 @@ class TestDense(unittest.TestCase):
             new_callable=PropertyMock,
             return_value=4,
         ):
-            for documents, collection_name in expression_matrix.transform():
-                if collection_name == DataArray.COLLECTION_NAME:
-                    self.assertTrue(
-                        GeneExpression.DATA_ARRAY_BATCH_SIZE + 1 >= len(documents)
-                    )
+            expression_matrix.transform()
 
         """
         Assures transform function creates gene data model correctly for files
@@ -315,8 +346,4 @@ class TestDense(unittest.TestCase):
             new_callable=PropertyMock,
             return_value=21,
         ):
-            for documents, collection_name in expression_matrix.transform():
-                if collection_name == DataArray.COLLECTION_NAME:
-                    self.assertEqual(
-                        GeneExpression.DATA_ARRAY_BATCH_SIZE, len(documents)
-                    )
+            expression_matrix.transform()

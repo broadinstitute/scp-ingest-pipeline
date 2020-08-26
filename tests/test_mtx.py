@@ -10,6 +10,7 @@ import sys
 from unittest.mock import patch, MagicMock, PropertyMock
 from bson.objectid import ObjectId
 
+from test_expression_files import mock_load_genes_batched
 from mock_data.expression.matrix_mtx.gene_models import mtx_gene_models
 from mock_data.expression.matrix_mtx.data_arrays import mtx_data_arrays
 
@@ -18,6 +19,25 @@ from expression_files.mtx import MTXIngestor
 from expression_files.expression_files import GeneExpression
 
 from ingest_files import DataArray
+
+
+def mock_load_mtx(documents, collection_name):
+    """Enables overwriting of GeneExpression.load() with this placeholder.
+    GeneExpression.load() is called multiple times. This method will verify
+    models in the arguments have the expected values.
+    """
+    # _id and linear_data_id are unique identifiers and can not be predicted
+    # so we exclude it from the comparison
+    for document in documents:
+        if collection_name == GeneExpression.COLLECTION_NAME:
+            del document["_id"]
+            gene_name = document["name"]
+            assert document == mtx_gene_models[gene_name]
+        if collection_name == DataArray.COLLECTION_NAME:
+            data_array_name = document["name"]
+            del document["linear_data_id"]
+            del mtx_data_arrays[data_array_name]["linear_data_id"]
+            assert document == mtx_data_arrays[data_array_name]
 
 
 class TestMTXIngestor(unittest.TestCase):
@@ -69,17 +89,6 @@ class TestMTXIngestor(unittest.TestCase):
             ValueError, MTXIngestor.check_duplicates, dup_values, "scores"
         )
 
-    def test_is_sorted(self):
-        visited_nums = [0]
-        sorted_nums = [1, 1, 2, 3, 4, 4, 4, 5]
-        for num in sorted_nums:
-            self.assertTrue(MTXIngestor.is_sorted(num, visited_nums))
-            if num not in visited_nums:
-                visited_nums.append(num)
-
-        unsorted = [1, 2, 2, 4]
-        self.assertRaises(ValueError, MTXIngestor.is_sorted, unsorted, visited_nums)
-
     @patch("expression_files.expression_files.GeneExpression.check_unique_cells")
     def test_check_valid(self, mock_check_unique_cells):
         """Confirms the errors are correctly promulgated"""
@@ -102,7 +111,7 @@ class TestMTXIngestor(unittest.TestCase):
 
         expected_dup_msg = (
             "Duplicate values are not allowed. "
-            "There are 1 duplicates in the barcodes file"
+            "There are 1 duplicates in the barcode file"
         )
         self.assertEqual(expected_dup_msg, str(cm.exception))
 
@@ -158,7 +167,11 @@ class TestMTXIngestor(unittest.TestCase):
         expression_matrix.execute_ingest()
         self.assertTrue(mock_transform.called)
 
-    def test_transform_fn(self):
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_load_mtx,
+    )
+    def test_transform_fn(self, mock_load):
         """
         Assures transform function creates gene data model correctly
         """
@@ -170,21 +183,13 @@ class TestMTXIngestor(unittest.TestCase):
             barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
         )
         expression_matrix.extract_feature_barcode_matrices()
-        for documents, collection_name in expression_matrix.transform():
-            # _id and linear_data_id are unique identifiers and can not be predicted
-            # so we exclude it from the comparison
-            for document in documents:
-                if collection_name == GeneExpression.COLLECTION_NAME:
-                    del document["_id"]
-                    gene_name = document["name"]
-                    self.assertEqual(document, mtx_gene_models[gene_name])
-                if collection_name == DataArray.COLLECTION_NAME:
-                    data_array_name = document["name"]
-                    del document["linear_data_id"]
-                    del mtx_data_arrays[data_array_name]["linear_data_id"]
-                    self.assertEqual(document, mtx_data_arrays[data_array_name])
+        expression_matrix.transform()
 
-    def test_transform_fn_batch(self):
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_load_genes_batched,
+    )
+    def test_transform_fn_batch(self, mock_load):
         """
         Assures transform function batches data array creation correctly and
         """
@@ -202,5 +207,4 @@ class TestMTXIngestor(unittest.TestCase):
             return_value=7,
         ):
             expression_matrix.extract_feature_barcode_matrices()
-            for documents, collection_name in expression_matrix.transform():
-                self.assertTrue(GeneExpression.DATA_ARRAY_BATCH_SIZE >= len(documents))
+            expression_matrix.transform()

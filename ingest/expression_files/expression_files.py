@@ -187,3 +187,65 @@ class GeneExpression:
         self.info_logger.info(
             f"Time to load {len(docs)} models: {str(datetime.datetime.now() - start_time)}"
         )
+
+    def load_data_arrays(
+        self,
+        exp_cells: List,
+        exp_scores: List,
+        gene: str,
+        gene_id: str,
+        gene_models: List,
+        data_arrays: List,
+        num_processed: int,
+        force=False,
+    ):
+        current_data_arrays = []
+        start_time = datetime.datetime.now()
+
+        model_id = ObjectId()
+        gene_models.append(
+            GeneExpression.create_gene_model(
+                name=gene,
+                study_file_id=self.study_file_id,
+                study_id=self.study_id,
+                gene_id=gene_id,
+                _id=model_id,
+            )
+        )
+        if len(data_arrays) > 0:
+            # Data arrays for cells
+            for data_array in GeneExpression.create_data_arrays(
+                name=f"{gene} Cells",
+                array_type="cells",
+                values=exp_cells,
+                linear_data_type="Gene",
+                linear_data_id=model_id,
+                **self.data_array_kwargs,
+            ):
+                current_data_arrays.append(data_array)
+            # Data arrays for expression values
+            for data_array in GeneExpression.create_data_arrays(
+                name=f"{gene} Expression",
+                array_type="expression",
+                values=exp_scores,
+                linear_data_type="Gene",
+                linear_data_id=model_id,
+                **self.data_array_kwargs,
+            ):
+                current_data_arrays.append(data_array)
+        this_batch_size = len(data_arrays) + len(current_data_arrays)
+        # Determine if models should be batched
+        if this_batch_size >= GeneExpression.DATA_ARRAY_BATCH_SIZE or force:
+            # self.load(gene_models, GeneExpression.COLLECTION_NAME)
+            # self.load(data_arrays, DataArray.COLLECTION_NAME)
+            num_processed += len(gene_models)
+            print(
+                f"Processed {num_processed} genes. "
+                f"{str(datetime.datetime.now() - start_time)} "
+                f"elapsed"
+            )
+            gene_models.clear()
+            data_arrays.clear()
+        data_arrays += current_data_arrays
+
+        return data_arrays, gene_models, num_processed
