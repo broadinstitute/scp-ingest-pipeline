@@ -20,7 +20,7 @@ def support_configs(log_file):
     """Returns handler for loggers used for SCP support"""
     formatter = logging.Formatter(
         "%(asctime)s %(name)s %(levelname)s:%(message)s",
-        datefmt="%Y:%m:%d %I:%M:%S %p %Z",
+        datefmt="%Y-%m-%d %I:%M:%S %p %Z",
     )
     handler = logging.FileHandler(log_file)
     handler.setFormatter(formatter)

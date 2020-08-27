@@ -379,6 +379,7 @@ class IngestPipeline:
                 return status
         # Incorrect file format
         else:
+            report_issues(self.cluster)
             IngestPipeline.dev_logger.error("Cluster file format invalid")
             IngestPipeline.user_logger.error("Cluster file format invalid")
             return 1
