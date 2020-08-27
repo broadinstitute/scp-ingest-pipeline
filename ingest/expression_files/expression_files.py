@@ -36,7 +36,8 @@ class GeneExpression:
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = "genes"
     DATA_ARRAY_BATCH_SIZE = 1000
-    info_logger = setup_logger(__name__, "info.txt")
+    # Logger provides more details
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
     @dataclass
     class Model(TypedDict):
@@ -185,6 +186,6 @@ class GeneExpression:
         start_time = datetime.datetime.now()
         GeneExpression.insert(gene_docs, self.COLLECTION_NAME, self.mongo_connection)
         GeneExpression.insert(data_array_docs, "data_arrays", self.mongo_connection)
-        self.info_logger.info(
+        GeneExpression.dev_logger.info(
             f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}"
         )

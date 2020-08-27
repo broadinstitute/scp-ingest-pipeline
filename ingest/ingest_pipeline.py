@@ -354,7 +354,7 @@ class IngestPipeline:
                     IngestPipeline.dev_logger.error(
                         f"Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program"
                     )
-                    IngestPipeline.usr_logger.error(
+                    IngestPipeline.user_logger.error(
                         f"Loading cell metadata header : {metadataModel.annot_header} failed. Exiting program"
                     )
                     return status
@@ -362,7 +362,7 @@ class IngestPipeline:
         else:
             report_issues(self.cell_metadata)
             IngestPipeline.dev_logger.error("Cell metadata file format invalid")
-            IngestPipeline.usr_logger.error("Cell metadata file format invalid")
+            IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
 
     # @my_debug_logger()
@@ -380,7 +380,7 @@ class IngestPipeline:
         # Incorrect file format
         else:
             IngestPipeline.dev_logger.error("Cluster file format invalid")
-            IngestPipeline.usr_logger.error("Cluster file format invalid")
+            IngestPipeline.user_logger.error("Cluster file format invalid")
             return 1
         return status
 
