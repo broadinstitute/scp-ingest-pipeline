@@ -1,6 +1,5 @@
 import logging
 import os
-import time
 from contextlib import nullcontext
 
 
@@ -17,58 +16,34 @@ import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 
 
-def setup_logger(logger_name, log_file, level=logging.DEBUG, format='default'):
-    logger = logging.getLogger(logger_name)
-    if format == 'default':
-        formatter = logging.Formatter(
-            '[%(asctime)s] %(levelname)s [%(study_id)s.%(name)s.%(funcName)s:%(lineno)d:%(duration)s] %(message)s'
-        )
-    else:
-        formatter = logging.Formatter(format)
+def support_configs(log_file):
+    """Returns handler for loggers used for SCP support"""
+    formatter = logging.Formatter(
+        "%(asctime)s %(name)s %(levelname)s:%(message)s",
+        datefmt="%Y:%m:%d %I:%M:%S %p %Z",
+    )
     handler = logging.FileHandler(log_file)
     handler.setFormatter(formatter)
+    return handler
+
+
+def default_configs(log_file):
+    handler = logging.FileHandler(log_file)
+    return handler
+
+
+def setup_logger(logger_name, log_file, level=logging.DEBUG, format="default"):
+    """"Sets up logging configurations and formatting"""
+    if format == "support_configs":
+        handler = support_configs(log_file)
+
+    else:
+        handler = default_configs(log_file)
+    logger = logging.getLogger(logger_name)
     logger.setLevel(level)
     logger.addHandler(handler)
     logger.propagate = False
     return logger
-
-
-def log(error_logger):
-    error_logger = error_logger
-
-    def debug(enter_message=None, exit_message=None):
-        def wrapper(fn):
-            def wrap(*args, **kwargs):
-                study_id = args[0].study_id
-                info_logger = setup_logger(args[0].__class__.__name__, 'info.txt')
-                if enter_message is not None:
-                    msg = enter_message
-                else:
-                    msg = f'Starting {fn.__name__}'
-                try:
-                    info_logger.info(
-                        msg, extra={'duration': None, 'study_id': study_id}
-                    )
-                    start_time = time.time()
-                    return_statements = fn(*args, **kwargs)  # running function
-                    end_time = time.time()
-                    exit_params = {
-                        'duration': end_time - start_time,
-                        'study_id': study_id,
-                    }
-                    if exit_message:
-                        info_logger.info(exit_message, extra=exit_params)
-                    else:
-                        info_logger.info(f'Finished {fn.__name__}', extra=exit_params)
-                    return return_statements
-                except Exception as e:
-                    error_logger.exception(e)
-
-            return wrap
-
-        return wrapper
-
-    return debug
 
 
 def trace(fn):
@@ -77,8 +52,8 @@ def trace(fn):
 
     def trace_fn(*args, **kwargs):
         span = args[0].tracer
-        if 'GOOGLE_CLOUD_PROJECT' in os.environ:
-            span_cm = span.span(name=f'{args[0].__class__.__name__} {fn.__name__}')
+        if "GOOGLE_CLOUD_PROJECT" in os.environ:
+            span_cm = span.span(name=f"{args[0].__class__.__name__} {fn.__name__}")
         # In the event where the environment variable is not set, use nullcontext
         # manager which does nothing
         else:
@@ -97,18 +72,18 @@ def before_send_to_sentry(event, hint):
     # Report a general logger name (`ingest_pipeline`) to Sentry,
     # rather than the function-specific logger name (e.g. `__main___errors`)
     # used internally within Ingest Pipeline.
-    event['logger'] = 'ingest_pipeline'
+    event["logger"] = "ingest_pipeline"
     return event
 
 
 def integrate_sentry():
-    '''Log Ingest Pipeline errors to Sentry, by integrating with Python logger
+    """Log Ingest Pipeline errors to Sentry, by integrating with Python logger
 
     See also: links to Sentry resources atop this module
-    '''
+    """
 
     # Ultimately stored in Vault, passed in as environmen variable to PAPI
-    sentry_DSN = os.environ.get('SENTRY_DSN')
+    sentry_DSN = os.environ.get("SENTRY_DSN")
 
     if sentry_DSN is None:
         # Don't log to Sentry unless its DSN is set.

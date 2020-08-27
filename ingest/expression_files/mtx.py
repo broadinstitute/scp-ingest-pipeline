@@ -213,7 +213,7 @@ class MTXIngestor(GeneExpression):
                 if len(data_arrays) > 1_000:
                     yield gene_models, data_arrays
                     num_processed += len(gene_models)
-                    print(
+                    GeneExpression.dev_logger.info(
                         f"Processed {num_processed} genes. "
                         f"{str(datetime.datetime.now() - start_time)} "
                         f"elapsed"
@@ -239,7 +239,7 @@ class MTXIngestor(GeneExpression):
         if len(gene_models) > 0:
             yield gene_models, data_arrays
             num_processed += len(gene_models)
-            print(
+            GeneExpression.dev_logger.info(
                 f"Processed {num_processed} genes. "
                 f"{str(datetime.datetime.now() - start_time)} "
                 f"elapsed"

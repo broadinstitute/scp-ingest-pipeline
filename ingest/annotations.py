@@ -28,8 +28,8 @@ class Annotations(IngestFiles):
     __metaclass__ = abc.ABCMeta
 
     # Logger provides more details
-    dev_logger = setup_logger(__name__, "log.txt")
-    user_logger = setup_logger(__name__, "user_log.txt")
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
+    user_logger = setup_logger(__name__ + "user_logger", "user_log.txt")
 
     def __init__(
         self, file_path, allowed_file_types, study_id=None, study_file_id=None
@@ -116,10 +116,10 @@ class Annotations(IngestFiles):
                 # coerce group annotations to type string
                 self.file[group_columns] = self.file[group_columns].astype(str)
             except Exception as e:
-                Annotations.logger.error(
+                Annotations.user_logger.critical(
                     "Unable to coerce group annotation to string type"
                 )
-                Annotations.logger.critical(
+                Annotations.dev_logger.critical(
                     "Unable to coerce group annotation to string type" + str(e),
                     exc_info=True,
                 )
@@ -133,7 +133,7 @@ class Annotations(IngestFiles):
                     self.file[numeric_columns].round(3).astype(float)
                 )
             except Exception as e:
-                Annotations.logger.critical(e, exc_info=True)
+                Annotations.dev_logger.critical(e, exc_info=True)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
@@ -285,6 +285,5 @@ class Annotations(IngestFiles):
             ):
                 valid = False
                 msg = f"Numeric annotation, {annot_name}, contains non-numeric data (or unidentified NA values)"
-                Annotations.logger.error(msg, exc_info=True)
                 self.store_validation_issue("error", "format", msg)
         return valid

@@ -54,9 +54,9 @@ except ImportError:
     from ..monitor import setup_logger
 
 
-dev_logger = setup_logger(__name__, "log.txt")
+dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
-user_logger = setup_logger(__name__ + "user_log.txt")
+user_logger = setup_logger(__name__ + "_errors", "errors.txt", level=logging.ERROR)
 
 # Ensures normal color for print() output, unless explicitly changed
 colorama.init(autoreset=True)
@@ -142,8 +142,7 @@ def backoff_handler(details):
     dev_logger.debug(
         "Backing off {wait:0.1f} seconds after {tries} tries "
         "calling function {target} with args {args} and kwargs "
-        "{kwargs}".format(**details),
-        extra={"study_id": None, "duration": None},
+        "{kwargs}".format(**details)
     )
 
 
@@ -249,7 +248,7 @@ class OntologyRetriever:
             error_msg = f'No result from EBI OLS for provided ontology shortname "{ontology_shortname}"'
             print(error_msg)
             dev_logger.error(error_msg)
-            usr_logger.error(error_msg)
+            user_logger.error(error_msg)
             raise ValueError(
                 f"{property_name}: No match found in EBI OLS for provided ontology ID: {term}"
             )
@@ -258,7 +257,7 @@ class OntologyRetriever:
                 f"encountered issue retrieving {ontology_urls} or {ontology_shortname}"
             )
             print(error_msg)
-            dev_logger.info(error_msg, extra={"study_id": None, "duration": None})
+            dev_logger.info(error_msg)
             raise RuntimeError(error_msg)
 
     def retrieve_mouse_brain_term(self, term, property_name):
@@ -312,6 +311,7 @@ def fetch_allen_mouse_brain_atlas_remote():
     # if we can't get the file in GitHub for validation record error
     except:  # noqa E722
         error_msg = "Unable to read GitHub-hosted organ_region ontology file"
+        dev_logger.critical(error_msg, exc_info=True)
         raise RuntimeError(error_msg)
 
 
@@ -919,10 +919,7 @@ def report_issues(metadata):
     returns True if errors are reported, False if no errors to report
     """
 
-    dev_logger.info(
-        f"Checking for validation issues",
-        extra={"study_id": metadata.study_id, "duration": None},
-    )
+    dev_logger.info(f"Checking for validation issues")
 
     error_file = open("scp_validation_errors.txt", "w")
     warn_file = open("scp_validation_warnings.txt", "w")
@@ -1033,7 +1030,7 @@ def validate_collected_ontology_data(metadata, convention):
                 )
             except requests.exceptions.RequestException as err:
                 error_msg = f"External service outage connecting to {ontology_urls} when querying {ontology_id}:{ontology_label}: {err}"
-                user_logger.critical(error_msg)
+                dev_logger.critical(error_msg)
                 metadata.store_validation_issue("error", "ontology", error_msg),
                 # immediately return as validation cannot continue
                 return
@@ -1136,20 +1133,18 @@ def push_metadata_to_bq(metadata, ndjson, dataset, table):
         job.result()  # Waits for table load to complete.
         info_msg = f"Metadata uploaded to BigQuery. ({job.output_rows} rows)"
         print(info_msg)
-        dev_logger.info(
-            info_msg, extra={"study_id": metadata.study_id, "duration": None}
-        )
+        dev_logger.info(info_msg)
     # Unable to intentionally trigger a failed BigQuery upload
     # please add print statement below to error logging so
     # error handling can be updated when better understood
     except Exception as e:
         print(e)
-        dev_logger.error(e)
+        dev_logger.critical(e, exc_info=True)
         return 1
     if job.output_rows != len(metadata.cells):
         error_msg = f"BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells"
         print(error_msg)
-        error_logger.error(error_msg)
+        dev_logger.error(error_msg)
         return 1
     os.remove(ndjson)
     return 0

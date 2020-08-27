@@ -209,9 +209,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
     def transform(self):
         """Transforms dense matrix into gene data model."""
         start_time = datetime.datetime.now()
-        self.error_logger.info(
-            "Starting run at " + str(start_time), extra=self.extra_log_params
-        )
+        GeneExpression.dev_logger.info("Starting run at " + str(start_time))
         num_processed = 0
         gene_models = []
         data_arrays = []
@@ -268,10 +266,9 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     data_arrays.append(data_array)
             if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
                 num_processed += len(gene_models)
-                self.info_logger.info(
+                GeneExpression.dev_logger.info(
                     f"Processed {num_processed} models, "
-                    f"{str(datetime.datetime.now() - start_time)} elapsed",
-                    extra=self.extra_log_params,
+                    f"{str(datetime.datetime.now() - start_time)} elapsed"
                 )
                 yield gene_models, data_arrays
                 gene_models = []
@@ -282,7 +279,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
         if len(gene_models) > 0:
             yield gene_models, data_arrays
             num_processed += len(gene_models)
-            self.info_logger.info(
-                f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed",
-                extra=self.extra_log_params,
+            GeneExpression.dev_logger.info(
+                f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed"
             )

@@ -1,4 +1,3 @@
-import logging
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
@@ -8,12 +7,10 @@ from mypy_extensions import TypedDict
 try:
     from ingest_files import DataArray
     from annotations import Annotations
-    from monitor import setup_logger, log
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import DataArray
     from .annotations import Annotations
-    from .monitor import setup_logger, log
 
 
 @dataclass
@@ -105,10 +102,9 @@ class Clusters(Annotations):
         # Iterate through all extra "annotation" column headers
         # (I.E. column headers that are not coordinates or where TYPE !=NAME)
         for annot_headers in self.annot_column_headers:
-            Annotations.logger.info(f"Transforming header {annot_headers[0]}")
+            Annotations.dev_logger.info(f"Transforming header {annot_headers[0]}")
             annot_name = annot_headers[0]
             annot_type = annot_headers[1]
-            # column_type = annot[1]
             cell_annotations.append(
                 {
                     "name": annot_name,
@@ -118,7 +114,7 @@ class Clusters(Annotations):
                     else [],
                 }
             )
-        Annotations.logger.info(f"Created model for {self.study_id}")
+        Annotations.dev_logger.info(f"Creating model for {self.study_id}")
         return self.Model(
             name=self.name,
             cluster_type=self.cluster_type,
@@ -132,7 +128,9 @@ class Clusters(Annotations):
 
     def get_data_array_annot(self, linear_data_id):
         for annot_header in self.file.columns:
-            Annotations.logger.info(f"Creating data array for header {annot_header[0]}")
+            Annotations.dev_logger.info(
+                f"Creating data array for header {annot_header[0]}"
+            )
             yield from Clusters.set_data_array(
                 annot_header[0],
                 self.name,
@@ -141,7 +139,7 @@ class Clusters(Annotations):
                 self.study_id,
                 linear_data_id,
             )
-            Annotations.logger.info(
+            Annotations.dev_logger.info(
                 f"Attempting to load cluster header : {annot_header[0]}"
             )
 
