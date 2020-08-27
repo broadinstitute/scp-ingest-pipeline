@@ -52,7 +52,6 @@ from expression_files.expression_files import GeneExpression
 from mock_data.dense_matrix_19_genes_100k_cells_txt.data_arrays import data_arrays
 
 
-
 def mock_load(self, *args, **kwargs):
     """Enables overwriting normal function with this placeholder.
     Returning the arguments enables tests to verify that the code invokes
@@ -237,17 +236,51 @@ class IngestTestCase(unittest.TestCase):
             "dense",
         ]
         ingest = self.execute_ingest(args)[0]
-
         models = ingest.expression_ingestor.gene_docs
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model["_id"]
             self.assertEqual(model, gene_models[model["name"]])
 
-    def test_ingest_mtx_matrix(self):
+    def test_empty_dense_file(self):
+        """Ingest Pipeline should fail gracefully when an empty file is given
+        """
+
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_expression",
+            "--taxon-name",
+            "Homo sapiens",
+            "--taxon-common-name",
+            "human",
+            "--ncbi-taxid",
+            "9606",
+            "--genome-assembly-accession",
+            "GCA_000001405.15",
+            "--genome-annotation",
+            "Ensembl 94",
+            "--matrix-file",
+            "../tests/data/empty_file.txt",
+            "--matrix-file-type",
+            "dense",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+
+    @patch(
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
+        return_value=True,
+    )
+    def test_ingest_mtx_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract and transform MTX matrix bundles
         """
-        GeneExpression.load = mock_load
+        GeneExpression.load = mock_load_genes
 
         args = [
             "--study-id",
@@ -275,18 +308,20 @@ class IngestTestCase(unittest.TestCase):
             "../tests/data/AB_toy_data_toy.barcodes.tsv",
         ]
         ingest = self.execute_ingest(args)[0]
-        models = ingest.expression_ingestor.load_args
+        models = ingest.expression_ingestor.gene_docs
         print(f"actual model is: {models}")
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model["_id"]
-        # print(model)
-        self.assertEqual(models, expected_model)
+            self.assertEqual(model, expected_model[model["name"]])
 
-    def test_remote_mtx_bundles(self):
+    @patch(
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
+        return_value=True,
+    )
+    def test_remote_mtx_bundles(self, mock_check_unique_cells):
         """Ingest Pipeline should handle MTX matrix files fetched from bucket
         """
-        GeneExpression.load = mock_load
 
         args = [
             "--study-id",
@@ -313,18 +348,20 @@ class IngestTestCase(unittest.TestCase):
             "--barcode-file",
             "gs://fake-bucket/tests/data/AB_toy_data_toy.barcodes.tsv",
         ]
-        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
-        models = ingest.expression_ingestor.load_args
-        print(models)
+        ingest = self.execute_ingest(args)[0]
+        models = ingest.expression_ingestor.gene_docs
+        print(f"actual model is: {models}")
         for model in models:
             # Ensure that 'ObjectID' in model is removed
             del model["_id"]
-            print(model)
-        # print(model)
-        self.assertEqual(models, expected_model)
+            self.assertEqual(model, expected_model[model["name"]])
 
-    def test_mtx_bundle_argument_validation(self):
+    @patch(
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
+        return_value=True,
+    )
+    def test_mtx_bundle_argument_validation(self, mock_check_unique_cells):
         """Omitting --gene-file and --barcode-file in MTX ingest should error
         """
 
