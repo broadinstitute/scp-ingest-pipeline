@@ -35,7 +35,6 @@ def mock_load_mtx(documents, collection_name):
             assert document == mtx_gene_models[model_name]
         if collection_name == DataArray.COLLECTION_NAME:
             del document["linear_data_id"]
-            del mtx_data_arrays[model_name]["linear_data_id"]
             assert document == mtx_data_arrays[model_name]
 
 
