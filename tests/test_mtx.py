@@ -29,15 +29,14 @@ def mock_load_mtx(documents, collection_name):
     # _id and linear_data_id are unique identifiers and can not be predicted
     # so we exclude it from the comparison
     for document in documents:
+        model_name = document["name"]
         if collection_name == GeneExpression.COLLECTION_NAME:
             del document["_id"]
-            gene_name = document["name"]
-            assert document == mtx_gene_models[gene_name]
+            assert document == mtx_gene_models[model_name]
         if collection_name == DataArray.COLLECTION_NAME:
-            data_array_name = document["name"]
             del document["linear_data_id"]
-            del mtx_data_arrays[data_array_name]["linear_data_id"]
-            assert document == mtx_data_arrays[data_array_name]
+            del mtx_data_arrays[model_name]["linear_data_id"]
+            assert document == mtx_data_arrays[model_name]
 
 
 class TestMTXIngestor(unittest.TestCase):
