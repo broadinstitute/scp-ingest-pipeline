@@ -225,7 +225,7 @@ class GeneExpression:
         )
         if len(data_arrays) > 0:
             # Data arrays for cells
-            for data_array in GeneExpression.create_data_arrays(
+            for cell_data_array in GeneExpression.create_data_arrays(
                 name=f"{gene} Cells",
                 array_type="cells",
                 values=exp_cells,
@@ -233,9 +233,9 @@ class GeneExpression:
                 linear_data_id=model_id,
                 **self.data_array_kwargs,
             ):
-                current_data_arrays.append(data_array)
+                current_data_arrays.append(cell_data_array)
             # Data arrays for expression values
-            for data_array in GeneExpression.create_data_arrays(
+            for exp_value_data_array in GeneExpression.create_data_arrays(
                 name=f"{gene} Expression",
                 array_type="expression",
                 values=exp_scores,
@@ -243,7 +243,7 @@ class GeneExpression:
                 linear_data_id=model_id,
                 **self.data_array_kwargs,
             ):
-                current_data_arrays.append(data_array)
+                current_data_arrays.append(exp_value_data_array)
         this_batch_size = len(data_arrays) + len(current_data_arrays)
         # Determine if models should be batched
         if this_batch_size >= GeneExpression.DATA_ARRAY_BATCH_SIZE or force:
