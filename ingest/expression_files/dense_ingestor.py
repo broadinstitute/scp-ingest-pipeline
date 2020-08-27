@@ -249,16 +249,17 @@ class DenseIngestor(GeneExpression, IngestFiles):
             if gene in self.gene_names:
                 raise ValueError(f"Duplicate gene: {gene}")
             self.gene_names[gene] = True
-            data_arrays, gene_models, num_processed = self.create_models(
-                exp_cells,
-                exp_scores,
-                gene,
-                None,
-                gene_models,
-                data_arrays,
-                num_processed,
-                False,
-            )
+            if len(exp_scores) > 0:
+                data_arrays, gene_models, num_processed = self.create_models(
+                    exp_cells,
+                    exp_scores,
+                    gene,
+                    None,
+                    gene_models,
+                    data_arrays,
+                    num_processed,
+                    False,
+                )
         # load any remaining models (this is necessary here since there isn't
         # an easy way to detect the last line of the file in the iteration above
         if len(gene_models) > 0:
