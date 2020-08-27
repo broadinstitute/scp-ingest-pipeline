@@ -9,7 +9,6 @@ Must have python 3.6 or higher.
 """
 import collections
 import ntpath
-import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
