@@ -1,7 +1,7 @@
 from bson.objectid import ObjectId
 
 
-data_arrays = {
+dense_19_100k_data_arrays = {
     "dense_matrix_19_genes_1000_cells.txt Cells": {
         "name": "dense_matrix_19_genes_1000_cells.txt Cells",
         "cluster_name": "dense_matrix_19_genes_1000_cells.txt",

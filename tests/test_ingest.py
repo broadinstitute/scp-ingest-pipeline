@@ -31,14 +31,15 @@ pytest -n auto -s
 pytest --cov=../ingest/
 
 """
-import ast
 import sys
 import unittest
 from unittest.mock import patch
-from bson.objectid import ObjectId
-from mock_data.dense_matrix_19_genes_100k_cells_txt.gene_models_0 import gene_models
-from mock_data.matrix_mtx.gene_model_0 import expected_model
+from test_dense import mock_dense_load, mock_load_r_files
+
+
+from test_mtx import mock_load_mtx
 from mock_gcp import mock_storage_client, mock_storage_blob
+
 
 sys.path.append("../ingest")
 from ingest_pipeline import (
@@ -48,8 +49,6 @@ from ingest_pipeline import (
     exit_pipeline,
     run_ingest,
 )
-from expression_files.expression_files import GeneExpression
-from mock_data.dense_matrix_19_genes_100k_cells_txt.data_arrays import data_arrays
 
 
 def mock_load(self, *args, **kwargs):
@@ -68,41 +67,8 @@ def mock_load(self, *args, **kwargs):
     self.load_kwargs = kwargs
 
 
-def mock_load_genes(self, *args, **kwargs):
-    """Enables overwriting normal function with this placeholder.
-    Returning the arguments enables tests to verify that the code invokes
-    this method with expected argument values.
-
-    TODO:
-    Integrate MongoDB emulator for faster, higher-coverage tests (SCP-2000)
-
-    This will enable us to also verify (and thus cover) loading-code *outputs*,
-    unlike here where we merely give a way to verify loading-code *inputs*.
-    Doing so via integration tests will isolate us from implementation changes.
-    """
-    self.gene_docs = args[0]
-    self.data_array_docs = args[1]
-
-
 # Mock method that writes to database
-GeneExpression.load = mock_load_genes
 IngestPipeline.load = mock_load
-
-
-def get_gene_model(mock_dir):
-    """Return actual and expected gene model, using actual and mock data
-    """
-
-    with open(f"mock_data/{mock_dir}/gene_model_0.txt") as f:
-        # Create a dictionary from the string-literal mock
-        expected_model = ast.literal_eval(f.read())
-        # convert strings to BSON ObjectIds
-        study_id = ObjectId(expected_model["study_id"])
-        study_file_id = ObjectId(expected_model["study_file_id"])
-        expected_model["study_id"] = study_id
-        expected_model["study_file_id"] = study_file_id
-
-    return expected_model
 
 
 class IngestTestCase(unittest.TestCase):
@@ -126,7 +92,11 @@ class IngestTestCase(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_ingest_dense_matrix(self, mock_check_unique_cells):
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_dense_load,
+    )
+    def test_ingest_dense_matrix(self, mock_check_unique_cells, mock_load):
         """Ingest Pipeline should extract, transform, and load dense matrices
         """
         args = [
@@ -150,24 +120,17 @@ class IngestTestCase(unittest.TestCase):
             "--matrix-file-type",
             "dense",
         ]
-        ingest = self.execute_ingest(args)[0]
-        models = ingest.expression_ingestor.gene_docs
-        actual_data_arrays = ingest.expression_ingestor.data_array_docs
-        # print(models)
-        for model in models:
-            # Ensure that 'ObjectID' in model is removed
-            del model["_id"]
-            # Verify gene model looks as expected
-            self.assertEqual(model, gene_models[model["name"]])
-        for actual_data_array in actual_data_arrays:
-            del actual_data_array["linear_data_id"]
-            self.assertEqual(actual_data_array, data_arrays[actual_data_array["name"]])
+        self.execute_ingest(args)
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_ingest_local_dense_matrix(self, mock_check_unique_cells):
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_dense_load,
+    )
+    def test_ingest_local_dense_matrix(self, mock_check_unique_cells, mock_load):
         """Ingest Pipeline should extract and transform local dense matrices
         """
 
@@ -192,24 +155,19 @@ class IngestTestCase(unittest.TestCase):
             "--matrix-file-type",
             "dense",
         ]
-        ingest = self.execute_ingest(args)[0]
-
-        models = ingest.expression_ingestor.gene_docs
-        actual_data_arrays = ingest.expression_ingestor.data_array_docs
-        for model in models:
-            # Ensure that 'ObjectID' in model is removed
-            del model["_id"]
-            self.assertEqual(model, gene_models[model["name"]])
-        # print(models)
-        for actual_data_array in actual_data_arrays:
-            del actual_data_array["linear_data_id"]
-            self.assertEqual(actual_data_array, data_arrays[actual_data_array["name"]])
+        self.execute_ingest(args)
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_ingest_local_compressed_dense_matrix(self, mock_check_unique_cells):
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_dense_load,
+    )
+    def test_ingest_local_compressed_dense_matrix(
+        self, mock_check_unique_cells, mock_load
+    ):
         """Ingest Pipeline should extract and transform local dense matrices
             from compressed file in the same manner as uncompressed file
         """
@@ -235,12 +193,7 @@ class IngestTestCase(unittest.TestCase):
             "--matrix-file-type",
             "dense",
         ]
-        ingest = self.execute_ingest(args)[0]
-        models = ingest.expression_ingestor.gene_docs
-        for model in models:
-            # Ensure that 'ObjectID' in model is removed
-            del model["_id"]
-            self.assertEqual(model, gene_models[model["name"]])
+        self.execute_ingest(args)
 
     def test_empty_dense_file(self):
         """Ingest Pipeline should fail gracefully when an empty file is given
@@ -273,14 +226,52 @@ class IngestTestCase(unittest.TestCase):
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
+    def test_empty_mtx_file(self):
+        """Ingest Pipeline should fail gracefully when an empty file is given
+        """
+
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_expression",
+            "--taxon-name",
+            "Homo sapiens",
+            "--taxon-common-name",
+            "human",
+            "--ncbi-taxid",
+            "9606",
+            "--genome-assembly-accession",
+            "GCA_000001405.15",
+            "--genome-annotation",
+            "Ensembl 94",
+            "--matrix-file",
+            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "--matrix-file-type",
+            "mtx",
+            "--gene-file",
+            "../tests/data/empty_file.txt",
+            "--barcode-file",
+            "../tests/data/AB_toy_data_toy.barcodes.tsv",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_ingest_mtx_matrix(self, mock_check_unique_cells):
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_load_mtx,
+    )
+    def test_ingest_mtx_matrix(self, mock_check_unique_cells, mock_load):
         """Ingest Pipeline should extract and transform MTX matrix bundles
         """
-        GeneExpression.load = mock_load_genes
 
         args = [
             "--study-id",
@@ -307,19 +298,17 @@ class IngestTestCase(unittest.TestCase):
             "--barcode-file",
             "../tests/data/AB_toy_data_toy.barcodes.tsv",
         ]
-        ingest = self.execute_ingest(args)[0]
-        models = ingest.expression_ingestor.gene_docs
-        print(f"actual model is: {models}")
-        for model in models:
-            # Ensure that 'ObjectID' in model is removed
-            del model["_id"]
-            self.assertEqual(model, expected_model[model["name"]])
+        self.execute_ingest(args)
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_remote_mtx_bundles(self, mock_check_unique_cells):
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_load_mtx,
+    )
+    def test_remote_mtx_bundles(self, mock_check_unique_cells, mock_load):
         """Ingest Pipeline should handle MTX matrix files fetched from bucket
         """
 
@@ -349,13 +338,7 @@ class IngestTestCase(unittest.TestCase):
             "gs://fake-bucket/tests/data/AB_toy_data_toy.barcodes.tsv",
         ]
 
-        ingest = self.execute_ingest(args)[0]
-        models = ingest.expression_ingestor.gene_docs
-        print(f"actual model is: {models}")
-        for model in models:
-            # Ensure that 'ObjectID' in model is removed
-            del model["_id"]
-            self.assertEqual(model, expected_model[model["name"]])
+        self.execute_ingest(args)
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
@@ -389,22 +372,27 @@ class IngestTestCase(unittest.TestCase):
 
         self.assertRaises(ValueError, self.execute_ingest, args)
 
-        # TODO: This test does not run.  De-indent and fix.
-        def test_bad_format_dense(self):
-            args = [
-                "--study-id",
-                "5d276a50421aa9117c982845",
-                "--study-file-id",
-                "5dd5ae25421aa910a723a337",
-                "ingest_expression",
-                "--matrix-file",
-                "../tests/data/expression_matrix_bad_missing_keyword.txt",
-                "--matrix-file-type",
-                "dense",
-            ]
-            with self.assertRaises(SystemExit) as cm:
-                self.execute_ingest(args)
-            not self.assertEqual(cm.exception.code, 0)
+    @patch(
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
+        return_value=True,
+    )
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_load_r_files,
+    )
+    def test_r_file_dense(self, mock_check_unique_cells, mock_load):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_expression",
+            "--matrix-file",
+            "../tests/data/r_format_text.txt",
+            "--matrix-file-type",
+            "dense",
+        ]
+        self.execute_ingest(args)
 
     def test_good_metadata_file(self):
         """Ingest Pipeline should succeed for properly formatted metadata file
@@ -540,46 +528,6 @@ class IngestTestCase(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
-
-    # def test_ingest_loom(self):
-    #     """Ingest Pipeline should extract and transform loom files
-    #     """
-    #
-    #     args = [
-    #         '--study-id',
-    #         '5d276a50421aa9117c982845',
-    #         '--study-file-id',
-    #         '5dd5ae25421aa910a723a337',
-    #         'ingest_expression',
-    #         '--taxon-name',
-    #         'Homo Sapiens',
-    #         '--taxon-common-name',
-    #         'human',
-    #         '--ncbi-taxid',
-    #         '9606',
-    #         '--genome-assembly-accession',
-    #         'GCA_000001405.15',
-    #         '--genome-annotation',
-    #         'Ensemble 94',
-    #         '--matrix-file',
-    #         '../tests/data/test_loom.loom',
-    #         '--matrix-file-type',
-    #         'loom',
-    #     ]
-    #
-    #     ingest = self.execute_ingest(args)
-    #
-    #     model = ingest.load_args[0]
-    #
-    #     # Verify that 25 gene models were passed into load method
-    #     num_models = len(models)
-    #     expected_num_models = 10
-    #     self.assertEqual(num_models, expected_num_models)
-    #
-    #     # Verify that the first gene model looks as expected
-    #     mock_dir = 'loom'
-    #     model, expected_model = get_nth_gene_models(0, models, mock_dir)
-    #     self.assertEqual(model, expected_model)
 
 
 if __name__ == "__main__":

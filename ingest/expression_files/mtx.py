@@ -9,22 +9,16 @@ These are commonly provided from 10x Genomics v2.
 
 """
 
-import datetime
-from typing import Dict, Generator, List, Tuple  # noqa: F401
-import sys
 
-from bson.objectid import ObjectId
+from typing import Dict, Generator, List, Tuple  # noqa: F401git ad
 
 try:
     from expression_files import GeneExpression
-
     from ingest_files import IngestFiles
 except ImportError:
     # Used when importing as external package, e.g. imports in
     # single_cell_portal code
     from .expression_files import GeneExpression
-
-    sys.path.append("../ingest")
     from ..ingest_files import IngestFiles
 
 
@@ -65,7 +59,11 @@ class MTXIngestor(GeneExpression):
         except ValueError as v:
             error_messages.append(str(v))
         try:
-            MTXIngestor.check_duplicate_genes(genes)
+            MTXIngestor.check_duplicates(genes, "gene")
+        except ValueError as v:
+            error_messages.append(str(v))
+        try:
+            MTXIngestor.check_duplicates(barcodes, "barcode")
         except ValueError as v:
             error_messages.append(str(v))
         try:
@@ -76,6 +74,20 @@ class MTXIngestor(GeneExpression):
         if len(error_messages) > 0:
             raise ValueError("; ".join(error_messages))
         return True
+
+    @staticmethod
+    def is_sorted(idx: int, visited_expression_idx: List[int]):
+        last_visited_idx = visited_expression_idx[-1]
+        if idx not in visited_expression_idx:
+            if idx > last_visited_idx:
+                return True
+            else:
+                return False
+        else:
+            if idx == last_visited_idx:
+                return True
+            else:
+                return False
 
     @staticmethod
     def check_bundle(barcodes, genes, mtx_dimensions):
@@ -97,13 +109,23 @@ class MTXIngestor(GeneExpression):
             raise ValueError(msg)
 
     @staticmethod
-    def check_duplicate_genes(gene_names: List):
-        unique_gene_names: List[str] = set(gene_names)
-        if len(unique_gene_names) != len(gene_names):
-            amount_of_duplicates = len(unique_gene_names) - len(gene_names)
+    def check_duplicates(names: List, file_type: str):
+        """Checks for duplicate values.
+        Barcode and gene files cannot contain duplicate values within the file
+
+        Parameters
+        ----------
+        names - Gene or cell values
+
+        file_type: Barcode or gene files. Used in error message
+        """
+        unique_names: List[str] = set(names)
+        if len(names) > len(unique_names):
+            amount_of_duplicates = abs(len(unique_names) - len(names))
             msg = (
-                "Duplicate header values are not allowed."
-                f"There are {amount_of_duplicates} duplicates"
+                "Duplicate values are not allowed. "
+                f"There are {amount_of_duplicates} duplicates "
+                f"in the {file_type} file"
             )
             raise ValueError(msg)
         return True
@@ -113,33 +135,24 @@ class MTXIngestor(GeneExpression):
         for line in file_handler:
             if not line.startswith("%"):
                 mtx_dimensions: List[str] = line.strip().split()
-                # Convert values in mtx_dimensions to int
-                return list(map(int, mtx_dimensions))
-
-    @staticmethod
-    def is_sorted(idx: int, visited_expression_idx: List[int]):
-        last_visited_idx = visited_expression_idx[-1]
-        if idx not in visited_expression_idx:
-            if idx == (last_visited_idx + 1):
-                return True
-            else:
-                raise ValueError("MTX file must be sorted")
-        else:
-            if idx == last_visited_idx:
-                return True
-            else:
-                raise ValueError("MTX file must be sorted")
+                try:
+                    # Convert values in mtx_dimensions to int
+                    dimensions = list(map(int, mtx_dimensions))
+                    return dimensions
+                except Exception as e:
+                    raise e
+        raise ValueError("MTX file did not contain data")
 
     def execute_ingest(self):
+        """Parses MTX files"""
         self.extract_feature_barcode_matrices()
-        if MTXIngestor.check_valid(
+        MTXIngestor.check_valid(
             self.cells,
             self.genes,
             self.mtx_dimensions,
             query_params=(self.study_id, self.mongo_connection._client),
-        ):
-            for gene_docs, data_array_documents in self.transform():
-                self.load(gene_docs, data_array_documents)
+        )
+        self.transform()
 
     def extract_feature_barcode_matrices(self):
         """
@@ -153,94 +166,61 @@ class MTXIngestor(GeneExpression):
         ]
 
     def transform(self):
-        start_time = datetime.datetime.now()
         num_processed = 0
-        last_idx = 0
+        prev_idx = 0
         gene_models = []
         data_arrays = []
         exp_cells = []
         exp_scores = []
         visited_expression_idx = [0]
-        model_id = None
 
         # All observed cells
-        data_arrays.extend(
-            GeneExpression.create_data_arrays(
-                name=f"{self.cluster_name} Cells",
-                array_type="cells",
-                values=self.cells,
-                linear_data_type="Study",
-                linear_data_id=self.study_file_id,
-                **self.data_array_kwargs,
-            )
-        )
+        for data_array in GeneExpression.create_data_arrays(
+            name=f"{self.cluster_name} Cells",
+            array_type="cells",
+            values=self.cells,
+            linear_data_type="Study",
+            linear_data_id=self.study_file_id,
+            **self.data_array_kwargs,
+        ):
+            data_arrays.append(data_array)
         for row in self.mtx_file:
             raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
             current_idx = int(raw_gene_idx)
-            gene_id, gene = self.genes[current_idx - 1].split("\t")
-            if current_idx != last_idx:
-                is_sorted = MTXIngestor.is_sorted(current_idx, visited_expression_idx)
-                if not is_sorted:
+            if current_idx != prev_idx:
+                if not MTXIngestor.is_sorted(current_idx, visited_expression_idx):
                     raise ValueError("MTX file must be sorted")
-                else:
-                    visited_expression_idx.append(current_idx)
-                    # Create data arrays from prior gene
-                    if last_idx != 0:
-                        # Data array for cell names
-                        da_cells = GeneExpression.create_data_arrays(
-                            name=gene,
-                            array_type=f"{gene} Cells",
-                            values=exp_cells,
-                            linear_data_type="Study",
-                            linear_data_id=model_id,
-                            **self.data_array_kwargs,
-                        )
-                        data_arrays.extend(da_cells)
-                        # Data array for expression values
-                        da_exp = GeneExpression.create_data_arrays(
-                            name=gene,
-                            array_type=f"{gene} Expression",
-                            values=exp_scores,
-                            linear_data_type="Gene",
-                            linear_data_id=model_id,
-                            **self.data_array_kwargs,
-                        )
-                        data_arrays.extend(da_exp)
-                        # Reset variables so values will be associated w/new
-                        # gene
-                        exp_cells = []
-                        exp_scores = []
-                if len(data_arrays) > 1_000:
-                    yield gene_models, data_arrays
-                    num_processed += len(gene_models)
-                    print(
-                        f"Processed {num_processed} genes. "
-                        f"{str(datetime.datetime.now() - start_time)} "
-                        f"elapsed"
+                visited_expression_idx.append(current_idx)
+                if prev_idx != 0:
+                    # Expressed cells and scores are associated with prior gene
+                    prev_gene_id, prev_gene = self.genes[prev_idx - 1].split("\t")
+                    # Ff the previous gene exists, load its models
+                    data_arrays, gene_models, num_processed = self.create_models(
+                        exp_cells,
+                        exp_scores,
+                        prev_gene,
+                        prev_gene_id,
+                        gene_models,
+                        data_arrays,
+                        num_processed,
+                        False,
                     )
-                    num_processed += len(gene_models)
-                    gene_models = []
-                    data_arrays = []
-                model_id = ObjectId()
-                # Add current gene's gene model
-                gene_model = GeneExpression.create_gene_model(
-                    name=gene,
-                    study_file_id=self.study_file_id,
-                    study_id=self.study_id,
-                    gene_id=gene_id,
-                    _id=model_id,
-                )
-                gene_models.append(gene_model)
-                last_idx = current_idx
+                    exp_cells = []
+                    exp_scores = []
+                prev_idx = current_idx
             exp_cell = self.cells[int(raw_barcode_idx) - 1]
             exp_score = round(float(raw_exp_score), 3)
             exp_cells.append(exp_cell)
             exp_scores.append(exp_score)
-        if len(gene_models) > 0:
-            yield gene_models, data_arrays
-            num_processed += len(gene_models)
-            print(
-                f"Processed {num_processed} genes. "
-                f"{str(datetime.datetime.now() - start_time)} "
-                f"elapsed"
-            )
+        # Create data array for last row
+        current_gene_id, current_gene = self.genes[prev_idx - 1].split("\t")
+        self.create_models(
+            exp_cells,
+            exp_scores,
+            current_gene,
+            current_gene_id,
+            gene_models,
+            data_arrays,
+            num_processed,
+            True,
+        )
