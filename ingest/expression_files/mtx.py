@@ -186,6 +186,7 @@ class MTXIngestor(GeneExpression):
                     visited_expression_idx.append(current_idx)
                     # Create data arrays from prior gene
                     if last_idx != 0:
+                        GeneExpression.dev_logger.debug(f"Processing {gene}")
                         # Data array for cell names
                         da_cells = GeneExpression.create_data_arrays(
                             name=gene,

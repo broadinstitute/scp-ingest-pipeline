@@ -459,11 +459,20 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     matched_argument = captured_argument.groups()[0]
                     file_path = arguments[matched_argument]
                     if IngestFiles.is_remote_file(file_path):
+                        # Delocalize support log
                         IngestFiles.delocalize_file(
                             study_file_id,
                             arguments["study_id"],
                             file_path,
-                            "errors.txt",
+                            "log.txt",
+                            f"parse_logs/{study_file_id}/errors.txt",
+                        )
+                        # Delocalize user log
+                        IngestFiles.delocalize_file(
+                            study_file_id,
+                            arguments["study_id"],
+                            file_path,
+                            "user_log.txt",
                             f"parse_logs/{study_file_id}/errors.txt",
                         )
                     # Need 1 argument that has a path to identify google bucket

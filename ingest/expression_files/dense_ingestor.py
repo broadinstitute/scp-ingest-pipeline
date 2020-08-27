@@ -230,6 +230,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             )
             exp_scores = DenseIngestor.process_row(valid_expression_scores)
             gene = row[0]
+            GeneExpression.dev_logger.debug(f"Processing {gene}")
             if gene in self.gene_names:
                 raise ValueError(f"Duplicate gene: {gene}")
             self.gene_names[gene] = True
