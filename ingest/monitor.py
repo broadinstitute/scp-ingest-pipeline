@@ -19,7 +19,7 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 def support_configs(log_file):
     """Returns handler for loggers used for SCP support"""
     formatter = logging.Formatter(
-        "%(asctime)s %(name)s %(levelname)s:%(message)s", datefmt="%Y-%m-%dT%H:%M:%S %Z"
+        "%(asctime)s %(name)s %(levelname)s:%(message)s", datefmt="%Y-%m-%dT%H:%M:%S%z"
     )
     handler = logging.FileHandler(log_file)
     handler.setFormatter(formatter)

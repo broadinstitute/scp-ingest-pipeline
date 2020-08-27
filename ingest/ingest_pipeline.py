@@ -465,7 +465,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                             arguments["study_id"],
                             file_path,
                             "log.txt",
-                            f"parse_logs/{study_file_id}/errors.txt",
+                            f"parse_logs/{study_file_id}/log.txt",
                         )
                         # Delocalize user log
                         IngestFiles.delocalize_file(
@@ -473,7 +473,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                             arguments["study_id"],
                             file_path,
                             "user_log.txt",
-                            f"parse_logs/{study_file_id}/errors.txt",
+                            f"parse_logs/{study_file_id}/user_log.txt",
                         )
                     # Need 1 argument that has a path to identify google bucket
                     # Break after first argument
