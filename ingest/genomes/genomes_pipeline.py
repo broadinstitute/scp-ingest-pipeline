@@ -48,38 +48,38 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        '--vault-path', help='Path in Vault for GCS service account credentials'
+        "--vault-path", help="Path in Vault for GCS service account credentials"
     )
     parser.add_argument(
-        '--input-dir',
-        help='Input directory; where to find organisms.tsv.  Default: ./',
-        default='./',
+        "--input-dir",
+        help="Input directory; where to find organisms.tsv.  Default: ./",
+        default="./",
     )
     parser.add_argument(
-        '--remote-output-dir',
-        help='Remote directory for output in GCS bucket.  '
-        + 'Default: reference_data_dev/',
-        default='reference_data_dev/',
+        "--remote-output-dir",
+        help="Remote directory for output in GCS bucket.  "
+        + "Default: reference_data_dev/",
+        default="reference_data_dev/",
     )
     parser.add_argument(
-        '--local-output-dir',
-        help='Local directory for output.  Default: output/',
-        default='output/',
+        "--local-output-dir",
+        help="Local directory for output.  Default: output/",
+        default="output/",
     )
     parser.add_argument(
-        '--gcs-bucket',
-        help='Name of GCS bucket for upload.  ' + 'Default: reference_data_dev/',
-        default='fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2',
+        "--gcs-bucket",
+        help="Name of GCS bucket for upload.  " + "Default: reference_data_dev/",
+        default="fc-bcc55e6c-bec3-4b2e-9fb2-5e1526ddfcd2",
     )
     parser.add_argument(
-        '--copy-data-from-prod-dir',
-        help='Remote directory from which to copy data into '
-        + 'remote_output_dir.  Use to ensure test data '
-        + 'environment is equivalent to production data '
-        + 'environment.  Default: reference_data/',
-        default='reference_data/',
+        "--copy-data-from-prod-dir",
+        help="Remote directory from which to copy data into "
+        + "remote_output_dir.  Use to ensure test data "
+        + "environment is equivalent to production data "
+        + "environment.  Default: reference_data/",
+        default="reference_data/",
     )
-    parser.add_argument('--use-cache', help='Whether to use cache', action='store_true')
+    parser.add_argument("--use-cache", help="Whether to use cache", action="store_true")
 
     return parser
 

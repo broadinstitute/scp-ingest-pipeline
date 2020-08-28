@@ -17,8 +17,8 @@ def get_species_list(organisms_path):
     """Get priority species to support in Single Cell Portal
     """
     with open(organisms_path) as f:
-        raw_species_list = [line.strip().split('\t') for line in f.readlines()[1:]]
-        species_list = [line for line in raw_species_list if line[0][0] != '#']
+        raw_species_list = [line.strip().split("\t") for line in f.readlines()[1:]]
+        species_list = [line for line in raw_species_list if line[0][0] != "#"]
     return species_list
 
 
@@ -26,28 +26,28 @@ def fetch_gzipped_content(url, output_path):
     """Fetch remote gzipped content, or read it from disk if cached
     """
     if os.path.exists(output_path):
-        print('  Reading cached gzipped ' + output_path)
+        print("  Reading cached gzipped " + output_path)
         # Use locally cached content if available
-        with open(output_path, 'rb') as f:
-            content = ''
+        with open(output_path, "rb") as f:
+            content = ""
             # content = gzip.GzipFile(fileobj=f).readlines()
     else:
-        print('  Fetching gzipped ' + url)
+        print("  Fetching gzipped " + url)
         # If local report absent, fetch remote content and cache it
         request_obj = request.Request(url, headers={"Accept-Encoding": "gzip"})
         with request.urlopen(request_obj) as response:
             remote_content = gzip.decompress(response.read())
-            with open(output_path, 'wb') as f:
+            with open(output_path, "wb") as f:
                 f.write(remote_content)
 
             # Decompress foo.gtf.gz to foo.gtf
-            output_path_uncompressed = output_path.replace('.gz', '')
-            with open(output_path_uncompressed, 'wb') as f_out:
-                with gzip.open(output_path, 'rb') as f_in:
+            output_path_uncompressed = output_path.replace(".gz", "")
+            with open(output_path_uncompressed, "wb") as f_out:
+                with gzip.open(output_path, "rb") as f_in:
                     shutil.copyfileobj(f_in, f_out)
 
             content = remote_content
-    print('  Returning content for gzipped ' + url)
+    print("  Returning content for gzipped " + url)
     return content
 
 
@@ -57,22 +57,22 @@ def fetch_content(url_and_output_paths):
     content_dict = {}
     for url_and_output_path in url_and_output_paths:
         url, output_path = url_and_output_path
-        if url[-3:] == '.gz':
+        if url[-3:] == ".gz":
             content = fetch_gzipped_content(url, output_path)
         else:
             if os.path.exists(output_path):
                 # Use locally cached content if available
-                print('  Reading cached ' + output_path)
+                print("  Reading cached " + output_path)
                 with open(output_path) as f:
                     content = f.readlines()
             else:
                 # If local report absent, fetch remote content and cache it
-                print('  Fetching ' + url)
+                print("  Fetching " + url)
                 with request.urlopen(url) as response:
-                    remote_content = response.read().decode('utf-8')
-                    with open(output_path, 'w') as f:
+                    remote_content = response.read().decode("utf-8")
+                    with open(output_path, "w") as f:
                         f.write(remote_content)
-                    content = remote_content.split('\n')
+                    content = remote_content.split("\n")
         content_dict[output_path] = content
     return content_dict
 
@@ -88,7 +88,7 @@ def get_pool_args(urls, output_dir, num_cores):
     """
 
     url_and_output_paths = []
-    output_paths = [os.path.join(output_dir, url.split('/')[-1]) for url in urls]
+    output_paths = [os.path.join(output_dir, url.split("/")[-1]) for url in urls]
     for i, url in enumerate(urls):
         url_and_output_paths.append([url, output_paths[i]])
 
@@ -134,12 +134,12 @@ def get_gcs_storage_client(vault_path):
     """Get Google Cloud Storage storage client for service account
     """
     # Get GCS SA credentials from Vault
-    vault_command = ('vault read -format=json ' + vault_path).split(' ')
+    vault_command = ("vault read -format=json " + vault_path).split(" ")
     p = subprocess.Popen(vault_command, stdout=subprocess.PIPE)
     vault_response = p.communicate()[0]
-    gcs_info = json.loads(vault_response)['data']
+    gcs_info = json.loads(vault_response)["data"]
 
-    project_id = 'single-cell-portal'
+    project_id = "single-cell-portal"
     credentials = service_account.Credentials.from_service_account_info(gcs_info)
     storage_client = storage.Client(project_id, credentials=credentials)
 
@@ -149,22 +149,22 @@ def get_gcs_storage_client(vault_path):
 def copy_gcs_data_from_prod_to_dev(bucket, prod_dir, dev_dir):
     """Copy all GCS prod contents to GCS dev, to ensure they're equivalent
     """
-    print('Copying prod blobs to dev in GCS')
+    print("Copying prod blobs to dev in GCS")
     prod_blobs = bucket.list_blobs(prefix=prod_dir)
 
     dev_blobs = bucket.list_blobs(prefix=dev_dir)
     dev_blob_names_trimmed = []
     for dev_blob in dev_blobs:
-        dev_blob_name_trimmed = dev_blob.name.replace(dev_dir, '')
+        dev_blob_name_trimmed = dev_blob.name.replace(dev_dir, "")
         dev_blob_names_trimmed.append(dev_blob_name_trimmed)
 
     # Compare names of prod and dev blobs without their respective directory
     # names, and copy only prod blobs that aren't already in dev.
     for prod_blob in prod_blobs:
-        prod_blob_name_trimmed = prod_blob.name.replace(prod_dir, '')
+        prod_blob_name_trimmed = prod_blob.name.replace(prod_dir, "")
         if prod_blob_name_trimmed not in dev_blob_names_trimmed:
             dev_blob_name = prod_blob.name.replace(prod_dir, dev_dir)
             bucket.copy_blob(prod_blob, bucket, dev_blob_name)
-            print('  Copied ' + prod_blob.name + ' to ' + dev_blob_name)
+            print("  Copied " + prod_blob.name + " to " + dev_blob_name)
         else:
-            print('  Already in dev, not copying ' + prod_blob.name)
+            print("  Already in dev, not copying " + prod_blob.name)
