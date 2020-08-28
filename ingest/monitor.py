@@ -39,12 +39,15 @@ def setup_logger(logger_name, log_file, level=logging.DEBUG, format="default"):
 
     else:
         handler = default_configs(log_file)
-        handler1 = support_configs(log_file)
-        logger.addHandler(handler1)
         logger.propagate = True
     logger.setLevel(level)
     logger.addHandler(handler)
     return logger
+
+
+def log_exception(dev_logger, user_logger, exception):
+    user_logger.critical(str(exception))
+    dev_logger.exception(exception)
 
 
 def trace(fn):

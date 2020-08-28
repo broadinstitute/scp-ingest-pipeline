@@ -54,7 +54,6 @@ class GeneExpression:
         self.study_file_id = ObjectId(study_file_id)
         head, tail = ntpath.split(file_path)
         self.cluster_name = tail or ntpath.basename(head)
-        self.extra_log_params = {"study_id": self.study_id, "duration": None}
         self.mongo_connection = MongoConnection()
         # Common data array kwargs
         self.data_array_kwargs = {

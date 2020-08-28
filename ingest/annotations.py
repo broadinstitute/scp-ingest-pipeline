@@ -16,12 +16,12 @@ from bson.objectid import ObjectId
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
-    from monitor import setup_logger
+    from monitor import setup_logger, log_exception
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
-    from .monitor import setup_logger
+    from .monitor import setup_logger, log_exception
 
 
 class Annotations(IngestFiles):
@@ -29,7 +29,7 @@ class Annotations(IngestFiles):
 
     # Logger provides more details
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
-    user_logger = setup_logger(__name__ + "user_logger", "user_log.txt")
+    user_logger = setup_logger(__name__ + ".user_logger", "user_log.txt")
 
     def __init__(
         self, file_path, allowed_file_types, study_id=None, study_file_id=None
@@ -37,7 +37,6 @@ class Annotations(IngestFiles):
         IngestFiles.__init__(self, file_path, allowed_file_types)
         if study_id is not None:
             self.study_id = ObjectId(study_id)
-            self.extra_log_params = {"study_id": self.study_id, "duration": None}
         else:
             self.extra_log_params = {"study_id": None, "duration": None}
         if study_file_id is not None:
@@ -133,7 +132,7 @@ class Annotations(IngestFiles):
                     self.file[numeric_columns].round(3).astype(float)
                 )
             except Exception as e:
-                Annotations.dev_logger.critical(e, exc_info=True)
+                log_exception(Annotations.dev_logger, Annotations.user_logger, e)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
