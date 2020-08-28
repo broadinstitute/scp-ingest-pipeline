@@ -223,9 +223,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
     def transform(self):
         """Transforms dense matrix into gene data model."""
         start_time = datetime.datetime.now()
-        self.error_logger.info(
-            "Starting run at " + str(start_time), extra=self.extra_log_params
-        )
+        GeneExpression.dev_logger.info("Starting run at " + str(start_time))
         num_processed = 0
         gene_models = []
         data_arrays = []
@@ -246,9 +244,11 @@ class DenseIngestor(GeneExpression, IngestFiles):
             )
             exp_scores = DenseIngestor.process_row(valid_expression_scores)
             gene = row[0]
+            GeneExpression.dev_logger.debug(f"Processing {gene}")
             if gene in self.gene_names:
                 raise ValueError(f"Duplicate gene: {gene}")
             self.gene_names[gene] = True
+
             if len(exp_scores) > 0:
                 data_arrays, gene_models, num_processed = self.create_models(
                     exp_cells,

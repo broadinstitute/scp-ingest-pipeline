@@ -33,7 +33,8 @@ class GeneExpression:
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = "genes"
     DATA_ARRAY_BATCH_SIZE = 1_000
-    info_logger = setup_logger(__name__, "info.txt")
+    # Logger provides more details
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
     @dataclass
     class Model(TypedDict):
@@ -50,7 +51,6 @@ class GeneExpression:
         self.study_file_id = ObjectId(study_file_id)
         head, tail = ntpath.split(file_path)
         self.cluster_name = tail or ntpath.basename(head)
-        self.extra_log_params = {"study_id": self.study_id, "duration": None}
         self.mongo_connection = MongoConnection()
         # Common data array kwargs
         self.data_array_kwargs = {
@@ -181,7 +181,7 @@ class GeneExpression:
     def load(self, docs: List, collection_name: List):
         start_time = datetime.datetime.now()
         GeneExpression.insert(docs, collection_name, self.mongo_connection)
-        self.info_logger.info(
+        GeneExpression.dev_logger.info(
             f"Time to load {len(docs)} models: {str(datetime.datetime.now() - start_time)}"
         )
 

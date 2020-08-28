@@ -49,7 +49,6 @@ class CellMetadata(Annotations):
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.ontology_label = dict()
         self.cells = []
-        self.extra_log_params = {"study_id": self.study_id, "duration": None}
         self.preprocess()
 
     # This model pertains to columns from cell metadata files
