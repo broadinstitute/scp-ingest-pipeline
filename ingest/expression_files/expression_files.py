@@ -180,7 +180,7 @@ class GeneExpression:
 
     def load(self, docs: List, collection_name: List):
         start_time = datetime.datetime.now()
-        GeneExpression.insert(docs, collection_name, self.mongo_connection)
+        GeneExpression.insert(docs, collection_name, self.mongo_connection._client)
         GeneExpression.dev_logger.info(
             f"Time to load {len(docs)} models: {str(datetime.datetime.now() - start_time)}"
         )
