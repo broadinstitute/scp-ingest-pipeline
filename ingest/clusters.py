@@ -192,4 +192,4 @@ class Clusters(Annotations):
         # Merge BASE_DICT, cluster_attr & data_array_attr and return DataArray model
         return DataArray(
             **data_array_attr, **cluster_attr, **BASE_DICT
-        ).get_data_array()
+        ).get_data_arrays()
