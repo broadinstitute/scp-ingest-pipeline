@@ -33,15 +33,17 @@ def default_configs(log_file):
 
 def setup_logger(logger_name, log_file, level=logging.DEBUG, format="default"):
     """"Sets up logging configurations and formatting"""
+    logger = logging.getLogger(logger_name)
     if format == "support_configs":
         handler = support_configs(log_file)
 
     else:
         handler = default_configs(log_file)
-    logger = logging.getLogger(logger_name)
+        handler1 = support_configs(log_file)
+        logger.addHandler(handler1)
+        logger.propagate = True
     logger.setLevel(level)
     logger.addHandler(handler)
-    logger.propagate = False
     return logger
 
 
