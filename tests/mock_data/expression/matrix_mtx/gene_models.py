@@ -1,6 +1,6 @@
 from bson.objectid import ObjectId
 
-expected_model = {
+mtx_gene_models = {
     "TP53": {
         "name": "TP53",
         "searchable_name": "tp53",

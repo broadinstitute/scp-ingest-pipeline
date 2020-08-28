@@ -10,6 +10,17 @@ from ingest_files import DataArray
 from typing import Dict
 
 
+def mock_load_genes_batched(documents, collection_name):
+    """Enables overwriting of GeneExpression.load() with this placeholder.
+    GeneExpression.load() is called multiple times. This method will verify
+    data array documents are batched correctly everytime a call is made to
+    GeneExpression.load()
+    """
+    # Assures transform function batches data array creation correctly
+    if collection_name == DataArray.COLLECTION_NAME:
+        assert GeneExpression.DATA_ARRAY_BATCH_SIZE >= len(documents)
+
+
 class TestExpressionFiles(unittest.TestCase):
     def test_check_unique_cells(self):
         client_mock = MagicMock()

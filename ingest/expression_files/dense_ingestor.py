@@ -12,10 +12,9 @@ from typing import List  # noqa: F401
 
 from bson.objectid import ObjectId
 
+sys.path.append("..")
 try:
     from expression_files import GeneExpression
-
-    sys.path.append("..")
     from ingest_files import IngestFiles
 
 except ImportError:
@@ -36,18 +35,21 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # To allow additional optional keyword arguments like gene_id
         self.matrix_params = matrix_kwargs
         self.gene_names = {}
-        self.header = self.set_header()
+        csv_file_handler = self.open_file(self.file_path)[0]
+        self.header = DenseIngestor.set_header(csv_file_handler)
         self.csv_file_handler, self.file_handler = self.open_file(self.file_path)
-        # Reset csv reader to first gene row
         next(self.csv_file_handler)
 
-    def set_header(self):
-        csv_file_handler = self.open_file(self.file_path)[0]
+    @staticmethod
+    def set_header(csv_file_handler) -> List[str]:
+        """
+        Sets header for a dense matrix. Function assumes file reader is at
+            beginning of file.
+        """
         header = next(csv_file_handler)
         row = next(csv_file_handler)
-        is_r_file = DenseIngestor.is_r_formatted_file(header, row)
-        # Cell names are formatted differently in R files
-        return header if is_r_file else header[1:]
+        is_r_file, new_header = DenseIngestor.is_r_formatted_file(header, row)
+        return new_header
 
     @staticmethod
     def matches_file_type(file_type):
@@ -66,8 +68,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # Reset csv reader to first gene row
         self.csv_file_handler = self.open_file(self.file_path)[0]
         next(self.csv_file_handler)
-        for gene_docs, data_array_documents in self.transform():
-            self.load(gene_docs, data_array_documents)
+        self.transform()
 
     @staticmethod
     def check_valid(header, first_row, query_params):
@@ -127,15 +128,28 @@ class DenseIngestor(GeneExpression, IngestFiles):
         Parameters:
             header (List[str]): Header of the dense matrix
             row (List): A single row from the dense matrix
+
+        Returns:
+             Boolean value if file is an R File or not and correct header for
+            file. (Tuple: (Boolean, List[Str]))
+
         """
-        # An "R formatted" file has one less entry in the header
-        # row than each successive row. Also, "GENE" will not appear in header
+        # An "R formatted" file can:
+        # Not have GENE in the header or
+        # Have one less entry in the header than each successive row or
+        # Have "" as the last value in header.
         if header[0].upper() != "GENE":
-            length_of_next_line = len(row)
-            if (length_of_next_line - 1) == len(header):
-                return True
+            next_line_length = len(row)
+            if len(header) == next_line_length:
+                last_value = header[-1]
+                if last_value.isspace() or last_value == "":
+                    return True, header[:-1]
+            else:
+                if (next_line_length - 1) == len(header):
+                    return True, header
+            return False, header[1:]
         else:
-            return False
+            return False, header[1:]
 
     @staticmethod
     def filter_expression_scores(scores: List, cells: List):
@@ -202,7 +216,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
         """
         if header[0].upper() == "GENE":
             return True
-        if DenseIngestor.is_r_formatted_file(header, row):
+        if DenseIngestor.is_r_formatted_file(header, row)[0]:
             return True
         raise ValueError("Required 'GENE' header is not present")
 
@@ -234,52 +248,28 @@ class DenseIngestor(GeneExpression, IngestFiles):
             if gene in self.gene_names:
                 raise ValueError(f"Duplicate gene: {gene}")
             self.gene_names[gene] = True
-            formatted_gene_name = DenseIngestor.format_gene_name(gene)
-            _id = ObjectId()
-            gene_model = GeneExpression.create_gene_model(
-                name=formatted_gene_name,
-                study_file_id=self.study_file_id,
-                study_id=self.study_id,
-                gene_id=None,
-                _id=_id,
-            )
-            gene_models.append(gene_model)
-            if len(valid_expression_scores) > 0:
-                # Data array for cell names
-                for data_array in GeneExpression.create_data_arrays(
-                    name=f"{gene} Cells",
-                    array_type="cells",
-                    values=exp_cells,
-                    linear_data_type="Gene",
-                    linear_data_id=_id,
-                    **self.data_array_kwargs,
-                ):
-                    data_arrays.append(data_array)
-                # Data array for expression values
-                for data_array in GeneExpression.create_data_arrays(
-                    name=f"{gene} Expression",
-                    array_type="expression",
-                    linear_data_type="Gene",
-                    values=exp_scores,
-                    linear_data_id=_id,
-                    **self.data_array_kwargs,
-                ):
-                    data_arrays.append(data_array)
-            if len(data_arrays) >= GeneExpression.DATA_ARRAY_BATCH_SIZE:
-                num_processed += len(gene_models)
-                GeneExpression.dev_logger.info(
-                    f"Processed {num_processed} models, "
-                    f"{str(datetime.datetime.now() - start_time)} elapsed"
-                )
-                yield gene_models, data_arrays
-                gene_models = []
-                data_arrays = []
 
+            if len(exp_scores) > 0:
+                data_arrays, gene_models, num_processed = self.create_models(
+                    exp_cells,
+                    exp_scores,
+                    gene,
+                    None,
+                    gene_models,
+                    data_arrays,
+                    num_processed,
+                    False,
+                )
         # load any remaining models (this is necessary here since there isn't
         # an easy way to detect the last line of the file in the iteration above
         if len(gene_models) > 0:
-            yield gene_models, data_arrays
-            num_processed += len(gene_models)
-            GeneExpression.dev_logger.info(
-                f"Processed {num_processed} models, {str(datetime.datetime.now() - start_time)} elapsed"
+            self.create_models(
+                exp_cells,
+                exp_scores,
+                gene,
+                None,
+                gene_models,
+                data_arrays,
+                num_processed,
+                True,
             )

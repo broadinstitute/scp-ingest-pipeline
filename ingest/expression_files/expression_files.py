@@ -10,7 +10,6 @@ Must have python 3.6 or higher.
 import abc
 import datetime
 import ntpath
-import sys
 import copy
 from dataclasses import dataclass
 from typing import List, Dict, Generator  # noqa: F401
@@ -20,8 +19,6 @@ from mypy_extensions import TypedDict
 from pymongo.errors import BulkWriteError
 
 try:
-    sys.path.append("..")
-    # Used when importing as external package, e.g. imports in single_cell_portal cod
     from ingest_files import DataArray
     from monitor import setup_logger
     from mongo_connection import MongoConnection
@@ -35,7 +32,7 @@ except ImportError:
 class GeneExpression:
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = "genes"
-    DATA_ARRAY_BATCH_SIZE = 1000
+    DATA_ARRAY_BATCH_SIZE = 1_000
     # Logger provides more details
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
@@ -80,8 +77,8 @@ class GeneExpression:
         *ignore, name: str, study_file_id, study_id, _id: int, gene_id: str = None
     ):
         """Creates a gene model for a single gene.
-            This function accepts keyword arguments only. An error will be raise
-                when positional or additional keyword arguments are passed in.
+            This function accepts keyword arguments only. An error will be raised
+                if positional or additional keyword arguments are passed in.
         """
         if ignore:
             raise TypeError("Position arguments are not accepted.")
@@ -157,8 +154,8 @@ class GeneExpression:
     ) -> Generator:
         """
         Sets data array for expression data.
-        This function accepts keyword arguments only. An error will be raise
-                when positional or additional keyword arguments are passed in.
+        This function accepts keyword arguments only. An error will be raised
+                if positional or additional keyword arguments are passed in.
         """
         fn_kwargs = copy.copy(locals())
         # Positional arguments passed in
@@ -181,10 +178,85 @@ class GeneExpression:
                 f"Error caused by inserting into collection '{collection_name}': {e}"
             )
 
-    def load(self, gene_docs: List, data_array_docs: List):
+    def load(self, docs: List, collection_name: List):
         start_time = datetime.datetime.now()
-        GeneExpression.insert(gene_docs, self.COLLECTION_NAME, self.mongo_connection)
-        GeneExpression.insert(data_array_docs, "data_arrays", self.mongo_connection)
+        GeneExpression.insert(docs, collection_name, self.mongo_connection)
         GeneExpression.dev_logger.info(
-            f"Time to load {len(gene_docs) + len(data_array_docs)} models: {str(datetime.datetime.now() - start_time)}"
+            f"Time to load {len(docs)} models: {str(datetime.datetime.now() - start_time)}"
         )
+
+    def create_models(
+        self,
+        exp_cells: List,
+        exp_scores: List,
+        gene: str,
+        gene_id: str,
+        gene_models: List,
+        data_arrays: List,
+        num_processed: int,
+        force=False,
+    ):
+        """Creates models for a given gene and batches them for loading if
+            necessary.
+
+        After creating models, the amount of data arrays are checked to see if
+        models should be loaded into the database. Data arrays and gene models
+        will be loaded if the threshold, as specified in DATA_ARRAY_BATCH_SIZE,
+        is met.
+
+        Returns:
+            data_arrays: List[str]
+            gene_models: List[str]
+            num_processed: int
+                Amount of gene models created.
+            """
+        current_data_arrays = []
+        start_time = datetime.datetime.now()
+
+        model_id = ObjectId()
+        gene_models.append(
+            GeneExpression.create_gene_model(
+                name=gene,
+                study_file_id=self.study_file_id,
+                study_id=self.study_id,
+                gene_id=gene_id,
+                _id=model_id,
+            )
+        )
+        if len(data_arrays) > 0:
+            # Data arrays for cells
+            for cell_data_array in GeneExpression.create_data_arrays(
+                name=f"{gene} Cells",
+                array_type="cells",
+                values=exp_cells,
+                linear_data_type="Gene",
+                linear_data_id=model_id,
+                **self.data_array_kwargs,
+            ):
+                current_data_arrays.append(cell_data_array)
+            # Data arrays for expression values
+            for exp_value_data_array in GeneExpression.create_data_arrays(
+                name=f"{gene} Expression",
+                array_type="expression",
+                values=exp_scores,
+                linear_data_type="Gene",
+                linear_data_id=model_id,
+                **self.data_array_kwargs,
+            ):
+                current_data_arrays.append(exp_value_data_array)
+        this_batch_size = len(data_arrays) + len(current_data_arrays)
+        # Determine if models should be batched
+        if this_batch_size >= GeneExpression.DATA_ARRAY_BATCH_SIZE or force:
+            self.load(gene_models, GeneExpression.COLLECTION_NAME)
+            self.load(data_arrays, DataArray.COLLECTION_NAME)
+            num_processed += len(gene_models)
+            print(
+                f"Processed {num_processed} genes. "
+                f"{str(datetime.datetime.now() - start_time)} "
+                f"elapsed"
+            )
+            gene_models.clear()
+            data_arrays.clear()
+        data_arrays += current_data_arrays
+
+        return data_arrays, gene_models, num_processed
