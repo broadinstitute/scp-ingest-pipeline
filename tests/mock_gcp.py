@@ -43,8 +43,8 @@ def mock_storage_blob(*args, **kwargs):
     class MockStorageBlob:
         def __init__(self, bucket=None, name=None):
             self.bucket = bucket
-            self.name = "../" + name
-            print(f"Bucket is {self.bucket} and name is {self.name}")
+            self.name = '../' + name
+            print(f'Bucket is {self.bucket} and name is {self.name}')
 
         def exists(self, storage_client):
             return os.path.exists(self.name)

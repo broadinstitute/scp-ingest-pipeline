@@ -18,7 +18,7 @@ import sys
 from random import randrange
 from glob import glob
 
-sys.path.append("../ingest/genomes")
+sys.path.append('../ingest/genomes')
 from genomes_pipeline import create_parser, parse_assemblies, parse_genome_annotations
 
 
@@ -38,16 +38,16 @@ def mock_record_annotation_metadata(output_dir, ensembl_metadata, scp_species):
     return
 
 
-output_dir = f"tmp/test_genomes_{randrange(100_000)}/"
+output_dir = f'tmp/test_genomes_{randrange(100_000)}/'
 
 
 class GenomesTestCase(unittest.TestCase):
     @patch(
-        "genome_annotation_metadata.upload_ensembl_gtf_products",
+        'genome_annotation_metadata.upload_ensembl_gtf_products',
         side_effect=mock_upload_ensembl_gtf_products,
     )
     @patch(
-        "genome_annotation_metadata.record_annotation_metadata",
+        'genome_annotation_metadata.record_annotation_metadata',
         side_effect=mock_record_annotation_metadata,
     )
     def execute_genomes_pipeline(
@@ -63,9 +63,9 @@ class GenomesTestCase(unittest.TestCase):
     def test_genomes_default(self):
         """Genomes Pipeline should extract and transform reference data
         """
-        args = ["--input-dir", "mock_data/genomes/", "--local-output-dir", output_dir]
+        args = ['--input-dir', 'mock_data/genomes/', '--local-output-dir', output_dir]
         self.execute_genomes_pipeline(args)
 
         # There should be two gzipped GTF files
-        gzipped_gtfs = glob(f"{output_dir}*.gtf.gz")
+        gzipped_gtfs = glob(f'{output_dir}*.gtf.gz')
         self.assertEqual(len(gzipped_gtfs), 2)

@@ -10,11 +10,11 @@ import unittest
 import sys
 from random import randrange
 
-sys.path.append("../ingest")
-sys.path.append("../ingest/genomes")
+sys.path.append('../ingest')
+sys.path.append('../ingest/genomes')
 from make_toy_data import create_parser, make_toy_data
 
-output_dir = f"tmp/test_make_toy_{randrange(100_000)}/"
+output_dir = f'tmp/test_make_toy_{randrange(100_000)}/'
 
 
 class MakeToyTestCase(unittest.TestCase):
@@ -26,5 +26,5 @@ class MakeToyTestCase(unittest.TestCase):
         return
 
     def test_make_toy_data_default(self):
-        args = ["--output-dir", output_dir]
+        args = ['--output-dir', output_dir]
         self.execute_make_toy(args)

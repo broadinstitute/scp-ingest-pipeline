@@ -55,50 +55,50 @@ def create_parser():
     )
 
     parser.add_argument(
-        "-n",
-        "--number",
-        help="Number of studies to create for stress test",
+        '-n',
+        '--number',
+        help='Number of studies to create for stress test',
         type=int,
         default=1,
     )
 
     parser.add_argument(
-        "--environment",
-        choices=["development", "staging", "production"],
-        help="Server to test against",
-        default="staging",
+        '--environment',
+        choices=['development', 'staging', 'production'],
+        help='Server to test against',
+        default='staging',
     )
 
     parser.add_argument(
-        "--token",
+        '--token',
         default=None,
         required=True,
-        help="Personal token after logging into Google (OAuth2).  This token is not persisted after the finish of the script.",
+        help='Personal token after logging into Google (OAuth2).  This token is not persisted after the finish of the script.',
     )
 
     parser.add_argument(
-        "--dev-run",
-        action="store_true",
+        '--dev-run',
+        action='store_true',
         help='Run using existing study, "stress-devel-study" (SCP138)',
     )
 
     parser.add_argument(
-        "--data-set",
-        choices=["small", "medium", "large"],
-        default="small",
-        help="Data set for stress test",
+        '--data-set',
+        choices=['small', 'medium', 'large'],
+        default='small',
+        help='Data set for stress test',
     )
 
     parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Show upload command results for troubleshooting",
+        '--debug',
+        action='store_true',
+        help='Show upload command results for troubleshooting',
     )
 
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show upload commands without running upload request",
+        '--dry-run',
+        action='store_true',
+        help='Show upload commands without running upload request',
     )
 
     return parser
@@ -108,10 +108,10 @@ class ManageStudyAction:
     def __init__(self, data_set):
         self.data_set = data_set
         self.action_setup = [
-            "manage-study",
-            "--environment",
+            'manage-study',
+            '--environment',
             args.environment,
-            "--token",
+            '--token',
             args.token,
         ]
 
@@ -119,45 +119,45 @@ class ManageStudyAction:
 
         study_actions = {
             "study_exists": [
-                "get-study-attribute",
-                "--study-name",
+                'get-study-attribute',
+                '--study-name',
                 study,
-                "--attribute",
-                "accession",
+                '--attribute',
+                'accession',
             ],
-            "create_study": [
-                "create-study",
-                "--study-name",
+            'create_study': [
+                'create-study',
+                '--study-name',
                 study,
-                "--description",
-                "test study for smoke or stress test",
-                "--is-private",
+                '--description',
+                'test study for smoke or stress test',
+                '--is-private',
             ],
             "upload_cluster": [
-                "upload-cluster",
-                "--study-name",
+                'upload-cluster',
+                '--study-name',
                 study,
-                "--file",
-                DATA[self.data_set]["cluster"],
-                "--cluster-name",
-                "tSNE",
+                '--file',
+                DATA[self.data_set]['cluster'],
+                '--cluster-name',
+                'tSNE',
             ],
             "upload_metadata": [
-                "upload-metadata",
-                "--study-name",
+                'upload-metadata',
+                '--study-name',
                 study,
-                "--file",
-                DATA[self.data_set]["metadata"],
+                '--file',
+                DATA[self.data_set]['metadata'],
             ],
             "upload_dense_expression": [
-                "upload-expression",
-                "--study-name",
+                'upload-expression',
+                '--study-name',
                 study,
-                "--file",
-                DATA[self.data_set]["dense"],
-                "--species",
+                '--file',
+                DATA[self.data_set]['dense'],
+                '--species',
                 "human",
-                "--genome",
+                '--genome',
                 "GRCh37",
             ],
         }
@@ -167,10 +167,10 @@ class ManageStudyAction:
             class Result:
                 def __init__(self):
                     self.returncode = 0
-                    self.stdout = b""
+                    self.stdout = b''
 
             result = Result()
-            print(f"{self.action_setup} {study_actions.get(action)}")
+            print(f'{self.action_setup} {study_actions.get(action)}')
         else:
             result = subprocess.run(
                 self.action_setup + study_actions.get(action),
@@ -185,8 +185,8 @@ class ManageStudyAction:
         # for "study_exists" action, failure to confirm a study exists is not an error
         elif action == "study_exists":
             return False
-        elif result.stdout.decode("utf-8") == "Error 403: Forbidden\n":
-            print(result.stdout.decode("utf-8"))
+        elif result.stdout.decode('utf-8') == "Error 403: Forbidden\n":
+            print(result.stdout.decode('utf-8'))
             print("Check that you have access (ie. VPN) to the Portal server")
             return False
         else:
@@ -196,51 +196,51 @@ class ManageStudyAction:
             return False
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     args = create_parser().parse_args()
 
     msaction = ManageStudyAction(args.data_set)
 
     # generate study names
-    test_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    test_id = datetime.now().strftime('%Y%m%d-%H%M%S')
     if args.number == 1:
         test_type = "smoke"
     else:
         test_type = "stress"
-    study_names = [f"{test_type}-{test_id}-{i}" for i in range(args.number)]
+    study_names = [f'{test_type}-{test_id}-{i}' for i in range(args.number)]
 
     # create studies unless it is a dev-run
     if not args.dev_run and not msaction.send_request(study_names[0], "study_exists"):
         for study in study_names:
-            print(f"Requesting creation of {study}")
+            print(f'Requesting creation of {study}')
             create = msaction.send_request(study, "create_study")
             if not create:
-                print(f"Failed to create {study}. Exiting")
+                print(f'Failed to create {study}. Exiting')
                 exit(1)
 
     # if a dev-run, limit ingest jobs to single, pre-created test study
     if args.dev_run:
-        study_names = ["stress-devel-study"]
+        study_names = ['stress-devel-study']
 
-    print(f"Using the following study/ies for file upload {study_names}")
+    print(f'Using the following study/ies for file upload {study_names}')
     # obtain study file info
 
     # launch ingest jobs for expression matrix, metadata and cluster files
     # exits upon first ingest request failure
-    print("Requesting file upload for")
+    print('Requesting file upload for')
     for study in study_names:
         print(study)
         upload_dense_expression = msaction.send_request(
             study, "upload_dense_expression"
         )
         if not upload_dense_expression:
-            print(f"Expression matrix upload failed for {study}. Exiting")
+            print(f'Expression matrix upload failed for {study}. Exiting')
             exit(1)
         upload_cluster = msaction.send_request(study, "upload_cluster")
         if not upload_cluster:
-            print(f"Cluster upload failed for {study}. Exiting")
+            print(f'Cluster upload failed for {study}. Exiting')
             exit(1)
         upload_metadata = msaction.send_request(study, "upload_metadata")
         if not upload_metadata:
-            print(f"Metadata upload failed for {study}. Exiting")
+            print(f'Metadata upload failed for {study}. Exiting')
             exit(1)
