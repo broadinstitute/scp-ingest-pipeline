@@ -24,7 +24,7 @@ try:
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from ..ingest_files import DataArray
-    from ..monitor import setup_logger, graceful_auto_reconnect
+    from ..monitor import setup_logger
     from ..mongo_connection import MongoConnection, graceful_auto_reconnect
 
 
