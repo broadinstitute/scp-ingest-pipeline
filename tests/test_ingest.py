@@ -36,6 +36,7 @@ import unittest
 from unittest.mock import patch
 from test_dense import mock_dense_load, mock_load_r_files
 
+from pymongo.errors import AutoReconnect
 
 from test_mtx import mock_load_mtx
 from mock_gcp import mock_storage_client, mock_storage_blob
@@ -418,6 +419,51 @@ class IngestTestCase(unittest.TestCase):
         # because we lack a MongoDB emulator.
         self.assertEqual(len(status), 1)
         self.assertEqual(status[0], None)
+
+    @patch(
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
+        return_value=True,
+    )
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=AutoReconnect,
+    )
+    def test_exponential_back_off_expression_file(
+        self, mock_check_unique_cells, mock_load
+    ):
+        """Ingest Pipeline should not succeed if mongo cannot connect after 5
+            reconnection tries.
+        """
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_expression",
+            "--taxon-name",
+            "Homo sapiens",
+            "--taxon-common-name",
+            "human",
+            "--ncbi-taxid",
+            "9606",
+            "--genome-assembly-accession",
+            "GCA_000001405.15",
+            "--genome-annotation",
+            "Ensembl 94",
+            "--matrix-file",
+            "gs://fake-bucket/tests/data/AB_toy_data_toy.matrix.mtx",
+            "--matrix-file-type",
+            "mtx",
+            "--gene-file",
+            "gs://fake-bucket/tests/data/AB_toy_data_toy.genes.tsv",
+            "--barcode-file",
+            "gs://fake-bucket/tests/data/AB_toy_data_toy.barcodes.tsv",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+
+        with self.assertRaises(SystemExit) as cm:
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_bad_metadata_file(self):
         """Ingest Pipeline should not succeed for misformatted metadata file

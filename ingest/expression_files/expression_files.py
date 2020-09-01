@@ -16,17 +16,16 @@ from typing import List, Dict, Generator  # noqa: F401
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
-from pymongo.errors import BulkWriteError
 
 try:
     from ingest_files import DataArray
     from monitor import setup_logger
-    from mongo_connection import MongoConnection
+    from mongo_connection import MongoConnection, graceful_auto_reconnect
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from ..ingest_files import DataArray
     from ..monitor import setup_logger
-    from ..mongo_connection import MongoConnection
+    from ..mongo_connection import MongoConnection, graceful_auto_reconnect
 
 
 class GeneExpression:
@@ -166,17 +165,9 @@ class GeneExpression:
             yield model
 
     @staticmethod
+    @graceful_auto_reconnect
     def insert(docs: List, collection_name: str, client):
-        try:
-            client[collection_name].insert_many(docs, ordered=False)
-        except BulkWriteError as bwe:
-            raise BulkWriteError(
-                f"Error caused by inserting into collection '{collection_name}': {bwe.details}"
-            )
-        except Exception as e:
-            raise Exception(
-                f"Error caused by inserting into collection '{collection_name}': {e}"
-            )
+        client[collection_name].insert_many(docs, ordered=False)
 
     def load(self, docs: List, collection_name: List):
         start_time = datetime.datetime.now()

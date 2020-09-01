@@ -2,7 +2,6 @@ import logging
 import os
 from contextlib import nullcontext
 
-
 # General docs for Sentry:
 # https://docs.sentry.io/platforms/python/logging/
 
