@@ -1,4 +1,3 @@
-import logging
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
@@ -8,12 +7,10 @@ from mypy_extensions import TypedDict
 try:
     from ingest_files import DataArray
     from annotations import Annotations
-    from monitor import setup_logger, log
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import DataArray
     from .annotations import Annotations
-    from .monitor import setup_logger, log
 
 
 @dataclass
@@ -27,13 +24,6 @@ class Clusters(Annotations):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
     LINEAR_DATA_TYPE = "ClusterGroup"
     COLLECTION_NAME = "cluster_groups"
-    errors_logger = setup_logger(
-        __name__ + "_errors", "errors.txt", level=logging.ERROR
-    )
-    # General logger for class
-    info_logger = setup_logger(__name__, "info.txt")
-
-    my_debug_logger = log(errors_logger)
 
     @dataclass
     class Model(TypedDict):
@@ -78,7 +68,6 @@ class Clusters(Annotations):
         self.name = name
         # Check if domain_ranges is an empty dictionary
         self.domain_ranges = domain_ranges if not (not domain_ranges) else None
-        self.extra_log_params = {"study_id": self.study_id, "duration": None}
 
     # Will evolve to do cross file validation
     def validate(self):
@@ -113,13 +102,9 @@ class Clusters(Annotations):
         # Iterate through all extra "annotation" column headers
         # (I.E. column headers that are not coordinates or where TYPE !=NAME)
         for annot_headers in self.annot_column_headers:
-            self.info_logger.info(
-                f"Transforming header {annot_headers[0]}",
-                extra={"study_id": self.study_id, "duration": None},
-            )
+            Annotations.dev_logger.info(f"Transforming header {annot_headers[0]}")
             annot_name = annot_headers[0]
             annot_type = annot_headers[1]
-            # column_type = annot[1]
             cell_annotations.append(
                 {
                     "name": annot_name,
@@ -129,9 +114,7 @@ class Clusters(Annotations):
                     else [],
                 }
             )
-        self.info_logger.info(
-            f"Created model for {self.study_id}", extra=self.extra_log_params
-        )
+        Annotations.dev_logger.info(f"Creating model for {self.study_id}")
         return self.Model(
             name=self.name,
             cluster_type=self.cluster_type,
@@ -145,9 +128,8 @@ class Clusters(Annotations):
 
     def get_data_array_annot(self, linear_data_id):
         for annot_header in self.file.columns:
-            self.info_logger.info(
-                f"Creating data array for header {annot_header[0]}",
-                extra={"study_id": self.study_id, "duration": None},
+            Annotations.dev_logger.info(
+                f"Creating data array for header {annot_header[0]}"
             )
             yield from Clusters.set_data_array(
                 annot_header[0],
@@ -157,9 +139,8 @@ class Clusters(Annotations):
                 self.study_id,
                 linear_data_id,
             )
-            self.info_logger.info(
-                f"Attempting to load cluster header : {annot_header[0]}",
-                extra={"study_id": self.study_id, "duration": None},
+            Annotations.dev_logger.info(
+                f"Attempting to load cluster header : {annot_header[0]}"
             )
 
     def can_subsample(self):
@@ -211,4 +192,4 @@ class Clusters(Annotations):
         # Merge BASE_DICT, cluster_attr & data_array_attr and return DataArray model
         return DataArray(
             **data_array_attr, **cluster_attr, **BASE_DICT
-        ).get_data_array()
+        ).get_data_arrays()

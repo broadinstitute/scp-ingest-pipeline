@@ -16,24 +16,24 @@ from typing import List, Dict, Generator  # noqa: F401
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
-from pymongo.errors import BulkWriteError
 
 try:
     from ingest_files import DataArray
     from monitor import setup_logger
-    from mongo_connection import MongoConnection
+    from mongo_connection import MongoConnection, graceful_auto_reconnect
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from ..ingest_files import DataArray
-    from ..monitor import setup_logger
-    from ..mongo_connection import MongoConnection
+    from ..monitor import setup_logger, graceful_auto_reconnect
+    from ..mongo_connection import MongoConnection, graceful_auto_reconnect
 
 
 class GeneExpression:
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = "genes"
     DATA_ARRAY_BATCH_SIZE = 1_000
-    info_logger = setup_logger(__name__, "info.txt")
+    # Logger provides more details
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
     @dataclass
     class Model(TypedDict):
@@ -50,7 +50,6 @@ class GeneExpression:
         self.study_file_id = ObjectId(study_file_id)
         head, tail = ntpath.split(file_path)
         self.cluster_name = tail or ntpath.basename(head)
-        self.extra_log_params = {"study_id": self.study_id, "duration": None}
         self.mongo_connection = MongoConnection()
         # Common data array kwargs
         self.data_array_kwargs = {
@@ -166,22 +165,14 @@ class GeneExpression:
             yield model
 
     @staticmethod
+    @graceful_auto_reconnect
     def insert(docs: List, collection_name: str, client):
-        try:
-            client[collection_name].insert_many(docs, ordered=False)
-        except BulkWriteError as bwe:
-            raise BulkWriteError(
-                f"Error caused by inserting into collection '{collection_name}': {bwe.details}"
-            )
-        except Exception as e:
-            raise Exception(
-                f"Error caused by inserting into collection '{collection_name}': {e}"
-            )
+        client[collection_name].insert_many(docs, ordered=False)
 
     def load(self, docs: List, collection_name: List):
         start_time = datetime.datetime.now()
-        GeneExpression.insert(docs, collection_name, self.mongo_connection)
-        self.info_logger.info(
+        GeneExpression.insert(docs, collection_name, self.mongo_connection._client)
+        GeneExpression.dev_logger.info(
             f"Time to load {len(docs)} models: {str(datetime.datetime.now() - start_time)}"
         )
 

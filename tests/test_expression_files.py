@@ -3,6 +3,8 @@ import unittest
 from unittest.mock import MagicMock
 from bson.objectid import ObjectId
 
+from pymongo.errors import AutoReconnect
+
 
 sys.path.append("../ingest")
 from expression_files.expression_files import GeneExpression
@@ -113,3 +115,12 @@ class TestExpressionFiles(unittest.TestCase):
         self.assertRaises(
             Exception, GeneExpression.insert, docs, "collection", client_mock
         )
+
+        # Test exponential back off
+        client_mock["collection"].insert_many.side_effect = AutoReconnect
+        self.assertRaises(
+            Exception, GeneExpression.insert, docs, "collection", client_mock
+        )
+
+        # client_mock["collection"].insert_many called twice before scenario
+        self.assertEqual(client_mock["collection"].insert_many.call_count - 2, 5)

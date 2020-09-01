@@ -1,9 +1,9 @@
 import os
 import functools
-import pymongo
 import logging
 import time
 from pymongo import MongoClient
+from pymongo.errors import AutoReconnect, BulkWriteError
 
 
 class MongoConnection:
@@ -35,22 +35,35 @@ class MongoConnection:
         else:
             self._client = None
 
-    @staticmethod
-    def graceful_auto_reconnect(mongo_op_func):
-        """Gracefully handle a reconnection event."""
 
-        @functools.wraps(mongo_op_func)
-        def wrapper(*args, **kwargs):
-            for attempt in xrange(MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS):
-                try:
-                    return mongo_op_func(*args, **kwargs)
-                except pymongo.errors.AutoReconnect as e:
+# Adopted from https://gist.github.com/anthonywu/1696591#file
+# -graceful_auto_reconnect-py
+def graceful_auto_reconnect(mongo_op_func):
+    """Gracefully handles a reconnection event as well as other exceptions
+        for mongo.
+    """
+
+    MAX_AUTO_RECONNECT_ATTEMPTS = 5
+
+    @functools.wraps(mongo_op_func)
+    def wrapper(*args, **kwargs):
+        for attempt in range(MAX_AUTO_RECONNECT_ATTEMPTS):
+            try:
+                return mongo_op_func(*args, **kwargs)
+            except AutoReconnect as e:
+                if attempt < MAX_AUTO_RECONNECT_ATTEMPTS - 1:
                     wait_t = 0.5 * pow(2, attempt)  # exponential back off
                     logging.warning(
-                        "PyMongo auto-reconnecting... %s. Waiting %.1f seconds.",
+                        "PyMongo auto-reconnecting... %s. Waiting %.1f " "seconds.",
                         str(e),
                         wait_t,
                     )
                     time.sleep(wait_t)
+                else:
+                    raise e
+            except BulkWriteError as bwe:
+                raise BulkWriteError(bwe.details)
+            except Exception as e:
+                raise e
 
-        return wrapper
+    return wrapper

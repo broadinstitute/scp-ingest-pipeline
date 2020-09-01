@@ -9,7 +9,6 @@ Must have python 3.6 or higher.
 
 import abc
 from collections import defaultdict
-import logging
 
 import pandas as pd
 from bson.objectid import ObjectId
@@ -17,20 +16,20 @@ from bson.objectid import ObjectId
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
-    from monitor import setup_logger
+    from monitor import setup_logger, log_exception
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
-    from .monitor import setup_logger
+    from .monitor import setup_logger, log_exception
 
 
 class Annotations(IngestFiles):
     __metaclass__ = abc.ABCMeta
 
-    errors_logger = setup_logger(
-        __name__ + "_errors", "errors.txt", level=logging.ERROR
-    )
+    # Logger provides more details
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
+    user_logger = setup_logger(__name__ + ".user_logger", "user_log.txt")
 
     def __init__(
         self, file_path, allowed_file_types, study_id=None, study_file_id=None
@@ -38,7 +37,6 @@ class Annotations(IngestFiles):
         IngestFiles.__init__(self, file_path, allowed_file_types)
         if study_id is not None:
             self.study_id = ObjectId(study_id)
-            self.extra_log_params = {"study_id": self.study_id, "duration": None}
         else:
             self.extra_log_params = {"study_id": None, "duration": None}
         if study_file_id is not None:
@@ -117,11 +115,14 @@ class Annotations(IngestFiles):
                 # coerce group annotations to type string
                 self.file[group_columns] = self.file[group_columns].astype(str)
             except Exception as e:
-                self.error_logger.error(
-                    "Unable to coerce group annotation to string type",
-                    extra=self.extra_log_params,
+                log_exception()
+                Annotations.user_logger.critical(
+                    "Unable to coerce group annotation to string type"
                 )
-                self.error_logger.error(e, extra=self.extra_log_params)
+                Annotations.dev_logger.critical(
+                    "Unable to coerce group annotation to string type" + str(e),
+                    exc_info=True,
+                )
         if "numeric" in self.annot_types:
             numeric_columns = self.file.xs(
                 "numeric", axis=1, level=1, drop_level=False
@@ -132,7 +133,7 @@ class Annotations(IngestFiles):
                     self.file[numeric_columns].round(3).astype(float)
                 )
             except Exception as e:
-                self.error_logger.error(e, extra=self.extra_log_params)
+                log_exception(Annotations.dev_logger, Annotations.user_logger, e)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
@@ -284,8 +285,5 @@ class Annotations(IngestFiles):
             ):
                 valid = False
                 msg = f"Numeric annotation, {annot_name}, contains non-numeric data (or unidentified NA values)"
-                self.errors_logger.error(
-                    msg, extra={"study_id": self.study_id, "duration": None}
-                )
                 self.store_validation_issue("error", "format", msg)
         return valid
