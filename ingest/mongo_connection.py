@@ -52,13 +52,13 @@ def graceful_auto_reconnect(mongo_op_func):
                 return mongo_op_func(*args, **kwargs)
             except AutoReconnect as e:
                 if attempt < MAX_AUTO_RECONNECT_ATTEMPTS - 1:
-                    wait_t = 0.5 * pow(2, attempt)  # exponential back off
+                    wait_time = 0.5 * pow(2, attempt)  # exponential back off
                     logging.warning(
                         "PyMongo auto-reconnecting... %s. Waiting %.1f " "seconds.",
                         str(e),
-                        wait_t,
+                        wait_time,
                     )
-                    time.sleep(wait_t)
+                    time.sleep(wait_time)
                 else:
                     raise e
             except BulkWriteError as bwe:
