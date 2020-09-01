@@ -115,13 +115,10 @@ class Annotations(IngestFiles):
                 # coerce group annotations to type string
                 self.file[group_columns] = self.file[group_columns].astype(str)
             except Exception as e:
-                log_exception()
-                Annotations.user_logger.critical(
-                    "Unable to coerce group annotation to string type"
-                )
-                Annotations.dev_logger.critical(
+                log_exception(
+                    Annotations.dev_logger,
+                    Annotations.user_logger,
                     "Unable to coerce group annotation to string type" + str(e),
-                    exc_info=True,
                 )
         if "numeric" in self.annot_types:
             numeric_columns = self.file.xs(
