@@ -6,7 +6,6 @@ Module provides extract capabilities for text, CSV, and TSV file types
 import copy
 import csv
 import gzip
-import logging
 import mimetypes
 import os
 import re
@@ -29,9 +28,6 @@ except ImportError:
 class DataArray:
     MAX_ENTRIES = 100_000
     COLLECTION_NAME = "data_arrays"
-    errors_logger = setup_logger(
-        __name__ + "_errors", "errors.txt", level=logging.ERROR
-    )
 
     def __init__(
         self,
@@ -62,7 +58,7 @@ class DataArray:
         if self.linear_data_type == "Study":
             self.linear_data_id = self.study_id
 
-    def get_data_array(self):
+    def get_data_arrays(self):
         if len(self.values) > self.MAX_ENTRIES:
             values = self.values
             for idx, i in enumerate(range(0, len(self.values), self.MAX_ENTRIES)):
@@ -75,15 +71,15 @@ class DataArray:
 
 class IngestFiles:
     # General logger for class
-    info_logger = setup_logger(__name__, "info.txt")
-    error_logger = setup_logger(__name__ + "_errors", "errors.txt", level=logging.ERROR)
+    # Logger provides more details
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
     def __init__(self, file_path, allowed_file_types):
         self.file_path = file_path
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
         self.is_remote_file = IngestFiles.is_remote_file(file_path)
-        self.is_gzip_file = self.get_file_type(file_path)[1] == 'gzip'
+        self.is_gzip_file = self.get_file_type(file_path)[1] == "gzip"
 
         self.verify_file_exists(file_path)
         # Allowed files for a given file type (expression file, cluster files, etc.)
@@ -100,10 +96,7 @@ class IngestFiles:
         blob = self.bucket.blob(self.source)
         destination = "/tmp/" + self.source.replace("/", "%2f")
         blob.download_to_filename(destination)
-        self.info_logger.info(
-            f"{file_path} downloaded to {destination}.",
-            extra={"study_id": None, "duration": None},
-        )
+        IngestFiles.dev_logger.info(f"{file_path} downloaded to {destination}.")
         return destination
 
     def set_gcs_attrs(self, file_path):
@@ -121,18 +114,12 @@ class IngestFiles:
             self.set_gcs_attrs(file_path)
             source_blob = storage.Blob(bucket=self.bucket, name=self.source)
             if not source_blob.exists(self.storage_client):
-                self.error_logger.error(
-                    f'Remote file "{file_path}" not found',
-                    extra={"study_id": None, "duration": None},
-                )
+                IngestFiles.dev_logger.error(f'Remote file "{file_path}" not found')
                 raise OSError(f'Remote file "{file_path}" not found')
         else:
             # File is local
             if not os.path.exists(file_path):
-                self.error_logger.error(
-                    f'File "{file_path}" not found',
-                    extra={"study_id": None, "duration": None},
-                )
+                IngestFiles.dev_logger.error(f'File "{file_path}" not found')
                 raise OSError(f'File "{file_path}" not found')
 
     def resolve_path(self, file_path):
@@ -151,7 +138,7 @@ class IngestFiles:
         if self.is_gzip_file:
             open_file = gzip.open(file_path, "rt", encoding="utf-8-sig")
         else:
-            open_file = open(file_path, 'rt', encoding="utf-8-sig")
+            open_file = open(file_path, "rt", encoding="utf-8-sig")
         return open_file, file_path
 
     def reset_file(self, file_path, start_point, open_as=None):
@@ -171,11 +158,7 @@ class IngestFiles:
             bucket_destination: path to google bucket (ie. parse_logs/{study_file_id}/errors.txt)
 
         """
-        info_logger = setup_logger(__name__, "info.txt")
-        error_logger = setup_logger(
-            __name__ + "_errors", "errors.txt", level=logging.ERROR
-        )
-        extra_log_params = {"study_id": study_id, "duration": None}
+
         if IngestFiles.is_remote_file(file_path):
             try:
                 path_segments = file_path[5:].split("/")
@@ -184,24 +167,23 @@ class IngestFiles:
                 bucket = storage_client.get_bucket(bucket_name)
                 blob = bucket.blob(bucket_destination)
                 blob.upload_from_filename(file_to_delocalize)
-                info_logger.info(
-                    f"File {file_to_delocalize} uploaded to {bucket_destination}.",
-                    extra=extra_log_params,
+                IngestFiles.dev_logger.info(
+                    f"File {file_to_delocalize} uploaded to {bucket_destination}."
                 )
-            except Exception as e:
-                error_logger.error(
+            except Exception:
+                IngestFiles.dev_logger.critical(
                     f"File {file_to_delocalize} not uploaded to {bucket_destination}.",
-                    extra=extra_log_params,
+                    exc_info=True,
                 )
-                error_logger.error(e, extra=extra_log_params)
         else:
-            error_logger.error(
-                "Cannot push to bucket. File is not remote", extra=extra_log_params
-            )
+            IngestFiles.dev_logger.error("Cannot push to bucket. File is not remote")
 
     def open_file(self, file_path, open_as=None, start_point: int = 0, **kwargs):
         """ A wrapper function for opening txt (txt is expected to be tsv or csv), csv, or tsv formatted files"""
         open_file, file_path = self.resolve_path(file_path)
+        file_size = os.path.getsize(file_path)
+        if file_size == 0:
+            raise ValueError(f"{file_path} is empty: " + str(file_size))
         file_connections = {
             "text/csv": self.open_csv,
             "text/plain": self.open_txt,
@@ -215,10 +197,7 @@ class IngestFiles:
                 open_file.readline()
         # See if file type is allowed
         file_type = self.get_file_type(file_path)[0]
-        self.info_logger.info(
-            f"opening {file_path} as: {file_type}",
-            extra={"study_id": None, "duration": None},
-        )
+        IngestFiles.dev_logger.info(f"Opening {file_path} as: {file_type}")
         if file_type in self.allowed_file_types:
             # Return file object and type
             if file_type == "application/json":
@@ -289,12 +268,12 @@ class IngestFiles:
             return csv.reader(open_file_object, csv_dialect)
         except Exception:
             raise ValueError(
-                f'Could not determine delimiter. Please save file with appropriate suffix (.tsv or .csv) and try again.'
+                f"Could not determine delimiter. Please save file with appropriate suffix (.tsv or .csv) and try again."
             )
 
     def open_pandas(self, file_path, file_type, **kwargs):
         """Opens file as a dataframe """
-        open_file_object = kwargs.pop('open_file_object')
+        open_file_object = kwargs.pop("open_file_object")
         if file_type in self.allowed_file_types:
             # Determine delimiter based on file type
             if file_type == "text/tab-separated-values":
@@ -319,7 +298,7 @@ class IngestFiles:
             delimiter=",",
             quotechar='"',
             skipinitialspace=True,
-            escapechar='\\',
+            escapechar="\\",
         )
         return csv.reader(opened_file_object, dialect="csvDialect")
 

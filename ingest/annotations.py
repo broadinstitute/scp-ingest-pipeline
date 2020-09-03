@@ -9,7 +9,6 @@ Must have python 3.6 or higher.
 
 import abc
 from collections import defaultdict
-import logging
 
 import pandas as pd
 from bson.objectid import ObjectId
@@ -17,20 +16,20 @@ from bson.objectid import ObjectId
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
-    from monitor import setup_logger
+    from monitor import setup_logger, log_exception
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
-    from .monitor import setup_logger
+    from .monitor import setup_logger, log_exception
 
 
 class Annotations(IngestFiles):
     __metaclass__ = abc.ABCMeta
 
-    errors_logger = setup_logger(
-        __name__ + '_errors', 'errors.txt', level=logging.ERROR
-    )
+    # Logger provides more details
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
+    user_logger = setup_logger(__name__ + ".user_logger", "user_log.txt")
 
     def __init__(
         self, file_path, allowed_file_types, study_id=None, study_file_id=None
@@ -38,17 +37,16 @@ class Annotations(IngestFiles):
         IngestFiles.__init__(self, file_path, allowed_file_types)
         if study_id is not None:
             self.study_id = ObjectId(study_id)
-            self.extra_log_params = {'study_id': self.study_id, 'duration': None}
         else:
-            self.extra_log_params = {'study_id': None, 'duration': None}
+            self.extra_log_params = {"study_id": None, "duration": None}
         if study_file_id is not None:
             self.study_file_id = ObjectId(study_file_id)
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         csv_file, self.file_handle = self.open_file(self.file_path)
         # Remove white spaces, quotes (only lowercase annot_types)
-        self.headers = [header.strip().strip('\"') for header in next(csv_file)]
-        self.annot_types = [type.strip().strip('\"').lower() for type in next(csv_file)]
+        self.headers = [header.strip().strip('"') for header in next(csv_file)]
+        self.annot_types = [type.strip().strip('"').lower() for type in next(csv_file)]
 
     def reset_file(self):
         self.preprocess()
@@ -66,13 +64,13 @@ class Annotations(IngestFiles):
         self.coordinates_and_cell_headers = [
             annot[0]
             for annot in self.file.columns
-            if annot[0].lower() in ('z', 'y', 'x', 'name')
+            if annot[0].lower() in ("z", "y", "x", "name")
         ]
         # annotation column names
         self.annot_column_headers = [
             annot
             for annot in self.file.columns
-            if annot[0].lower() not in ('z', 'y', 'x', 'name')
+            if annot[0].lower() not in ("z", "y", "x", "name")
         ]
 
     def merge_df(self, first_df, second_df):
@@ -100,31 +98,31 @@ class Annotations(IngestFiles):
         columns = []
         dtypes = {}
         for annotation, annot_type in zip(self.headers, self.annot_types):
-            dtypes[annotation] = 'object' if annot_type != 'numeric' else 'float32'
+            dtypes[annotation] = "object" if annot_type != "numeric" else "float32"
             columns.append((annotation, annot_type))
             # multiIndex = pd.MultiIndex.from_tuples(index)
         index = pd.MultiIndex.from_tuples(columns)
         self.file = self.open_file(
-            self.file_path, open_as='dataframe', dtype=dtypes, names=index, skiprows=2
+            self.file_path, open_as="dataframe", dtype=dtypes, names=index, skiprows=2
         )[0]
         # dtype of object allows mixed dtypes in columns, including numeric dtypes
         # coerce group annotations that pandas detects as non-object types to type string
-        if 'group' in self.annot_types:
+        if "group" in self.annot_types:
             group_columns = self.file.xs(
-                'group', axis=1, level=1, drop_level=False
+                "group", axis=1, level=1, drop_level=False
             ).columns.tolist()
             try:
                 # coerce group annotations to type string
                 self.file[group_columns] = self.file[group_columns].astype(str)
             except Exception as e:
-                self.error_logger.error(
-                    'Unable to coerce group annotation to string type',
-                    extra=self.extra_log_params,
+                log_exception(
+                    Annotations.dev_logger,
+                    Annotations.user_logger,
+                    "Unable to coerce group annotation to string type" + str(e),
                 )
-                self.error_logger.error(e, extra=self.extra_log_params)
-        if 'numeric' in self.annot_types:
+        if "numeric" in self.annot_types:
             numeric_columns = self.file.xs(
-                'numeric', axis=1, level=1, drop_level=False
+                "numeric", axis=1, level=1, drop_level=False
             ).columns.tolist()
             try:
                 # Round numeric columns to 3 decimal places
@@ -132,7 +130,7 @@ class Annotations(IngestFiles):
                     self.file[numeric_columns].round(3).astype(float)
                 )
             except Exception as e:
-                self.error_logger.error(e, extra=self.extra_log_params)
+                log_exception(Annotations.dev_logger, Annotations.user_logger, e)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
@@ -153,14 +151,14 @@ class Annotations(IngestFiles):
         """
 
         valid = False
-        if self.headers[0].upper() == 'NAME':
+        if self.headers[0].upper() == "NAME":
             valid = True
-            if self.headers[0] != 'NAME':
+            if self.headers[0] != "NAME":
                 msg = f'Metadata file keyword "NAME" provided as {self.headers[0]}'
-                self.store_validation_issue('warn', 'format', msg)
+                self.store_validation_issue("warn", "format", msg)
         else:
-            msg = 'Malformed metadata file header row, missing NAME. (Case Sensitive)'
-            self.store_validation_issue('error', 'format', msg)
+            msg = "Malformed metadata file header row, missing NAME. (Case Sensitive)"
+            self.store_validation_issue("error", "format", msg)
         return valid
 
     def validate_unique_header(self):
@@ -178,13 +176,13 @@ class Annotations(IngestFiles):
                 if x in seen_headers or seen_headers.add(x):
                     duplicate_headers.add(x)
             msg = (
-                f'Duplicated metadata header names are not allowed: {duplicate_headers}'
+                f"Duplicated metadata header names are not allowed: {duplicate_headers}"
             )
-            self.store_validation_issue('error', 'format', msg)
+            self.store_validation_issue("error", "format", msg)
             valid = False
-        if any('Unnamed' in s for s in list(unique_headers)):
-            msg = 'Headers cannot contain empty values'
-            self.store_validation_issue('error', 'format', msg)
+        if any("Unnamed" in s for s in list(unique_headers)):
+            msg = "Headers cannot contain empty values"
+            self.store_validation_issue("error", "format", msg)
             valid = False
         return valid
 
@@ -193,14 +191,14 @@ class Annotations(IngestFiles):
         :return: boolean   True if valid, False otherwise
         """
         valid = False
-        if self.annot_types[0].upper() == 'TYPE':
+        if self.annot_types[0].upper() == "TYPE":
             valid = True
-            if self.annot_types[0] != 'TYPE':
+            if self.annot_types[0] != "TYPE":
                 msg = f'Metadata file keyword "TYPE" provided as {self.annot_types[0]}'
-                self.store_validation_issue('warn', 'format', msg)
+                self.store_validation_issue("warn", "format", msg)
         else:
-            msg = 'Malformed metadata TYPE row, missing TYPE. (Case Sensitive)'
-            self.store_validation_issue('error', 'format', msg)
+            msg = "Malformed metadata TYPE row, missing TYPE. (Case Sensitive)"
+            self.store_validation_issue("error", "format", msg)
         return valid
 
     def validate_type_annotations(self):
@@ -212,23 +210,23 @@ class Annotations(IngestFiles):
         # skipping the TYPE keyword, iterate through the types
         # collecting invalid type annotations in list annots
         for t in self.annot_types[1:]:
-            if t.lower() not in ('group', 'numeric'):
+            if t.lower() not in ("group", "numeric"):
                 # if the value is a blank space, store a higher visibility
                 # string for error reporting
-                if 'Unnamed' in t:
-                    invalid_types.append('<empty value>')
+                if "Unnamed" in t:
+                    invalid_types.append("<empty value>")
                 # Duplicated metadata header name causes type annotation issue.
                 # Side effect of Pandas adding a suffix to uniquefy the header.
                 # These invalid annotations should not be included in invalid
                 # type annotation count. This exception may cause miscount of
                 # type annot errors if user-supplied annotation has period.
-                elif '.' in t:
+                elif "." in t:
                     pass
                 else:
                     invalid_types.append(t)
         if invalid_types:
             msg = 'TYPE row annotations should be "group" or "numeric"'
-            self.store_validation_issue('error', 'format', msg, invalid_types)
+            self.store_validation_issue("error", "format", msg, invalid_types)
         else:
             valid = True
         return valid
@@ -239,21 +237,21 @@ class Annotations(IngestFiles):
         """
         valid = False
         len_headers = len(
-            [header for header in self.headers if 'Unnamed' not in header]
+            [header for header in self.headers if "Unnamed" not in header]
         )
         len_annot_type = len(
             [
                 annot_type
                 for annot_type in self.annot_types
-                if 'Unnamed' not in annot_type
+                if "Unnamed" not in annot_type
             ]
         )
         if not len_headers == len_annot_type:
             msg = (
-                f'Header mismatch: {len_annot_type} TYPE declarations '
-                f'for {len_headers} column headers'
+                f"Header mismatch: {len_annot_type} TYPE declarations "
+                f"for {len_headers} column headers"
             )
-            self.store_validation_issue('error', 'format', msg)
+            self.store_validation_issue("error", "format", msg)
         else:
             valid = True
         return valid
@@ -279,13 +277,10 @@ class Annotations(IngestFiles):
             annot_name = annot_header[0]
             annot_type = annot_header[1]
             if (
-                annot_type == 'numeric'
-                and self.file[annot_name].dtypes[annot_type] == 'object'
+                annot_type == "numeric"
+                and self.file[annot_name].dtypes[annot_type] == "object"
             ):
                 valid = False
-                msg = f'Numeric annotation, {annot_name}, contains non-numeric data (or unidentified NA values)'
-                self.errors_logger.error(
-                    msg, extra={'study_id': self.study_id, 'duration': None}
-                )
-                self.store_validation_issue('error', 'format', msg)
+                msg = f"Numeric annotation, {annot_name}, contains non-numeric data (or unidentified NA values)"
+                self.store_validation_issue("error", "format", msg)
         return valid

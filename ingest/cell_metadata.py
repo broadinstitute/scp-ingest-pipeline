@@ -27,8 +27,8 @@ except ImportError:
 
 
 class CellMetadata(Annotations):
-    ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
-    COLLECTION_NAME = 'cell_metadata'
+    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
+    COLLECTION_NAME = "cell_metadata"
 
     def __init__(
         self,
@@ -49,7 +49,6 @@ class CellMetadata(Annotations):
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.ontology_label = dict()
         self.cells = []
-        self.extra_log_params = {'study_id': self.study_id, 'duration': None}
         self.preprocess()
 
     # This model pertains to columns from cell metadata files
@@ -81,19 +80,19 @@ class CellMetadata(Annotations):
         """
         lower_cased_headers = [header.lower() for header in self.headers]
         valid = not any(
-            [coordinate in ('x', 'y', 'z') for coordinate in lower_cased_headers]
+            [coordinate in ("x", "y", "z") for coordinate in lower_cased_headers]
         )
         if valid:
             return True
         else:
-            msg = 'Header names can not be coordinate values x, y, or z (case insensitive)'
-            self.store_validation_issue('error', 'format', msg)
+            msg = "Header names can not be coordinate values x, y, or z (case insensitive)"
+            self.store_validation_issue("error", "format", msg)
             return False
 
     def transform(self):
         """ Builds cell metadata model"""
         AnnotationModel = collections.namedtuple(
-            'AnnotationModel', ['annot_header', 'model']
+            "AnnotationModel", ["annot_header", "model"]
         )
         for annot_header in self.file.columns[0:]:
             annot_name = annot_header[0]
@@ -102,49 +101,49 @@ class CellMetadata(Annotations):
                 annot_header,
                 self.Model(
                     {
-                        'name': annot_name,
-                        'annotation_type': annot_type,
+                        "name": annot_name,
+                        "annotation_type": annot_type,
                         # unique values from "group" type annotations else []
-                        'values': list(self.file[annot_header].unique())
-                        if annot_type == 'group'
+                        "values": list(self.file[annot_header].unique())
+                        if annot_type == "group"
                         else [],
-                        'study_file_id': self.study_file_id,
-                        'study_id': self.study_id,
+                        "study_file_id": self.study_file_id,
+                        "study_id": self.study_id,
                     }
                 ),
             )
 
     def set_data_array(self, linear_data_id: str, annot_header: str):
         data_array_attrs = locals()
-        del data_array_attrs['annot_header']
-        del data_array_attrs['self']
+        del data_array_attrs["annot_header"]
+        del data_array_attrs["self"]
         annot_name = annot_header[0]
         head, tail = ntpath.split(self.file_path)
         base_data_array_model = {
-            'cluster_name': tail or ntpath.basename(head),
-            'values': list(self.file[annot_header]),
-            'study_file_id': self.study_file_id,
-            'study_id': self.study_id,
+            "cluster_name": tail or ntpath.basename(head),
+            "values": list(self.file[annot_header]),
+            "study_file_id": self.study_file_id,
+            "study_id": self.study_id,
         }
         # This is an array (or group of arrays) of every cell
-        if annot_name.lower() == 'name':
+        if annot_name.lower() == "name":
             base_data_array_model.update(
                 {
-                    'name': 'All Cells',
-                    'array_type': 'cells',
-                    'linear_data_type': 'Study',
+                    "name": "All Cells",
+                    "array_type": "cells",
+                    "linear_data_type": "Study",
                 }
             )
         # data from cell metadata file that correspond to a column of data
         else:
             base_data_array_model.update(
                 {
-                    'name': annot_name,
-                    'array_type': 'annotations',
-                    'linear_data_type': 'CellMetadatum',
+                    "name": annot_name,
+                    "array_type": "annotations",
+                    "linear_data_type": "CellMetadatum",
                 }
             )
-        return DataArray(**base_data_array_model, **data_array_attrs).get_data_array()
+        return DataArray(**base_data_array_model, **data_array_attrs).get_data_arrays()
 
     def yield_by_row(self) -> None:
         """ Yield row from cell metadata file"""
