@@ -363,7 +363,7 @@ class TestDense(unittest.TestCase):
     )
     def test_transform_fn_no_exp_data(self, mock_load):
         """
-        Confirms gene models are created even when there is no exprerssion data
+        Confirms gene models are created even when there is no expression data
         """
 
         expression_matrix = DenseIngestor(
