@@ -24,6 +24,14 @@ from expression_files.expression_files import GeneExpression
 from ingest_files import DataArray
 
 
+def mock_load_no_exp_data(documents, collection_name):
+    assert collection_name == GeneExpression.COLLECTION_NAME
+    assert len(documents) == 4
+    if collection_name == DataArray.COLLECTION_NAME:
+        # There will always be a data array models for the cell names
+        assert len(documents) == 1
+
+
 def mock_dense_load(documents, collection_name):
     """Overwrites GeneExpression.load().
 
@@ -345,5 +353,26 @@ class TestDense(unittest.TestCase):
             "expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE",
             new_callable=PropertyMock,
             return_value=21,
+        ):
+            expression_matrix.transform()
+
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_load_no_exp_data,
+    )
+    def test_transform_fn_no_exp_data(self, mock_load):
+        """
+        Confirms gene models are created even when there is no exprerssion data
+        """
+
+        expression_matrix = DenseIngestor(
+            "../tests/data/dense_matrix_no_exp_data.txt",
+            "5d276a50421aa9117c982845",
+            "5dd5ae25421aa910a723a337",
+        )
+        with patch(
+            "expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE",
+            new_callable=PropertyMock,
+            return_value=4,
         ):
             expression_matrix.transform()
