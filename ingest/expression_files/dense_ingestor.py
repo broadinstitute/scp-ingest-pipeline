@@ -259,16 +259,9 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 num_processed,
                 False,
             )
-        # load any remaining models (this is necessary here since there isn't
-        # an easy way to detect the last line of the file in the iteration above
+        # Load any remaining models. This is necessary because the amount of
+        # models maybe less than the batch size.
         if len(gene_models) > 0:
             self.create_models(
-                exp_cells,
-                exp_scores,
-                gene,
-                None,
-                gene_models,
-                data_arrays,
-                num_processed,
-                True,
+                [], [], None, None, gene_models, data_arrays, num_processed, True
             )

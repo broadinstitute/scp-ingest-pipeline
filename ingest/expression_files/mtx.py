@@ -190,11 +190,14 @@ class MTXIngestor(GeneExpression):
             if current_idx != prev_idx:
                 if not MTXIngestor.is_sorted(current_idx, visited_expression_idx):
                     raise ValueError("MTX file must be sorted")
+                GeneExpression.dev_logger.debug(
+                    f"Processing {self.genes[prev_idx - 1]}"
+                )
                 visited_expression_idx.append(current_idx)
                 if prev_idx != 0:
                     # Expressed cells and scores are associated with prior gene
                     prev_gene_id, prev_gene = self.genes[prev_idx - 1].split("\t")
-                    # Ff the previous gene exists, load its models
+                    # If the previous gene exists, load its models
                     data_arrays, gene_models, num_processed = self.create_models(
                         exp_cells,
                         exp_scores,
