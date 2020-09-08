@@ -214,7 +214,8 @@ class GeneExpression:
                 _id=model_id,
             )
         )
-        if len(data_arrays) > 0:
+        # Make data array models for genes with expression data
+        if len(exp_scores) > 0:
             # Data arrays for cells
             for cell_data_array in GeneExpression.create_data_arrays(
                 name=f"{gene} Cells",
@@ -238,8 +239,8 @@ class GeneExpression:
         this_batch_size = len(data_arrays) + len(current_data_arrays)
         # Determine if models should be batched
         if this_batch_size >= GeneExpression.DATA_ARRAY_BATCH_SIZE or force:
-            self.load(gene_models, GeneExpression.COLLECTION_NAME)
-            self.load(data_arrays, DataArray.COLLECTION_NAME)
+            # self.load(gene_models, GeneExpression.COLLECTION_NAME)
+            # self.load(data_arrays, DataArray.COLLECTION_NAME)
             num_processed += len(gene_models)
             print(
                 f"Processed {num_processed} genes. "
