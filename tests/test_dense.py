@@ -25,11 +25,12 @@ from ingest_files import DataArray
 
 
 def mock_load_no_exp_data(documents, collection_name):
-    assert collection_name == GeneExpression.COLLECTION_NAME
-    assert len(documents) == 4
     if collection_name == DataArray.COLLECTION_NAME:
         # There will always be a data array model for the cell names
         assert len(documents) == 1
+    else:
+        assert collection_name == GeneExpression.COLLECTION_NAME
+        assert len(documents) == 4
 
 
 def mock_dense_load(documents, collection_name):
