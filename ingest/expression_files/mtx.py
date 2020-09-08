@@ -196,7 +196,14 @@ class MTXIngestor(GeneExpression):
                 visited_expression_idx.append(current_idx)
                 if prev_idx != 0:
                     # Expressed cells and scores are associated with prior gene
-                    prev_gene_id, prev_gene = self.genes[prev_idx - 1].split("\t")
+                    features = self.genes[prev_idx - 1].split("\t")
+                    prev_gene_id = features[0]
+                    try:
+                        prev_gene = features[1]
+                    # If no gene_name field is present, hence the index error,
+                    # gene name is equivalent to gene ID
+                    except IndexError:
+                        prev_gene = prev_gene_id
                     # If the previous gene exists, load its models
                     data_arrays, gene_models, num_processed = self.create_models(
                         exp_cells,
