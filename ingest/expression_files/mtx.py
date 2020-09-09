@@ -143,6 +143,19 @@ class MTXIngestor(GeneExpression):
                     raise e
         raise ValueError("MTX file did not contain data")
 
+    @staticmethod
+    def get_features(feature_row: str):
+        """Determines gene id and gene name from a given row:str in a feature
+            file
+        """
+        feature_data = feature_row.split("\t")
+        gene_id = feature_data[0]
+        gene_name = feature_data[0]
+        if len(feature_data) >= 2:
+            # gene_name field is present
+            gene_name = feature_data[1]
+        return gene_id, gene_name
+
     def execute_ingest(self):
         """Parses MTX files"""
         self.extract_feature_barcode_matrices()
@@ -196,14 +209,9 @@ class MTXIngestor(GeneExpression):
                 visited_expression_idx.append(current_idx)
                 if prev_idx != 0:
                     # Expressed cells and scores are associated with prior gene
-                    features = self.genes[prev_idx - 1].split("\t")
-                    prev_gene_id = features[0]
-                    if len(features) >= 2:
-                        prev_gene = features[1] 
-                    else:
-                        # no gene_name field is present,
-                        # so gene name is equivalent to gene ID
-                        prev_gene = prev_gene_id
+                    prev_gene_id, prev_gene = MTXIngestor.get_features(
+                        self.genes[prev_idx - 1]
+                    )
                     # If the previous gene exists, load its models
                     data_arrays, gene_models, num_processed = self.create_models(
                         exp_cells,
@@ -223,7 +231,9 @@ class MTXIngestor(GeneExpression):
             exp_cells.append(exp_cell)
             exp_scores.append(exp_score)
         # Create data array for last row
-        current_gene_id, current_gene = self.genes[prev_idx - 1].split("\t")
+        current_gene_id, current_gene = MTXIngestor.get_features(
+            self.genes[prev_idx - 1]
+        )
         self.create_models(
             exp_cells,
             exp_scores,

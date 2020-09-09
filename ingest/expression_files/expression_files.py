@@ -237,12 +237,15 @@ class GeneExpression:
                 linear_data_id=model_id,
                 **self.data_array_kwargs,
             ):
-                exp_value_data_array["linear_data_id"]
                 current_data_arrays.append(exp_value_data_array)
         this_batch_size = len(data_arrays) + len(current_data_arrays)
-        # Determine if models should be batched
+        # Determine if models should be batched/loaded
         if this_batch_size >= GeneExpression.DATA_ARRAY_BATCH_SIZE or force:
-            if this_batch_size > 0:
+            if force:
+                # Add new data arrays
+                data_arrays += current_data_arrays
+                current_data_arrays.clear()
+            if len(data_arrays) > 0:
                 self.load(data_arrays, DataArray.COLLECTION_NAME)
             if len(gene_models) > 0:
                 self.load(gene_models, GeneExpression.COLLECTION_NAME)

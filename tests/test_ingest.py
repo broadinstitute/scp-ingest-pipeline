@@ -34,11 +34,11 @@ pytest --cov=../ingest/
 import sys
 import unittest
 from unittest.mock import patch
-from test_dense import mock_dense_load, mock_load_r_files
+from test_dense import mock_load_r_files
 
 from pymongo.errors import AutoReconnect
 
-from test_mtx import mock_load_mtx
+from test_expression_files import mock_expression_load
 from mock_gcp import mock_storage_client, mock_storage_blob
 
 
@@ -50,6 +50,7 @@ from ingest_pipeline import (
     exit_pipeline,
     run_ingest,
 )
+from expression_files.expression_files import GeneExpression
 
 
 def mock_load(self, *args, **kwargs):
@@ -70,6 +71,7 @@ def mock_load(self, *args, **kwargs):
 
 # Mock method that writes to database
 IngestPipeline.load = mock_load
+GeneExpression.load = mock_expression_load
 
 
 class IngestTestCase(unittest.TestCase):
@@ -93,11 +95,7 @@ class IngestTestCase(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    @patch(
-        "expression_files.expression_files.GeneExpression.load",
-        side_effect=mock_dense_load,
-    )
-    def test_ingest_dense_matrix(self, mock_check_unique_cells, mock_load):
+    def test_ingest_dense_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract, transform, and load dense matrices
         """
         args = [
@@ -127,11 +125,7 @@ class IngestTestCase(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    @patch(
-        "expression_files.expression_files.GeneExpression.load",
-        side_effect=mock_dense_load,
-    )
-    def test_ingest_local_dense_matrix(self, mock_check_unique_cells, mock_load):
+    def test_ingest_local_dense_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract and transform local dense matrices
         """
 
@@ -162,13 +156,7 @@ class IngestTestCase(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    @patch(
-        "expression_files.expression_files.GeneExpression.load",
-        side_effect=mock_dense_load,
-    )
-    def test_ingest_local_compressed_dense_matrix(
-        self, mock_check_unique_cells, mock_load
-    ):
+    def test_ingest_local_compressed_dense_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract and transform local dense matrices
             from compressed file in the same manner as uncompressed file
         """
@@ -266,11 +254,7 @@ class IngestTestCase(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    @patch(
-        "expression_files.expression_files.GeneExpression.load",
-        side_effect=mock_load_mtx,
-    )
-    def test_ingest_mtx_matrix(self, mock_check_unique_cells, mock_load):
+    def test_ingest_mtx_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract and transform MTX matrix bundles
         """
 
@@ -305,11 +289,7 @@ class IngestTestCase(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    @patch(
-        "expression_files.expression_files.GeneExpression.load",
-        side_effect=mock_load_mtx,
-    )
-    def test_remote_mtx_bundles(self, mock_check_unique_cells, mock_load):
+    def test_remote_mtx_bundles(self, mock_check_unique_cells):
         """Ingest Pipeline should handle MTX matrix files fetched from bucket
         """
 
