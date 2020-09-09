@@ -6,11 +6,6 @@ import csv
 
 from test_expression_files import mock_load_genes_batched, mock_expression_load
 
-# Dense models
-from mock_data.expression.dense_matrices.nineteen_genes_100k_cell_models import (
-    nineteen_genes_100k_cell_models,
-)
-
 # R models
 from mock_data.expression.r_format.models import r_data_models
 
@@ -32,29 +27,6 @@ def mock_load_no_exp_data(documents, collection_name):
     else:
         assert collection_name == GeneExpression.COLLECTION_NAME
         assert len(documents) == 4
-
-
-def mock_dense_load(documents, collection_name):
-    """Overwrites GeneExpression.load().
-
-       GeneExpression.load() is called multiple times. This method will verify
-       models in the arguments have the expected values.
-       """
-    for document in documents:
-        model_name = document["name"]
-        if collection_name == GeneExpression.COLLECTION_NAME:
-            # Ensure that 'ObjectID' in model is removed
-            del document["_id"]
-            assert (
-                document == nineteen_genes_100k_cell_models["gene_models"][model_name]
-            )
-        if collection_name == DataArray.COLLECTION_NAME:
-            if document["cluster_name"] != "dense_matrix_19_genes_100k_cells.txt.gz":
-                del document["linear_data_id"]
-                assert (
-                    document
-                    == nineteen_genes_100k_cell_models["data_arrays"][model_name]
-                )
 
 
 def mock_load_r_files(documents, collection_name):
