@@ -10,35 +10,27 @@ import sys
 from unittest.mock import patch, MagicMock, PropertyMock
 from bson.objectid import ObjectId
 
-from test_expression_files import mock_load_genes_batched
-from mock_data.expression.matrix_mtx.gene_models import mtx_gene_models
-from mock_data.expression.matrix_mtx.data_arrays import mtx_data_arrays
+from test_expression_files import mock_load_genes_batched, mock_expression_load
+
 
 sys.path.append("../ingest")
 from expression_files.mtx import MTXIngestor
 from expression_files.expression_files import GeneExpression
 
-from ingest_files import DataArray
-
-
-def mock_load_mtx(documents, collection_name):
-    """Enables overwriting of GeneExpression.load() with this placeholder.
-    GeneExpression.load() is called multiple times. This method will verify
-    models in the arguments have the expected values.
-    """
-    # _id and linear_data_id are unique identifiers and can not be predicted
-    # so we exclude it from the comparison
-    for document in documents:
-        model_name = document["name"]
-        if collection_name == GeneExpression.COLLECTION_NAME:
-            del document["_id"]
-            assert document == mtx_gene_models[model_name]
-        if collection_name == DataArray.COLLECTION_NAME:
-            del document["linear_data_id"]
-            assert document == mtx_data_arrays[model_name]
-
 
 class TestMTXIngestor(unittest.TestCase):
+    GeneExpression.load = mock_expression_load
+
+    def test_get_features(self):
+        single_column = "0610007P14Rik"
+        self.assertEqual(
+            MTXIngestor.get_features(single_column), ("0610007P14Rik", "0610007P14Rik")
+        )
+        two_columns = "ENSMUSG00000051951\tXkr4"
+        self.assertEqual(
+            MTXIngestor.get_features(two_columns), ("ENSMUSG00000051951", "Xkr4")
+        )
+
     def test_check_bundle(self):
         mtx_dimensions = [5, 4, 50]
         expected_genes = mtx_dimensions[0]
@@ -207,11 +199,7 @@ class TestMTXIngestor(unittest.TestCase):
             expression_matrix.transform()
         self.assertEqual("MTX file must be sorted", str(cm.exception))
 
-    @patch(
-        "expression_files.expression_files.GeneExpression.load",
-        side_effect=mock_load_mtx,
-    )
-    def test_transform_fn(self, mock_load):
+    def test_transform_fn(self):
         """
         Assures transform function creates gene data model correctly
         """
@@ -222,8 +210,31 @@ class TestMTXIngestor(unittest.TestCase):
             gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
             barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
         )
+        expression_matrix.test_models = None
+        expression_matrix.models_processed = 0
         expression_matrix.extract_feature_barcode_matrices()
         expression_matrix.transform()
+        amount_of_models = len(
+            expression_matrix.test_models["data_arrays"].keys()
+        ) + len(expression_matrix.test_models["gene_models"].keys())
+        self.assertEqual(expression_matrix.models_processed, amount_of_models)
+
+        # MTX with a single column feature file
+        expression_matrix = MTXIngestor(
+            "../tests/data/one_column_feature_file_data_models.mtx",
+            "5f2f58eba0845f8c4cf1dc12",
+            "5dd5ae25421aa910a723a447",
+            gene_file="../tests/data/one_column_feature_file_data_models.genes.tsv",
+            barcode_file="../tests/data/one_column_feature_file_data_models.barcodes.tsv",
+        )
+        expression_matrix.test_models = None
+        expression_matrix.models_processed = 0
+        expression_matrix.extract_feature_barcode_matrices()
+        expression_matrix.transform()
+        amount_of_models = len(expression_matrix.test_models["data_arrays"]) + len(
+            expression_matrix.test_models["gene_models"]
+        )
+        self.assertEqual(expression_matrix.models_processed, amount_of_models)
 
     @patch(
         "expression_files.expression_files.GeneExpression.load",
@@ -236,8 +247,8 @@ class TestMTXIngestor(unittest.TestCase):
         GeneExpression.DATA_ARRAY_BATCH_SIZE = 7
         expression_matrix = MTXIngestor(
             "../tests/data/AB_toy_data_toy.matrix.mtx",
-            "5d276a50421aa9117c982845",
-            "5dd5ae25421aa910a723a337",
+            "5dd5ae25421aa910a723a447",
+            "5f2f58eba0845f8c4cf1dc12",
             gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
             barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
         )

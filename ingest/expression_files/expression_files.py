@@ -203,19 +203,22 @@ class GeneExpression:
             """
         current_data_arrays = []
         start_time = datetime.datetime.now()
-
         model_id = ObjectId()
-        gene_models.append(
-            GeneExpression.create_gene_model(
-                name=gene,
-                study_file_id=self.study_file_id,
-                study_id=self.study_id,
-                gene_id=gene_id,
-                _id=model_id,
+
+        GeneExpression.dev_logger.debug(f"Creating models for {gene}")
+        if gene:
+            gene_models.append(
+                GeneExpression.create_gene_model(
+                    name=gene,
+                    study_file_id=self.study_file_id,
+                    study_id=self.study_id,
+                    gene_id=gene_id,
+                    _id=model_id,
+                )
             )
-        )
-        if len(data_arrays) > 0:
-            # Data arrays for cells
+        # Make data array models for genes with expression data
+        if len(exp_scores) > 0:
+            # Data array model for cells
             for cell_data_array in GeneExpression.create_data_arrays(
                 name=f"{gene} Cells",
                 array_type="cells",
@@ -225,7 +228,7 @@ class GeneExpression:
                 **self.data_array_kwargs,
             ):
                 current_data_arrays.append(cell_data_array)
-            # Data arrays for expression values
+            # Data array model for expression values
             for exp_value_data_array in GeneExpression.create_data_arrays(
                 name=f"{gene} Expression",
                 array_type="expression",
@@ -236,12 +239,18 @@ class GeneExpression:
             ):
                 current_data_arrays.append(exp_value_data_array)
         this_batch_size = len(data_arrays) + len(current_data_arrays)
-        # Determine if models should be batched
+        # Determine if models should be batched/loaded
         if this_batch_size >= GeneExpression.DATA_ARRAY_BATCH_SIZE or force:
-            self.load(gene_models, GeneExpression.COLLECTION_NAME)
-            self.load(data_arrays, DataArray.COLLECTION_NAME)
+            if force:
+                # Add new data arrays
+                data_arrays += current_data_arrays
+                current_data_arrays.clear()
+            if len(data_arrays) > 0:
+                self.load(data_arrays, DataArray.COLLECTION_NAME)
+            if len(gene_models) > 0:
+                self.load(gene_models, GeneExpression.COLLECTION_NAME)
             num_processed += len(gene_models)
-            print(
+            GeneExpression.dev_logger.info(
                 f"Processed {num_processed} genes. "
                 f"{str(datetime.datetime.now() - start_time)} "
                 f"elapsed"
