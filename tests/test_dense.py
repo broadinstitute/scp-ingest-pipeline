@@ -4,19 +4,10 @@ from unittest.mock import patch, MagicMock, PropertyMock
 from bson.objectid import ObjectId
 import csv
 
-from test_expression_files import mock_load_genes_batched
-
-# Dense models
-from mock_data.expression.dense_matrices.dense_matrix_19_genes_100k_cells_txt.gene_models import (
-    dense_19_100k_gene_models,
-)
-from mock_data.expression.dense_matrices.dense_matrix_19_genes_100k_cells_txt.data_arrays import (
-    dense_19_100k_data_arrays,
-)
+from test_expression_files import mock_load_genes_batched, mock_expression_load
 
 # R models
-from mock_data.expression.r_format.models import r_gene_models
-from mock_data.expression.r_format.data_arrays import r_data_arrays
+from mock_data.expression.r_format.models import r_data_models
 
 sys.path.append("../ingest")
 from expression_files.dense_ingestor import DenseIngestor
@@ -24,22 +15,18 @@ from expression_files.expression_files import GeneExpression
 from ingest_files import DataArray
 
 
-def mock_dense_load(documents, collection_name):
+def mock_load_no_exp_data(documents, collection_name):
     """Overwrites GeneExpression.load().
 
-       GeneExpression.load() is called multiple times. This method will verify
-       models in the arguments have the expected values.
-       """
-    for document in documents:
-        model_name = document["name"]
-        if collection_name == GeneExpression.COLLECTION_NAME:
-            # Ensure that 'ObjectID' in model is removed
-            del document["_id"]
-            assert document == dense_19_100k_gene_models[model_name]
-        if collection_name == DataArray.COLLECTION_NAME:
-            if document["cluster_name"] != "dense_matrix_19_genes_100k_cells.txt.gz":
-                del document["linear_data_id"]
-                assert document == dense_19_100k_data_arrays[model_name]
+        Confirms gene models are created when a gene does not have expression
+        values
+    """
+    if collection_name == DataArray.COLLECTION_NAME:
+        # There will always be a data array model for the cell names
+        assert len(documents) == 1
+    else:
+        assert collection_name == GeneExpression.COLLECTION_NAME
+        assert len(documents) == 4
 
 
 def mock_load_r_files(documents, collection_name):
@@ -56,13 +43,15 @@ def mock_load_r_files(documents, collection_name):
             # Ensure that 'ObjectID' in model is removed
             del document["_id"]
             # Verify gene model looks as expected
-            assert document == r_gene_models[model_name]
+            assert document == r_data_models["gene_models"][model_name]
         else:
             del document["linear_data_id"]
-            assert document == r_data_arrays[model_name]
+            assert document == r_data_models["data_arrays"][model_name]
 
 
 class TestDense(unittest.TestCase):
+    GeneExpression.load = mock_expression_load
+
     def test_set_header(self):
         # R File where last value is ""
         with open("../tests/data/r_format_text.txt") as f:
@@ -277,11 +266,7 @@ class TestDense(unittest.TestCase):
         self.assertTrue(mock_transform.called)
         self.assertTrue(mock_load.called)
 
-    @patch(
-        "expression_files.expression_files.GeneExpression.load",
-        side_effect=mock_dense_load,
-    )
-    def test_transform_fn(self, mock_load):
+    def test_transform_fn(self):
         """
         Assures transform function creates data models correctly.
         """
@@ -290,7 +275,13 @@ class TestDense(unittest.TestCase):
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
         )
+        expression_matrix.test_models = None
+        expression_matrix.models_processed = 0
         expression_matrix.transform()
+        amount_of_models = len(
+            expression_matrix.test_models["data_arrays"].keys()
+        ) + len(expression_matrix.test_models["gene_models"].keys())
+        self.assertEqual(expression_matrix.models_processed, amount_of_models)
 
     @patch(
         "expression_files.expression_files.GeneExpression.load",
@@ -345,5 +336,26 @@ class TestDense(unittest.TestCase):
             "expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE",
             new_callable=PropertyMock,
             return_value=21,
+        ):
+            expression_matrix.transform()
+
+    @patch(
+        "expression_files.expression_files.GeneExpression.load",
+        side_effect=mock_load_no_exp_data,
+    )
+    def test_transform_fn_no_exp_data(self, mock_load):
+        """
+        Confirms gene models are created even when there is no expression data
+        """
+
+        expression_matrix = DenseIngestor(
+            "../tests/data/dense_matrix_no_exp_data.txt",
+            "5d276a50421aa9117c982845",
+            "5dd5ae25421aa910a723a337",
+        )
+        with patch(
+            "expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE",
+            new_callable=PropertyMock,
+            return_value=4,
         ):
             expression_matrix.transform()
