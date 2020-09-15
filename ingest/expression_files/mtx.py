@@ -11,6 +11,7 @@ These are commonly provided from 10x Genomics v2.
 
 
 from typing import Dict, Generator, List, Tuple  # noqa: F401git ad
+import ntpath
 
 try:
     from expression_files import GeneExpression
@@ -31,7 +32,8 @@ class MTXIngestor(GeneExpression):
 
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
-
+        self.foo, self.file_path = ntpath.split(mtx_path)
+        self.file_name = mtx_path
         mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
         self.mtx_file = mtx_ingest_file.resolve_path(mtx_path)[0]
 
@@ -158,14 +160,38 @@ class MTXIngestor(GeneExpression):
 
     def execute_ingest(self):
         """Parses MTX files"""
-        self.extract_feature_barcode_matrices()
-        MTXIngestor.check_valid(
-            self.cells,
-            self.genes,
-            self.mtx_dimensions,
-            query_params=(self.study_id, self.mongo_connection._client),
+        # self.extract_feature_barcode_matrices()
+        # MTXIngestor.check_valid(
+        #     self.cells,
+        #     self.genes,
+        #     self.mtx_dimensions,
+        #     query_params=(self.study_id, self.mongo_connection._client),
+        # )
+        # self.transform()
+        import subprocess
+
+        file_name = f"{self.file_path[:-4]}_sorted_MTX.mtx"
+        with open(file_name, "w+") as f:
+            p1 = subprocess.Popen(
+                ["head", "-n", "2", f"{self.file_name}"], stdout=subprocess.PIPE
+            )
+            subprocess.Popen(["cat"], stdin=p1.stdout, stdout=f)
+            p2 = subprocess.Popen(
+                ["tail", "-n", "+3", f"{self.file_name}"],
+                stdin=p1.stdout,
+                stdout=subprocess.PIPE,
+            )
+            subprocess.Popen(
+                ["sort", "-s", "-n", "-k", "1,1"], stdin=p2.stdout, stdout=f
+            )
+
+        IngestFiles.delocalize_file(
+            self.study_file_id,
+            self.study_id,
+            self.foo,
+            file_name,
+            f"sorted_mtx/{file_name}",
         )
-        self.transform()
 
     def extract_feature_barcode_matrices(self):
         """
