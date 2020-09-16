@@ -12,6 +12,7 @@ These are commonly provided from 10x Genomics v2.
 
 from typing import Dict, Generator, List, Tuple  # noqa: F401git ad
 import ntpath
+import datetime
 
 try:
     from expression_files import GeneExpression
@@ -32,11 +33,11 @@ class MTXIngestor(GeneExpression):
 
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
-        self.foo, self.file_path = ntpath.split(mtx_path)
-        self.file_name = mtx_path
         mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
         self.mtx_file = mtx_ingest_file.resolve_path(mtx_path)[0]
-
+        self.file_path = mtx_ingest_file.download_from_bucket(mtx_path)
+        self.foo, self.file_name = ntpath.split(self.file_path)
+        self.mtx_path = mtx_path
         genes_path = kwargs.pop("gene_file")
         genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
         self.genes_file = genes_ingest_file.resolve_path(genes_path)[0]
@@ -170,14 +171,15 @@ class MTXIngestor(GeneExpression):
         # self.transform()
         import subprocess
 
-        file_name = f"{self.file_path[:-4]}_sorted_MTX.mtx"
+        start_time = datetime.datetime.now()
+        file_name = f"{self.file_name[:-4]}_sorted_MTX.mtx"
         with open(file_name, "w+") as f:
             p1 = subprocess.Popen(
-                ["head", "-n", "2", f"{self.file_name}"], stdout=subprocess.PIPE
+                ["head", "-n", "2", f"{self.file_path}"], stdout=subprocess.PIPE
             )
             subprocess.Popen(["cat"], stdin=p1.stdout, stdout=f)
             p2 = subprocess.Popen(
-                ["tail", "-n", "+3", f"{self.file_name}"],
+                ["tail", "-n", "+3", f"{self.file_path}"],
                 stdin=p1.stdout,
                 stdout=subprocess.PIPE,
             )
@@ -188,9 +190,13 @@ class MTXIngestor(GeneExpression):
         IngestFiles.delocalize_file(
             self.study_file_id,
             self.study_id,
-            self.foo,
+            self.mtx_path,
             file_name,
             f"sorted_mtx/{file_name}",
+        )
+        GeneExpression.dev_logger.info(
+            f"Time to sort {self.mtx_path} models: "
+            f"{str(datetime.datetime.now() - start_time)}"
         )
 
     def extract_feature_barcode_matrices(self):

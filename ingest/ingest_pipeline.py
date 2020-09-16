@@ -149,9 +149,9 @@ class IngestPipeline:
         db_name = os.environ["DATABASE_NAME"]
         client = MongoClient(
             host,
-            username=user,
-            password=password,
-            authSource=db_name,
+            username="single_cell",
+            password="7a4df82fc6b959276e84b3c2c34b791b",
+            authSource="single_cell_portal_development",
             authMechanism="SCRAM-SHA-1",
         )
 
@@ -434,43 +434,70 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """Logs any errors, then exits Ingest Pipeline with standard OS code
     """
     if len(status) > 0:
+        # delocalize errors file
+        for argument in list(arguments.keys()):
+            captured_argument = re.match("(\w*file)$", argument)
+            if captured_argument is not None:
+                study_file_id = arguments["study_file_id"]
+                matched_argument = captured_argument.groups()[0]
+                file_path = arguments[matched_argument]
+                if IngestFiles.is_remote_file(file_path):
+                    # Delocalize support log
+                    IngestFiles.delocalize_file(
+                        study_file_id,
+                        arguments["study_id"],
+                        file_path,
+                        "log.txt",
+                        f"parse_logs/{study_file_id}/log.txt",
+                    )
+                    # Delocalize user log
+                    IngestFiles.delocalize_file(
+                        study_file_id,
+                        arguments["study_id"],
+                        file_path,
+                        "user_log.txt",
+                        f"parse_logs/{study_file_id}/user_log.txt",
+                    )
+                # Need 1 argument that has a path to identify google bucket
+                # Break after first argument
+                break
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:
-            # delocalize errors file
-            for argument in list(arguments.keys()):
-                captured_argument = re.match("(\w*file)$", argument)
-                if captured_argument is not None:
-                    study_file_id = arguments["study_file_id"]
-                    matched_argument = captured_argument.groups()[0]
-                    file_path = arguments[matched_argument]
-                    if IngestFiles.is_remote_file(file_path):
-                        # Delocalize support log
-                        IngestFiles.delocalize_file(
-                            study_file_id,
-                            arguments["study_id"],
-                            file_path,
-                            "log.txt",
-                            f"parse_logs/{study_file_id}/log.txt",
-                        )
-                        # Delocalize user log
-                        IngestFiles.delocalize_file(
-                            study_file_id,
-                            arguments["study_id"],
-                            file_path,
-                            "user_log.txt",
-                            f"parse_logs/{study_file_id}/user_log.txt",
-                        )
-                    # Need 1 argument that has a path to identify google bucket
-                    # Break after first argument
-                    break
-            if status_cell_metadata is not None:
-                if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
-                    # PAPI jobs failing metadata validation against convention report
-                    # will have "unexpected exit status 65 was not ignored"
-                    # EX_DATAERR (65) The input data was incorrect in some way.
-                    # note that failure to load to MongoDB also triggers this error
-                    sys.exit(os.EX_DATAERR)
+            #     # delocalize errors file
+            #     for argument in list(arguments.keys()):
+            #         captured_argument = re.match("(\w*file)$", argument)
+            #         if captured_argument is not None:
+            #             study_file_id = arguments["study_file_id"]
+            #             matched_argument = captured_argument.groups()[0]
+            #             file_path = arguments[matched_argument]
+            #             if IngestFiles.is_remote_file(file_path):
+            #                 # Delocalize support log
+            #                 IngestFiles.delocalize_file(
+            #                     study_file_id,
+            #                     arguments["study_id"],
+            #                     file_path,
+            #                     "log.txt",
+            #                     f"parse_logs/{study_file_id}/log.txt",
+            #                 )
+            #                 # Delocalize user log
+            #                 IngestFiles.delocalize_file(
+            #                     study_file_id,
+            #                     arguments["study_id"],
+            #                     file_path,
+            #                     "user_log.txt",
+            #                     f"parse_logs/{study_file_id}/user_log.txt",
+            #                 )
+            #             # Need 1 argument that has a path to identify google bucket
+            #             # Break after first argument
+            #             break
+            #     if status_cell_metadata is not None:
+            #         if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
+            #             # PAPI jobs failing metadata validation against convention report
+            #             # will have "unexpected exit status 65 was not ignored"
+            #             # EX_DATAERR (65) The input data was incorrect in some way.
+            #             # note that failure to load to MongoDB also triggers this error
+            #             sys.exit(os.EX_DATAERR)
             sys.exit(1)
 
 
