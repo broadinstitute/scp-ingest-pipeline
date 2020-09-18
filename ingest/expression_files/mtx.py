@@ -13,6 +13,7 @@ These are commonly provided from 10x Genomics v2.
 from typing import Dict, Generator, List, Tuple  # noqa: F401git ad
 import ntpath
 import datetime
+import subprocess
 
 try:
     from expression_files import GeneExpression
@@ -33,23 +34,23 @@ class MTXIngestor(GeneExpression):
 
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
-        mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
-        self.mtx_file = mtx_ingest_file.resolve_path(mtx_path)[0]
-        self.file_path = mtx_ingest_file.download_from_bucket(mtx_path)
+        IngestFiles(self, mtx_path, self.ALLOWED_FILE_TYPES)
+        self.mtx_file = self.resolve_path(mtx_path)[0]
+        self.file_path = self.download_from_bucket(mtx_path)
         self.foo, self.file_name = ntpath.split(self.file_path)
         self.mtx_path = mtx_path
-        genes_path = kwargs.pop("gene_file")
-        genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
-        self.genes_file = genes_ingest_file.resolve_path(genes_path)[0]
-
-        barcodes_path = kwargs.pop("barcode_file")
-        barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
-        self.barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
-
-        # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
-        # is the gene index, M is the barcode index, and K is the expression
-        # score for the given gene index
-        self.mtx_dimensions: List[int] = MTXIngestor.get_mtx_dimensions(self.mtx_file)
+        # genes_path = kwargs.pop("gene_file")
+        # genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
+        # self.genes_file = genes_ingest_file.resolve_path(genes_path)[0]
+        #
+        # barcodes_path = kwargs.pop("barcode_file")
+        # barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
+        # self.barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
+        #
+        # # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
+        # # is the gene index, M is the barcode index, and K is the expression
+        # # score for the given gene index
+        # self.mtx_dimensions: List[int] = MTXIngestor.get_mtx_dimensions(self.mtx_file)
 
     @staticmethod
     def check_valid(
@@ -77,6 +78,18 @@ class MTXIngestor(GeneExpression):
         if len(error_messages) > 0:
             raise ValueError("; ".join(error_messages))
         return True
+
+    @staticmethod
+    def check_is_sorted(file_handler, file):
+        start_idx = None
+        for idx, line in enumerate(1, file_handler):
+            if not line.startswith("%"):
+                start_idx = idx + 1
+        p2 = subprocess.Popen(
+            ["tail", "-n", f"+{start_idx}", f"{file}"],
+            stdin=p1.stdout,
+            stdout=subprocess.PIPE,
+        )
 
     @staticmethod
     def is_sorted(idx: int, visited_expression_idx: List[int]):
@@ -198,6 +211,33 @@ class MTXIngestor(GeneExpression):
             f"Time to sort {self.mtx_path} models: "
             f"{str(datetime.datetime.now() - start_time)}"
         )
+
+    def shuffle_mtx(self):
+        import subprocess
+
+        file_name = f"{self.file_name[:-4]}_unsorted_MTX.mtx"
+        with open(file_name, "w+") as f:
+            # p1 = subprocess.Popen(
+            #     ["gzip", "-cd", f"{self.file_path}"], stdout=subprocess.PIPE
+            # )
+            p2 = subprocess.Popen(
+                ["head", "-n", "2", f"{self.file_path}"], stdout=subprocess.PIPE
+            )
+            subprocess.Popen(["cat"], stdin=p2.stdout, stdout=f)
+            p3 = subprocess.Popen(
+                ["tail", "-n", "+3", f"{self.file_path}"],
+                stdin=p2.stdout,
+                stdout=subprocess.PIPE,
+            )
+            subprocess.Popen(["shuf"], stdin=p3.stdout, stdout=f)
+        #
+        # IngestFiles.delocalize_file(
+        #     self.study_file_id,
+        #     self.study_id,
+        #     "gs://fc-ed3b1176-bb3f-468f-ac69-52058714cb2g",
+        #     file_name,
+        #     f"shuffled_mtx/{file_name}",
+        # )
 
     def extract_feature_barcode_matrices(self):
         """

@@ -311,7 +311,7 @@ class IngestPipeline:
                     tracer=self.tracer,
                     **self.kwargs,
                 )  # Dense receiver
-            self.expression_ingestor.execute_ingest()
+            self.expression_ingestor.shuffle_mtx()
         except Exception as e:
             log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
             return 1
