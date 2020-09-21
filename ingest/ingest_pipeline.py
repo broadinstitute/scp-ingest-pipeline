@@ -321,7 +321,7 @@ class IngestPipeline:
         """Ingests cell metadata files into Firestore."""
         self.cell_metadata.preprocess()
         if self.cell_metadata.validate():
-            IngestPipeline.dev_logger.error("Cell metadata file format valid")
+            IngestPipeline.dev_logger.info("Cell metadata file format valid")
             # Check file against metadata convention
             if self.kwargs["validate_convention"] is not None:
                 if self.kwargs["validate_convention"]:
