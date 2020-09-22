@@ -25,7 +25,7 @@ except ImportError:
     from ..ingest_files import IngestFiles
 
 
-class MTXIngestor(GeneExpression):
+class MTXIngestor(GeneExpression, IngestFiles):
     ALLOWED_FILE_TYPES = ["text/tab-separated-values"]
 
     @staticmethod
@@ -34,23 +34,25 @@ class MTXIngestor(GeneExpression):
 
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
-        IngestFiles(self, mtx_path, self.ALLOWED_FILE_TYPES)
-        self.mtx_file = self.resolve_path(mtx_path)[0]
-        self.file_path = self.download_from_bucket(mtx_path)
-        self.foo, self.file_name = ntpath.split(self.file_path)
+        mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
+        self.mtx_file = mtx_ingest_file.resolve_path(mtx_path)[0]
+        # self.file_path = mtx_ingest_file.download_from_bucket(mtx_path)
+        self.foo, self.file_name = ntpath.split(mtx_path)
         self.mtx_path = mtx_path
-        # genes_path = kwargs.pop("gene_file")
-        # genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
-        # self.genes_file = genes_ingest_file.resolve_path(genes_path)[0]
-        #
-        # barcodes_path = kwargs.pop("barcode_file")
-        # barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
-        # self.barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
-        #
-        # # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
-        # # is the gene index, M is the barcode index, and K is the expression
-        # # score for the given gene index
-        # self.mtx_dimensions: List[int] = MTXIngestor.get_mtx_dimensions(self.mtx_file)
+        # self.foo, self.file_name = ntpath.split(self.file_path)
+        # self.mtx_path = mtx_path
+        genes_path = kwargs.pop("gene_file")
+        genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
+        self.genes_file = genes_ingest_file.resolve_path(genes_path)[0]
+
+        barcodes_path = kwargs.pop("barcode_file")
+        barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
+        self.barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
+
+        # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
+        # is the gene index, M is the barcode index, and K is the expression
+        # score for the given gene index
+        self.mtx_dimensions: List[int] = MTXIngestor.get_mtx_dimensions(self.mtx_file)
 
     @staticmethod
     def check_valid(
@@ -80,16 +82,15 @@ class MTXIngestor(GeneExpression):
         return True
 
     @staticmethod
-    def check_is_sorted(file_handler, file):
-        start_idx = None
-        for idx, line in enumerate(1, file_handler):
-            if not line.startswith("%"):
-                start_idx = idx + 1
-        p2 = subprocess.Popen(
-            ["tail", "-n", f"+{start_idx}", f"{file}"],
-            stdin=p1.stdout,
-            stdout=subprocess.PIPE,
-        )
+    def check_is_sorted(file):
+        with open(file, "rb", 0) as f:
+            p1 = subprocess.run(
+                ["sort", "-c", "--stable", "-k", "1,1"], stdin=f, capture_output=True
+            )
+            if "disorder" in p1.stderr.decode("utf-8"):
+                return False
+            else:
+                return True
 
     @staticmethod
     def is_sorted(idx: int, visited_expression_idx: List[int]):
@@ -147,6 +148,15 @@ class MTXIngestor(GeneExpression):
         return True
 
     @staticmethod
+    def get_line_no(file_handler):
+        i = 1
+        for line in file_handler:
+            if line.startswith("%"):
+                i = +1
+            else:
+                return i
+
+    @staticmethod
     def get_mtx_dimensions(file_handler) -> List:
         for line in file_handler:
             if not line.startswith("%"):
@@ -172,72 +182,62 @@ class MTXIngestor(GeneExpression):
             gene_name = feature_data[1]
         return gene_id, gene_name
 
+    @staticmethod
+    def sort_mtx(file_path):
+        file_name = ntpath.split(file_path)[1]
+        new_file_name = f"{file_name}_sorted_MTX.mtx"
+        with open(new_file_name, "w+") as f:
+            p2 = subprocess.Popen(
+                ["tail", "-n", "+3", f"{file_path}"], stdout=subprocess.PIPE
+            )
+            subprocess.Popen(
+                ["sort", "-s", "-n", "-k", "1,1"], stdin=p2.stdout, stdout=f
+            )
+        return open(new_file_name)
+
     def execute_ingest(self):
         """Parses MTX files"""
-        # self.extract_feature_barcode_matrices()
+        self.extract_feature_barcode_matrices()
         # MTXIngestor.check_valid(
         #     self.cells,
         #     self.genes,
         #     self.mtx_dimensions,
         #     query_params=(self.study_id, self.mongo_connection._client),
         # )
-        # self.transform()
-        import subprocess
 
         start_time = datetime.datetime.now()
-        file_name = f"{self.file_name[:-4]}_sorted_MTX.mtx"
-        with open(file_name, "w+") as f:
-            p1 = subprocess.Popen(
-                ["head", "-n", "2", f"{self.file_path}"], stdout=subprocess.PIPE
-            )
-            subprocess.Popen(["cat"], stdin=p1.stdout, stdout=f)
-            p2 = subprocess.Popen(
-                ["tail", "-n", "+3", f"{self.file_path}"],
-                stdin=p1.stdout,
-                stdout=subprocess.PIPE,
-            )
-            subprocess.Popen(
-                ["sort", "-s", "-n", "-k", "1,1"], stdin=p2.stdout, stdout=f
-            )
-
-        IngestFiles.delocalize_file(
-            self.study_file_id,
-            self.study_id,
-            self.mtx_path,
-            file_name,
-            f"sorted_mtx/{file_name}",
-        )
-        GeneExpression.dev_logger.info(
-            f"Time to sort {self.mtx_path} models: "
-            f"{str(datetime.datetime.now() - start_time)}"
-        )
-
-    def shuffle_mtx(self):
-        import subprocess
-
-        file_name = f"{self.file_name[:-4]}_unsorted_MTX.mtx"
-        with open(file_name, "w+") as f:
-            # p1 = subprocess.Popen(
-            #     ["gzip", "-cd", f"{self.file_path}"], stdout=subprocess.PIPE
-            # )
-            p2 = subprocess.Popen(
-                ["head", "-n", "2", f"{self.file_path}"], stdout=subprocess.PIPE
-            )
-            subprocess.Popen(["cat"], stdin=p2.stdout, stdout=f)
-            p3 = subprocess.Popen(
-                ["tail", "-n", "+3", f"{self.file_path}"],
-                stdin=p2.stdout,
-                stdout=subprocess.PIPE,
-            )
-            subprocess.Popen(["shuf"], stdin=p3.stdout, stdout=f)
+        if not MTXIngestor.check_is_sorted(self.mtx_path):
+            self.mtx_file = MTXIngestor.sort_mtx(self.mtx_path)
+        self.transform()
         #
         # IngestFiles.delocalize_file(
         #     self.study_file_id,
         #     self.study_id,
-        #     "gs://fc-ed3b1176-bb3f-468f-ac69-52058714cb2g",
+        #     self.mtx_path,
         #     file_name,
-        #     f"shuffled_mtx/{file_name}",
+        #     f"sorted_mtx/{file_name}",
         # )
+        # GeneExpression.dev_logger.info(
+        #     f"Time to sort {self.mtx_path} models: "
+        #     f"{str(datetime.datetime.now() - start_time)}"
+        # )
+
+    # def shuffle_mtx(self):
+    #     import subprocess
+    #
+    #     file_name = f"{self.file_name[:-4]}_unsorted_MTX.mtx"
+    #     with open(file_name, "w+") as f:
+    #         p2 = subprocess.Popen(
+    #             ["head", "-n", "2", f"{self.file_path}"], stdout=subprocess.PIPE
+    #         )
+    #         subprocess.Popen(["cat"], stdin=p2.stdout, stdout=f)
+    #         p3 = subprocess.Popen(
+    #             ["tail", "-n", "+3", f"{self.file_path}"],
+    #             stdin=p2.stdout,
+    #             stdout=subprocess.PIPE,
+    #         )
+    #         subprocess.Popen(["shuf"], stdin=p3.stdout, stdout=f)
+    #     self.mtx_file = file_name
 
     def extract_feature_barcode_matrices(self):
         """
