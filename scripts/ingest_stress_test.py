@@ -35,7 +35,7 @@ DATA = {
     "medium": {
         "dense": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/medium_expr.txt.gz",
         "cluster": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/medium_coords.txt",
-        "metadata": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/medium/metadata.txt",
+        "metadata": "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982/test_Data/scp-ingest-pipeline/stress_test_data/medium_metadata.txt",
     },
     # matrix has ~220K cells, ~16K genes
     # baseline ingest for dense ~25.5m
