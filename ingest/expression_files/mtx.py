@@ -13,7 +13,7 @@ These are commonly provided from 10x Genomics v2.
 from typing import Dict, Generator, List, Tuple  # noqa: F401git ad
 import ntpath
 
-# import datetime
+import datetime
 import subprocess
 
 try:
@@ -37,18 +37,15 @@ class MTXIngestor(GeneExpression, IngestFiles):
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
         IngestFiles.__init__(self, mtx_path, self.ALLOWED_FILE_TYPES)
         self.mtx_file, self.mtx_path = self.resolve_path(mtx_path)
-        # self.file_path = mtx_ingest_file.download_from_bucket(mtx_path)
-        self.foo, self.file_name = ntpath.split(mtx_path)
-        self.mtx_path = mtx_path
-        # self.foo, self.file_name = ntpath.split(self.file_path)
-        # self.mtx_path = mtx_path
-        genes_path = kwargs.pop("gene_file")
-        genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
-        self.genes_file = genes_ingest_file.resolve_path(genes_path)[0]
+        self.gs_mtx_path = mtx_path
 
-        barcodes_path = kwargs.pop("barcode_file")
-        barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
-        self.barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
+        # genes_path = kwargs.pop("gene_file")
+        # genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
+        # self.genes_file = genes_ingest_file.resolve_path(genes_path)[0]
+        #
+        # barcodes_path = kwargs.pop("barcode_file")
+        # barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
+        # self.barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
 
         # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
         # is the gene index, M is the barcode index, and K is the expression
@@ -175,18 +172,18 @@ class MTXIngestor(GeneExpression, IngestFiles):
         new_file_name = f"{file_name}_sorted_MTX.mtx"
         with open(new_file_name, "w+") as f:
             # Choose specific number of lines
-            start_idx = MTXIngestor.get_line_no(file_handler)
+            # start_idx = MTXIngestor.get_line_no(file_handler)
             p2 = subprocess.Popen(
-                ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
+                ["tail", "-n", "+3", f"{file_path}"], stdout=subprocess.PIPE
             )
             subprocess.Popen(
                 ["sort", "-s", "-n", "-k", "1,1"], stdin=p2.stdout, stdout=f
             )
-        return resolve_fn(new_file_name)
+        return resolve_fn(new_file_name)[0]
 
     def execute_ingest(self):
         """Parses MTX files"""
-        self.extract_feature_barcode_matrices()
+        # self.extract_feature_barcode_matrices()
         # MTXIngestor.check_valid(
         #     self.cells,
         #     self.genes,
@@ -194,41 +191,32 @@ class MTXIngestor(GeneExpression, IngestFiles):
         #     query_params=(self.study_id, self.mongo_connection._client),
         # )
 
-        # start_time = datetime.datetime.now()
-        if not MTXIngestor.check_is_sorted(self.mtx_path):
-            self.mtx_file = MTXIngestor.sort_mtx(
-                self.mtx_file, self.mtx_path, self.resolve_path
-            )
-        self.transform()
-        #
-        # IngestFiles.delocalize_file(
-        #     self.study_file_id,
-        #     self.study_id,
-        #     self.mtx_path,
-        #     file_name,
-        #     f"sorted_mtx/{file_name}",
-        # )
-        # GeneExpression.dev_logger.info(
-        #     f"Time to sort {self.mtx_path} models: "
-        #     f"{str(datetime.datetime.now() - start_time)}"
-        # )
+        start_time = datetime.datetime.now()
+        # self.shuffle_mtx()
+        self.mtx_file = MTXIngestor.sort_mtx(
+            self.mtx_file, self.mtx_path, self.resolve_path
+        )
+        # self.transform()
+        file_name = ntpath.split(self.mtx_path)[1]
+        new_file_name = f"{file_name}_sorted_MTX.mtx"
+        IngestFiles.delocalize_file(
+            self.study_file_id,
+            self.study_id,
+            self.gs_mtx_path,
+            new_file_name,
+            f"sorted_mtx/{new_file_name}",
+        )
 
-    # def shuffle_mtx(self):
-    #     import subprocess
-    #
-    #     file_name = f"{self.file_name[:-4]}_unsorted_MTX.mtx"
-    #     with open(file_name, "w+") as f:
-    #         p2 = subprocess.Popen(
-    #             ["head", "-n", "2", f"{self.file_path}"], stdout=subprocess.PIPE
-    #         )
-    #         subprocess.Popen(["cat"], stdin=p2.stdout, stdout=f)
-    #         p3 = subprocess.Popen(
-    #             ["tail", "-n", "+3", f"{self.file_path}"],
-    #             stdin=p2.stdout,
-    #             stdout=subprocess.PIPE,
-    #         )
-    #         subprocess.Popen(["shuf"], stdin=p3.stdout, stdout=f)
-    #     self.mtx_file = file_name
+    def shuffle_mtx(self):
+
+        file_name = f"{self.file_name[:-4]}_unsorted_MTX.mtx"
+        with open(file_name, "w+") as f:
+            p3 = subprocess.Popen(
+                ["tail", "-n", "+3", self.mtx_path], stdout=subprocess.PIPE
+            )
+            subprocess.Popen(["shuf"], stdin=p3.stdout, stdout=f)
+        self.mtx_file = file_name
+        self.mtx_file = self.resolve_fn(file_name)[0]
 
     def extract_feature_barcode_matrices(self):
         """
