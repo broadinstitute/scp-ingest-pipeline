@@ -35,8 +35,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
-        mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
-        self.mtx_file = mtx_ingest_file.resolve_path(mtx_path)[0]
+        IngestFiles.__init__(self, mtx_path, self.ALLOWED_FILE_TYPES)
+        self.mtx_file, self.mtx_path = self.resolve_path(mtx_path)
         # self.file_path = mtx_ingest_file.download_from_bucket(mtx_path)
         self.foo, self.file_name = ntpath.split(mtx_path)
         self.mtx_path = mtx_path
@@ -135,9 +135,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def get_line_no(file):
+    def get_line_no(file_handler):
         i = 1
-        file_handler = open(file)
         for line in file_handler:
             if line.startswith("%"):
                 i = +1
@@ -171,21 +170,19 @@ class MTXIngestor(GeneExpression, IngestFiles):
             gene_name = feature_data[1]
         return gene_id, gene_name
 
-    @staticmethod
-    def sort_mtx(file_path):
+    def sort_mtx(file_handler, file_path, resolve_fn):
         file_name = ntpath.split(file_path)[1]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
-        # if IngestFiles.is_remote_file(file_path):
-        #
         with open(new_file_name, "w+") as f:
-            start_idx = MTXIngestor.get_line_no(file_path)
+            # Choose specific number of lines
+            start_idx = MTXIngestor.get_line_no(file_handler)
             p2 = subprocess.Popen(
                 ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
             )
             subprocess.Popen(
                 ["sort", "-s", "-n", "-k", "1,1"], stdin=p2.stdout, stdout=f
             )
-        return open(new_file_name)
+        return resolve_fn(new_file_name)
 
     def execute_ingest(self):
         """Parses MTX files"""
@@ -199,7 +196,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
         # start_time = datetime.datetime.now()
         if not MTXIngestor.check_is_sorted(self.mtx_path):
-            self.mtx_file = MTXIngestor.sort_mtx(self.mtx_path)
+            self.mtx_file = MTXIngestor.sort_mtx(
+                self.mtx_file, self.mtx_path, self.resolve_path
+            )
         self.transform()
         #
         # IngestFiles.delocalize_file(
