@@ -12,7 +12,8 @@ These are commonly provided from 10x Genomics v2.
 
 from typing import Dict, Generator, List, Tuple  # noqa: F401git ad
 import ntpath
-import datetime
+
+# import datetime
 import subprocess
 
 try:
@@ -93,20 +94,6 @@ class MTXIngestor(GeneExpression, IngestFiles):
                 return True
 
     @staticmethod
-    def is_sorted(idx: int, visited_expression_idx: List[int]):
-        last_visited_idx = visited_expression_idx[-1]
-        if idx not in visited_expression_idx:
-            if idx > last_visited_idx:
-                return True
-            else:
-                return False
-        else:
-            if idx == last_visited_idx:
-                return True
-            else:
-                return False
-
-    @staticmethod
     def check_bundle(barcodes, genes, mtx_dimensions):
         """Confirms barcode and gene files have expected length of values"""
         expected_genes = mtx_dimensions[0]
@@ -148,13 +135,15 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def get_line_no(file_handler):
+    def get_line_no(file):
         i = 1
+        file_handler = open(file)
         for line in file_handler:
             if line.startswith("%"):
                 i = +1
             else:
                 return i
+        raise ValueError("MTX file did not contain data")
 
     @staticmethod
     def get_mtx_dimensions(file_handler) -> List:
@@ -186,9 +175,12 @@ class MTXIngestor(GeneExpression, IngestFiles):
     def sort_mtx(file_path):
         file_name = ntpath.split(file_path)[1]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
+        # if IngestFiles.is_remote_file(file_path):
+        #
         with open(new_file_name, "w+") as f:
+            start_idx = MTXIngestor.get_line_no(file_path)
             p2 = subprocess.Popen(
-                ["tail", "-n", "+3", f"{file_path}"], stdout=subprocess.PIPE
+                ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
             )
             subprocess.Popen(
                 ["sort", "-s", "-n", "-k", "1,1"], stdin=p2.stdout, stdout=f
@@ -205,7 +197,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         #     query_params=(self.study_id, self.mongo_connection._client),
         # )
 
-        start_time = datetime.datetime.now()
+        # start_time = datetime.datetime.now()
         if not MTXIngestor.check_is_sorted(self.mtx_path):
             self.mtx_file = MTXIngestor.sort_mtx(self.mtx_path)
         self.transform()
@@ -273,8 +265,6 @@ class MTXIngestor(GeneExpression, IngestFiles):
             raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
             current_idx = int(raw_gene_idx)
             if current_idx != prev_idx:
-                if not MTXIngestor.is_sorted(current_idx, visited_expression_idx):
-                    raise ValueError("MTX file must be sorted")
                 GeneExpression.dev_logger.debug(
                     f"Processing {self.genes[prev_idx - 1]}"
                 )
