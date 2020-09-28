@@ -179,7 +179,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             subprocess.Popen(
                 ["sort", "-s", "-n", "-k", "1,1"], stdin=p2.stdout, stdout=f
             )
-        return resolve_fn(new_file_name)[0]
+        return resolve_fn(new_file_name)[0], new_file_name
 
     def execute_ingest(self):
         """Parses MTX files"""
@@ -193,12 +193,12 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
         start_time = datetime.datetime.now()
         # self.shuffle_mtx()
-        self.mtx_file = MTXIngestor.sort_mtx(
+        self.mtx_file, new_file_name = MTXIngestor.sort_mtx(
             self.mtx_file, self.mtx_path, self.resolve_path
         )
-        # self.transform()
-        file_name = ntpath.split(self.mtx_path)[1]
-        new_file_name = f"{file_name}_sorted_MTX.mtx"
+        GeneExpression.dev_logger.info(
+            f"Time to sort {str(datetime.datetime.now() - start_time)} "
+        )
         IngestFiles.delocalize_file(
             self.study_file_id,
             self.study_id,
