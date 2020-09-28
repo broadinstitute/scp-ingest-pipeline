@@ -179,7 +179,6 @@ class MTXIngestor(GeneExpression, IngestFiles):
             subprocess.run(
                 [
                     "sort",
-                    "-s",
                     "-S",
                     "20G",
                     "--batch-size=90%",
