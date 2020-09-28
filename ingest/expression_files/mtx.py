@@ -176,7 +176,21 @@ class MTXIngestor(GeneExpression, IngestFiles):
             p2 = subprocess.Popen(
                 ["tail", "-n", "+3", f"{file_path}"], stdout=subprocess.PIPE
             )
-            subprocess.run(["sort", "-s", "-n", "-k", "1,1"], stdin=p2.stdout, stdout=f)
+            subprocess.run(
+                [
+                    "sort",
+                    "-s",
+                    "-S",
+                    "90%",
+                    "--batch-size=1000",
+                    "-n",
+                    "--buffer-size=10g",
+                    "-k",
+                    "1,1",
+                ],
+                stdin=p2.stdout,
+                stdout=f,
+            )
         return resolve_fn(new_file_name)[0], new_file_name
 
     def execute_ingest(self):
