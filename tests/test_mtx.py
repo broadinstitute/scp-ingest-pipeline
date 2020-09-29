@@ -65,34 +65,18 @@ class TestMTXIngestor(unittest.TestCase):
         )
         self.assertEqual(str(cm.exception), expected_msg)
 
-    def test_is_sorted(self):
-        visited_nums = [0]
-        sorted_nums = [2, 2, 2, 3, 4, 4, 4, 5]
-        for num in sorted_nums:
-            self.assertTrue(MTXIngestor.is_sorted(num, visited_nums))
-            if num not in visited_nums:
-                visited_nums.append(num)
-
-        visited_nums = [0]
-        unsorted_nums = [1, 2, 2, 4, 6, 5]
-        truth_values = []
-        for num in unsorted_nums:
-            truth_values.append(MTXIngestor.is_sorted(num, visited_nums))
-            if num not in visited_nums:
-                visited_nums.append(num)
-        self.assertFalse(all(truth_values))
 
     def test_get_mtx_dimensions(self):
-        file_handler = open("data/AB_toy_data_toy.matrix.mtx")
+        file_handler = open("data/mtx/AB_toy_data_toy.matrix.mtx")
         dimensions = MTXIngestor.get_mtx_dimensions(file_handler)
         self.assertEqual([80, 272, 4352], dimensions)
 
         # Dimension contains a letter
-        file_handler = open("data/bad_dimensions.mtx.txt")
+        file_handler = open("data/mtx/bad_dimensions.mtx.txt")
         self.assertRaises(Exception, MTXIngestor.get_mtx_dimensions, file_handler)
 
         with self.assertRaises(ValueError) as cm:
-            file_handler = open("data/no_data.mtx.txt")
+            file_handler = open("data/mtx/no_data.mtx.txt")
             MTXIngestor.get_mtx_dimensions(file_handler)
         self.assertEqual("MTX file did not contain data", str(cm.exception))
 
@@ -159,11 +143,11 @@ class TestMTXIngestor(unittest.TestCase):
         """
 
         expression_matrix = MTXIngestor(
-            "../tests/data/matrix.mtx",
+            "../tests/data/mtx/matrix.mtx",
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
-            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
-            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+            gene_file="../tests/data/mtx/AB_toy_data_toy.genes.tsv",
+            barcode_file="../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         )
         # When is_valid_format() is false exception should be raised
         with self.assertRaises(ValueError) as error:
@@ -173,11 +157,11 @@ class TestMTXIngestor(unittest.TestCase):
             "Expected 25 cells and 33694 genes. Got 272 cells and 80 genes.",
         )
         expression_matrix = MTXIngestor(
-            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "../tests/data/mtx/AB_toy_data_toy.matrix.mtx",
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
-            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
-            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+            gene_file="../tests/data/mtx/AB_toy_data_toy.genes.tsv",
+            barcode_file="../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         )
 
         expression_matrix.execute_ingest()
@@ -188,11 +172,11 @@ class TestMTXIngestor(unittest.TestCase):
         Tests if value error is raised when mtx file is unsorted,
         """
         expression_matrix = MTXIngestor(
-            "../tests/data/unsorted_mtx.mtx.txt",
+            "../tests/data/mtx/unsorted_mtx.mtx.txt",
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
-            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
-            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+            gene_file="../tests/data/mtx/AB_toy_data_toy.genes.tsv",
+            barcode_file="../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         )
         expression_matrix.extract_feature_barcode_matrices()
         with self.assertRaises(ValueError) as cm:
@@ -204,11 +188,11 @@ class TestMTXIngestor(unittest.TestCase):
         Assures transform function creates gene data model correctly
         """
         expression_matrix = MTXIngestor(
-            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "../tests/data/mtx/AB_toy_data_toy.matrix.mtx",
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
-            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
-            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+            gene_file="../tests/data/mtx/AB_toy_data_toy.genes.tsv",
+            barcode_file="../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         )
         expression_matrix.test_models = None
         expression_matrix.models_processed = 0
@@ -221,11 +205,11 @@ class TestMTXIngestor(unittest.TestCase):
 
         # MTX with a single column feature file
         expression_matrix = MTXIngestor(
-            "../tests/data/one_column_feature_file_data_models.mtx",
+            "../tests/data/mtx/one_column_feature_file_data_models.mtx",
             "5f2f58eba0845f8c4cf1dc12",
             "5dd5ae25421aa910a723a447",
-            gene_file="../tests/data/one_column_feature_file_data_models.genes.tsv",
-            barcode_file="../tests/data/one_column_feature_file_data_models.barcodes.tsv",
+            gene_file="../tests/data/mtx/one_column_feature_file_data_models.genes.tsv",
+            barcode_file="../tests/data/mtx/one_column_feature_file_data_models.barcodes.tsv",
         )
         expression_matrix.test_models = None
         expression_matrix.models_processed = 0
@@ -246,11 +230,11 @@ class TestMTXIngestor(unittest.TestCase):
         """
         GeneExpression.DATA_ARRAY_BATCH_SIZE = 7
         expression_matrix = MTXIngestor(
-            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "../tests/data/mtx/AB_toy_data_toy.matrix.mtx",
             "5dd5ae25421aa910a723a447",
             "5f2f58eba0845f8c4cf1dc12",
-            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
-            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+            gene_file="../tests/data/mtx/AB_toy_data_toy.genes.tsv",
+            barcode_file="../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         )
         with patch(
             "expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE",

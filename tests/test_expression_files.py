@@ -46,7 +46,7 @@ def mock_expression_load(self, *args):
         model_name = documents[0]["name"]
         if collection_name == GeneExpression.COLLECTION_NAME:
             if model_name in AB_toy_data_toy_data_models["gene_models"]:
-                self.test_model = AB_toy_data_toy_data_models
+                self.test_models = AB_toy_data_toy_data_models
             if model_name in one_column_feature_file_data_models["gene_models"]:
                 self.test_models = one_column_feature_file_data_models
             if model_name in nineteen_genes_100k_cell_models["gene_models"][model_name]:
