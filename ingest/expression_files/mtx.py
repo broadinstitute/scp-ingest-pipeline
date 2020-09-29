@@ -177,9 +177,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         with open(new_file_name, "w+") as f:
             # Choose specific number of lines
             # start_idx = MTXIngestor.get_line_no(file_handler)
-            # p2 = subprocess.Popen(
-            #     ["tail", "-n", "+3", f"{file_path}"], stdout=subprocess.PIPE
-            # )
+            p2 = subprocess.Popen(["cat", f"{file_path}"], stdout=subprocess.PIPE)
             subprocess.run(
                 [
                     "sort",
@@ -192,9 +190,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     "--heapsort",
                     "-k",
                     "1,1",
-                    file_path,
                 ],
-                # stdin=file_path,
+                stdin=p2.stdout,
                 stdout=f,
             )
         return resolve_fn(new_file_name)[0], new_file_name
