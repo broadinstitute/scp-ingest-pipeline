@@ -36,7 +36,11 @@ class MTXIngestor(GeneExpression, IngestFiles):
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
         IngestFiles.__init__(self, mtx_path, self.ALLOWED_FILE_TYPES)
+        start_time_localize_MTX_file = datetime.datetime.now()
         self.mtx_file, self.mtx_path = self.resolve_path(mtx_path)
+        GeneExpression.dev_logger.info(
+            f"Time to localize mtx file from bucket {str(datetime.datetime.now() - start_time_localize_MTX_file)} "
+        )
         self.gs_mtx_path = mtx_path
 
         # genes_path = kwargs.pop("gene_file")
@@ -173,22 +177,24 @@ class MTXIngestor(GeneExpression, IngestFiles):
         with open(new_file_name, "w+") as f:
             # Choose specific number of lines
             # start_idx = MTXIngestor.get_line_no(file_handler)
-            p2 = subprocess.Popen(
-                ["tail", "-n", "+3", f"{file_path}"], stdout=subprocess.PIPE
-            )
+            # p2 = subprocess.Popen(
+            #     ["tail", "-n", "+3", f"{file_path}"], stdout=subprocess.PIPE
+            # )
             subprocess.run(
                 [
                     "sort",
+                    "--heapsort",
                     "-S",
                     "20G",
                     "--batch-size=90%",
                     "-n",
-                    "--buffer-size=10G",
+                    "--buffer-size=15G",
+                    "--heapsort",
                     "-k",
                     "1,1",
-                    "--debug",
+                    file_path,
                 ],
-                stdin=p2.stdout,
+                # stdin=file_path,
                 stdout=f,
             )
         return resolve_fn(new_file_name)[0], new_file_name
@@ -204,19 +210,23 @@ class MTXIngestor(GeneExpression, IngestFiles):
         # )
 
         start_time = datetime.datetime.now()
-        # self.shuffle_mtx()
         self.mtx_file, new_file_name = MTXIngestor.sort_mtx(
             self.mtx_file, self.mtx_path, self.resolve_path
         )
         GeneExpression.dev_logger.info(
             f"Time to sort {str(datetime.datetime.now() - start_time)} "
         )
+
+        start_time_delocalize_file = datetime.datetime.now()
         IngestFiles.delocalize_file(
             self.study_file_id,
             self.study_id,
             self.gs_mtx_path,
             new_file_name,
             f"sorted_mtx/{new_file_name}",
+        )
+        GeneExpression.dev_logger.info(
+            f"Time to push file back to bucket {str(datetime.datetime.now() - start_time_delocalize_file)} "
         )
 
     def shuffle_mtx(self):
