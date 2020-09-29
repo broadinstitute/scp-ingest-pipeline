@@ -236,13 +236,13 @@ class IngestTestCase(unittest.TestCase):
             "--genome-annotation",
             "Ensembl 94",
             "--matrix-file",
-            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "../tests/data/mtx/AB_toy_data_toy.matrix.mtx",
             "--matrix-file-type",
             "mtx",
             "--gene-file",
             "../tests/data/empty_file.txt",
             "--barcode-file",
-            "../tests/data/AB_toy_data_toy.barcodes.tsv",
+            "../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         ]
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
@@ -275,13 +275,13 @@ class IngestTestCase(unittest.TestCase):
             "--genome-annotation",
             "Ensembl 94",
             "--matrix-file",
-            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "../tests/data/mtx/AB_toy_data_toy.matrix.mtx",
             "--matrix-file-type",
             "mtx",
             "--gene-file",
-            "../tests/data/AB_toy_data_toy.genes.tsv",
+            "../tests/data/mtx/AB_toy_data_toy.genes.tsv",
             "--barcode-file",
-            "../tests/data/AB_toy_data_toy.barcodes.tsv",
+            "../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         ]
         self.execute_ingest(args)
 
@@ -310,13 +310,13 @@ class IngestTestCase(unittest.TestCase):
             "--genome-annotation",
             "Ensembl 94",
             "--matrix-file",
-            "gs://fake-bucket/tests/data/AB_toy_data_toy.matrix.mtx",
+            "gs://fake-bucket/tests/data/mtx/AB_toy_data_toy.matrix.mtx",
             "--matrix-file-type",
             "mtx",
             "--gene-file",
-            "gs://fake-bucket/tests/data/AB_toy_data_toy.genes.tsv",
+            "gs://fake-bucket/tests/data/mtx/AB_toy_data_toy.genes.tsv",
             "--barcode-file",
-            "gs://fake-bucket/tests/data/AB_toy_data_toy.barcodes.tsv",
+            "gs://fake-bucket/tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         ]
 
         self.execute_ingest(args)
@@ -346,7 +346,7 @@ class IngestTestCase(unittest.TestCase):
             "--genome-annotation",
             "Ensembl 94",
             "--matrix-file",
-            "../tests/data/matrix.mtx",
+            "../tests/data/mtx/matrix.mtx",
             "--matrix-file-type",
             "mtx",
         ]
