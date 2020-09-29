@@ -43,13 +43,13 @@ class MTXIngestor(GeneExpression, IngestFiles):
         )
         self.gs_mtx_path = mtx_path
 
-        # genes_path = kwargs.pop("gene_file")
-        # genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
-        # self.genes_file = genes_ingest_file.resolve_path(genes_path)[0]
-        #
-        # barcodes_path = kwargs.pop("barcode_file")
-        # barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
-        # self.barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
+        genes_path = kwargs.pop("gene_file")
+        genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
+        self.genes_file = genes_ingest_file.resolve_path(genes_path)[0]
+
+        barcodes_path = kwargs.pop("barcode_file")
+        barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
+        self.barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
 
         # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
         # is the gene index, M is the barcode index, and K is the expression
@@ -196,7 +196,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
     def execute_ingest(self):
         """Parses MTX files"""
-        # self.extract_feature_barcode_matrices()
+        self.extract_feature_barcode_matrices()
         # MTXIngestor.check_valid(
         #     self.cells,
         #     self.genes,
@@ -208,6 +208,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
         self.mtx_file, new_file_name = MTXIngestor.sort_mtx(
             self.mtx_file, self.mtx_path, self.resolve_path
         )
+        self.mtx_file.readline()
+        self.mtx_file.readline()
         GeneExpression.dev_logger.info(
             f"Time to sort {str(datetime.datetime.now() - start_time)} "
         )
@@ -223,6 +225,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         GeneExpression.dev_logger.info(
             f"Time to push file back to bucket {str(datetime.datetime.now() - start_time_delocalize_file)} "
         )
+        self.transform()
 
     def shuffle_mtx(self):
 
