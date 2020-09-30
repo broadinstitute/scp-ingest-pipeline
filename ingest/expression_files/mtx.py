@@ -188,10 +188,19 @@ class MTXIngestor(GeneExpression, IngestFiles):
     def sort_mtx(self, file_path):
         file_name = ntpath.split(file_path)[1]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
+        GeneExpression.dev_logger.info(f"New file name is {new_file_name} ")
+        GeneExpression.dev_logger.info(f"File path is {file_path} ")
+        df = subprocess.run(["df", "-H", "/tmp"], stdout=subprocess.PIPE)
+        GeneExpression.dev_logger.info(f"df file system: {df.stdout.decode('UTF-8')}")
+        df_tmp = subprocess.run(["df", "-H"], stdout=subprocess.PIPE)
+        GeneExpression.dev_logger.info(f"df of tmp: {df_tmp.stdout.decode('UTF-8')}")
         with open(new_file_name, "w+") as f:
+            GeneExpression.dev_logger.info("Starting to sort")
             # Choose specific number of lines
             # start_idx = MTXIngestor.get_line_no(file_handler)
-            p2 = subprocess.Popen(["cat", f"{file_path}"], stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(
+                ["tail", "-n", "+3", f"{file_path}"], stdout=subprocess.PIPE
+            )
             subprocess.run(
                 [
                     "sort",
@@ -206,6 +215,11 @@ class MTXIngestor(GeneExpression, IngestFiles):
                 stdin=p2.stdout,
                 stdout=f,
             )
+        wc = subprocess.run(["wc", "-l", f"{new_file_name}"], stdout=subprocess.PIPE)
+        GeneExpression.dev_logger.info(
+            f"wc of sorted file: {wc.stdout.decode('UTF-8')}"
+        )
+        GeneExpression.dev_logger.info("Finished sorting")
         return open(new_file_name, "rt", encoding="utf-8-sig"), new_file_name
 
     def execute_ingest(self):
@@ -227,6 +241,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         )
 
         start_time_delocalize_file = datetime.datetime.now()
+        GeneExpression.dev_logger.info("Delocalizing file")
         IngestFiles.delocalize_file(
             self.study_file_id,
             self.study_id,
@@ -238,17 +253,6 @@ class MTXIngestor(GeneExpression, IngestFiles):
             f"Time to push file back to bucket {str(datetime.datetime.now() - start_time_delocalize_file)} "
         )
         self.transform()
-
-    def shuffle_mtx(self):
-
-        file_name = f"{self.file_name[:-4]}_unsorted_MTX.mtx"
-        with open(file_name, "w+") as f:
-            p3 = subprocess.Popen(
-                ["tail", "-n", "+3", self.mtx_path], stdout=subprocess.PIPE
-            )
-            subprocess.Popen(["shuf"], stdin=p3.stdout, stdout=f)
-        self.mtx_file = file_name
-        self.mtx_file = self.resolve_fn(file_name)[0]
 
     def extract_feature_barcode_matrices(self):
         """
@@ -284,7 +288,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
             raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
             current_idx = int(raw_gene_idx)
             if current_idx != prev_idx:
-                if not MTXIngestor.is_sorted(current_idx, visited_expression_idx):
+                GeneExpression.dev_logger.debug(f"Current Index is:  {current_idx}")
+                GeneExpression.dev_logger.debug(f"Prior Index is:  {prev_idx}")
+                if not prev_idx < current_idx:
                     raise ValueError("MTX file must be sorted")
                 GeneExpression.dev_logger.debug(
                     f"Processing {self.genes[prev_idx - 1]}"
