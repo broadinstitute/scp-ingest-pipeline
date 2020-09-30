@@ -95,6 +95,20 @@ class MTXIngestor(GeneExpression, IngestFiles):
                 return True
 
     @staticmethod
+    def is_sorted(idx: int, visited_expression_idx: List[int]):
+        last_visited_idx = visited_expression_idx[-1]
+        if idx not in visited_expression_idx:
+            if idx > last_visited_idx:
+                return True
+            else:
+                return False
+        else:
+            if idx == last_visited_idx:
+                return True
+            else:
+                return False
+
+    @staticmethod
     def check_bundle(barcodes, genes, mtx_dimensions):
         """Confirms barcode and gene files have expected length of values"""
         expected_genes = mtx_dimensions[0]
@@ -171,7 +185,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             gene_name = feature_data[1]
         return gene_id, gene_name
 
-    def sort_mtx(file_handler, file_path, resolve_fn):
+    def sort_mtx(self, file_path):
         file_name = ntpath.split(file_path)[1]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
         with open(new_file_name, "w+") as f:
@@ -192,7 +206,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                 stdin=p2.stdout,
                 stdout=f,
             )
-        return resolve_fn(new_file_name)[0], new_file_name
+        return open(new_file_name, "rt", encoding="utf-8-sig"), new_file_name
 
     def execute_ingest(self):
         """Parses MTX files"""
@@ -205,9 +219,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         # )
 
         start_time = datetime.datetime.now()
-        self.mtx_file, new_file_name = MTXIngestor.sort_mtx(
-            self.mtx_file, self.mtx_path, self.resolve_path
-        )
+        self.mtx_file, new_file_name = self.sort_mtx(self.mtx_path)
         self.mtx_file.readline()
         self.mtx_file.readline()
         GeneExpression.dev_logger.info(
@@ -272,6 +284,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
             raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
             current_idx = int(raw_gene_idx)
             if current_idx != prev_idx:
+                if not MTXIngestor.is_sorted(current_idx, visited_expression_idx):
+                    raise ValueError("MTX file must be sorted")
                 GeneExpression.dev_logger.debug(
                     f"Processing {self.genes[prev_idx - 1]}"
                 )
