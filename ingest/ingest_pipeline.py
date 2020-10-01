@@ -31,7 +31,7 @@ python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --name custer1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --matrix-file ../tests/data/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --matrix-file ../tests/data/mtx/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 """
 import json
 import logging
@@ -321,7 +321,7 @@ class IngestPipeline:
         """Ingests cell metadata files into Firestore."""
         self.cell_metadata.preprocess()
         if self.cell_metadata.validate():
-            IngestPipeline.dev_logger.error("Cell metadata file format valid")
+            IngestPipeline.dev_logger.info("Cell metadata file format valid")
             # Check file against metadata convention
             if self.kwargs["validate_convention"] is not None:
                 if self.kwargs["validate_convention"]:
