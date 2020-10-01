@@ -76,20 +76,6 @@ class MTXIngestor(GeneExpression):
         return True
 
     @staticmethod
-    def is_sorted(idx: int, visited_expression_idx: List[int]):
-        last_visited_idx = visited_expression_idx[-1]
-        if idx not in visited_expression_idx:
-            if idx > last_visited_idx:
-                return True
-            else:
-                return False
-        else:
-            if idx == last_visited_idx:
-                return True
-            else:
-                return False
-
-    @staticmethod
     def check_bundle(barcodes, genes, mtx_dimensions):
         """Confirms barcode and gene files have expected length of values"""
         expected_genes = mtx_dimensions[0]
@@ -185,7 +171,7 @@ class MTXIngestor(GeneExpression):
         data_arrays = []
         exp_cells = []
         exp_scores = []
-        visited_expression_idx = [0]
+        visited_expression_indices = {}
 
         # All observed cells
         for data_array in GeneExpression.create_data_arrays(
@@ -201,12 +187,12 @@ class MTXIngestor(GeneExpression):
             raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
             current_idx = int(raw_gene_idx)
             if current_idx != prev_idx:
-                if not MTXIngestor.is_sorted(current_idx, visited_expression_idx):
+                if not current_idx > prev_idx:
                     raise ValueError("MTX file must be sorted")
                 GeneExpression.dev_logger.debug(
                     f"Processing {self.genes[prev_idx - 1]}"
                 )
-                visited_expression_idx.append(current_idx)
+                visited_expression_indices[current_idx] = True
                 if prev_idx != 0:
                     # Expressed cells and scores are associated with prior gene
                     prev_gene_id, prev_gene = MTXIngestor.get_features(
@@ -230,11 +216,29 @@ class MTXIngestor(GeneExpression):
             exp_score = round(float(raw_exp_score), 3)
             exp_cells.append(exp_cell)
             exp_scores.append(exp_score)
+
+
+        # create gene entries for genes with no positive expression values
+        for idx, gene in enumerate(self.genes):
+            if not visited_expression_indices.get(idx + 1):
+                current_gene_id, current_gene = MTXIngestor.get_features(gene)
+
+                data_arrays, gene_models, num_processed = self.create_models(
+                    [],
+                    [],
+                    current_gene,
+                    current_gene_id,
+                    gene_models,
+                    data_arrays,
+                    num_processed,
+                    False,
+                )
+
         # Create data array for last row
         current_gene_id, current_gene = MTXIngestor.get_features(
             self.genes[prev_idx - 1]
         )
-        self.create_models(
+        data_arrays, gene_models, num_processed = self.create_models(
             exp_cells,
             exp_scores,
             current_gene,
