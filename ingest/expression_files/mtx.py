@@ -202,7 +202,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                 [
                     "sort",
                     "--compress-program=",
-                    "gzip",
+                    "bzip2",
                     "--parallel=8",
                     "-S",
                     "20G",
