@@ -198,26 +198,25 @@ class MTXIngestor(GeneExpression, IngestFiles):
             GeneExpression.dev_logger.info("Starting to sort")
             # Choose specific number of lines
             # start_idx = MTXIngestor.get_line_no(file_handler)
-            p2 = subprocess.Popen(
-                ["tail", "-n", "+3", f"{file_path}"], stdout=subprocess.PIPE
-            )
             subprocess.run(
                 [
                     "sort",
+                    "--compress-program=",
+                    "gzip",
+                    "--parallel=8",
                     "-S",
                     "20G",
                     "--batch-size=90%",
-                    "--buffer-size=15G",
                     "-n",
                     "-k",
                     "1,1",
+                    file_path,
                 ],
-                stdin=p2.stdout,
                 stdout=f,
             )
-        wc = subprocess.run(["wc", "-l", f"{new_file_name}"], stdout=subprocess.PIPE)
+        df_tmp = subprocess.run(["df", "-H"], stdout=subprocess.PIPE)
         GeneExpression.dev_logger.info(
-            f"wc of sorted file: {wc.stdout.decode('UTF-8')}"
+            f"df of tmp after sort: {df_tmp.stdout.decode('UTF-8')}"
         )
         GeneExpression.dev_logger.info("Finished sorting")
         return open(new_file_name, "rt", encoding="utf-8-sig"), new_file_name
@@ -252,7 +251,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         GeneExpression.dev_logger.info(
             f"Time to push file back to bucket {str(datetime.datetime.now() - start_time_delocalize_file)} "
         )
-        self.transform()
+        # self.transform()
 
     def extract_feature_barcode_matrices(self):
         """
