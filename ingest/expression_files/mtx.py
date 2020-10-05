@@ -201,8 +201,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             subprocess.run(
                 [
                     "sort",
-                    "--compress-program=",
-                    "bzip2",
+                    "--compress-program=gzip",
                     "--parallel=8",
                     "-S",
                     "20G",
@@ -230,7 +229,11 @@ class MTXIngestor(GeneExpression, IngestFiles):
         #     self.mtx_dimensions,
         #     query_params=(self.study_id, self.mongo_connection._client),
         # )
-
+        subprocess.run(
+            [
+                "man",
+                "sort"
+        )
         start_time = datetime.datetime.now()
         self.mtx_file, new_file_name = self.sort_mtx(self.mtx_path)
         self.mtx_file.readline()
