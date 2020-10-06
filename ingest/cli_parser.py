@@ -20,7 +20,7 @@ def bq_dataset_exists(dataset):
         bigquery_client.get_dataset(dataset_ref)
         exists = True
     except NotFound:
-        print(f'Dataset {dataset} not found')
+        print(f"Dataset {dataset} not found")
     return exists
 
 
@@ -33,7 +33,7 @@ def bq_table_exists(dataset, table):
         bigquery_client.get_table(table_ref)
         exists = True
     except NotFound:
-        print(f'Dataset {table} not found')
+        print(f"Dataset {table} not found")
     return exists
 
 
@@ -60,19 +60,19 @@ def validate_arguments(parsed_args):
             parsed_args.bq_dataset is None and parsed_args.bq_table is not None
         ):
             raise ValueError(
-                'Missing argument: --bq_dataset and --bq_table are both required for BigQuery upload.'
+                "Missing argument: --bq_dataset and --bq_table are both required for BigQuery upload."
             )
         if parsed_args.bq_dataset is not None and not bq_dataset_exists(
             parsed_args.bq_dataset
         ):
             raise ValueError(
-                f' Invalid argument: unable to connect to a BigQuery dataset called {parsed_args.bq_dataset}.'
+                f" Invalid argument: unable to connect to a BigQuery dataset called {parsed_args.bq_dataset}."
             )
         if parsed_args.bq_table is not None and not bq_table_exists(
             parsed_args.bq_dataset, parsed_args.bq_table
         ):
             raise ValueError(
-                f' Invalid argument: unable to connect to a BigQuery table called {parsed_args.bq_table}.'
+                f" Invalid argument: unable to connect to a BigQuery table called {parsed_args.bq_table}."
             )
 
 
@@ -154,6 +154,10 @@ def create_parser():
         type=str.lower,
         required=True,
         help=matrix_file_type_txt,
+    )
+    parser_ingest_expression.add_argument("--is-count", action="store_true")
+    parser_ingest_expression.add_argument(
+        "--expression-ids", default=[], action=ExpressionIDs, type=ast.literal_eval
     )
 
     # Gene and Barcode arguments for MTX bundle
@@ -242,3 +246,21 @@ def create_parser():
     )
 
     return parser
+
+
+class IsCount(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if namespace.is_count:
+            if len(namespace.exp_ids) < 0:
+                parser.error("Must include expression IDs of same type")
+            else:
+                namespace.is_count.append(values)
+
+
+class ExpressionIDs(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if namespace.is_count:
+            if not values:
+                parser.error("Must include expression IDs for count matrices ")
+            else:
+                namespace.expression_ids = values
