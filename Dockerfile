@@ -38,4 +38,5 @@ WORKDIR /scp-ingest-pipeline
 RUN python3.7 -m pip install -r requirements.txt
 
 WORKDIR /scp-ingest-pipeline/ingest
-CMD ["python", "ingest_pipeline.py", "--help"]
+# CMD ["python", "ingest_pipeline.py", "--help"]
+CMD ["sleep","100000"]
