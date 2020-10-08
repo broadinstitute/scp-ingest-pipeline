@@ -217,7 +217,6 @@ class MTXIngestor(GeneExpression):
             exp_cells.append(exp_cell)
             exp_scores.append(exp_score)
 
-
         # create gene entries for genes with no positive expression values
         for idx, gene in enumerate(self.genes):
             if not visited_expression_indices.get(idx + 1):

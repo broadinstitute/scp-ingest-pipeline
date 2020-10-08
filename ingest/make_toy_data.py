@@ -30,6 +30,7 @@ import shutil
 import os
 import sys
 from functools import partial
+from scipy.stats import lognorm
 
 import numpy as np
 
@@ -220,6 +221,7 @@ def get_signature_content(
     sparse,
     crush,
     genes,
+    raw_count,
 ):
     """
     Generates "signature" data, incorporating a given prefix.
@@ -246,7 +248,10 @@ def get_signature_content(
     # Return a generator so we can use a somewhat constant amount of RAM
     def row_generator():
 
-        if not is_explicit_num_columns:
+        if raw_count:
+            # integer values for raw count files
+            exp_values = list(range(0, 2000))
+        elif not is_explicit_num_columns:
             # Values of log2 from 1 to 8.
             # These 2- and 3-digit numbers also give predictable file-size
             # outputs (see --size-per-file).
@@ -266,26 +271,38 @@ def get_signature_content(
                 1.98297962349834,
                 2.65073109135182,
             ]
-
-        # the probability that it is zero is whatever the user provided in
-        # the --crush param, everything else is equal
-        prob_not_zero = (1 - crush) / 7
-        # probability list for np.random.choice
-        expr_probs = [
-            crush,
-            prob_not_zero,
-            prob_not_zero,
-            prob_not_zero,
-            prob_not_zero,
-            prob_not_zero,
-            prob_not_zero,
-            prob_not_zero,
-        ]
+        if raw_count:
+            lognorm_prob = [lognorm.pdf(i, 1) for i in range(2000)]
+            lognorm_prob.pop(0)
+            # adjusting single count probability to resemble experimental
+            lognorm_prob[0] = lognorm_prob[0] * 2
+            total_residual_prob = 1 - crush
+            residual_prob = [
+                total_residual_prob * i / sum(lognorm_prob) for i in lognorm_prob
+            ]
+            expr_probs = [crush]
+            expr_probs.extend(residual_prob)
+        else:
+            # the probability that it is zero is whatever the user provided in
+            # the --crush param, everything else is equal
+            prob_not_zero = (1 - crush) / 7
+            # probability list for np.random.choice
+            expr_probs = [
+                crush,
+                prob_not_zero,
+                prob_not_zero,
+                prob_not_zero,
+                prob_not_zero,
+                prob_not_zero,
+                prob_not_zero,
+                prob_not_zero,
+            ]
         # Generate values below header
         values = header + '\n'
 
         # actual generator portion
         for i, group_of_genes in enumerate(split_seq(genes, num_chunks)):
+            np.random.seed(12345)
             expr = []
             gene_row = np.asarray([group_of_genes])
             # generate random scores with dimension (num_genes_in_chunk, num_cells)
@@ -297,6 +314,8 @@ def get_signature_content(
             joined_row = ['\t'.join(row) for row in rows]
             # generate the raw expression scores for sparse matrix
             expr = np.append(expr, scores)
+            if raw_count:
+                expr = expr.astype(int)
             values += '\n'.join(joined_row)
             # yield the joined rows for dense matrix, and the raw expression
             # scores for sparse matrix
@@ -378,6 +397,7 @@ def pool_processing(
     genes,
     ids,
     output_dir,
+    raw_count,
     prefix,
 ):
     """ Function called by each CPU core in our pool of available CPUs.
@@ -422,6 +442,7 @@ def pool_processing(
         sparse,
         crush,
         genes,
+        raw_count,
     )
     # make a var for bar length for convenience
     bar_len = len(barcodes)
@@ -645,6 +666,9 @@ def create_parser():
     )
     parser.add_argument('--output-dir', default='output/', help=('Output directory'))
 
+    parser.add_argument(
+        '--raw-count', action="store_true", help=('Generate raw counts matrix')
+    )
     return parser
 
 
@@ -664,6 +688,7 @@ def make_toy_data(args):
     random_seed = args.random_seed
     visualize = args.visualize
     output_dir = args.output_dir
+    raw_count = args.raw_count
 
     bytes_per_file = parse_filesize_string(size_per_file)
     prefixes = []
@@ -679,8 +704,11 @@ def make_toy_data(args):
     bytes_per_file = parse_filesize_string(size_per_file)
     prefixes = []
 
-    # ~1.65 KB (KiB) per 80 cells, uncompressed
-    bytes_per_column = 4.7 * num_rows
+    if raw_count:
+        bytes_per_column = 2.5 * num_rows
+    else:
+        # ~1.65 KB (KiB) per 80 cells, uncompressed
+        bytes_per_column = 4.7 * num_rows
 
     if not num_columns:
         num_columns = int(bytes_per_file / bytes_per_column)
@@ -722,6 +750,7 @@ def make_toy_data(args):
             genes,
             ids,
             output_dir,
+            raw_count,
         ),
         prefixes,
     )
