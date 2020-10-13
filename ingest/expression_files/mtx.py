@@ -10,7 +10,8 @@ These are commonly provided from 10x Genomics v2.
 """
 
 
-from typing import Dict, Generator, List, Tuple  # noqa: F401git ad
+from typing import Dict, Generator, List, Tuple, IO  # noqa: F401git ad
+
 import ntpath
 
 import datetime
@@ -156,7 +157,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
             if line.startswith("%"):
                 i = +1
             else:
-                return i
+                # Skip line that defines mtx dimension
+                return i+2
         raise ValueError("MTX file did not contain data")
 
     @staticmethod
@@ -185,7 +187,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             gene_name = feature_data[1]
         return gene_id, gene_name
 
-    def sort_mtx(self, file_path):
+    def sort_mtx(self, file_path) -> IO:
         file_name = ntpath.split(file_path)[1]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
         GeneExpression.dev_logger.info(f"New file name is {new_file_name} ")
@@ -197,7 +199,10 @@ class MTXIngestor(GeneExpression, IngestFiles):
         with open(new_file_name, "w+") as f:
             GeneExpression.dev_logger.info("Starting to sort")
             # Choose specific number of lines
-            # start_idx = MTXIngestor.get_line_no(file_handler)
+            start_idx = MTXIngestor.get_line_no(self.resolve_path(self.mtx_path)[0])
+            p1 = subprocess.Popen(
+                ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
+            )
             subprocess.run(
                 [
                     "sort",
@@ -207,9 +212,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     "--batch-size=90%",
                     "-n",
                     "-k",
-                    "1,1",
-                    file_path,
+                    "1,1"
                 ],
+                stdin=p1.stdout,
                 stdout=f,
             )
         df_tmp = subprocess.run(["df", "-H"], stdout=subprocess.PIPE)
@@ -217,7 +222,11 @@ class MTXIngestor(GeneExpression, IngestFiles):
             f"df of tmp after sort: {df_tmp.stdout.decode('UTF-8')}"
         )
         GeneExpression.dev_logger.info("Finished sorting")
-        return open(new_file_name, "rt", encoding="utf-8-sig"), new_file_name
+        new_mtx_file: IO = open(new_file_name, "rt", encoding="utf-8-sig")
+
+        #  First line in mtx file is the dimension. So need to skip first line
+        new_mtx_file.readline()
+        return new_mtx_file
 
     def execute_ingest(self):
         """Parses MTX files"""
@@ -229,28 +238,26 @@ class MTXIngestor(GeneExpression, IngestFiles):
         #     query_params=(self.study_id, self.mongo_connection._client),
         # )
 
-        subprocess.run(["sort", "--version"])
-        start_time = datetime.datetime.now()
-        self.mtx_file, new_file_name = self.sort_mtx(self.mtx_path)
-        self.mtx_file.readline()
-        self.mtx_file.readline()
-        GeneExpression.dev_logger.info(
-            f"Time to sort {str(datetime.datetime.now() - start_time)} "
-        )
+        if not MTXIngestor.check_is_sorted(self.mtx_path):
+            start_time = datetime.datetime.now()
+            self.mtx_file, new_file_name = self.sort_mtx(self.mtx_path)
+            GeneExpression.dev_logger.info(
+                f"Time to sort {str(datetime.datetime.now() - start_time)} "
+            )
 
-        start_time_delocalize_file = datetime.datetime.now()
-        GeneExpression.dev_logger.info("Delocalizing file")
-        IngestFiles.delocalize_file(
-            self.study_file_id,
-            self.study_id,
-            self.gs_mtx_path,
-            new_file_name,
-            f"sorted_mtx/{new_file_name}",
-        )
-        GeneExpression.dev_logger.info(
-            f"Time to push file back to bucket {str(datetime.datetime.now() - start_time_delocalize_file)} "
-        )
-        # self.transform()
+        # start_time_delocalize_file = datetime.datetime.now()
+        # GeneExpression.dev_logger.info("Delocalizing file")
+        # IngestFiles.delocalize_file(
+        #     self.study_file_id,
+        #     self.study_id,
+        #     self.gs_mtx_path,
+        #     new_file_name,
+        #     f"sorted_mtx/{new_file_name}",
+        # )
+        # GeneExpression.dev_logger.info(
+        #     f"Time to push file back to bucket {str(datetime.datetime.now() - start_time_delocalize_file)} "
+        # )
+        self.transform()
 
     def extract_feature_barcode_matrices(self):
         """
