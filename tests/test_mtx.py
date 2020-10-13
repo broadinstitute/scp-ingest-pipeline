@@ -74,22 +74,11 @@ class TestMTXIngestor(unittest.TestCase):
         self.assertTrue(filecmp.cmp(sorted_mtx, expected_sorted_mtx))
         os.remove(sorted_mtx)
 
-    def test_is_sorted(self):
-        visited_nums = [0]
-        sorted_nums = [2, 2, 2, 3, 4, 4, 4, 5]
-        for num in sorted_nums:
-            self.assertTrue(MTXIngestor.is_sorted(num, visited_nums))
-            if num not in visited_nums:
-                visited_nums.append(num)
 
-        visited_nums = [0]
-        unsorted_nums = [1, 2, 2, 4, 6, 5]
-        truth_values = []
-        for num in unsorted_nums:
-            truth_values.append(MTXIngestor.is_sorted(num, visited_nums))
-            if num not in visited_nums:
-                visited_nums.append(num)
-        self.assertFalse(all(truth_values))
+
+    def test_is_sorted(self):
+        self.assertTrue(MTXIngestor.is_sorted("data/AB_toy_data_toy.matrix.mtx"))
+        self.assertFalse(MTXIngestor.is_sorted("data/unsorted_matrix.mtx"))
 
     def test_get_mtx_dimensions(self):
         file_handler = open("data/AB_toy_data_toy.matrix.mtx")

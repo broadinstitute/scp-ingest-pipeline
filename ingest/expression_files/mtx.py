@@ -7,6 +7,8 @@ MTX file bundle consists of A) an .mtx file in Matrix
 Market matrix coordinate format, B) a genes.tsv file, and a barcodes.tsv file.
 These are commonly provided from 10x Genomics v2.
 
+
+
 """
 
 
@@ -86,15 +88,18 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def is_sorted(file):
-        """Checks if """
-        with open(file, "rb", 0) as f:
-            p1 = subprocess.run(
-                ["sort", "-c", "--stable", "-k", "1,1"], stdin=f, capture_output=True
-            )
-            if "disorder" in p1.stderr.decode("utf-8"):
-                return False
-            else:
-                return True
+        """Checks if a file is sorted"""
+        start_idx: int = MTXIngestor.get_line_no(file)
+        p1 = subprocess.Popen(
+            ["tail", "-n", f"+{start_idx}", f"{file}"], stdout=subprocess.PIPE
+        )
+        p2 = subprocess.run(
+            ["sort", "-c", "--stable","-n", "-k", "1,1"], stdin=p1.stdout, capture_output=True
+        )
+        if "disorder" in p2.stderr.decode("utf-8"):
+            return False
+        else:
+            return True
 
     @staticmethod
     def check_bundle(barcodes, genes, mtx_dimensions):
