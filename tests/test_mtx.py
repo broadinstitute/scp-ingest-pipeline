@@ -74,11 +74,17 @@ class TestMTXIngestor(unittest.TestCase):
         self.assertTrue(filecmp.cmp(sorted_mtx, expected_sorted_mtx))
         os.remove(sorted_mtx)
 
+    def test_get_line_no(self):
+        mtx_file_handler = open('data/unsorted_mtx.mtx.txt')
+        self.assertEqual(3,MTXIngestor.get_line_no(mtx_file_handler) )
 
+        # Test for empty file
+        empty_file_handler = open('data/empty_file.txt')
+        self.assertRaises(ValueError, MTXIngestor.get_line_no,empty_file_handler)
 
     def test_is_sorted(self):
         self.assertTrue(MTXIngestor.is_sorted("data/AB_toy_data_toy.matrix.mtx"))
-        self.assertFalse(MTXIngestor.is_sorted("data/unsorted_matrix.mtx"))
+        self.assertFalse(MTXIngestor.is_sorted("data/unsorted_mtx.mtx.txt"))
 
     def test_get_mtx_dimensions(self):
         file_handler = open("data/AB_toy_data_toy.matrix.mtx")
@@ -233,6 +239,8 @@ class TestMTXIngestor(unittest.TestCase):
             expression_matrix.test_models["gene_models"]
         )
         self.assertEqual(expression_matrix.models_processed, amount_of_models)
+
+        # unsorted MTX file
 
     @patch(
         "expression_files.expression_files.GeneExpression.load",
