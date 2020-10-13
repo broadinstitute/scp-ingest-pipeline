@@ -12,6 +12,9 @@ python make_toy_data.py
 # Generate 6 dense matrix files, 2 MB each
 python make_toy_data.py --num-files 6 --size-per-file 2_MiB
 
+# Generate 1 raw counts dense matrix file, 2 MB
+python make_toy_data.py --num-files 1 --size-per-file 2_MiB --raw-count
+
 # Generate 1 dense matrix file named AB_meso.txt, 2 GB in raw size, then compress it
 python make_toy_data.py --num-files 1 --filename-leaf 'meso' --size-per-file 2_GiB --gzip
 
@@ -302,7 +305,6 @@ def get_signature_content(
 
         # actual generator portion
         for i, group_of_genes in enumerate(split_seq(genes, num_chunks)):
-            np.random.seed(12345)
             expr = []
             gene_row = np.asarray([group_of_genes])
             # generate random scores with dimension (num_genes_in_chunk, num_cells)
