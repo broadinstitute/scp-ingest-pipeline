@@ -85,7 +85,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def check_is_sorted(file):
+    def is_sorted(file):
+        """Checks if """
         with open(file, "rb", 0) as f:
             p1 = subprocess.run(
                 ["sort", "-c", "--stable", "-k", "1,1"], stdin=f, capture_output=True
@@ -94,20 +95,6 @@ class MTXIngestor(GeneExpression, IngestFiles):
                 return False
             else:
                 return True
-
-    @staticmethod
-    def is_sorted(idx: int, visited_expression_idx: List[int]):
-        last_visited_idx = visited_expression_idx[-1]
-        if idx not in visited_expression_idx:
-            if idx > last_visited_idx:
-                return True
-            else:
-                return False
-        else:
-            if idx == last_visited_idx:
-                return True
-            else:
-                return False
 
     @staticmethod
     def check_bundle(barcodes, genes, mtx_dimensions):
@@ -151,14 +138,14 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def get_line_no(file_handler):
+    def get_line_no(file_handler) -> int:
         i = 1
         for line in file_handler:
             if line.startswith("%"):
                 i = +1
             else:
-                # Skip line that defines mtx dimension
-                return i+2
+                # First line w/o '%' is mtx dimension. So skip this line (+2)
+                return i + 2
         raise ValueError("MTX file did not contain data")
 
     @staticmethod
@@ -187,19 +174,19 @@ class MTXIngestor(GeneExpression, IngestFiles):
             gene_name = feature_data[1]
         return gene_id, gene_name
 
-    def sort_mtx(self, file_path) -> IO:
+    @staticmethod
+    def sort_mtx(file_path) -> IO:
         file_name = ntpath.split(file_path)[1]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
-        GeneExpression.dev_logger.info(f"New file name is {new_file_name} ")
-        GeneExpression.dev_logger.info(f"File path is {file_path} ")
-        df = subprocess.run(["df", "-H", "/tmp"], stdout=subprocess.PIPE)
-        GeneExpression.dev_logger.info(f"df file system: {df.stdout.decode('UTF-8')}")
-        df_tmp = subprocess.run(["df", "-H"], stdout=subprocess.PIPE)
-        GeneExpression.dev_logger.info(f"df of tmp: {df_tmp.stdout.decode('UTF-8')}")
+
+        # df = subprocess.run(["df", "-H", "/tmp"], stdout=subprocess.PIPE)
+        # GeneExpression.dev_logger.info(f"df file system: {df.stdout.decode('UTF-8')}")
+        # df_tmp = subprocess.run(["df", "-H"], stdout=subprocess.PIPE)
+        # GeneExpression.dev_logger.info(f"df of tmp: {df_tmp.stdout.decode('UTF-8')}")
         with open(new_file_name, "w+") as f:
             GeneExpression.dev_logger.info("Starting to sort")
-            # Choose specific number of lines
-            start_idx = MTXIngestor.get_line_no(self.resolve_path(self.mtx_path)[0])
+            # Line to start sorting at
+            start_idx: int = MTXIngestor.get_line_no(file_path)
             p1 = subprocess.Popen(
                 ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
             )
@@ -212,7 +199,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     "--batch-size=90%",
                     "-n",
                     "-k",
-                    "1,1"
+                    "1,1",
                 ],
                 stdin=p1.stdout,
                 stdout=f,
@@ -222,41 +209,27 @@ class MTXIngestor(GeneExpression, IngestFiles):
             f"df of tmp after sort: {df_tmp.stdout.decode('UTF-8')}"
         )
         GeneExpression.dev_logger.info("Finished sorting")
-        new_mtx_file: IO = open(new_file_name, "rt", encoding="utf-8-sig")
+        # new_mtx_file: IO = open(new_file_name, "rt", encoding="utf-8-sig")
 
-        #  First line in mtx file is the dimension. So need to skip first line
-        new_mtx_file.readline()
-        return new_mtx_file
+        return new_file_name
 
     def execute_ingest(self):
         """Parses MTX files"""
         self.extract_feature_barcode_matrices()
-        # MTXIngestor.check_valid(
-        #     self.cells,
-        #     self.genes,
-        #     self.mtx_dimensions,
-        #     query_params=(self.study_id, self.mongo_connection._client),
-        # )
+        MTXIngestor.check_valid(
+            self.cells,
+            self.genes,
+            self.mtx_dimensions,
+            query_params=(self.study_id, self.mongo_connection._client),
+        )
 
         if not MTXIngestor.check_is_sorted(self.mtx_path):
             start_time = datetime.datetime.now()
-            self.mtx_file, new_file_name = self.sort_mtx(self.mtx_path)
+            new_mtx_file_name = self.sort_mtx(self.mtx_path, self.resolve_path)
+            self.mtx_file, self.mtx_path = self.resolve_path(new_mtx_file)
             GeneExpression.dev_logger.info(
                 f"Time to sort {str(datetime.datetime.now() - start_time)} "
             )
-
-        # start_time_delocalize_file = datetime.datetime.now()
-        # GeneExpression.dev_logger.info("Delocalizing file")
-        # IngestFiles.delocalize_file(
-        #     self.study_file_id,
-        #     self.study_id,
-        #     self.gs_mtx_path,
-        #     new_file_name,
-        #     f"sorted_mtx/{new_file_name}",
-        # )
-        # GeneExpression.dev_logger.info(
-        #     f"Time to push file back to bucket {str(datetime.datetime.now() - start_time_delocalize_file)} "
-        # )
         self.transform()
 
     def extract_feature_barcode_matrices(self):
@@ -306,17 +279,17 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     prev_gene_id, prev_gene = MTXIngestor.get_features(
                         self.genes[prev_idx - 1]
                     )
-                    # If the previous gene exists, load its models
-                    data_arrays, gene_models, num_processed = self.create_models(
-                        exp_cells,
-                        exp_scores,
-                        prev_gene,
-                        prev_gene_id,
-                        gene_models,
-                        data_arrays,
-                        num_processed,
-                        False,
-                    )
+                    # # If the previous gene exists, load its models
+                    # data_arrays, gene_models, num_processed = self.create_models(
+                    #     exp_cells,
+                    #     exp_scores,
+                    #     prev_gene,
+                    #     prev_gene_id,
+                    #     gene_models,
+                    #     data_arrays,
+                    #     num_processed,
+                    #     False,
+                    # )
                     exp_cells = []
                     exp_scores = []
                 prev_idx = current_idx
@@ -328,13 +301,13 @@ class MTXIngestor(GeneExpression, IngestFiles):
         current_gene_id, current_gene = MTXIngestor.get_features(
             self.genes[prev_idx - 1]
         )
-        self.create_models(
-            exp_cells,
-            exp_scores,
-            current_gene,
-            current_gene_id,
-            gene_models,
-            data_arrays,
-            num_processed,
-            True,
-        )
+        # self.create_models(
+        #     exp_cells,
+        #     exp_scores,
+        #     current_gene,
+        #     current_gene_id,
+        #     gene_models,
+        #     data_arrays,
+        #     num_processed,
+        #     True,
+        # )

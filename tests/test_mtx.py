@@ -65,6 +65,12 @@ class TestMTXIngestor(unittest.TestCase):
         )
         self.assertEqual(str(cm.exception), expected_msg)
 
+    def test_sort_mtx(self):
+        import filecmp
+        # exp_sorted_mtx =
+        unsorted_mtx = '../tests/data/unsorted_mtx.mtx.txt'
+        sorted_mtx = MTXIngestor.sort_mtx(unsorted_mtx)
+        self.assertTrue(filecmp.cmp(sorted_mtx, 'file1.txt'))
     def test_is_sorted(self):
         visited_nums = [0]
         sorted_nums = [2, 2, 2, 3, 4, 4, 4, 5]
