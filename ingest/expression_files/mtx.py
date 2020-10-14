@@ -243,7 +243,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         )
 
         if not MTXIngestor.is_sorted(self.mtx_path):
-            new_mtx_file_path = self.sort_mtx(self.mtx_path)
+            new_mtx_file_path = MTXIngestor.sort_mtx(self.mtx_path)
             # Reset mtx variables to newly sorted file
             self.mtx_file, self.mtx_path = self.resolve_path(new_mtx_file_path)
         self.transform()

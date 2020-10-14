@@ -25,3 +25,5 @@ tmp/
 
 errors.txt
 info.txt
+log.txt
+user_log.txt

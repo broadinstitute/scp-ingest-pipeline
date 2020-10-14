@@ -69,8 +69,8 @@ class TestMTXIngestor(unittest.TestCase):
         import filecmp
         import os
 
-        expected_sorted_mtx = "../tests/data/sorted_matrix.mtx"
-        unsorted_mtx = "../tests/data/unsorted_matrix.mtx"
+        expected_sorted_mtx = "../tests/data/mtx/sorted_matrix.mtx"
+        unsorted_mtx = "../tests/data/mtx/unsorted_matrix.mtx"
         sorted_mtx = MTXIngestor.sort_mtx(unsorted_mtx)
 
         # Verify files have the same contents
@@ -87,23 +87,23 @@ class TestMTXIngestor(unittest.TestCase):
         self.assertRaises(ValueError, MTXIngestor.get_line_no, empty_file_handler)
 
     def test_is_sorted(self):
-        self.assertTrue(MTXIngestor.is_sorted("data/AB_toy_data_toy.matrix.mtx"))
-        self.assertFalse(MTXIngestor.is_sorted("data/unsorted_mtx.mtx.txt"))
+        self.assertTrue(MTXIngestor.is_sorted("data/mtx/AB_toy_data_toy.matrix.mtx"))
+        self.assertFalse(MTXIngestor.is_sorted("data/mtx/unsorted_mtx.mtx.txt"))
 
         # Test empty file
         self.assertRaises(ValueError, MTXIngestor.is_sorted, "data/empty_file.txt")
 
     def test_get_mtx_dimensions(self):
-        file_handler = open("data/AB_toy_data_toy.matrix.mtx")
+        file_handler = open("data/mtx/AB_toy_data_toy.matrix.mtx")
         dimensions = MTXIngestor.get_mtx_dimensions(file_handler)
         self.assertEqual([80, 272, 4352], dimensions)
 
         # Dimension contains a letter
-        file_handler = open("data/bad_dimensions.mtx.txt")
+        file_handler = open("data/mtx/bad_dimensions.mtx.txt")
         self.assertRaises(Exception, MTXIngestor.get_mtx_dimensions, file_handler)
 
         with self.assertRaises(ValueError) as cm:
-            file_handler = open("data/no_data.mtx.txt")
+            file_handler = open("data/mtx/no_data.mtx.txt")
             MTXIngestor.get_mtx_dimensions(file_handler)
         self.assertEqual("MTX file did not contain data", str(cm.exception))
 
@@ -164,17 +164,20 @@ class TestMTXIngestor(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_execute_ingest(self, mock_load, mock_transform, mock_has_unique_cells):
+    @patch("expression_files.mtx.MTXIngestor.sort_mtx")
+    def test_execute_ingest(
+        self, mock_load, mock_transform, mock_has_unique_cells, mock_sort_mtx
+    ):
         """
             Integration test for execute_ingest()
         """
 
         expression_matrix = MTXIngestor(
-            "../tests/data/matrix.mtx",
+            "../tests/data/mtx/matrix.mtx",
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
-            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
-            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+            gene_file="../tests/data/mtx/AB_toy_data_toy.genes.tsv",
+            barcode_file="../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         )
         # When is_valid_format() is false exception should be raised
         with self.assertRaises(ValueError) as error:
@@ -184,11 +187,11 @@ class TestMTXIngestor(unittest.TestCase):
             "Expected 25 cells and 33694 genes. Got 272 cells and 80 genes.",
         )
         expression_matrix = MTXIngestor(
-            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "../tests/data/mtx/AB_toy_data_toy.matrix.mtx",
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
-            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
-            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+            gene_file="../tests/data/mtx/AB_toy_data_toy.genes.tsv",
+            barcode_file="../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         )
 
         expression_matrix.execute_ingest()
@@ -199,11 +202,11 @@ class TestMTXIngestor(unittest.TestCase):
         Assures transform function creates gene data model correctly
         """
         expression_matrix = MTXIngestor(
-            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "../tests/data/mtx/AB_toy_data_toy.matrix.mtx",
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
-            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
-            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+            gene_file="../tests/data/mtx/AB_toy_data_toy.genes.tsv",
+            barcode_file="../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         )
         expression_matrix.test_models = None
         expression_matrix.models_processed = 0
@@ -216,11 +219,11 @@ class TestMTXIngestor(unittest.TestCase):
 
         # MTX with a single column feature file
         expression_matrix = MTXIngestor(
-            "../tests/data/one_column_feature_file_data_models.mtx",
+            "../tests/data/mtx/one_column_feature_file_data_models.mtx",
             "5f2f58eba0845f8c4cf1dc12",
             "5dd5ae25421aa910a723a447",
-            gene_file="../tests/data/one_column_feature_file_data_models.genes.tsv",
-            barcode_file="../tests/data/one_column_feature_file_data_models.barcodes.tsv",
+            gene_file="../tests/data/mtx/one_column_feature_file_data_models.genes.tsv",
+            barcode_file="../tests/data/mtx/one_column_feature_file_data_models.barcodes.tsv",
         )
         expression_matrix.test_models = None
         expression_matrix.models_processed = 0
@@ -237,11 +240,11 @@ class TestMTXIngestor(unittest.TestCase):
             return_value=True,
         ):
             expression_matrix = MTXIngestor(
-                "../tests/data/AB_toy_data_toy.unsorted_mtx.mtx",
+                "../tests/data/mtx/AB_toy_data_toy.unsorted_mtx.mtx",
                 "5d276a50421aa9117c982845",
                 "5dd5ae25421aa910a723a337",
-                gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
-                barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+                gene_file="../tests/data/mtx/AB_toy_data_toy.genes.tsv",
+                barcode_file="../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
             )
             expression_matrix.test_models = None
             expression_matrix.models_processed = 0
@@ -261,11 +264,11 @@ class TestMTXIngestor(unittest.TestCase):
         """
         GeneExpression.DATA_ARRAY_BATCH_SIZE = 7
         expression_matrix = MTXIngestor(
-            "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "../tests/data/mtx/AB_toy_data_toy.matrix.mtx",
             "5dd5ae25421aa910a723a447",
             "5f2f58eba0845f8c4cf1dc12",
-            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
-            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+            gene_file="../tests/data/mtx/AB_toy_data_toy.genes.tsv",
+            barcode_file="../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         )
         with patch(
             "expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE",

@@ -897,17 +897,15 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
         return False
 
 
-def record_issue(errfile, warnfile, issue_type, msg):
+def record_issue(issue_type, msg):
     """Print issue to console with coloring and
-    writes issues to appropriate issue file
+    send errors to logger
     """
 
     if issue_type == "error":
-        errfile.write(msg + "\n")
-        dev_logger.error(msg)
+        user_logger.error(msg)
         color = Fore.RED
     elif issue_type == "warn":
-        warnfile.write(msg + "\n")
         color = Fore.YELLOW
     else:
         color = ""
@@ -922,15 +920,13 @@ def report_issues(metadata):
 
     dev_logger.info(f"Checking for validation issues")
 
-    error_file = open("scp_validation_errors.txt", "w")
-    warn_file = open("scp_validation_warnings.txt", "w")
     has_errors = False
     has_warnings = False
     for issue_type in sorted(metadata.issues.keys()):
         for issue_category, category_dict in metadata.issues[issue_type].items():
             if category_dict:
                 category_header = f"\n*** {issue_category} {issue_type} list:"
-                record_issue(error_file, warn_file, issue_type, category_header)
+                record_issue(issue_type, category_header)
                 if issue_type == "error":
                     has_errors = True
                 elif issue_type == "warn":
@@ -938,14 +934,12 @@ def report_issues(metadata):
                 for issue_text, cells in category_dict.items():
                     if cells:
                         issue_msg = f"{issue_text} [ Error count: {len(cells)} ]"
-                        record_issue(error_file, warn_file, issue_type, issue_msg)
+                        record_issue(issue_type, issue_msg)
                     else:
-                        record_issue(error_file, warn_file, issue_type, issue_text)
+                        record_issue(issue_type, issue_text)
     if not has_errors and not has_warnings:
         no_issues = "No errors or warnings detected for input metadata file"
-        record_issue(error_file, warn_file, None, no_issues)
-    error_file.close()
-    warn_file.close()
+        record_issue(None, no_issues)
     return has_errors
 
 
@@ -1162,11 +1156,7 @@ def write_metadata_to_bq(metadata, bq_dataset, bq_table):
 def check_if_old_output():
     """Exit if old output files found
     """
-    output_files = [
-        "scp_validation_errors.txt",
-        "scp_validation_warnings.txt",
-        "bq.json",
-    ]
+    output_files = ["bq.json"]
 
     old_output = False
     for file in output_files:
