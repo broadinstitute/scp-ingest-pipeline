@@ -288,7 +288,7 @@ class IngestTestCase(unittest.TestCase):
         return_value=True,
     )
     def test_ingest_unsorted_mtx_matrix(self, mock_check_unique_cells):
-        """Ingest Pipeline should extract and transform MTX matrix bundles
+        """Ingest Pipeline should extract and transform unsorted MTX matrix bundles
         """
 
         args = [

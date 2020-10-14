@@ -83,11 +83,14 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def is_sorted(file):
+    def is_sorted(file_path: str):
         """Checks if a file is sorted by gene index"""
-        start_idx: int = MTXIngestor.get_line_no(file)
+        file_size = os.path.getsize(file_path)
+        if file_size == 0:
+            raise ValueError(f"{file_path} is empty: " + str(file_size))
+        start_idx: int = MTXIngestor.get_line_no(file_path)
         p1 = subprocess.Popen(
-            ["tail", "-n", f"+{start_idx}", f"{file}"], stdout=subprocess.PIPE
+            ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
         )
         p2 = subprocess.run(
             ["sort", "-c", "--stable", "-n", "-k", "1,1"],
@@ -149,7 +152,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             file_handler (IO) - File handler of mtx file
 
         :return
-            i: int - Line number where data starts
+            i (int) - Line number where data starts
         """
         i = 1
         for line in file_handler:

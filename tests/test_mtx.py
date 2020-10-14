@@ -89,6 +89,9 @@ class TestMTXIngestor(unittest.TestCase):
         self.assertTrue(MTXIngestor.is_sorted("data/AB_toy_data_toy.matrix.mtx"))
         self.assertFalse(MTXIngestor.is_sorted("data/unsorted_mtx.mtx.txt"))
 
+        # Test empty file
+        self.assertRaises(ValueError, MTXIngestor.is_sorted, "data/empty_file.txt")
+
     def test_get_mtx_dimensions(self):
         file_handler = open("data/AB_toy_data_toy.matrix.mtx")
         dimensions = MTXIngestor.get_mtx_dimensions(file_handler)
