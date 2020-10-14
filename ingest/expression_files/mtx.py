@@ -84,7 +84,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def is_sorted(file):
-        """Checks if a file is sorted by the first column (gene index)"""
+        """Checks if a file is sorted by gene index"""
         start_idx: int = MTXIngestor.get_line_no(file)
         p1 = subprocess.Popen(
             ["tail", "-n", f"+{start_idx}", f"{file}"], stdout=subprocess.PIPE
@@ -144,8 +144,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
     def get_line_no(file_handler: IO) -> int:
         """ Determines what line number data starts.
 
-        :parameter
-            file_handler: IO - File handler of mtx file
+        Parameters
+        ----------
+            file_handler (IO) - File handler of mtx file
 
         :return
             i: int - Line number where data starts
@@ -190,8 +191,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
         """
         Sorts MTX file by gene.
 
-        :return:
-            new_file_name : Name of newly sorted MTX file
+         Returns:
+            new_file_path (str) : Full path of newly sorted MTX file
         """
         file_name = ntpath.split(file_path)[1]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
@@ -222,8 +223,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
             f"Time to sort {str(datetime.datetime.now() - start_time)} "
         )
         GeneExpression.dev_logger.info("Finished sorting")
-
-        return f"{os.getcwd()}/{new_file_name}"
+        new_file_path = f"{os.getcwd()}/{new_file_name}"
+        return new_file_path
 
     def execute_ingest(self):
         """Parses MTX files"""
