@@ -41,7 +41,6 @@ from pymongo.errors import AutoReconnect
 from test_expression_files import mock_expression_load
 from mock_gcp import mock_storage_client, mock_storage_blob
 
-
 sys.path.append("../ingest")
 from ingest_pipeline import (
     create_parser,
@@ -78,7 +77,6 @@ class IngestTestCase(unittest.TestCase):
     @patch("google.cloud.storage.Blob", side_effect=mock_storage_blob)
     @patch("google.cloud.storage.Client", side_effect=mock_storage_client)
     def execute_ingest(self, args, mock_storage_client, mock_storage_blob):
-
         self.maxDiff = None
 
         parsed_args = create_parser().parse_args(args)
@@ -276,6 +274,41 @@ class IngestTestCase(unittest.TestCase):
             "Ensembl 94",
             "--matrix-file",
             "../tests/data/AB_toy_data_toy.matrix.mtx",
+            "--matrix-file-type",
+            "mtx",
+            "--gene-file",
+            "../tests/data/AB_toy_data_toy.genes.tsv",
+            "--barcode-file",
+            "../tests/data/AB_toy_data_toy.barcodes.tsv",
+        ]
+        self.execute_ingest(args)
+
+    @patch(
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
+        return_value=True,
+    )
+    def test_ingest_unsorted_mtx_matrix(self, mock_check_unique_cells):
+        """Ingest Pipeline should extract and transform MTX matrix bundles
+        """
+
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_expression",
+            "--taxon-name",
+            "Homo sapiens",
+            "--taxon-common-name",
+            "human",
+            "--ncbi-taxid",
+            "9606",
+            "--genome-assembly-accession",
+            "GCA_000001405.15",
+            "--genome-annotation",
+            "Ensembl 94",
+            "--matrix-file",
+            "../tests/data/AB_toy_data_toy.unsorted_mtx.mtx",
             "--matrix-file-type",
             "mtx",
             "--gene-file",

@@ -91,7 +91,6 @@ class IngestFiles:
     def is_remote_file(file_path):
         return file_path[:5] == "gs://"
 
-    @staticmethod
     def download_from_bucket(self, file_path):
         """Downloads file from Google Cloud Storage bucket"""
         blob = self.bucket.blob(self.source)
@@ -132,7 +131,7 @@ class IngestFiles:
         Returns:
             Open file object
         """
-        if self.is_remote_file:
+        if IngestFiles.is_remote_file(file_path):
             file_path = self.download_from_bucket(file_path)
             self.local_file_path = file_path
         # Remove BOM with encoding ='utf - 8 - sig'

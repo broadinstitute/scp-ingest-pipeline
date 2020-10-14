@@ -7,14 +7,15 @@ MTX file bundle consists of A) an .mtx file in Matrix
 Market matrix coordinate format, B) a genes.tsv file, and a barcodes.tsv file.
 These are commonly provided from 10x Genomics v2.
 
-
+Unsorted MTX files can be parsed. Files are considered unsorted when file is not
+sorted by gene. In this event, the file will automatically be sorted by gene.
 
 """
-
 
 from typing import Dict, Generator, List, Tuple, IO  # noqa: F401git ad
 
 import ntpath
+import os
 
 import datetime
 import subprocess
@@ -39,12 +40,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
         IngestFiles.__init__(self, mtx_path, self.ALLOWED_FILE_TYPES)
-        start_time_localize_MTX_file = datetime.datetime.now()
         self.mtx_file, self.mtx_path = self.resolve_path(mtx_path)
-        GeneExpression.dev_logger.info(
-            f"Time to localize mtx file from bucket {str(datetime.datetime.now() - start_time_localize_MTX_file)} "
-        )
-        self.gs_mtx_path = mtx_path
 
         genes_path = kwargs.pop("gene_file")
         genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
@@ -88,13 +84,15 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def is_sorted(file):
-        """Checks if a file is sorted"""
+        """Checks if a file is sorted by the first column (gene index)"""
         start_idx: int = MTXIngestor.get_line_no(file)
         p1 = subprocess.Popen(
             ["tail", "-n", f"+{start_idx}", f"{file}"], stdout=subprocess.PIPE
         )
         p2 = subprocess.run(
-            ["sort", "-c", "--stable","-n", "-k", "1,1"], stdin=p1.stdout, capture_output=True
+            ["sort", "-c", "--stable", "-n", "-k", "1,1"],
+            stdin=p1.stdout,
+            capture_output=True,
         )
         if "disorder" in p2.stderr.decode("utf-8"):
             return False
@@ -143,7 +141,15 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def get_line_no(file_handler) -> int:
+    def get_line_no(file_handler: IO) -> int:
+        """ Determines what line number data starts.
+
+        :parameter
+            file_handler: IO - File handler of mtx file
+
+        :return
+            i: int - Line number where data starts
+        """
         i = 1
         for line in file_handler:
             if line.startswith("%"):
@@ -180,16 +186,19 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return gene_id, gene_name
 
     @staticmethod
-    def sort_mtx(file_path) -> IO:
+    def sort_mtx(file_path) -> str:
+        """
+        Sorts MTX file by gene.
+
+        :return:
+            new_file_name : Name of newly sorted MTX file
+        """
         file_name = ntpath.split(file_path)[1]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
 
-        # df = subprocess.run(["df", "-H", "/tmp"], stdout=subprocess.PIPE)
-        # GeneExpression.dev_logger.info(f"df file system: {df.stdout.decode('UTF-8')}")
-        # df_tmp = subprocess.run(["df", "-H"], stdout=subprocess.PIPE)
-        # GeneExpression.dev_logger.info(f"df of tmp: {df_tmp.stdout.decode('UTF-8')}")
         with open(new_file_name, "w+") as f:
             GeneExpression.dev_logger.info("Starting to sort")
+            start_time = datetime.datetime.now()
             # Line to start sorting at
             start_idx: int = MTXIngestor.get_line_no(file_path)
             p1 = subprocess.Popen(
@@ -209,14 +218,12 @@ class MTXIngestor(GeneExpression, IngestFiles):
                 stdin=p1.stdout,
                 stdout=f,
             )
-        df_tmp = subprocess.run(["df", "-H"], stdout=subprocess.PIPE)
         GeneExpression.dev_logger.info(
-            f"df of tmp after sort: {df_tmp.stdout.decode('UTF-8')}"
+            f"Time to sort {str(datetime.datetime.now() - start_time)} "
         )
         GeneExpression.dev_logger.info("Finished sorting")
-        # new_mtx_file: IO = open(new_file_name, "rt", encoding="utf-8-sig")
 
-        return new_file_name
+        return f"{os.getcwd()}/{new_file_name}"
 
     def execute_ingest(self):
         """Parses MTX files"""
@@ -228,13 +235,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
             query_params=(self.study_id, self.mongo_connection._client),
         )
 
-        if not MTXIngestor.check_is_sorted(self.mtx_path):
-            start_time = datetime.datetime.now()
-            new_mtx_file_name = self.sort_mtx(self.mtx_path, self.resolve_path)
-            self.mtx_file, self.mtx_path = self.resolve_path(new_mtx_file)
-            GeneExpression.dev_logger.info(
-                f"Time to sort {str(datetime.datetime.now() - start_time)} "
-            )
+        if not MTXIngestor.is_sorted(self.mtx_path):
+            new_mtx_file_path = self.sort_mtx(self.mtx_path)
+            self.mtx_file, self.mtx_path = self.resolve_path(new_mtx_file_path)
         self.transform()
 
     def extract_feature_barcode_matrices(self):
@@ -255,7 +258,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         data_arrays = []
         exp_cells = []
         exp_scores = []
-        visited_expression_idx = [0]
+        visited_expression_indices = {}
 
         # All observed cells
         for data_array in GeneExpression.create_data_arrays(
@@ -271,30 +274,28 @@ class MTXIngestor(GeneExpression, IngestFiles):
             raw_gene_idx, raw_barcode_idx, raw_exp_score = row.split()
             current_idx = int(raw_gene_idx)
             if current_idx != prev_idx:
-                GeneExpression.dev_logger.debug(f"Current Index is:  {current_idx}")
-                GeneExpression.dev_logger.debug(f"Prior Index is:  {prev_idx}")
-                if not prev_idx < current_idx:
+                if not current_idx > prev_idx:
                     raise ValueError("MTX file must be sorted")
                 GeneExpression.dev_logger.debug(
                     f"Processing {self.genes[prev_idx - 1]}"
                 )
-                visited_expression_idx.append(current_idx)
+                visited_expression_indices[current_idx] = True
                 if prev_idx != 0:
                     # Expressed cells and scores are associated with prior gene
                     prev_gene_id, prev_gene = MTXIngestor.get_features(
                         self.genes[prev_idx - 1]
                     )
-                    # # If the previous gene exists, load its models
-                    # data_arrays, gene_models, num_processed = self.create_models(
-                    #     exp_cells,
-                    #     exp_scores,
-                    #     prev_gene,
-                    #     prev_gene_id,
-                    #     gene_models,
-                    #     data_arrays,
-                    #     num_processed,
-                    #     False,
-                    # )
+                    # If the previous gene exists, load its models
+                    data_arrays, gene_models, num_processed = self.create_models(
+                        exp_cells,
+                        exp_scores,
+                        prev_gene,
+                        prev_gene_id,
+                        gene_models,
+                        data_arrays,
+                        num_processed,
+                        False,
+                    )
                     exp_cells = []
                     exp_scores = []
                 prev_idx = current_idx
@@ -302,17 +303,34 @@ class MTXIngestor(GeneExpression, IngestFiles):
             exp_score = round(float(raw_exp_score), 3)
             exp_cells.append(exp_cell)
             exp_scores.append(exp_score)
+
+        # create gene entries for genes with no positive expression values
+        for idx, gene in enumerate(self.genes):
+            if not visited_expression_indices.get(idx + 1):
+                current_gene_id, current_gene = MTXIngestor.get_features(gene)
+
+                data_arrays, gene_models, num_processed = self.create_models(
+                    [],
+                    [],
+                    current_gene,
+                    current_gene_id,
+                    gene_models,
+                    data_arrays,
+                    num_processed,
+                    False,
+                )
+
         # Create data array for last row
         current_gene_id, current_gene = MTXIngestor.get_features(
             self.genes[prev_idx - 1]
         )
-        # self.create_models(
-        #     exp_cells,
-        #     exp_scores,
-        #     current_gene,
-        #     current_gene_id,
-        #     gene_models,
-        #     data_arrays,
-        #     num_processed,
-        #     True,
-        # )
+        data_arrays, gene_models, num_processed = self.create_models(
+            exp_cells,
+            exp_scores,
+            current_gene,
+            current_gene_id,
+            gene_models,
+            data_arrays,
+            num_processed,
+            True,
+        )

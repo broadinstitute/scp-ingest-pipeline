@@ -68,19 +68,22 @@ class TestMTXIngestor(unittest.TestCase):
     def test_sort_mtx(self):
         import filecmp
         import os
-        expected_sorted_mtx = '../tests/data/sorted_matrix.mtx'
-        unsorted_mtx = '../tests/data/unsorted_matrix.mtx'
+
+        expected_sorted_mtx = "../tests/data/sorted_matrix.mtx"
+        unsorted_mtx = "../tests/data/unsorted_matrix.mtx"
         sorted_mtx = MTXIngestor.sort_mtx(unsorted_mtx)
+
+        # Verify files have the same contents
         self.assertTrue(filecmp.cmp(sorted_mtx, expected_sorted_mtx))
         os.remove(sorted_mtx)
 
     def test_get_line_no(self):
-        mtx_file_handler = open('data/unsorted_mtx.mtx.txt')
-        self.assertEqual(3,MTXIngestor.get_line_no(mtx_file_handler) )
+        mtx_file_handler = open("data/unsorted_mtx.mtx.txt")
+        self.assertEqual(3, MTXIngestor.get_line_no(mtx_file_handler))
 
         # Test for empty file
-        empty_file_handler = open('data/empty_file.txt')
-        self.assertRaises(ValueError, MTXIngestor.get_line_no,empty_file_handler)
+        empty_file_handler = open("data/empty_file.txt")
+        self.assertRaises(ValueError, MTXIngestor.get_line_no, empty_file_handler)
 
     def test_is_sorted(self):
         self.assertTrue(MTXIngestor.is_sorted("data/AB_toy_data_toy.matrix.mtx"))
@@ -187,22 +190,6 @@ class TestMTXIngestor(unittest.TestCase):
         expression_matrix.execute_ingest()
         self.assertTrue(mock_transform.called)
 
-    def test_unsorted_mtx_transform(self):
-        """
-        Tests if value error is raised when mtx file is unsorted,
-        """
-        expression_matrix = MTXIngestor(
-            "../tests/data/unsorted_mtx.mtx.txt",
-            "5d276a50421aa9117c982845",
-            "5dd5ae25421aa910a723a337",
-            gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
-            barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
-        )
-        expression_matrix.extract_feature_barcode_matrices()
-        with self.assertRaises(ValueError) as cm:
-            expression_matrix.transform()
-        self.assertEqual("MTX file must be sorted", str(cm.exception))
-
     def test_transform_fn(self):
         """
         Assures transform function creates gene data model correctly
@@ -240,7 +227,25 @@ class TestMTXIngestor(unittest.TestCase):
         )
         self.assertEqual(expression_matrix.models_processed, amount_of_models)
 
-        # unsorted MTX file
+        # Checks models for unsorted MTX file
+        with patch(
+            "expression_files.expression_files.GeneExpression.check_unique_cells",
+            return_value=True,
+        ):
+            expression_matrix = MTXIngestor(
+                "../tests/data/AB_toy_data_toy.unsorted_mtx.mtx",
+                "5d276a50421aa9117c982845",
+                "5dd5ae25421aa910a723a337",
+                gene_file="../tests/data/AB_toy_data_toy.genes.tsv",
+                barcode_file="../tests/data/AB_toy_data_toy.barcodes.tsv",
+            )
+            expression_matrix.test_models = None
+            expression_matrix.models_processed = 0
+            expression_matrix.execute_ingest()
+            amount_of_models = len(expression_matrix.test_models["data_arrays"]) + len(
+                expression_matrix.test_models["gene_models"]
+            )
+            self.assertEqual(expression_matrix.models_processed, amount_of_models)
 
     @patch(
         "expression_files.expression_files.GeneExpression.load",
