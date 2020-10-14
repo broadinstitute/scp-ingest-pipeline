@@ -164,7 +164,6 @@ class TestMTXIngestor(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    @patch("expression_files.mtx.MTXIngestor.sort_mtx")
     def test_execute_ingest(
         self, mock_load, mock_transform, mock_has_unique_cells, mock_sort_mtx
     ):
