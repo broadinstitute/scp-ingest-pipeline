@@ -151,7 +151,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
         ----------
             file_handler (str) - File handler of mtx file
 
-        :return
+         Returns
+         ----------
             i (int) - Line number where data starts
         """
         i = 1
@@ -194,9 +195,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
         """
         Sorts MTX file by gene. File header, dimensions, and comments are not included in sort.
 
-
-
-         Returns:
+         Returns
+         ----------
             new_file_path (str) : Full path of newly sorted MTX file
         """
         file_name = ntpath.split(file_path)[1]
