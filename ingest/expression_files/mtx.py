@@ -144,12 +144,12 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def get_line_no(file_handler: IO) -> int:
+    def get_line_no(file_handler: str) -> int:
         """ Determines what line number data starts.
 
         Parameters
         ----------
-            file_handler (IO) - File handler of mtx file
+            file_handler (str) - File handler of mtx file
 
         :return
             i (int) - Line number where data starts
@@ -192,7 +192,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
     @staticmethod
     def sort_mtx(file_path) -> str:
         """
-        Sorts MTX file by gene.
+        Sorts MTX file by gene. File header, dimensions, and comments are not included in sort.
+
+
 
          Returns:
             new_file_path (str) : Full path of newly sorted MTX file
@@ -205,6 +207,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             start_time = datetime.datetime.now()
             # Line to start sorting at
             start_idx: int = MTXIngestor.get_line_no(file_path)
+            # Only include gene expression data
             p1 = subprocess.Popen(
                 ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
             )
@@ -241,6 +244,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
         if not MTXIngestor.is_sorted(self.mtx_path):
             new_mtx_file_path = self.sort_mtx(self.mtx_path)
+            # Reset mtx variables to newly sorted file
             self.mtx_file, self.mtx_path = self.resolve_path(new_mtx_file_path)
         self.transform()
 

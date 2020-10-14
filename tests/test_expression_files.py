@@ -72,12 +72,14 @@ def mock_expression_load(self, *args):
         if collection_name == GeneExpression.COLLECTION_NAME:
             expected_model = self.test_models["gene_models"][model_name]
             del document["_id"]
+            # Sometimes linear_data_id is not deleted in mock models in cases where mocked models are large
             if "linear_data_id" in expected_model:
                 del expected_model["linear_data_id"]
             assert document == expected_model
         if collection_name == DataArray.COLLECTION_NAME:
             expected_model = self.test_models["data_arrays"][model_name]
             del document["linear_data_id"]
+            # Sometimes linear_data_id is not deleted in mock models in cases where mocked models are large
             if "linear_data_id" in expected_model:
                 del expected_model["linear_data_id"]
             assert document == expected_model

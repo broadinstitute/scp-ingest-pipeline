@@ -75,10 +75,11 @@ class TestMTXIngestor(unittest.TestCase):
 
         # Verify files have the same contents
         self.assertTrue(filecmp.cmp(sorted_mtx, expected_sorted_mtx))
+        # Delete sorted MTX file
         os.remove(sorted_mtx)
 
     def test_get_line_no(self):
-        mtx_file_handler = open("data/unsorted_mtx.mtx.txt")
+        mtx_file_handler = "data/unsorted_mtx.mtx.txt"
         self.assertEqual(3, MTXIngestor.get_line_no(mtx_file_handler))
 
         # Test for empty file
