@@ -90,7 +90,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             raise ValueError(f"{file_path} is empty: " + str(file_size))
         start_idx: int = MTXIngestor.get_data_start_line_number(file_path)
         # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
-        # The header and mtx dimension aren't included or else the file would always be considered file due to the mtx
+        # The header and mtx dimension aren't included or else the file would always be considered unsorted due to the mtx
         # dimensions always being larger than the first row of data.
         p1 = subprocess.Popen(
             ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
