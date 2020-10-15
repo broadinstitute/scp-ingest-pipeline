@@ -137,8 +137,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         Parameters
         ----------
         names - Gene or cell values
-
-        file_type: Barcode or gene files. Used in error message
+        file_type - Barcode or gene files. Used in error message
         """
         unique_names: List[str] = set(names)
         if len(names) > len(unique_names):
@@ -167,7 +166,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                 # First line w/o '%' is mtx dimension. So skip this line (+2)
                 return i + 2
         raise ValueError(
-            "MTX file did not contain expression data. Please check formating and contents of file."
+            "MTX file did not contain expression data. Please check formatting and contents of file."
         )
 
     @staticmethod
@@ -347,7 +346,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         current_gene_id, current_gene = MTXIngestor.get_features(
             self.genes[prev_idx - 1]
         )
-        data_arrays, gene_models, num_processed = self.create_models(
+        self.create_models(
             exp_cells,
             exp_scores,
             current_gene,
