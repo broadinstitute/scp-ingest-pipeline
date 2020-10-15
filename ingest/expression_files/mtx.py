@@ -152,20 +152,21 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def get_data_start_line_number(file_path: str) -> int:
+    def get_data_start_line_number(file_handler: IO) -> int:
         """ Determines what line number data starts.
 
          Returns
          ----------
-            i (int) - Line number where data starts
+            i (IO) - Line number where data starts
         """
         i = 1
-        for line in file_path:
+        for line in file_handler:
             if line.startswith("%"):
                 i += 1
             else:
-                # First line w/o '%' is mtx dimension. So skip this line (+2)
-                return i + 2
+                # First line w/o '%' is mtx dimension. So skip this line (+1)
+                i += 1
+                return i
         raise ValueError(
             "MTX file did not contain expression data. Please check formatting and contents of file."
         )
@@ -197,7 +198,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return gene_id, gene_name
 
     @staticmethod
-    def sort_mtx(file_path) -> str:
+    def sort_mtx(file_path, mtx_file_handler) -> str:
         """
         Sorts MTX file by gene. File header, dimensions, and comments are not included in sort.
 
@@ -212,7 +213,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             GeneExpression.dev_logger.info("Starting to sort")
             start_time = datetime.datetime.now()
             # Line to start sorting at
-            start_idx: int = MTXIngestor.get_data_start_line_number(file_path)
+            start_idx: int = MTXIngestor.get_data_start_line_number(mtx_file_handler)
             # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
             # Transform() is expecting the file handle to be at the first line of data which is why sorting starts at
             # line number 'n', as defined by start_idx
@@ -246,19 +247,22 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
     def execute_ingest(self):
         """Parses MTX files"""
-        self.extract_feature_barcode_matrices()
-        MTXIngestor.check_valid(
-            self.cells,
-            self.genes,
-            self.mtx_dimensions,
-            query_params=(self.study_id, self.mongo_connection._client),
-        )
+        # self.extract_feature_barcode_matrices()
+        # MTXIngestor.check_valid(
+        #     self.cells,
+        #     self.genes,
+        #     self.mtx_dimensions,
+        #     query_params=(self.study_id, self.mongo_connection._client),
+        # )
 
         if not MTXIngestor.is_sorted(self.mtx_path):
-            new_mtx_file_path = MTXIngestor.sort_mtx(self.mtx_path)
+            # Pass fresh mtx file handler for get_data_start_line_number()
+            new_mtx_file_path = MTXIngestor.sort_mtx(
+                self.mtx_path, self.resolve_path(self.mtx_path)
+            )
             # Reset mtx variables to newly sorted file
             self.mtx_file, self.mtx_path = self.resolve_path(new_mtx_file_path)
-        self.transform()
+        # self.transform()
 
     def extract_feature_barcode_matrices(self):
         """

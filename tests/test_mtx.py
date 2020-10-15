@@ -79,7 +79,7 @@ class TestMTXIngestor(unittest.TestCase):
         os.remove(sorted_mtx)
 
     def test_get_data_start_line_number(self):
-        mtx_file_handler = "data/unsorted_mtx.mtx.txt"
+        mtx_file_handler = open("data/mtx/unsorted_mtx.mtx.txt")
         self.assertEqual(3, MTXIngestor.get_data_start_line_number(mtx_file_handler))
 
         # Test for empty file
