@@ -88,7 +88,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         file_size = os.path.getsize(file_path)
         if file_size == 0:
             raise ValueError(f"{file_path} is empty: " + str(file_size))
-        start_idx: int = MTXIngestor.get_line_no(file_path)
+        start_idx: int = MTXIngestor.get_data_start_line_number(file_path)
         p1 = subprocess.Popen(
             ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
         )
@@ -144,7 +144,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def get_line_no(file_path: str) -> int:
+    def get_data_start_line_number(file_path: str) -> int:
         """ Determines what line number data starts.
 
          Returns
@@ -202,7 +202,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             GeneExpression.dev_logger.info("Starting to sort")
             start_time = datetime.datetime.now()
             # Line to start sorting at
-            start_idx: int = MTXIngestor.get_line_no(file_path)
+            start_idx: int = MTXIngestor.get_data_start_line_number(file_path)
             # Grab gene expression data which starts at number 'n' as defined in start_idx.Transform() is expecting
             # the file handle to be at the first line of data.
             p1 = subprocess.Popen(
