@@ -144,19 +144,15 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def get_line_no(file_handler: str) -> int:
+    def get_line_no(file_path: str) -> int:
         """ Determines what line number data starts.
-
-        Parameters
-        ----------
-            file_handler (str) - File handler of mtx file
 
          Returns
          ----------
             i (int) - Line number where data starts
         """
         i = 1
-        for line in file_handler:
+        for line in file_path:
             if line.startswith("%"):
                 i = +1
             else:
@@ -207,17 +203,22 @@ class MTXIngestor(GeneExpression, IngestFiles):
             start_time = datetime.datetime.now()
             # Line to start sorting at
             start_idx: int = MTXIngestor.get_line_no(file_path)
-            # Only include gene expression data
+            # Grab gene expression data which starts at number 'n' as defined in start_idx.Transform() is expecting
+            # the file handle to be at the first line of data.
             p1 = subprocess.Popen(
                 ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
             )
+            # Sort output of p1 ( all gene expression data) by first and only first column (-k 1,1,)
+            # using 20G for the memory buffer (-S 20G) with a max maximum number of 320 temporary files (--batch-size=320)
+            # that can be merged at once (instead of default 16). Use compress program gzip to compress temporary files
+            # files (--compress-program=gzip)
             subprocess.run(
                 [
                     "sort",
                     "--compress-program=gzip",
                     "-S",
                     "20G",
-                    "--batch-size=90%",
+                    "--batch-size=320",
                     "-n",
                     "-k",
                     "1,1",
@@ -260,6 +261,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
         ]
 
     def transform(self):
+        """Transform data into data models.
+        Transform() is expecting the file handle to be at the first line of data.
+        """
         num_processed = 0
         prev_idx = 0
         gene_models = []
