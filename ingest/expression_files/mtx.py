@@ -89,9 +89,15 @@ class MTXIngestor(GeneExpression, IngestFiles):
         if file_size == 0:
             raise ValueError(f"{file_path} is empty: " + str(file_size))
         start_idx: int = MTXIngestor.get_data_start_line_number(file_path)
+        # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
+        # The header and mtx dimension aren't included or else the file would always be considered file due to the mtx
+        # dimensions always being larger than the first row of data.
         p1 = subprocess.Popen(
             ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
         )
+        # Check that the input file is sorted (-c). Check sorting by first and only first column that's a number (-n -k 1,1,).
+        # Use stable sort (--stable) so that columns are only compared by the first column.  Without this argument line
+        #  '1 3 4' and ' 1 5 4' would be considered unsorted.
         p2 = subprocess.run(
             ["sort", "-c", "--stable", "-n", "-k", "1,1"],
             stdin=p1.stdout,
@@ -209,7 +215,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             p1 = subprocess.Popen(
                 ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
             )
-            # Sort output of p1 ( all gene expression data) by first and only first column (-k 1,1,)
+            # Sort output of p1 ( all gene expression data) by first and only first column that's a number (-n -k 1,1,)
             # using 20G for the memory buffer (-S 20G) with a max maximum number of 320 temporary files (--batch-size=320)
             # that can be merged at once (instead of default 16). Use compress program gzip to compress temporary files
             # files (--compress-program=gzip)
