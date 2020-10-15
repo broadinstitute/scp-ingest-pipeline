@@ -103,6 +103,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
             stdin=p1.stdout,
             capture_output=True,
         )
+        # When a file is unsorted, or 'disordered', the output includes the string 'disorder' which indicates the
+        # first offending row that caused the 'disorder'
         if "disorder" in p2.stderr.decode("utf-8"):
             return False
         else:
