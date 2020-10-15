@@ -12,7 +12,7 @@ sorted by gene. In this event, the file will automatically be sorted by gene.
 
 """
 
-from typing import Dict, Generator, List, Tuple, IO  # noqa: F401git ad
+from typing import Dict, Generator, List, Tuple, IO  # noqa: F401
 
 import ntpath
 import os
