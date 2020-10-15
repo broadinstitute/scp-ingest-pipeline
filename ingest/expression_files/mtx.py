@@ -203,9 +203,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
             start_time = datetime.datetime.now()
             # Line to start sorting at
             start_idx: int = MTXIngestor.get_data_start_line_number(file_path)
-            # Grab gene expression data which starts at number 'n' as defined by start_idx. Transform() is expecting
-            # the file handle to be at the first line of data which is why sorting starts at line number 'n', as
-            # defined by start_idx
+            # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
+            # Transform() is expecting the file handle to be at the first line of data which is why sorting starts at
+            # line number 'n', as defined by start_idx
             p1 = subprocess.Popen(
                 ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
             )
