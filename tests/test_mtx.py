@@ -71,7 +71,7 @@ class TestMTXIngestor(unittest.TestCase):
 
         expected_sorted_mtx = "../tests/data/mtx/sorted_matrix.mtx"
         unsorted_mtx = "../tests/data/mtx/unsorted_matrix.mtx"
-        sorted_mtx = MTXIngestor.sort_mtx(unsorted_mtx)
+        sorted_mtx = MTXIngestor.sort_mtx(unsorted_mtx, open(unsorted_mtx))
 
         # Verify files have the same contents
         self.assertTrue(filecmp.cmp(sorted_mtx, expected_sorted_mtx))
@@ -89,11 +89,25 @@ class TestMTXIngestor(unittest.TestCase):
         )
 
     def test_is_sorted(self):
-        self.assertTrue(MTXIngestor.is_sorted("data/mtx/AB_toy_data_toy.matrix.mtx"))
-        self.assertFalse(MTXIngestor.is_sorted("data/mtx/unsorted_mtx.mtx.txt"))
+        self.assertTrue(
+            MTXIngestor.is_sorted(
+                "data/mtx/AB_toy_data_toy.matrix.mtx",
+                open("data/mtx/AB_toy_data_toy.matrix.mtx"),
+            )
+        )
+        self.assertFalse(
+            MTXIngestor.is_sorted(
+                "data/mtx/unsorted_mtx.mtx.txt", open("data/mtx/unsorted_mtx.mtx.txt")
+            )
+        )
 
         # Test empty file
-        self.assertRaises(ValueError, MTXIngestor.is_sorted, "data/empty_file.txt")
+        self.assertRaises(
+            ValueError,
+            MTXIngestor.is_sorted,
+            "data/empty_file.txt",
+            open("data/empty_file.txt"),
+        )
 
     def test_get_mtx_dimensions(self):
         file_handler = open("data/mtx/AB_toy_data_toy.matrix.mtx")

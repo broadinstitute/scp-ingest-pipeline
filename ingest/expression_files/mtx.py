@@ -84,12 +84,12 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def is_sorted(file_path: str):
+    def is_sorted(file_path: str, file_handler):
         """Checks if a file is sorted by gene index"""
         file_size = os.path.getsize(file_path)
         if file_size == 0:
             raise ValueError(f"{file_path} is empty: " + str(file_size))
-        start_idx: int = MTXIngestor.get_data_start_line_number(file_path)
+        start_idx: int = MTXIngestor.get_data_start_line_number(file_handler)
         # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
         # The header and mtx dimension aren't included or else the file would always be considered unsorted due to the mtx
         # dimensions always being larger than the first row of data.
@@ -159,13 +159,13 @@ class MTXIngestor(GeneExpression, IngestFiles):
          ----------
             i (IO) - Line number where data starts
         """
-        i = 1
+        i = 0
         for line in file_handler:
             if line.startswith("%"):
                 i += 1
             else:
                 # First line w/o '%' is mtx dimension. So skip this line (+1)
-                i += 1
+                i += 2
                 return i
         raise ValueError(
             "MTX file did not contain expression data. Please check formatting and contents of file."
@@ -247,22 +247,22 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
     def execute_ingest(self):
         """Parses MTX files"""
-        # self.extract_feature_barcode_matrices()
-        # MTXIngestor.check_valid(
-        #     self.cells,
-        #     self.genes,
-        #     self.mtx_dimensions,
-        #     query_params=(self.study_id, self.mongo_connection._client),
-        # )
-
-        if not MTXIngestor.is_sorted(self.mtx_path):
-            # Pass fresh mtx file handler for get_data_start_line_number()
+        self.extract_feature_barcode_matrices()
+        MTXIngestor.check_valid(
+            self.cells,
+            self.genes,
+            self.mtx_dimensions,
+            query_params=(self.study_id, self.mongo_connection._client),
+        )
+        # Need fresh mtx file handler for get_data_start_line_number()
+        fresh_mtx_file_handler = self.resolve_path(self.mtx_path)[1]
+        if not MTXIngestor.is_sorted(self.mtx_path, fresh_mtx_file_handler):
             new_mtx_file_path = MTXIngestor.sort_mtx(
-                self.mtx_path, self.resolve_path(self.mtx_path)
+                self.mtx_path, fresh_mtx_file_handler
             )
             # Reset mtx variables to newly sorted file
             self.mtx_file, self.mtx_path = self.resolve_path(new_mtx_file_path)
-        # self.transform()
+        self.transform()
 
     def extract_feature_barcode_matrices(self):
         """
