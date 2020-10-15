@@ -9,6 +9,7 @@ These are commonly provided from 10x Genomics v2.
 
 Unsorted MTX files can be parsed. Files are considered unsorted when file is not
 sorted by gene. In this event, the file will automatically be sorted by gene.
+Version of sort: (GNU coreutils) 8.25
 
 """
 
@@ -218,10 +219,10 @@ class MTXIngestor(GeneExpression, IngestFiles):
             p1 = subprocess.Popen(
                 ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
             )
-            # Sort output of p1 ( all gene expression data) by first and only first column that's a number (-n -k 1,1,)
+            # Sort output of p1 ( all gene expression data) by first and only first column (-k 1,1,)
             # using 20G for the memory buffer (-S 20G) with a max maximum number of 320 temporary files (--batch-size=320)
-            # that can be merged at once (instead of default 16). Use compress program gzip to compress temporary files
-            # files (--compress-program=gzip)
+            # that can be merged at once (instead of default 16). The data being sorted is numeric (-n).
+            # Use compress program gzip to compress temporary files (--compress-program=gzip).
             subprocess.run(
                 [
                     "sort",
