@@ -8,6 +8,7 @@ See See https://github.com/broadinstitute/scp-ingest-pipeline#test.
 
 import unittest
 import sys
+import shutil
 from random import randrange
 
 sys.path.append('../ingest')
@@ -25,6 +26,14 @@ class MakeToyTestCase(unittest.TestCase):
         make_toy_data(parsed_args)
         return
 
+    @staticmethod
+    def clean_up(output_dir):
+        try:
+            shutil.rmtree(output_dir)
+        except OSError:
+            print('no files to remove')
+
     def test_make_toy_data_default(self):
         args = ['--output-dir', output_dir]
         self.execute_make_toy(args)
+        self.clean_up(output_dir)
