@@ -234,6 +234,9 @@ class OntologyRetriever:
 
         if convention_ontology and metadata_ontology:
             base_term_uri = metadata_ontology["config"]["baseUris"][0]
+            # temporary workaround for invald baseURI returned from EBI OLS for NCBITaxon (SCP-2820)
+            if base_term_uri == "http://purl.obolibrary.org/obo/NCBITAXON_":
+                base_term_uri = "http://purl.obolibrary.org/obo/NCBITaxon_"
             query_iri = encode_term_iri(term_id, base_term_uri)
 
             term_url = convention_ontology["_links"]["terms"]["href"] + "/" + query_iri
