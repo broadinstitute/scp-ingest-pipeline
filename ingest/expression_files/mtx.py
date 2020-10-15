@@ -166,7 +166,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
             else:
                 # First line w/o '%' is mtx dimension. So skip this line (+2)
                 return i + 2
-        raise ValueError("MTX file did not contain data")
+        raise ValueError(
+            "MTX file did not contain expression data. Please check formating and contents of file."
+        )
 
     @staticmethod
     def get_mtx_dimensions(file_handler) -> List:
