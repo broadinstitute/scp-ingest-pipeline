@@ -155,9 +155,13 @@ class MTXIngestor(GeneExpression, IngestFiles):
     def get_data_start_line_number(file_handler: IO) -> int:
         """ Determines what line number data starts.
 
+        Parameters:
+        ___________
+            file_handler (IO): File handler that points to top of MTX file
+
          Returns
          ----------
-            i (IO) - Line number where data starts
+            i (IO): Line number where data starts
         """
         i = 0
         for line in file_handler:
@@ -198,9 +202,13 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return gene_id, gene_name
 
     @staticmethod
-    def sort_mtx(file_path, mtx_file_handler) -> str:
+    def sort_mtx(file_path, mtx_file_handler: IO) -> str:
         """
         Sorts MTX file by gene. File header, dimensions, and comments are not included in sort.
+
+         Parameters:
+            mtx_file_handler (IO): File handler that points to top of MTX file
+            file_path (str): Path path to MTX file
 
          Returns
          ----------
