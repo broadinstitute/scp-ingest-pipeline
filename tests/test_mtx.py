@@ -78,13 +78,15 @@ class TestMTXIngestor(unittest.TestCase):
         # Delete sorted MTX file
         os.remove(sorted_mtx)
 
-    def test_get_line_no(self):
+    def test_get_data_start_line_number(self):
         mtx_file_handler = "data/unsorted_mtx.mtx.txt"
-        self.assertEqual(3, MTXIngestor.get_line_no(mtx_file_handler))
+        self.assertEqual(3, MTXIngestor.get_data_start_line_number(mtx_file_handler))
 
         # Test for empty file
         empty_file_handler = open("data/empty_file.txt")
-        self.assertRaises(ValueError, MTXIngestor.get_line_no, empty_file_handler)
+        self.assertRaises(
+            ValueError, MTXIngestor.get_data_start_line_number, empty_file_handler
+        )
 
     def test_is_sorted(self):
         self.assertTrue(MTXIngestor.is_sorted("data/mtx/AB_toy_data_toy.matrix.mtx"))
