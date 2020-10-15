@@ -162,7 +162,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         i = 1
         for line in file_path:
             if line.startswith("%"):
-                i = +1
+                i += 1
             else:
                 # First line w/o '%' is mtx dimension. So skip this line (+2)
                 return i + 2
