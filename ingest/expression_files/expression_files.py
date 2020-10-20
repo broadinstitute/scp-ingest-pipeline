@@ -117,6 +117,10 @@ class GeneExpression:
         raw_id_query_results = list(
             client[STUDY_FILE_COLLECTION_NAME].find(raw_ids_query, {"_id": 1})
         )
+        # raw_id_query_results did not return results
+        if not raw_id_query_results:
+            # Cells can be repeated in expression matrixes that are not raw counts
+            return True
 
         # Builds raw ids fields for query
         raw_ids_query_filter = [
@@ -132,9 +136,6 @@ class GeneExpression:
         query_results: List[Dict] = list(
             client[DATA_ARRAY_COLLECTION_NAME].find(existing_cells_query, field_names)
         )
-        # Query did not return results
-        if not query_results:
-            return True
         # Flatten query results
         existing_cells = [
             values

@@ -88,6 +88,7 @@ class TestExpressionFiles(unittest.TestCase):
         ]
 
         # Build client mock with functions and return values needed to query
+        # Taken from https://stackoverflow.com/questions/10043965
         client_mock = MagicMock()
         client_mock.keys.return_value.__iter__.return_value = client_values.keys()
         client_mock.__getitem__.side_effect = lambda k: client_values[k]
@@ -110,6 +111,12 @@ class TestExpressionFiles(unittest.TestCase):
         )
 
         client_mock["data_arrays"].find.return_value = []
+        self.assertTrue(
+            GeneExpression.check_unique_cells(header, ObjectId(), client_mock)
+        )
+
+        # Test when there are no raw counts in the study
+        client_values["study_files"].find.return_value = []
         self.assertTrue(
             GeneExpression.check_unique_cells(header, ObjectId(), client_mock)
         )
