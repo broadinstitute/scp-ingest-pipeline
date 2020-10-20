@@ -109,7 +109,7 @@ class IngestFiles:
 
     def verify_file_exists(self, file_path):
         """Determines if file can be found, throws error if not"""
-        if self.is_remote_file:
+        if IngestFiles.is_remote_file(file_path):
             # File is in GCS bucket
             self.set_gcs_attrs(file_path)
             source_blob = storage.Blob(bucket=self.bucket, name=self.source)
@@ -131,7 +131,7 @@ class IngestFiles:
         Returns:
             Open file object
         """
-        if self.is_remote_file:
+        if IngestFiles.is_remote_file(file_path):
             file_path = self.download_from_bucket(file_path)
             self.local_file_path = file_path
         # Remove BOM with encoding ='utf - 8 - sig'

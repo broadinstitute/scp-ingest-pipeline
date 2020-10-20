@@ -15,6 +15,7 @@ import unittest
 
 from unittest.mock import patch
 import sys
+import shutil
 from random import randrange
 from glob import glob
 
@@ -60,6 +61,13 @@ class GenomesTestCase(unittest.TestCase):
         parse_genome_annotations(parsed_args)
         return
 
+    @staticmethod
+    def clean_up(output_dir):
+        try:
+            shutil.rmtree(output_dir)
+        except OSError:
+            print('no files to remove')
+
     def test_genomes_default(self):
         """Genomes Pipeline should extract and transform reference data
         """
@@ -69,3 +77,5 @@ class GenomesTestCase(unittest.TestCase):
         # There should be two gzipped GTF files
         gzipped_gtfs = glob(f'{output_dir}*.gtf.gz')
         self.assertEqual(len(gzipped_gtfs), 2)
+
+        self.clean_up(output_dir)

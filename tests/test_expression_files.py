@@ -17,6 +17,9 @@ from mock_data.expression.matrix_mtx.AB_toy_data_toy_models import (
 from mock_data.expression.matrix_mtx.one_column_feature_file_data_models import (
     one_column_feature_file_data_models,
 )
+from mock_data.expression.matrix_mtx.AB_toy_data_toy_unsorted_mtx_models import (
+    AB_toy_data_toy_unsorted_mtx_models,
+)
 
 sys.path.append("../ingest")
 from expression_files.expression_files import GeneExpression
@@ -46,7 +49,9 @@ def mock_expression_load(self, *args):
         model_name = documents[0]["name"]
         if collection_name == GeneExpression.COLLECTION_NAME:
             if model_name in AB_toy_data_toy_data_models["gene_models"]:
-                self.test_models = AB_toy_data_toy_data_models
+                self.test_model = AB_toy_data_toy_data_models
+            if model_name in AB_toy_data_toy_unsorted_mtx_models["gene_models"]:
+                self.test_models = AB_toy_data_toy_unsorted_mtx_models
             if model_name in one_column_feature_file_data_models["gene_models"]:
                 self.test_models = one_column_feature_file_data_models
             if model_name in nineteen_genes_100k_cell_models["gene_models"][model_name]:
@@ -54,6 +59,8 @@ def mock_expression_load(self, *args):
         if collection_name == DataArray.COLLECTION_NAME:
             if model_name in AB_toy_data_toy_data_models["data_arrays"]:
                 self.test_models = AB_toy_data_toy_data_models
+            if model_name in AB_toy_data_toy_unsorted_mtx_models["data_arrays"]:
+                self.test_models = AB_toy_data_toy_unsorted_mtx_models
             if model_name in one_column_feature_file_data_models["data_arrays"]:
                 self.test_models = one_column_feature_file_data_models
             if model_name in nineteen_genes_100k_cell_models["data_arrays"]:
@@ -63,11 +70,19 @@ def mock_expression_load(self, *args):
     for document in documents:
         model_name = document["name"]
         if collection_name == GeneExpression.COLLECTION_NAME:
+            expected_model = self.test_models["gene_models"][model_name]
             del document["_id"]
-            assert document == self.test_models["gene_models"][model_name]
+            # Sometimes linear_data_id is not deleted in mock models in cases where mocked models are large
+            if "linear_data_id" in expected_model:
+                del expected_model["linear_data_id"]
+            assert document == expected_model
         if collection_name == DataArray.COLLECTION_NAME:
+            expected_model = self.test_models["data_arrays"][model_name]
             del document["linear_data_id"]
-            assert document == self.test_models["data_arrays"][model_name]
+            # Sometimes linear_data_id is not deleted in mock models in cases where mocked models are large
+            if "linear_data_id" in expected_model:
+                del expected_model["linear_data_id"]
+            assert document == expected_model
     self.models_processed += len(documents)
 
 

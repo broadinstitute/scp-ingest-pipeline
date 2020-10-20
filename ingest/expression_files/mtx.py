@@ -7,10 +7,19 @@ MTX file bundle consists of A) an .mtx file in Matrix
 Market matrix coordinate format, B) a genes.tsv file, and a barcodes.tsv file.
 These are commonly provided from 10x Genomics v2.
 
+Unsorted MTX files can be parsed. Files are considered unsorted when file is not
+sorted by gene. In this event, the file will automatically be sorted by gene.
+Version of sort: (GNU coreutils) 8.25
+
 """
 
+from typing import Dict, Generator, List, Tuple, IO  # noqa: F401
 
-from typing import Dict, Generator, List, Tuple  # noqa: F401git ad
+import ntpath
+import os
+
+import datetime
+import subprocess
 
 try:
     from expression_files import GeneExpression
@@ -22,7 +31,7 @@ except ImportError:
     from ..ingest_files import IngestFiles
 
 
-class MTXIngestor(GeneExpression):
+class MTXIngestor(GeneExpression, IngestFiles):
     ALLOWED_FILE_TYPES = ["text/tab-separated-values"]
 
     @staticmethod
@@ -31,9 +40,8 @@ class MTXIngestor(GeneExpression):
 
     def __init__(self, mtx_path: str, study_file_id: str, study_id: str, **kwargs):
         GeneExpression.__init__(self, mtx_path, study_file_id, study_id)
-
-        mtx_ingest_file = IngestFiles(mtx_path, self.ALLOWED_FILE_TYPES)
-        self.mtx_file = mtx_ingest_file.resolve_path(mtx_path)[0]
+        IngestFiles.__init__(self, mtx_path, self.ALLOWED_FILE_TYPES)
+        self.mtx_file, self.mtx_path = self.resolve_path(mtx_path)
 
         genes_path = kwargs.pop("gene_file")
         genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
@@ -76,6 +84,34 @@ class MTXIngestor(GeneExpression):
         return True
 
     @staticmethod
+    def is_sorted(file_path: str, file_handler):
+        """Checks if a file is sorted by gene index"""
+        file_size = os.path.getsize(file_path)
+        if file_size == 0:
+            raise ValueError(f"{file_path} is empty: " + str(file_size))
+        start_idx: int = MTXIngestor.get_data_start_line_number(file_handler)
+        # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
+        # The header and mtx dimension aren't included or else the file would always be considered unsorted due to the mtx
+        # dimensions always being larger than the first row of data.
+        p1 = subprocess.Popen(
+            ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
+        )
+        # Check that the input file is sorted (-c). Check sorting by first and only first column (-k 1,1,). This value is
+        # numeric(-n). Use stable sort (--stable) so that columns are only compared by the first column.
+        # Without this argument line '1 3 4' and ' 1 5 4' would be considered unsorted.
+        p2 = subprocess.run(
+            ["sort", "-c", "--stable", "-n", "-k", "1,1"],
+            stdin=p1.stdout,
+            capture_output=True,
+        )
+        # When a file is unsorted, or 'disordered', the output includes the string 'disorder' which indicates the
+        # first offending row that caused the 'disorder'
+        if "disorder" in p2.stderr.decode("utf-8"):
+            return False
+        else:
+            return True
+
+    @staticmethod
     def check_bundle(barcodes, genes, mtx_dimensions):
         """Confirms barcode and gene files have expected length of values"""
         expected_genes = mtx_dimensions[0]
@@ -102,8 +138,7 @@ class MTXIngestor(GeneExpression):
         Parameters
         ----------
         names - Gene or cell values
-
-        file_type: Barcode or gene files. Used in error message
+        file_type - Barcode or gene files. Used in error message
         """
         unique_names: List[str] = set(names)
         if len(names) > len(unique_names):
@@ -115,6 +150,30 @@ class MTXIngestor(GeneExpression):
             )
             raise ValueError(msg)
         return True
+
+    @staticmethod
+    def get_data_start_line_number(file_handler: IO) -> int:
+        """ Determines what line number data starts.
+
+        Parameters:
+        ___________
+            file_handler (IO): File handler that points to top of MTX file
+
+         Returns
+         ----------
+            i (IO): Line number where data starts
+        """
+        i = 0
+        for line in file_handler:
+            if line.startswith("%"):
+                i += 1
+            else:
+                # First line w/o '%' is mtx dimension. So skip this line (+1)
+                i += 2
+                return i
+        raise ValueError(
+            "MTX file did not contain expression data. Please check formatting and contents of file."
+        )
 
     @staticmethod
     def get_mtx_dimensions(file_handler) -> List:
@@ -142,6 +201,58 @@ class MTXIngestor(GeneExpression):
             gene_name = feature_data[1]
         return gene_id, gene_name
 
+    @staticmethod
+    def sort_mtx(file_path, mtx_file_handler: IO) -> str:
+        """
+        Sorts MTX file by gene. File header, dimensions, and comments are not included in sort.
+
+         Parameters:
+            mtx_file_handler (IO): File handler that points to top of MTX file
+            file_path (str): Path path to MTX file
+
+         Returns
+         ----------
+            new_file_path (str) : Full path of newly sorted MTX file
+        """
+        file_name = ntpath.split(file_path)[1]
+        new_file_name = f"{file_name}_sorted_MTX.mtx"
+
+        with open(new_file_name, "w+") as f:
+            GeneExpression.dev_logger.info("Starting to sort")
+            start_time = datetime.datetime.now()
+            # Line to start sorting at
+            start_idx: int = MTXIngestor.get_data_start_line_number(mtx_file_handler)
+            # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
+            # Transform() is expecting the file handle to be at the first line of data which is why sorting starts at
+            # line number 'n', as defined by start_idx
+            p1 = subprocess.Popen(
+                ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
+            )
+            # Sort output of p1 ( all gene expression data) by first and only first column (-k 1,1,)
+            # using 20G for the memory buffer (-S 20G) with a max maximum number of 320 temporary files (--batch-size=320)
+            # that can be merged at once (instead of default 16). The data being sorted is numeric (-n).
+            # Use compress program gzip to compress temporary files (--compress-program=gzip).
+            subprocess.run(
+                [
+                    "sort",
+                    "--compress-program=gzip",
+                    "-S",
+                    "20G",
+                    "--batch-size=320",
+                    "-n",
+                    "-k",
+                    "1,1",
+                ],
+                stdin=p1.stdout,
+                stdout=f,
+            )
+        GeneExpression.dev_logger.info(
+            f"Time to sort {str(datetime.datetime.now() - start_time)} "
+        )
+        GeneExpression.dev_logger.info("Finished sorting")
+        new_file_path = f"{os.getcwd()}/{new_file_name}"
+        return new_file_path
+
     def execute_ingest(self):
         """Parses MTX files"""
         self.extract_feature_barcode_matrices()
@@ -151,6 +262,14 @@ class MTXIngestor(GeneExpression):
             self.mtx_dimensions,
             query_params=(self.study_id, self.mongo_connection._client),
         )
+        # Need fresh mtx file handler for get_data_start_line_number()
+        fresh_mtx_file_handler = self.resolve_path(self.mtx_path)[1]
+        if not MTXIngestor.is_sorted(self.mtx_path, fresh_mtx_file_handler):
+            new_mtx_file_path = MTXIngestor.sort_mtx(
+                self.mtx_path, fresh_mtx_file_handler
+            )
+            # Reset mtx variables to newly sorted file
+            self.mtx_file, self.mtx_path = self.resolve_path(new_mtx_file_path)
         self.transform()
 
     def extract_feature_barcode_matrices(self):
@@ -165,6 +284,9 @@ class MTXIngestor(GeneExpression):
         ]
 
     def transform(self):
+        """Transform data into data models.
+        Transform() is expecting the file handle to be at the first line of data.
+        """
         num_processed = 0
         prev_idx = 0
         gene_models = []
@@ -237,7 +359,7 @@ class MTXIngestor(GeneExpression):
         current_gene_id, current_gene = MTXIngestor.get_features(
             self.genes[prev_idx - 1]
         )
-        data_arrays, gene_models, num_processed = self.create_models(
+        self.create_models(
             exp_cells,
             exp_scores,
             current_gene,
