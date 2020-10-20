@@ -102,20 +102,35 @@ class GeneExpression:
             study_id (ObjectId): The study id the cell names belong to
             client: MongoDB client
         """
-        COLLECTION_NAME = "data_arrays"
-        query = {
+        DATA_ARRAY_COLLECTION_NAME = "data_arrays"
+        STUDY_FILE_COLLECTION_NAME = "study_files"
+
+        raw_ids_query = {
             "$and": [
-                {"linear_data_type": "Study"},
-                {"array_type": "cells"},
                 {"study_id": study_id},
-            ],
+                {"file_type": "Expression Matrix"},
+                {"expression_file_info.is_raw_counts": True},
+            ]
+        }
+        # Returned fields from raw id query results
+        field_names = {"values": 1, "_id": 0}
+        raw_id_query_results = list(
+            client[STUDY_FILE_COLLECTION_NAME].find(raw_ids_query, {"_id": 1})
+        )
+
+        # Builds raw ids fields for query
+        raw_ids_query_filter = [
+            {"study_id": result["_id"]} for result in raw_id_query_results
+        ]
+        existing_cells_query = {
+            "$and": [{"linear_data_type": "Study"}, {"array_type": "cells"}],
+            # Grab cell values from studies ids listed in raw_ids_query_filter
+            "$or": raw_ids_query_filter,
             "$nor": [{"name": "All Cells"}],
         }
-        # Returned fields from query results
-        field_names = {"values": 1, "_id": 0}
         # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
         query_results: List[Dict] = list(
-            client[COLLECTION_NAME].find(query, field_names)
+            client[DATA_ARRAY_COLLECTION_NAME].find(existing_cells_query, field_names)
         )
         # Query did not return results
         if not query_results:
@@ -245,10 +260,10 @@ class GeneExpression:
                 # Add new data arrays
                 data_arrays += current_data_arrays
                 current_data_arrays.clear()
-            if len(data_arrays) > 0:
-                self.load(data_arrays, DataArray.COLLECTION_NAME)
-            if len(gene_models) > 0:
-                self.load(gene_models, GeneExpression.COLLECTION_NAME)
+            # if len(data_arrays) > 0:
+            #     self.load(data_arrays, DataArray.COLLECTION_NAME)
+            # if len(gene_models) > 0:
+            #     self.load(gene_models, GeneExpression.COLLECTION_NAME)
             num_processed += len(gene_models)
             GeneExpression.dev_logger.info(
                 f"Processed {num_processed} genes. "

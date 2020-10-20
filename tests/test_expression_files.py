@@ -72,14 +72,26 @@ def mock_expression_load(self, *args):
 
 
 class TestExpressionFiles(unittest.TestCase):
+    # @patch("expression_files.expression_files.MongoConnection")
     def test_check_unique_cells(self):
-        client_mock = MagicMock()
         header = ["GENE", "foo", "foo2", "foo3"]
-
-        client_mock["data_arrays"].find.return_value = [
+        client_values = {}
+        client_values["data_arrays"] = MagicMock()
+        client_values["data_arrays"].find.return_value = [
             {"values": ["foo3", "foo4", "foo5"]},
             {"values": ["foo6", "foo7", "foo8"]},
         ]
+        client_values["study_files"] = MagicMock()
+        client_values["study_files"].find.return_value = [
+            {"_id": ObjectId("5f70abd6771a5b0de0cea0f0")},
+            {"_id": ObjectId("5f70c1b2771a5b0de0cea0ed")},
+        ]
+
+        # Build client mock with functions and return values needed to query
+        client_mock = MagicMock()
+        client_mock.keys.return_value.__iter__.return_value = client_values.keys()
+        client_mock.__getitem__.side_effect = lambda k: client_values[k]
+
         with self.assertRaises(ValueError) as cm:
             GeneExpression.check_unique_cells(header, ObjectId(), client_mock)
         self.assertTrue("contains 1 cells" in str(cm.exception))
