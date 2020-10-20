@@ -32,8 +32,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
-        is_count = matrix_kwargs.get("is_count")
-        expression_ids = matrix_kwargs.get("expression_ids")
         # To allow additional optional keyword arguments like gene_id
         self.matrix_params = matrix_kwargs
         self.gene_names = {}
@@ -62,15 +60,15 @@ class DenseIngestor(GeneExpression, IngestFiles):
         # dependency on position in text file.
         # Row after header is needed for R format validation
         first_row = next(self.csv_file_handler)
-        # DenseIngestor.check_valid(
-        #     self.header,
-        #     first_row,
-        #     query_params=(self.study_id, self.mongo_connection._client),
-        # )
+        DenseIngestor.check_valid(
+            self.header,
+            first_row,
+            query_params=(self.study_id, self.mongo_connection._client),
+        )
         # Reset csv reader to first gene row
         self.csv_file_handler = self.open_file(self.file_path)[0]
         next(self.csv_file_handler)
-        # self.transform()
+        self.transform()
 
     @staticmethod
     def check_valid(header, first_row, query_params):

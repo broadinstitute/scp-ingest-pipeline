@@ -260,10 +260,10 @@ class GeneExpression:
                 # Add new data arrays
                 data_arrays += current_data_arrays
                 current_data_arrays.clear()
-            # if len(data_arrays) > 0:
-            #     self.load(data_arrays, DataArray.COLLECTION_NAME)
-            # if len(gene_models) > 0:
-            #     self.load(gene_models, GeneExpression.COLLECTION_NAME)
+            if len(data_arrays) > 0:
+                self.load(data_arrays, DataArray.COLLECTION_NAME)
+            if len(gene_models) > 0:
+                self.load(gene_models, GeneExpression.COLLECTION_NAME)
             num_processed += len(gene_models)
             GeneExpression.dev_logger.info(
                 f"Processed {num_processed} genes. "
