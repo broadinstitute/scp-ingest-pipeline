@@ -93,48 +93,51 @@ class GeneExpression:
         )
 
     @staticmethod
-    def check_unique_cells(cell_names: List, study_id, client):
+    def check_unique_cells(cell_names: List, study_id, study_file_id, client):
         """Checks cell names against database to confirm matrix contains unique
             cell names.
+
+        Method acts as 'command center' for deciding what methods need to be called to check for cell uniquenes under
+            given scenarios.
 
          Parameters:
             cell_names (List[str]): List of cell names in matrix
             study_id (ObjectId): The study id the cell names belong to
+            study_file_id (ObjectId): The file id the cell names belong to
             client: MongoDB client
         """
-        DATA_ARRAY_COLLECTION_NAME = "data_arrays"
-        STUDY_FILE_COLLECTION_NAME = "study_files"
-
-        raw_ids_query = {
+        EXISITING_CELL_QUERY = {
             "$and": [
+                {"linear_data_type": "Study"},
+                {"array_type": "cells"},
                 {"study_id": study_id},
-                {"file_type": "Expression Matrix"},
-                {"expression_file_info.is_raw_counts": True},
-            ]
-        }
-        # Returned fields from raw id query results
-        field_names = {"values": 1, "_id": 0}
-        raw_id_query_results = list(
-            client[STUDY_FILE_COLLECTION_NAME].find(raw_ids_query, {"_id": 1})
-        )
-        # raw_id_query_results did not return results
-        if not raw_id_query_results:
-            # Cells can be repeated in expression matrixes that are not raw counts
-            return True
-
-        # Builds raw ids fields for query
-        raw_ids_query_filter = [
-            {"study_id": result["_id"]} for result in raw_id_query_results
-        ]
-        existing_cells_query = {
-            "$and": [{"linear_data_type": "Study"}, {"array_type": "cells"}],
-            # Grab cell values from studies ids listed in raw_ids_query_filter
-            "$or": raw_ids_query_filter,
+            ],
             "$nor": [{"name": "All Cells"}],
         }
+        # Returned fields from query results
+        FIELD_NAMES = {"values": 1, "_id": 0}
+        DATA_ARRAY_COLLECTION_NAME = "data_arrays"
+        # Holds additional filter to add to EXISITING_CELL_QUERY
+        additional_query_params = {}
+
+        raw_count_query_results = GeneExpression.get_raw_count_study_ids(
+            client, study_id
+        )
+        if raw_count_query_results:
+            raw_count_query_fields = GeneExpression.get_raw_count_query_filters(
+                study_file_id, raw_count_query_results
+            )
+            query_operator_value = "'$and'"
+            operator_values = additional_query_params.get(query_operator_value)
+            merged_operator_values = GeneExpression.add_additional_query_params(
+                operator_values, raw_count_query_fields
+            )
+            additional_query_params[query_operator_value] = merged_operator_values
+
+        EXISITING_CELL_QUERY.update(additional_query_params)
         # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
         query_results: List[Dict] = list(
-            client[DATA_ARRAY_COLLECTION_NAME].find(existing_cells_query, field_names)
+            client[DATA_ARRAY_COLLECTION_NAME].find(EXISITING_CELL_QUERY, FIELD_NAMES)
         )
         # Flatten query results
         existing_cells = [
@@ -153,6 +156,53 @@ class GeneExpression:
             error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
             raise ValueError(error_string)
         return True
+
+    @staticmethod
+    def get_raw_count_query_filters(study_file_id, raw_id_query_results):
+        """Creates query filters for study files have are considered raw count matrices
+        
+            For every result in 'raw_id_query_results' is expected to have the id present. The current study file id
+                is excluded from filters.
+
+        :parameter
+        """
+        current_study_id = {"_id": ObjectId(study_file_id)}
+        if (item == current_study_id for item in raw_id_query_results):
+            raw_id_query_results.remove({"_id": ObjectId("5f8d90e7fa642961b4ca5883")})
+            # raw_id_query_results had additional raw counts for the study
+            if raw_id_query_results:
+                # Builds study ids fields for query
+                raw_ids_query_filters = [
+                    {"study_file_id": result["_id"]} for result in raw_id_query_results
+                ]
+                return raw_ids_query_filters
+            else:
+                return None
+
+    @staticmethod
+    def add_additional_query_params(query_operator_values: [], values):
+        if query_operator_values:
+            return query_operator_values + values
+        return values
+
+    @staticmethod
+    def get_raw_count_study_ids(client, study_id):
+
+        STUDY_FILE_COLLECTION_NAME = "study_files"
+
+        raw_ids_query = {
+            "$and": [
+                {"study_id": study_id},
+                {"file_type": "Expression Matrix"},
+                {"expression_file_info.is_raw_counts": True},
+            ]
+        }
+        # Returned fields from raw id query results
+        field_names = {"_id": 1}
+        raw_id_query_results = list(
+            client[STUDY_FILE_COLLECTION_NAME].find(raw_ids_query, field_names)
+        )
+        return raw_id_query_results
 
     @staticmethod
     def create_data_arrays(
