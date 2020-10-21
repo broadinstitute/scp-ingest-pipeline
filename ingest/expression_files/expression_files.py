@@ -160,11 +160,10 @@ class GeneExpression:
     def get_raw_count_query_filters(
         study_file_id, raw_count_study_file_ids: List[Dict], include_study_file_id=True
     ) -> List[Dict]:
-        """Creates query filters for study files have are considered raw count matrices
+        """Creates query filters for study files that are considered raw count matrices.
 
-            For every result in 'raw_id_query_results' is expected to have the id present. The current study file id
-                is excluded from filters. This function can eventually expand to generically create filters for a
-                given property.
+            Every result in 'raw_id_query_results' is expected to have the id present. This
+                function can eventually expand to generically create filters for a given property.
 
         :parameter
             study_file_id (ObjectID) : Study file id for the current study
