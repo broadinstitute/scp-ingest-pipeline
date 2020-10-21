@@ -106,7 +106,7 @@ class GeneExpression:
             study_file_id (ObjectId): The file id the cell names belong to
             client: MongoDB client
         """
-        EXISITING_CELL_QUERY = {
+        QUERY = {
             "$and": [
                 {"linear_data_type": "Study"},
                 {"array_type": "cells"},
@@ -128,14 +128,16 @@ class GeneExpression:
                 study_file_id, raw_count_query_results, include_study_file_id=False
             )
             query_operator_value = "$and"
-            operator_values = EXISITING_CELL_QUERY.get(query_operator_value, [])
+            operator_values = QUERY.get(query_operator_value, [])
             operator_values.append({"$or": raw_count_query_fields})
-            EXISITING_CELL_QUERY[query_operator_value] = operator_values
+            QUERY[query_operator_value] = operator_values
 
         # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
         query_results: List[Dict] = list(
-            client[COLLECTION_NAME].find(EXISITING_CELL_QUERY, FIELD_NAMES)
+            client[COLLECTION_NAME].find(QUERY, FIELD_NAMES)
         )
+        if not query_results:
+            return True
         # Flatten query results
         existing_cells = [
             values
