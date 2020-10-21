@@ -159,9 +159,9 @@ class GeneExpression:
         study_file_id, raw_count_study_file_ids: List[Dict], include_study_file_id=True
     ) -> List[Dict]:
         """Creates query filters for study files have are considered raw count matrices
-        
+
             For every result in 'raw_id_query_results' is expected to have the id present. The current study file id
-                is excluded from filters. This function can eventually expand to generically create filters for a 
+                is excluded from filters. This function can eventually expand to generically create filters for a
                 given property.
 
         :parameter
