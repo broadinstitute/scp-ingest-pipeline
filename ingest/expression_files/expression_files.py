@@ -116,28 +116,25 @@ class GeneExpression:
         }
         # Returned fields from query results
         FIELD_NAMES = {"values": 1, "_id": 0}
-        DATA_ARRAY_COLLECTION_NAME = "data_arrays"
-        # Holds additional filter to add to EXISITING_CELL_QUERY
-        additional_query_params = {}
+        COLLECTION_NAME = "data_arrays"
 
-        raw_count_query_results = GeneExpression.get_raw_count_study_ids(
+        raw_count_query_results = GeneExpression.get_raw_count_study_file_ids(
             client, study_id
         )
         if raw_count_query_results:
-            raw_count_query_fields = GeneExpression.get_raw_count_query_filters(
-                study_file_id, raw_count_query_results
+            raw_count_query_fields: List[
+                Dict
+            ] = GeneExpression.get_raw_count_query_filters(
+                study_file_id, raw_count_query_results, include_study_file_id=False
             )
-            query_operator_value = "'$and'"
-            operator_values = additional_query_params.get(query_operator_value)
-            merged_operator_values = GeneExpression.add_additional_query_params(
-                operator_values, raw_count_query_fields
-            )
-            additional_query_params[query_operator_value] = merged_operator_values
+            query_operator_value = "$and"
+            operator_values = EXISITING_CELL_QUERY.get(query_operator_value, [])
+            operator_values.append({"$or": raw_count_query_fields})
+            EXISITING_CELL_QUERY[query_operator_value] = operator_values
 
-        EXISITING_CELL_QUERY.update(additional_query_params)
         # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
         query_results: List[Dict] = list(
-            client[DATA_ARRAY_COLLECTION_NAME].find(EXISITING_CELL_QUERY, FIELD_NAMES)
+            client[COLLECTION_NAME].find(EXISITING_CELL_QUERY, FIELD_NAMES)
         )
         # Flatten query results
         existing_cells = [
@@ -158,37 +155,44 @@ class GeneExpression:
         return True
 
     @staticmethod
-    def get_raw_count_query_filters(study_file_id, raw_id_query_results):
+    def get_raw_count_query_filters(
+        study_file_id, raw_count_study_file_ids: List[Dict], include_study_file_id=True
+    ) -> List[Dict]:
         """Creates query filters for study files have are considered raw count matrices
         
             For every result in 'raw_id_query_results' is expected to have the id present. The current study file id
-                is excluded from filters.
+                is excluded from filters. This function can eventually expand to generically create filters for a 
+                given property.
 
         :parameter
+            study_file_id (ObjectID) : Study file id for the current study
+            raw_count_study_file_ids : Study file ids that need filters created ie. [{'id': <Study file id>}]
+            include_study_file_id : Whether to include 'study_file_id' in filter
         """
-        current_study_id = {"_id": ObjectId(study_file_id)}
-        if (item == current_study_id for item in raw_id_query_results):
-            raw_id_query_results.remove({"_id": ObjectId("5f8d90e7fa642961b4ca5883")})
-            # raw_id_query_results had additional raw counts for the study
-            if raw_id_query_results:
-                # Builds study ids fields for query
-                raw_ids_query_filters = [
-                    {"study_file_id": result["_id"]} for result in raw_id_query_results
-                ]
-                return raw_ids_query_filters
-            else:
-                return None
+
+        def generate_filters(raw_count_study_file_ids):
+            return [
+                {"study_file_id": result["_id"]} for result in raw_count_study_file_ids
+            ]
+
+        current_study_file_id = {"_id": ObjectId(study_file_id)}
+        if not include_study_file_id:
+            if (item == current_study_file_id.id for item in raw_count_study_file_ids):
+                raw_count_study_file_ids.remove(current_study_file_id)
+                # raw_count_study_file_ids has other study file
+                if raw_count_study_file_ids:
+                    # Builds study ids fields for query
+                    return generate_filters(raw_count_study_file_ids)
+                else:
+                    return None
+        else:
+            return generate_filters(raw_count_study_file_ids)
 
     @staticmethod
-    def add_additional_query_params(query_operator_values: [], values):
-        if query_operator_values:
-            return query_operator_values + values
-        return values
+    def get_raw_count_study_file_ids(client, study_id) -> List[Dict]:
+        """Returns raw count study file ids that are apart of study"""
 
-    @staticmethod
-    def get_raw_count_study_ids(client, study_id):
-
-        STUDY_FILE_COLLECTION_NAME = "study_files"
+        COLLECTION_NAME = "study_files"
 
         raw_ids_query = {
             "$and": [
@@ -200,7 +204,7 @@ class GeneExpression:
         # Returned fields from raw id query results
         field_names = {"_id": 1}
         raw_id_query_results = list(
-            client[STUDY_FILE_COLLECTION_NAME].find(raw_ids_query, field_names)
+            client[COLLECTION_NAME].find(raw_ids_query, field_names)
         )
         return raw_id_query_results
 
