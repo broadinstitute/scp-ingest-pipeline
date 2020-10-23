@@ -127,35 +127,35 @@ class GeneExpression:
             client, study_id, study_file_id
         )
 
-        # If there are study files of the same type continue
+        # If there are study files of the same type add filters
         if study_files_ids:
             query_fields: List[Dict] = GeneExpression.generate_query_filters(
                 study_files_ids, ["_id"], {"_id": "study_file_id"}
             )
             QUERY["$in"] = query_fields
 
-            # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
-            query_results: List[Dict] = list(
-                client[COLLECTION_NAME].find(QUERY, FIELD_NAMES)
+        # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
+        query_results: List[Dict] = list(
+            client[COLLECTION_NAME].find(QUERY, FIELD_NAMES)
+        )
+        if not query_results:
+            return True
+        # Flatten query results
+        existing_cells = [
+            values
+            for cell_values in query_results
+            for values in cell_values.get("values")
+        ]
+        dupes = set(existing_cells) & set(cell_names)
+        if len(dupes) > 0:
+            error_string = (
+                f"Expression file contains {len(dupes)} cells "
+                "that also exist in another expression file."
             )
-            if not query_results:
-                return True
-            # Flatten query results
-            existing_cells = [
-                values
-                for cell_values in query_results
-                for values in cell_values.get("values")
-            ]
-            dupes = set(existing_cells) & set(cell_names)
-            if len(dupes) > 0:
-                error_string = (
-                    f"Expression file contains {len(dupes)} cells "
-                    "that also exist in another expression file."
-                )
 
-                # add the first 3 duplicates to the error message
-                error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
-                raise ValueError(error_string)
+            # add the first 3 duplicates to the error message
+            error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
+            raise ValueError(error_string)
         return True
 
     @staticmethod
