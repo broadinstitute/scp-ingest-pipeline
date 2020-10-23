@@ -196,7 +196,7 @@ class GeneExpression:
     def get_study_file_ids_by_type(
         client, study_id, current_study_file_id
     ) -> List[Dict]:
-        """Returns raw count study file ids that are apart of study"""
+        """Returns raw count study file ids that are a part of study"""
 
         COLLECTION_NAME = "study_files"
         field_names = {"_id": 1}
