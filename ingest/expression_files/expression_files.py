@@ -176,7 +176,7 @@ class GeneExpression:
         :parameter
             query_results (List[Dict]) : Results from any query
             field_values (List) : Keys that are taken from query_results
-            query_mappings : Maps keys in query_results to fields a model
+            query_mappings : Map query_results fields to model attributes
         Example:
                query_results = [{_id: 1234}, {food:abc}, {barbara: streisand}]
                field_values = [id, food]
