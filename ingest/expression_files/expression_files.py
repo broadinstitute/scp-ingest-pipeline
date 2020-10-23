@@ -102,11 +102,8 @@ class GeneExpression:
 
     @staticmethod
     def check_unique_cells(cell_names: List, study_id, study_file_id, client):
-        """Checks cell names against database to confirm matrix contains unique
-            cell names.
+        """Method checks for unique cells  by matrix type
 
-        Method acts as 'command center' for deciding what methods need to be called to check for cell uniquenes under
-            given scenarios.
 
          Parameters:
             cell_names (List[str]): List of cell names in matrix
