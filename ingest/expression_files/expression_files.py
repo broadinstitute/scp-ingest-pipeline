@@ -174,15 +174,15 @@ class GeneExpression:
         """Creates query filters
 
         :parameter
-            query_results (List[Dict]) : Study file id for the current study
+            query_results (List[Dict]) : Results from any query
             field_values (List) : Keys that are taken from query_results
-            query_mappings : Maps how keys in field_values in the query results should map in the filters
+            query_mappings : Maps keys in query_results to fields a model
         Example:
-               query_results = [{_id: 1234}, {food:abc}, {barbara: strisand}]
+               query_results = [{_id: 1234}, {food:abc}, {barbara: streisand}]
                field_values = [id, food]
                query_mappings = {id: study_file_id, barbara: lastname}
 
-               results = [{study_file_id: 1234}, {lastname: strisand}]
+               results = [{study_file_id: 1234}, {lastname: streisand}]
         """
         filters = []
         for results in query_results:
