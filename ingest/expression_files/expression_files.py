@@ -123,7 +123,7 @@ class GeneExpression:
         FIELD_NAMES = {"values": 1, "_id": 0}
         COLLECTION_NAME = "data_arrays"
 
-        study_files_ids = GeneExpression.get_study_file_ids_by_type(
+        study_files_ids = GeneExpression.get_study_expression_file_ids(
             client, study_id, study_file_id
         )
 
@@ -197,7 +197,7 @@ class GeneExpression:
         return filters
 
     @staticmethod
-    def get_study_file_ids_by_type(
+    def get_study_expression_file_ids(
         client, study_id, current_study_file_id
     ) -> List[Dict]:
         """Returns raw count study file ids that are a part of study"""
