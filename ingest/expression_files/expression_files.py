@@ -169,7 +169,7 @@ class GeneExpression:
 
     @staticmethod
     def generate_query_filters(
-        query_results, field_values, query_mappings: Dict
+        query_results: List[Dict], field_values: List, query_mappings: Dict
     ) -> List[Dict]:
         """Creates query filters
 
