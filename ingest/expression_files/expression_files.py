@@ -159,9 +159,13 @@ class GeneExpression:
         return True
 
     @staticmethod
-    def has_expression_file_info_doc(client, study_id):
+    def has_expression_file_info_doc(client, study_id, study_file_id):
         COLLECTION_NAME = "study_files"
-        QUERY = {"study_id": study_id, "expression_file_info": {"$exists": True}}
+        QUERY = {
+            "study_id": study_id,
+            "study_file_id": study_file_id,
+            "expression_file_info": {"$exists": True},
+        }
         query_results = list(client[COLLECTION_NAME].find(QUERY))
         if query_results:
             return True
@@ -208,7 +212,9 @@ class GeneExpression:
 
         # If study files Does not have document expression_file_info
         # the study only contains one file type.
-        if GeneExpression.has_expression_file_info_doc(client, current_study_file_id):
+        if GeneExpression.has_expression_file_info_doc(
+            client, study_id, current_study_file_id
+        ):
             is_raw_counts = GeneExpression.is_raw_count(current_study_file_id, client)
             if is_raw_counts:
                 QUERY["$and"].append(
