@@ -96,7 +96,7 @@ class GeneExpression:
     def is_raw_count(study_file_id, client):
         COLLECTION_NAME = "study_files"
         FIELD_NAMES = {"expression_file_info.is_raw_counts": 1, "_id": 0}
-        QUERY = {"$and": [{"_id": study_file_id}, {"file_type": "Expression Matrix"}]}
+        QUERY = {"_id": study_file_id}
         query_results = list(client[COLLECTION_NAME].find(QUERY, FIELD_NAMES)).pop()
         return query_results["expression_file_info"]["is_raw_counts"]
 
