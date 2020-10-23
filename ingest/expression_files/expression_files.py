@@ -93,6 +93,14 @@ class GeneExpression:
         )
 
     @staticmethod
+    def is_raw_count(study_file_id, client):
+        COLLECTION_NAME = "study_files"
+        FIELD_NAMES = {"expression_file_info.is_raw_counts": 1, "_id": 0}
+        QUERY = {"$and": [{"_id": study_file_id}, {"file_type": "Expression Matrix"}]}
+        query_results = list(client[COLLECTION_NAME].find(QUERY, FIELD_NAMES)).pop()
+        return query_results["expression_file_info"]["is_raw_counts"]
+
+    @staticmethod
     def check_unique_cells(cell_names: List, study_id, study_file_id, client):
         """Checks cell names against database to confirm matrix contains unique
             cell names.
@@ -118,96 +126,100 @@ class GeneExpression:
         FIELD_NAMES = {"values": 1, "_id": 0}
         COLLECTION_NAME = "data_arrays"
 
-        raw_count_query_results = GeneExpression.get_raw_count_study_file_ids(
-            client, study_id
+        study_files_ids = GeneExpression.get_study_file_ids_by_type(
+            client, study_id, study_file_id
         )
-        if raw_count_query_results:
-            raw_count_query_fields: List[
-                Dict
-            ] = GeneExpression.get_raw_count_query_filters(
-                study_file_id, raw_count_query_results, include_study_file_id=False
-            )
-            query_operator_value = "$and"
-            operator_values = QUERY.get(query_operator_value, [])
-            operator_values.append({"$or": raw_count_query_fields})
-            QUERY[query_operator_value] = operator_values
 
-        # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
-        query_results: List[Dict] = list(
-            client[COLLECTION_NAME].find(QUERY, FIELD_NAMES)
-        )
-        if not query_results:
-            return True
-        # Flatten query results
-        existing_cells = [
-            values
-            for cell_values in query_results
-            for values in cell_values.get("values")
-        ]
-        dupes = set(existing_cells) & set(cell_names)
-        if len(dupes) > 0:
-            error_string = (
-                f"Expression file contains {len(dupes)} cells "
-                "that also exist in another expression file."
+        # If there are study files of the same type continue
+        if study_files_ids:
+            query_fields: List[Dict] = GeneExpression.generate_query_filters(
+                study_files_ids, ["_id"], {"_id": "study_file_id"}
             )
+            QUERY["$in"] = query_fields
 
-            # add the first 3 duplicates to the error message
-            error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
-            raise ValueError(error_string)
+            # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
+            query_results: List[Dict] = list(
+                client[COLLECTION_NAME].find(QUERY, FIELD_NAMES)
+            )
+            if not query_results:
+                return True
+            # Flatten query results
+            existing_cells = [
+                values
+                for cell_values in query_results
+                for values in cell_values.get("values")
+            ]
+            dupes = set(existing_cells) & set(cell_names)
+            if len(dupes) > 0:
+                error_string = (
+                    f"Expression file contains {len(dupes)} cells "
+                    "that also exist in another expression file."
+                )
+
+                # add the first 3 duplicates to the error message
+                error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
+                raise ValueError(error_string)
         return True
 
     @staticmethod
-    def get_raw_count_query_filters(
-        study_file_id, raw_count_study_file_ids: List[Dict], include_study_file_id=True
-    ) -> List[Dict]:
-        """Creates query filters for study files that are considered raw count matrices.
-
-            Every result in 'raw_id_query_results' is expected to have the id present. This
-                function can eventually expand to generically create filters for a given property.
-
-        :parameter
-            study_file_id (ObjectID) : Study file id for the current study
-            raw_count_study_file_ids : Study file ids that need filters created ie. [{'id': <Study file id>}]
-            include_study_file_id : Whether to include 'study_file_id' in filter
-        """
-
-        def generate_filters(raw_count_study_file_ids):
-            return [
-                {"study_file_id": result["_id"]} for result in raw_count_study_file_ids
-            ]
-
-        current_study_file_id = {"_id": ObjectId(study_file_id)}
-        if not include_study_file_id:
-            if (item == current_study_file_id.id for item in raw_count_study_file_ids):
-                raw_count_study_file_ids.remove(current_study_file_id)
-                # raw_count_study_file_ids has other study file
-                if raw_count_study_file_ids:
-                    # Builds study ids fields for query
-                    return generate_filters(raw_count_study_file_ids)
-                else:
-                    return None
-        else:
-            return generate_filters(raw_count_study_file_ids)
+    def has_expression_file_info_doc(client, study_id):
+        COLLECTION_NAME = "study_files"
+        QUERY = {"study_id": study_id, "expression_file_info": {"$exists": True}}
+        query_results = list(client[COLLECTION_NAME].find(QUERY))
+        if query_results:
+            return True
+        return False
 
     @staticmethod
-    def get_raw_count_study_file_ids(client, study_id) -> List[Dict]:
+    def generate_query_filters(
+        query_results, field_values, query_mappings: Dict
+    ) -> List[Dict]:
+        """Creates query filters
+
+        :parameter
+            query_results (List[Dict]) : Study file id for the current study
+            field_values (List) : Keys that are taken from query_results
+            query_mappings : Maps how keys in field_values in the query results should map in the filters
+        Example:
+               query_results = [{_id: 1234}, {food:abc}, {barbara: strisand}]
+               field_values = [id, food]
+               query_mappings = {id: study_file_id, barbara: lastname}
+
+               results = [{study_file_id: 1234}, {lastname: strisand}]
+        """
+        filters = []
+        for results in query_results:
+            for field in field_values:
+                field_key = query_mappings[field]
+                field_value = results[field]
+                filters.append({field_key: field_value})
+        return filters
+
+    @staticmethod
+    def get_study_file_ids_by_type(
+        client, study_id, current_study_file_id
+    ) -> List[Dict]:
         """Returns raw count study file ids that are apart of study"""
 
         COLLECTION_NAME = "study_files"
-
-        raw_ids_query = {
-            "$and": [
-                {"study_id": study_id},
-                {"file_type": "Expression Matrix"},
-                {"expression_file_info.is_raw_counts": True},
-            ]
-        }
-        # Returned fields from raw id query results
         field_names = {"_id": 1}
-        raw_id_query_results = list(
-            client[COLLECTION_NAME].find(raw_ids_query, field_names)
-        )
-        return raw_id_query_results
+        QUERY = {
+            "$and": [{"study_id": study_id}],
+            "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
+            "$nor": [{"_id": current_study_file_id}],
+        }
+
+        # If study files Does not have document expression_file_info
+        # the study only contains one file type.
+        if GeneExpression.has_expression_file_info_doc(client, current_study_file_id):
+            is_raw_counts = GeneExpression.is_raw_count(current_study_file_id, client)
+            if is_raw_counts:
+                QUERY["$and"].append(
+                    {"expression_file_info.is_raw_counts": is_raw_counts}
+                )
+        # Returned fields query results
+        query_results = list(client[COLLECTION_NAME].find(QUERY, field_names))
+        return query_results
 
     @staticmethod
     def create_data_arrays(
