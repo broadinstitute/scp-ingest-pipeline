@@ -224,6 +224,14 @@ class TestExpressionFiles(unittest.TestCase):
                 TestExpressionFiles.client_mock,
             )
         )
+        mock_has_expression_file_info_doc.return_value = None
+        self.assertFalse(
+            GeneExpression.is_raw_count(
+                TestExpressionFiles.STUDY_ID,
+                TestExpressionFiles.STUDY_FILE_ID,
+                TestExpressionFiles.client_mock,
+            )
+        )
 
         mock_has_expression_file_info_doc.return_value = True
         client = MagicMock()
