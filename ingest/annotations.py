@@ -90,7 +90,7 @@ class Annotations(IngestFiles):
             self.create_data_frame()
         else:
             msg = (
-                "Unable to parse file - Duplicated annotation header names are not allowed. \n"
+                "Unable to parse file - Duplicate annotation header names are not allowed. \n"
                 "This error can be also be caused by a row with too many entries. \n"
             )
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
