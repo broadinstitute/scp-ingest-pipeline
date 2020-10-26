@@ -93,12 +93,34 @@ class GeneExpression:
         )
 
     @staticmethod
-    def is_raw_count(study_file_id, client):
+    def is_raw_count(study_id, study_file_id, client):
         COLLECTION_NAME = "study_files"
         FIELD_NAMES = {"expression_file_info.is_raw_counts": 1, "_id": 0}
-        QUERY = {"$and": [{"_id": study_file_id}, {"file_type": "Expression Matrix"}]}
-        query_results = list(client[COLLECTION_NAME].find(QUERY, FIELD_NAMES)).pop()
-        return query_results["expression_file_info"]["is_raw_counts"]
+        QUERY = {"_id": study_file_id}
+        # If study files does not have document expression_file_info
+        # field, "is_raw_counts", will not exist.
+        if GeneExpression.has_expression_file_info_doc(study_id, study_file_id, client):
+            query_results = list(client[COLLECTION_NAME].find(QUERY, FIELD_NAMES)).pop()
+            return query_results["expression_file_info"]["is_raw_counts"]
+        else:
+            return False
+
+    @staticmethod
+    def query_cells(study_id, client, query_kwargs):
+        QUERY = {
+            "$and": [
+                {"linear_data_type": "Study"},
+                {"array_type": "cells"},
+                {"study_id": study_id},
+            ],
+            "$nor": [{"name": "All Cells"}],
+            **query_kwargs,
+        }
+        # Returned fields from query results
+        FIELD_NAMES = {"values": 1, "_id": 0}
+        COLLECTION_NAME = "data_arrays"
+
+        return list(client[COLLECTION_NAME].find(QUERY, FIELD_NAMES))
 
     @staticmethod
     def check_unique_cells(cell_names: List, study_id, study_file_id, client):
@@ -111,32 +133,22 @@ class GeneExpression:
             study_file_id (ObjectId): The file id the cell names belong to
             client: MongoDB client
         """
-        QUERY = {
-            "$and": [
-                {"linear_data_type": "Study"},
-                {"array_type": "cells"},
-                {"study_id": study_id},
-            ],
-            "$nor": [{"name": "All Cells"}],
-        }
-        # Returned fields from query results
-        FIELD_NAMES = {"values": 1, "_id": 0}
-        COLLECTION_NAME = "data_arrays"
 
+        additional_query_kwargs = {}
         study_files_ids = GeneExpression.get_study_expression_file_ids(
-            client, study_id, study_file_id
+            study_id, study_file_id, client
         )
 
         # If there are study files of the same type add filters
         if study_files_ids:
-            query_fields: List[Dict] = GeneExpression.generate_query_filters(
-                study_files_ids, ["_id"], {"_id": "study_file_id"}
-            )
-            QUERY["$in"] = query_fields
+            study_files_ids_list = [
+                study_files_id["_id"] for study_files_id in study_files_ids
+            ]
+            additional_query_kwargs["study_file_id"] = {"$in": study_files_ids_list}
 
         # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
-        query_results: List[Dict] = list(
-            client[COLLECTION_NAME].find(QUERY, FIELD_NAMES)
+        query_results: List[Dict] = GeneExpression.query_cells(
+            study_id, client, additional_query_kwargs
         )
         if not query_results:
             return True
@@ -159,7 +171,7 @@ class GeneExpression:
         return True
 
     @staticmethod
-    def has_expression_file_info_doc(client, study_id, study_file_id):
+    def has_expression_file_info_doc(study_id, study_file_id, client):
         COLLECTION_NAME = "study_files"
         QUERY = {
             "study_id": study_id,
@@ -172,35 +184,10 @@ class GeneExpression:
         return False
 
     @staticmethod
-    def generate_query_filters(
-        query_results: List[Dict], field_values: List, query_mappings: Dict
-    ) -> List[Dict]:
-        """Creates query filters
-
-        :parameter
-            query_results (List[Dict]) : Results from any query
-            field_values (List) : Keys that are taken from query_results
-            query_mappings : Map query_results fields to model attributes
-        Example:
-               query_results = [{_id: 1234}, {food:abc}, {barbara: streisand}]
-               field_values = [id, food]
-               query_mappings = {id: study_file_id, barbara: lastname}
-
-               results = [{study_file_id: 1234}, {lastname: streisand}]
-        """
-        filters = []
-        for results in query_results:
-            for field in field_values:
-                field_key = query_mappings[field]
-                field_value = results[field]
-                filters.append({field_key: field_value})
-        return filters
-
-    @staticmethod
     def get_study_expression_file_ids(
-        client, study_id, current_study_file_id
+        study_id, current_study_file_id, client
     ) -> List[Dict]:
-        """Returns raw count study file ids that are a part of study"""
+        """Returns study file ids that are of the same type as 'current_study_file_id' in the study """
 
         COLLECTION_NAME = "study_files"
         field_names = {"_id": 1}
@@ -213,9 +200,11 @@ class GeneExpression:
         # If study files Does not have document expression_file_info
         # the study only contains one file type.
         if GeneExpression.has_expression_file_info_doc(
-            client, study_id, current_study_file_id
+            study_id, current_study_file_id, client
         ):
-            is_raw_counts = GeneExpression.is_raw_count(current_study_file_id, client)
+            is_raw_counts = GeneExpression.is_raw_count(
+                study_id, current_study_file_id, client
+            )
             if is_raw_counts:
                 QUERY["$and"].append(
                     {"expression_file_info.is_raw_counts": is_raw_counts}

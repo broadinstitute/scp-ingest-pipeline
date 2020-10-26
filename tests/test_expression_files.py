@@ -116,14 +116,14 @@ class TestExpressionFiles(unittest.TestCase):
                 {"linear_data_type": "Study"},
                 {"array_type": "cells"},
                 {"study_id": TestExpressionFiles.STUDY_ID},
-                {
-                    "$or": [
-                        {"study_file_id": ObjectId("5d276a50421aa9117c982845")},
-                        {"study_file_id": ObjectId("5f70abd6771a5b0de0cea0f0")},
-                    ]
-                },
             ],
             "$nor": [{"name": "All Cells"}],
+            "study_file_id": {
+                "$in": [
+                    ObjectId("5f70abd6771a5b0de0cea0f0"),
+                    ObjectId("5f70c1b2771a5b0de0cea0ed"),
+                ]
+            },
         }
         # Following tests are for matrices that aren't raw counts
 
@@ -149,37 +149,48 @@ class TestExpressionFiles(unittest.TestCase):
                 self.assertTrue("foo3" in str(cm.exception))
                 self.assertTrue("foo6" in str(cm.exception))
 
-                # Cells are unique
-                header = ["GENE", "foo", "foo2"]
-                self.assertTrue(
-                    GeneExpression.check_unique_cells(
-                        header,
-                        TestExpressionFiles.STUDY_ID,
-                        TestExpressionFiles.STUDY_FILE_ID,
-                        TestExpressionFiles.client_mock,
-                    )
+            # Cells are unique
+            header = ["GENE", "foo", "foo2"]
+            self.assertTrue(
+                GeneExpression.check_unique_cells(
+                    header,
+                    TestExpressionFiles.STUDY_ID,
+                    TestExpressionFiles.STUDY_FILE_ID,
+                    TestExpressionFiles.client_mock,
                 )
-                TestExpressionFiles.client_mock["data_arrays"].find.assert_called_with(
-                    QUERY, FIELD_NAMES
-                )
+            )
+            TestExpressionFiles.client_mock["data_arrays"].find.assert_called_with(
+                QUERY, FIELD_NAMES
+            )
 
         # Following tests are for matrices that are raw counts"""
-
-        # Add query filter for is_raw_counts
-        QUERY["$and"].append({"expression_file_info.is_raw_counts": True})
         with patch(
             "expression_files.expression_files.GeneExpression.is_raw_count",
             return_value=True,
-        ), self.assertRaises(ValueError) as cm:
-            header = ["GENE", "foo", "foo3", "foo2", "foo6"]
-            study_id = ObjectId()
-            study_file_id = ObjectId("5dd5ae25421aa910a723a337")
-            GeneExpression.check_unique_cells(
-                header, study_id, study_file_id, TestExpressionFiles.client_mock
+        ):
+            with self.assertRaises(ValueError) as cm:
+                header = ["GENE", "foo", "foo3", "foo2", "foo6"]
+                study_id = ObjectId()
+                study_file_id = ObjectId("5dd5ae25421aa910a723a337")
+                GeneExpression.check_unique_cells(
+                    header, study_id, study_file_id, TestExpressionFiles.client_mock
+                )
+                self.assertTrue("contains 2 cells" in str(cm.exception))
+                self.assertTrue("foo3" in str(cm.exception))
+                self.assertTrue("foo6" in str(cm.exception))
+                TestExpressionFiles.client_mock["data_arrays"].find.assert_called_with(
+                    QUERY, FIELD_NAMES
+                )
+            # Cells are unique
+            header = ["GENE", "foo", "foo2"]
+            self.assertTrue(
+                GeneExpression.check_unique_cells(
+                    header,
+                    TestExpressionFiles.STUDY_ID,
+                    TestExpressionFiles.STUDY_FILE_ID,
+                    TestExpressionFiles.client_mock,
+                )
             )
-            self.assertTrue("contains 2 cells" in str(cm.exception))
-            self.assertTrue("foo3" in str(cm.exception))
-            self.assertTrue("foo6" in str(cm.exception))
             TestExpressionFiles.client_mock["data_arrays"].find.assert_called_with(
                 QUERY, FIELD_NAMES
             )
@@ -192,7 +203,7 @@ class TestExpressionFiles(unittest.TestCase):
                 )
             )
 
-    def test_get_study_file_ids_by_type(self):
+    def test_get_study_expression_file_ids(self):
         RAW_COUNTS_QUERY = {
             "$and": [{"study_id": ObjectId("5d276a50421aa9117c982845")}],
             "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
@@ -216,10 +227,10 @@ class TestExpressionFiles(unittest.TestCase):
                 RAW_COUNTS_QUERY["$and"].append(
                     {"expression_file_info.is_raw_counts": True}
                 )
-                GeneExpression.get_study_file_ids_by_type(
-                    TestExpressionFiles.client_mock,
+                GeneExpression.get_study_expression_file_ids(
                     TestExpressionFiles.STUDY_ID,
                     TestExpressionFiles.STUDY_FILE_ID,
+                    TestExpressionFiles.client_mock,
                 )
                 TestExpressionFiles.client_mock[
                     COLLECTION_NAME
@@ -236,10 +247,10 @@ class TestExpressionFiles(unittest.TestCase):
                 "expression_files.expression_files.GeneExpression.is_raw_count",
                 return_value=False,
             ):
-                GeneExpression.get_study_file_ids_by_type(
-                    TestExpressionFiles.client_mock,
+                GeneExpression.get_study_expression_file_ids(
                     TestExpressionFiles.STUDY_ID,
                     TestExpressionFiles.STUDY_FILE_ID,
+                    TestExpressionFiles.client_mock,
                 )
                 TestExpressionFiles.client_mock[
                     COLLECTION_NAME
