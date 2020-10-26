@@ -109,6 +109,15 @@ class TestExpressionFiles(unittest.TestCase):
     client_mock.keys.return_value.__iter__.return_value = client_values.keys()
     client_mock.__getitem__.side_effect = lambda k: client_values[k]
 
+    def setUp(self) -> None:
+        # Reinitialize client mock before each test
+        TestExpressionFiles.client_mock.keys.return_value.__iter__.return_value = (
+            client_values.keys()
+        )
+        TestExpressionFiles.client_mock.__getitem__.side_effect = lambda k: client_values[
+            k
+        ]
+
     def test_check_unique_cells(self):
         FIELD_NAMES = {"values": 1, "_id": 0}
         QUERY = {
@@ -203,6 +212,39 @@ class TestExpressionFiles(unittest.TestCase):
                 )
             )
 
+    @patch(
+        "expression_files.expression_files.GeneExpression.has_expression_file_info_doc"
+    )
+    def test_is_raw_count(self, mock_has_expression_file_info_doc):
+        mock_has_expression_file_info_doc.return_value = False
+        self.assertFalse(
+            GeneExpression.is_raw_count(
+                TestExpressionFiles.STUDY_ID,
+                TestExpressionFiles.STUDY_FILE_ID,
+                TestExpressionFiles.client_mock,
+            )
+        )
+
+        mock_has_expression_file_info_doc.return_value = True
+        client = MagicMock()
+        client["study_files"].find.return_value = [
+            {"expression_file_info": {"is_raw_counts": True}}
+        ]
+        self.assertTrue(
+            GeneExpression.is_raw_count(
+                TestExpressionFiles.STUDY_ID, TestExpressionFiles.STUDY_FILE_ID, client
+            )
+        )
+
+        client["study_files"].find.return_value = [
+            {"expression_file_info": {"is_raw_counts": False}}
+        ]
+        self.assertFalse(
+            GeneExpression.is_raw_count(
+                TestExpressionFiles.STUDY_ID, TestExpressionFiles.STUDY_FILE_ID, client
+            )
+        )
+
     def test_get_study_expression_file_ids(self):
         RAW_COUNTS_QUERY = {
             "$and": [{"study_id": ObjectId("5d276a50421aa9117c982845")}],
@@ -255,26 +297,6 @@ class TestExpressionFiles(unittest.TestCase):
                 TestExpressionFiles.client_mock[
                     COLLECTION_NAME
                 ].find.assert_called_with(RAW_COUNTS_QUERY, FIELD_NAME)
-
-        # Study has study files without document expression_file_info
-
-    def test_generate_query_filters(self):
-
-        # Tests when there are results outside of current raw counts study file
-        query_results = [
-            {"_id": ObjectId("5dd5ae25421aa910a723a337")},
-            {"_id": ObjectId("5d276a50421aa9117c982845")},
-            {"_id": ObjectId("5f70abd6771a5b0de0cea0f0")},
-        ]
-        expected_results = [
-            {"study_file_id": ObjectId("5dd5ae25421aa910a723a337")},
-            {"study_file_id": ObjectId("5d276a50421aa9117c982845")},
-            {"study_file_id": ObjectId("5f70abd6771a5b0de0cea0f0")},
-        ]
-        results = GeneExpression.generate_query_filters(
-            query_results, ["_id"], {"_id": "study_file_id"}
-        )
-        self.assertCountEqual(expected_results, results)
 
     def test_create_data_arrays(self):
         _id = ObjectId()
