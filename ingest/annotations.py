@@ -86,7 +86,15 @@ class Annotations(IngestFiles):
         # Uppercase NAME and TYPE
         self.headers[0] = self.headers[0].upper()
         self.annot_types[0] = self.annot_types[0].upper()
-        self.create_data_frame()
+        if self.validate_unique_header():
+            self.create_data_frame()
+        else:
+            msg = (
+                "Unable to parse file - Duplicate annotation header names are not allowed. \n"
+                "This error can be also be caused by a row with too many entries. \n"
+            )
+            log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
+            raise ValueError(msg)
 
     def create_data_frame(self):
         """
@@ -154,10 +162,10 @@ class Annotations(IngestFiles):
         if self.headers[0].upper() == "NAME":
             valid = True
             if self.headers[0] != "NAME":
-                msg = f'Metadata file keyword "NAME" provided as {self.headers[0]}'
+                msg = f'File keyword "NAME" provided as {self.headers[0]}'
                 self.store_validation_issue("warn", "format", msg)
         else:
-            msg = "Malformed metadata file header row, missing NAME. (Case Sensitive)"
+            msg = "Malformed file header row, missing NAME keyword. (Case Sensitive)"
             self.store_validation_issue("error", "format", msg)
         return valid
 
@@ -175,13 +183,13 @@ class Annotations(IngestFiles):
             for x in self.headers:
                 if x in seen_headers or seen_headers.add(x):
                     duplicate_headers.add(x)
-            msg = (
-                f"Duplicated metadata header names are not allowed: {duplicate_headers}"
-            )
+            msg = f"Duplicated header names are not allowed: {duplicate_headers}"
+            log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
             self.store_validation_issue("error", "format", msg)
             valid = False
         if any("Unnamed" in s for s in list(unique_headers)):
             msg = "Headers cannot contain empty values"
+            log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
             self.store_validation_issue("error", "format", msg)
             valid = False
         return valid
@@ -194,10 +202,10 @@ class Annotations(IngestFiles):
         if self.annot_types[0].upper() == "TYPE":
             valid = True
             if self.annot_types[0] != "TYPE":
-                msg = f'Metadata file keyword "TYPE" provided as {self.annot_types[0]}'
+                msg = f'File keyword "TYPE" provided as {self.annot_types[0]}'
                 self.store_validation_issue("warn", "format", msg)
         else:
-            msg = "Malformed metadata TYPE row, missing TYPE. (Case Sensitive)"
+            msg = "Malformed TYPE row, missing TYPE. (Case Sensitive)"
             self.store_validation_issue("error", "format", msg)
         return valid
 
