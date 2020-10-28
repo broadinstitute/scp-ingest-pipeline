@@ -95,13 +95,14 @@ class GeneExpression:
     @staticmethod
     def is_raw_count(study_id, study_file_id, client):
         COLLECTION_NAME = "study_files"
-        FIELD_NAMES = {"expression_file_info.is_raw_counts": 1, "_id": 0}
-        QUERY = {"_id": study_file_id}
+        QUERY = {"_id": study_file_id, "study_id": study_id}
+
+        study_file_doc = list(client[COLLECTION_NAME].find(QUERY)).pop()
+        # Name of embedded document that holds 'is_raw_counts is named expression_file_info.
         # If study files does not have document expression_file_info
-        # field, "is_raw_counts", will not exist.
-        if GeneExpression.has_expression_file_info_doc(study_id, study_file_id, client):
-            query_results = list(client[COLLECTION_NAME].find(QUERY, FIELD_NAMES)).pop()
-            return query_results["expression_file_info"]["is_raw_counts"]
+        # field, "is_raw_counts", will not exist.:
+        if "expression_file_info" in study_file_doc.keys():
+            return study_file_doc["expression_file_info"]["is_raw_counts"]
         else:
             return False
 
@@ -196,19 +197,11 @@ class GeneExpression:
             "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
             "$nor": [{"_id": current_study_file_id}],
         }
-
-        # If study files Does not have document expression_file_info
-        # the study only contains one file type.
-        if GeneExpression.has_expression_file_info_doc(
+        is_raw_counts = GeneExpression.is_raw_count(
             study_id, current_study_file_id, client
-        ):
-            is_raw_counts = GeneExpression.is_raw_count(
-                study_id, current_study_file_id, client
-            )
-            if is_raw_counts:
-                QUERY["$and"].append(
-                    {"expression_file_info.is_raw_counts": is_raw_counts}
-                )
+        )
+        if is_raw_counts:
+            QUERY["$and"].append({"expression_file_info.is_raw_counts": is_raw_counts})
         # Returned fields query results
         query_results = list(client[COLLECTION_NAME].find(QUERY, field_names))
         return query_results
