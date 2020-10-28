@@ -125,23 +125,13 @@ class GeneExpression:
         return list(client[COLLECTION_NAME].find(QUERY, FIELD_NAMES))
 
     @staticmethod
-    def check_unique_cells(cell_names: List, study_id, study_file_id, client):
-        """Method checks for unique cells  by matrix type
-
-
-         Parameters:
-            cell_names (List[str]): List of cell names in matrix
-            study_id (ObjectId): The study id the cell names belong to
-            study_file_id (ObjectId): The file id the cell names belong to
-            client: MongoDB client
-        """
-
+    def get_cell_names_from_study_file_id(study_id, study_file_id, client):
         additional_query_kwargs = {}
         study_files_ids = GeneExpression.get_study_expression_file_ids(
             study_id, study_file_id, client
         )
 
-        # If there are study files of the same type add filters
+        # If there are study files of the same type create and add filters
         if study_files_ids:
             study_files_ids_list = [
                 study_files_id["_id"] for study_files_id in study_files_ids
@@ -153,13 +143,30 @@ class GeneExpression:
             study_id, client, additional_query_kwargs
         )
         if not query_results:
-            return True
+            return None
         # Flatten query results
         existing_cells = [
             values
             for cell_values in query_results
             for values in cell_values.get("values")
         ]
+        return existing_cells
+
+    @staticmethod
+    def check_unique_cells(cell_names: List, study_id, study_file_id, client):
+        """Method checks for unique cells  by matrix type
+
+
+         Parameters:
+            cell_names (List[str]): List of cell names in matrix
+            study_id (ObjectId): The study id the cell names belong to
+            study_file_id (ObjectId): The file id the cell names belong to
+            client: MongoDB client
+        """
+
+        existing_cells = GeneExpression.get_cell_names_from_study_file_id(
+            study_id, study_file_id, client
+        )
         dupes = set(existing_cells) & set(cell_names)
         if len(dupes) > 0:
             error_string = (
