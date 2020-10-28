@@ -86,15 +86,21 @@ class MTXIngestor(GeneExpression, IngestFiles):
     @staticmethod
     def is_sorted(file_path: str, file_handler):
         """Checks if a file is sorted by gene index"""
+        std_in = None
         file_size = os.path.getsize(file_path)
         if file_size == 0:
             raise ValueError(f"{file_path} is empty: " + str(file_size))
         start_idx: int = MTXIngestor.get_data_start_line_number(file_handler)
+        if IngestFiles.get_file_type(file_path) == "gzip":
+            p0 = subprocess.Popen(["zcat", file_path], stdout=subprocess.PIPE)
+            std_in = p0.out
         # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
         # The header and mtx dimension aren't included or else the file would always be considered unsorted due to the mtx
         # dimensions always being larger than the first row of data.
         p1 = subprocess.Popen(
-            ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
+            ["tail", "-n", f"+{start_idx}", file_path],
+            stdout=subprocess.PIPE,
+            stdin=std_in,
         )
         # Check that the input file is sorted (-c). Check sorting by first and only first column (-k 1,1,). This value is
         # numeric(-n). Use stable sort (--stable) so that columns are only compared by the first column.
