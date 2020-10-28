@@ -91,9 +91,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
         if file_size == 0:
             raise ValueError(f"{file_path} is empty: " + str(file_size))
         start_idx: int = MTXIngestor.get_data_start_line_number(file_handler)
-        if IngestFiles.get_file_type(file_path) == "gzip":
-            p0 = subprocess.Popen(["zcat", file_path], stdout=subprocess.PIPE)
-            std_in = p0.out
+        if IngestFiles.get_file_type(file_path)[1] == "gzip":
+            p0 = subprocess.Popen(["gunzip", "-c", file_path], stdout=subprocess.PIPE)
+            std_in = p0.stdout
         # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
         # The header and mtx dimension aren't included or else the file would always be considered unsorted due to the mtx
         # dimensions always being larger than the first row of data.
@@ -222,17 +222,25 @@ class MTXIngestor(GeneExpression, IngestFiles):
         """
         file_name = ntpath.split(file_path)[1]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
+        std_in = None
 
         with open(new_file_name, "w+") as f:
             GeneExpression.dev_logger.info("Starting to sort")
             start_time = datetime.datetime.now()
+            if IngestFiles.get_file_type(file_path)[1] == "gzip":
+                p0 = subprocess.Popen(
+                    ["gunzip", "-c", file_path], stdout=subprocess.PIPE
+                )
+                std_in = p0.stdout
             # Line to start sorting at
             start_idx: int = MTXIngestor.get_data_start_line_number(mtx_file_handler)
             # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
             # Transform() is expecting the file handle to be at the first line of data which is why sorting starts at
             # line number 'n', as defined by start_idx
             p1 = subprocess.Popen(
-                ["tail", "-n", f"+{start_idx}", f"{file_path}"], stdout=subprocess.PIPE
+                ["tail", "-n", f"+{start_idx}", f"{file_path}"],
+                stdin=std_in,
+                stdout=subprocess.PIPE,
             )
             # Sort output of p1 ( all gene expression data) by first and only first column (-k 1,1,)
             # using 20G for the memory buffer (-S 20G) with a max maximum number of 320 temporary files (--batch-size=320)
@@ -262,12 +270,12 @@ class MTXIngestor(GeneExpression, IngestFiles):
     def execute_ingest(self):
         """Parses MTX files"""
         self.extract_feature_barcode_matrices()
-        MTXIngestor.check_valid(
-            self.cells,
-            self.genes,
-            self.mtx_dimensions,
-            query_params=(self.study_id, self.mongo_connection._client),
-        )
+        # MTXIngestor.check_valid(
+        #     self.cells,
+        #     self.genes,
+        #     self.mtx_dimensions,
+        #     query_params=(self.study_id, self.mongo_connection._client),
+        # )
         # Need fresh mtx file handler for get_data_start_line_number()
         fresh_mtx_file_handler = self.resolve_path(self.mtx_path)[1]
         if not MTXIngestor.is_sorted(self.mtx_path, fresh_mtx_file_handler):
