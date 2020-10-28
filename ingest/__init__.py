@@ -2,3 +2,6 @@
 from .ingest_files import IngestFiles
 from .cell_metadata import CellMetadata
 from .validation.validate_metadata import *
+from ingest.montoring.mixpanel_log import custom_metric
+from .mongo_connection import MongoConnection
+from .montoring.mixpanel_log import custom_metric
