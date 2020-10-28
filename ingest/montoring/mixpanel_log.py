@@ -62,12 +62,13 @@ class CustomMetricTimedNode(ContextDecorator, MixpanelLog):
         MixpanelLog.__init__(self)
         file_path = func_values[0]
         file_size = os.path.getsize(file_path)
+        study_accession = CustomMetricTimedNode.get_study_accession(cls.study_id)
         if file_size == 0:
             raise ValueError(f"{file_size} is empty: " + str(file_size))
         self.model = CustomMetricTimedNode.Model(
             {
                 "name": name,
-                "study_accession": "hello",
+                "study_accession": study_accession,
                 "function_name": func_name,
                 "file_path": file_path,
                 "file_type": file_type,
@@ -76,6 +77,11 @@ class CustomMetricTimedNode(ContextDecorator, MixpanelLog):
             }
         )
         self.model.update(props)
+
+    def get_study_accession(study_id):
+        return CustomMetricTimedNode.MONGO_CONNECTION["study_accessions"].find(
+            {"study_id": study_id}, {"study_id": 1, "_id": 0}
+        )
 
     def __enter__(self):
         self.start_time = timer()
