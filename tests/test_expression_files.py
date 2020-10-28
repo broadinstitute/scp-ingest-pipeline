@@ -119,122 +119,99 @@ class TestExpressionFiles(unittest.TestCase):
         ]
 
     def test_check_unique_cells(self):
-        FIELD_NAMES = {"values": 1, "_id": 0}
-        QUERY = {
-            "$and": [
-                {"linear_data_type": "Study"},
-                {"array_type": "cells"},
-                {"study_id": TestExpressionFiles.STUDY_ID},
+        with patch(
+            "expression_files.expression_files.GeneExpression.get_cell_names_from_study_file_id",
+            return_value=["foo3", "foo4", "foo5", "foo6", "foo7", "foo8"],
+        ), self.assertRaises(ValueError) as cm:
+            header = ["GENE", "foo", "foo2", "foo3"]
+            GeneExpression.check_unique_cells(
+                header, ObjectId(), ObjectId(), TestExpressionFiles.client_mock
+            )
+            self.assertTrue("contains 1 cells" in str(cm.exception))
+            self.assertTrue("foo3" in str(cm.exception))
+
+        # Duplicate cells but duplicate values don't appear in same 'value' array
+        with patch(
+            "expression_files.expression_files.GeneExpression.get_cell_names_from_study_file_id",
+            return_value=["foo3", "foo4", "foo5", "foo6", "foo7", "foo8"],
+        ), self.assertRaises(ValueError) as cm:
+            header = ["GENE", "foo", "foo3", "foo2", "foo6"]
+            GeneExpression.check_unique_cells(
+                header, ObjectId(), ObjectId(), TestExpressionFiles.client_mock
+            )
+            self.assertTrue("contains 2 cells" in str(cm.exception))
+            self.assertTrue("foo3" in str(cm.exception))
+            self.assertTrue("foo6" in str(cm.exception))
+
+        with patch(
+            "expression_files.expression_files.GeneExpression.get_cell_names_from_study_file_id",
+            return_value=["foo3", "foo4", "foo5", "foo6", "foo7", "foo8"],
+        ):
+            # Cells are unique
+            header = ["GENE", "foo", "foo2"]
+            self.assertTrue(
+                GeneExpression.check_unique_cells(
+                    header,
+                    TestExpressionFiles.STUDY_ID,
+                    TestExpressionFiles.STUDY_FILE_ID,
+                    TestExpressionFiles.client_mock,
+                )
+            )
+
+    @patch("expression_files.expression_files.GeneExpression.query_cells")
+    def test_get_cell_names_from_study_file_id(self, mock_query_cells):
+        with patch(
+            "expression_files.expression_files.GeneExpression.get_study_expression_file_ids",
+            return_value=[
+                {"_id": ObjectId(), "study_file_id": ObjectId()},
+                {"_id": ObjectId(), "study_file_id": ObjectId()},
             ],
-            "$nor": [{"name": "All Cells"}],
-            "study_file_id": {
-                "$in": [
-                    ObjectId("5f70abd6771a5b0de0cea0f0"),
-                    ObjectId("5f70c1b2771a5b0de0cea0ed"),
-                ]
-            },
-        }
-        # Following tests are for matrices that aren't raw counts
-
-        with patch(
-            "expression_files.expression_files.GeneExpression.is_raw_count",
-            return_value=False,
         ):
-            with self.assertRaises(ValueError) as cm:
-                header = ["GENE", "foo", "foo2", "foo3"]
-                GeneExpression.check_unique_cells(
-                    header, ObjectId(), ObjectId(), TestExpressionFiles.client_mock
-                )
-                self.assertTrue("contains 1 cells" in str(cm.exception))
-                self.assertTrue("foo3" in str(cm.exception))
+            mock_query_cells.return_value = [
+                {"values": ["foo3", "foo4", "foo5"]},
+                {"values": ["foo6", "foo7", "foo8", "foo6", "foo7", "foo8"]},
+            ]
+            expected = [
+                "foo3",
+                "foo4",
+                "foo5",
+                "foo6",
+                "foo7",
+                "foo8",
+                "foo6",
+                "foo7",
+                "foo8",
+            ]
+            cells = GeneExpression.get_cell_names_from_study_file_id(
+                ObjectId(), ObjectId(), MagicMock()
+            )
+            self.assertEqual(cells, expected)
 
-            # Duplicate cells but duplicate values don't appear in same 'value' array
-            with self.assertRaises(ValueError) as cm:
-                header = ["GENE", "foo", "foo3", "foo2", "foo6"]
-                GeneExpression.check_unique_cells(
-                    header, ObjectId(), ObjectId(), TestExpressionFiles.client_mock
-                )
-                self.assertTrue("contains 2 cells" in str(cm.exception))
-                self.assertTrue("foo3" in str(cm.exception))
-                self.assertTrue("foo6" in str(cm.exception))
+            mock_query_cells.return_value = []
+            cells = GeneExpression.get_cell_names_from_study_file_id(
+                ObjectId(), ObjectId(), MagicMock()
+            )
+            self.assertEqual(cells, None)
 
-            # Cells are unique
-            header = ["GENE", "foo", "foo2"]
-            self.assertTrue(
-                GeneExpression.check_unique_cells(
-                    header,
-                    TestExpressionFiles.STUDY_ID,
-                    TestExpressionFiles.STUDY_FILE_ID,
-                    TestExpressionFiles.client_mock,
-                )
-            )
-            TestExpressionFiles.client_mock["data_arrays"].find.assert_called_with(
-                QUERY, FIELD_NAMES
-            )
-
-        # Following tests are for matrices that are raw counts"""
-        with patch(
-            "expression_files.expression_files.GeneExpression.is_raw_count",
-            return_value=True,
-        ):
-            with self.assertRaises(ValueError) as cm:
-                header = ["GENE", "foo", "foo3", "foo2", "foo6"]
-                study_id = ObjectId()
-                study_file_id = ObjectId("5dd5ae25421aa910a723a337")
-                GeneExpression.check_unique_cells(
-                    header, study_id, study_file_id, TestExpressionFiles.client_mock
-                )
-                self.assertTrue("contains 2 cells" in str(cm.exception))
-                self.assertTrue("foo3" in str(cm.exception))
-                self.assertTrue("foo6" in str(cm.exception))
-                TestExpressionFiles.client_mock["data_arrays"].find.assert_called_with(
-                    QUERY, FIELD_NAMES
-                )
-            # Cells are unique
-            header = ["GENE", "foo", "foo2"]
-            self.assertTrue(
-                GeneExpression.check_unique_cells(
-                    header,
-                    TestExpressionFiles.STUDY_ID,
-                    TestExpressionFiles.STUDY_FILE_ID,
-                    TestExpressionFiles.client_mock,
-                )
-            )
-            TestExpressionFiles.client_mock["data_arrays"].find.assert_called_with(
-                QUERY, FIELD_NAMES
-            )
-
-            # When no cells are returned from the query that checks for cell uniqueness
-            TestExpressionFiles.client_mock["data_arrays"].find.return_value = []
-            self.assertTrue(
-                GeneExpression.check_unique_cells(
-                    header, ObjectId(), ObjectId(), TestExpressionFiles.client_mock
-                )
-            )
-
-    @patch(
-        "expression_files.expression_files.GeneExpression.has_expression_file_info_doc"
-    )
-    def test_is_raw_count(self, mock_has_expression_file_info_doc):
-        mock_has_expression_file_info_doc.return_value = False
-        self.assertFalse(
-            GeneExpression.is_raw_count(
-                TestExpressionFiles.STUDY_ID,
-                TestExpressionFiles.STUDY_FILE_ID,
-                TestExpressionFiles.client_mock,
-            )
-        )
-        mock_has_expression_file_info_doc.return_value = None
-        self.assertFalse(
-            GeneExpression.is_raw_count(
-                TestExpressionFiles.STUDY_ID,
-                TestExpressionFiles.STUDY_FILE_ID,
-                TestExpressionFiles.client_mock,
-            )
-        )
-
-        mock_has_expression_file_info_doc.return_value = True
+    def test_is_raw_count(self):
         client = MagicMock()
+        client["study_files"].find.return_value = [
+            {"expression_file_info": {"is_raw_counts": False}}
+        ]
+        self.assertFalse(
+            GeneExpression.is_raw_count(
+                TestExpressionFiles.STUDY_ID, TestExpressionFiles.STUDY_FILE_ID, client
+            )
+        )
+        client["study_files"].find.return_value = [{}]
+        self.assertFalse(
+            GeneExpression.is_raw_count(
+                TestExpressionFiles.STUDY_ID,
+                TestExpressionFiles.STUDY_FILE_ID,
+                TestExpressionFiles.client_mock,
+            )
+        )
+
         client["study_files"].find.return_value = [
             {"expression_file_info": {"is_raw_counts": True}}
         ]
@@ -265,46 +242,38 @@ class TestExpressionFiles(unittest.TestCase):
         # Study has study files with document expression_file_info
 
         with patch(
-            "expression_files.expression_files.GeneExpression.has_expression_file_info_doc",
+            "expression_files.expression_files.GeneExpression.is_raw_count",
             return_value=True,
         ):
-            #
-            with patch(
-                "expression_files.expression_files.GeneExpression.is_raw_count",
-                return_value=True,
-            ):
-                # Add query filter for is_raw_counts
-                RAW_COUNTS_QUERY["$and"].append(
-                    {"expression_file_info.is_raw_counts": True}
-                )
-                GeneExpression.get_study_expression_file_ids(
-                    TestExpressionFiles.STUDY_ID,
-                    TestExpressionFiles.STUDY_FILE_ID,
-                    TestExpressionFiles.client_mock,
-                )
-                TestExpressionFiles.client_mock[
-                    COLLECTION_NAME
-                ].find.assert_called_with(RAW_COUNTS_QUERY, FIELD_NAME)
+            # Add query filter for is_raw_counts
+            RAW_COUNTS_QUERY["$and"].append(
+                {"expression_file_info.is_raw_counts": True}
+            )
+            GeneExpression.get_study_expression_file_ids(
+                TestExpressionFiles.STUDY_ID,
+                TestExpressionFiles.STUDY_FILE_ID,
+                TestExpressionFiles.client_mock,
+            )
+            TestExpressionFiles.client_mock[COLLECTION_NAME].find.assert_called_with(
+                RAW_COUNTS_QUERY, FIELD_NAME
+            )
 
-                # Return query to original state
-                del RAW_COUNTS_QUERY["$and"][1]
+        # Return query to original state
+        del RAW_COUNTS_QUERY["$and"][1]
 
-            # When study file is not raw count
-            with patch(
-                "expression_files.expression_files.GeneExpression.has_expression_file_info_doc",
-                return_value=False,
-            ), patch(
-                "expression_files.expression_files.GeneExpression.is_raw_count",
-                return_value=False,
-            ):
-                GeneExpression.get_study_expression_file_ids(
-                    TestExpressionFiles.STUDY_ID,
-                    TestExpressionFiles.STUDY_FILE_ID,
-                    TestExpressionFiles.client_mock,
-                )
-                TestExpressionFiles.client_mock[
-                    COLLECTION_NAME
-                ].find.assert_called_with(RAW_COUNTS_QUERY, FIELD_NAME)
+        # When study file is not raw count
+        with patch(
+            "expression_files.expression_files.GeneExpression.is_raw_count",
+            return_value=False,
+        ):
+            GeneExpression.get_study_expression_file_ids(
+                TestExpressionFiles.STUDY_ID,
+                TestExpressionFiles.STUDY_FILE_ID,
+                TestExpressionFiles.client_mock,
+            )
+            TestExpressionFiles.client_mock[COLLECTION_NAME].find.assert_called_with(
+                RAW_COUNTS_QUERY, FIELD_NAME
+            )
 
     def test_create_data_arrays(self):
         _id = ObjectId()
