@@ -94,6 +94,7 @@ class GeneExpression:
 
     @staticmethod
     def is_raw_count(study_id, study_file_id, client):
+        "Checks if study file is a raw count matrix"
         COLLECTION_NAME = "study_files"
         QUERY = {"_id": study_file_id, "study_id": study_id}
 
