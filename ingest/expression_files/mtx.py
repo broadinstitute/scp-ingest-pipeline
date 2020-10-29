@@ -84,38 +84,51 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return True
 
     @staticmethod
-    def is_sorted(file_path: str, file_handler):
-        """Checks if a file is sorted by gene index"""
+    def get_gene_expression_data(file_path: str, file_handler):
         std_in = None
         file_size = os.path.getsize(file_path)
         if file_size == 0:
             raise ValueError(f"{file_path} is empty: " + str(file_size))
-        start_idx: int = MTXIngestor.get_data_start_line_number(file_handler)
         if IngestFiles.get_file_type(file_path)[1] == "gzip":
-            p0 = subprocess.Popen(["gunzip", "-c", file_path], stdout=subprocess.PIPE)
+            p0: IO = subprocess.Popen(
+                ["gunzip", "-c", file_path],
+                stdout=subprocess.PIPE,
+                universal_newlines=True,
+            )
             std_in = p0.stdout
+
         # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
         # The header and mtx dimension aren't included or else the file would always be considered unsorted due to the mtx
         # dimensions always being larger than the first row of data.
-        p1 = subprocess.Popen(
-            ["tail", "-n", f"+{start_idx}", file_path],
-            stdout=subprocess.PIPE,
-            stdin=std_in,
-        )
-        # Check that the input file is sorted (-c). Check sorting by first and only first column (-k 1,1,). This value is
-        # numeric(-n). Use stable sort (--stable) so that columns are only compared by the first column.
-        # Without this argument line '1 3 4' and ' 1 5 4' would be considered unsorted.
-        p2 = subprocess.run(
-            ["sort", "-c", "--stable", "-n", "-k", "1,1"],
-            stdin=p1.stdout,
-            capture_output=True,
-        )
-        # When a file is unsorted, or 'disordered', the output includes the string 'disorder' which indicates the
-        # first offending row that caused the 'disorder'
-        if "disorder" in p2.stderr.decode("utf-8").strip():
-            return False
+        start_idx: int = MTXIngestor.get_data_start_line_number(file_handler)
+        p1_cmd = ["tail", "-n", f"+{start_idx}"]
+        if std_in:
+            p1_cmd.append(file_path)
+        p1 = subprocess.Popen(p1_cmd, stdout=subprocess.PIPE, stdin=std_in)
+        return p1
+
+    @staticmethod
+    def is_sorted(file_path: str, file_handler):
+        """Checks if a file is sorted by gene index"""
+        p1 = MTXIngestor.get_gene_expression_data(file_path, file_handler)
+        try:
+            # Check that the input file is sorted (-c). Check sorting by first and only first column (-k 1,1,). This value is
+            # numeric(-n). Use stable sort (--stable) so that columns are only compared by the first column.
+            # Without this argument line '1 3 4' and ' 1 5 4' would be considered unsorted.
+            p2 = subprocess.run(
+                ["sort", "-c", "--stable", "-n", "-k", "1,1"],
+                stdin=p1.stdout,
+                capture_output=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise e
         else:
-            return True
+            # When a file is unsorted, or 'disordered', the output includes the string 'disorder' which indicates the
+            # first offending row that caused the 'disorder'
+            if "disorder" in str(p2.stderr):
+                return False
+            else:
+                return True
 
     @staticmethod
     def check_bundle(barcodes, genes, mtx_dimensions):
@@ -222,26 +235,11 @@ class MTXIngestor(GeneExpression, IngestFiles):
         """
         file_name = ntpath.split(file_path)[1]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
-        std_in = None
 
+        p1 = MTXIngestor.get_gene_expression_data(file_path, mtx_file_handler)
         with open(new_file_name, "w+") as f:
             GeneExpression.dev_logger.info("Starting to sort")
             start_time = datetime.datetime.now()
-            if IngestFiles.get_file_type(file_path)[1] == "gzip":
-                p0 = subprocess.Popen(
-                    ["gunzip", "-c", file_path], stdout=subprocess.PIPE
-                )
-                std_in = p0.stdout
-            # Line to start sorting at
-            start_idx: int = MTXIngestor.get_data_start_line_number(mtx_file_handler)
-            # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
-            # Transform() is expecting the file handle to be at the first line of data which is why sorting starts at
-            # line number 'n', as defined by start_idx
-            p1 = subprocess.Popen(
-                ["tail", "-n", f"+{start_idx}", f"{file_path}"],
-                stdin=std_in,
-                stdout=subprocess.PIPE,
-            )
             # Sort output of p1 ( all gene expression data) by first and only first column (-k 1,1,)
             # using 20G for the memory buffer (-S 20G) with a max maximum number of 320 temporary files (--batch-size=320)
             # that can be merged at once (instead of default 16). The data being sorted is numeric (-n).
