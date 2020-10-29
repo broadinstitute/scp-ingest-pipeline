@@ -260,7 +260,11 @@ class MTXIngestor(GeneExpression, IngestFiles):
             self.cells,
             self.genes,
             self.mtx_dimensions,
-            query_params=(self.study_id, self.mongo_connection._client),
+            query_params=(
+                self.study_id,
+                self.study_file_id,
+                self.mongo_connection._client,
+            ),
         )
         # Need fresh mtx file handler for get_data_start_line_number()
         fresh_mtx_file_handler = self.resolve_path(self.mtx_path)[1]
