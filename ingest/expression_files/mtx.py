@@ -85,26 +85,32 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def get_gene_expression_data(file_path: str, file_handler):
-        std_in = None
+        """Pipes expression data out for zipped and unzipped files"""
+        std_in = file_path
         file_size = os.path.getsize(file_path)
         if file_size == 0:
             raise ValueError(f"{file_path} is empty: " + str(file_size))
+
         if IngestFiles.get_file_type(file_path)[1] == "gzip":
-            p0: IO = subprocess.Popen(
-                ["gunzip", "-c", file_path],
-                stdout=subprocess.PIPE,
-                universal_newlines=True,
-            )
-            std_in = p0.stdout
+            base = os.path.basename(file_path)
+            base = os.path.splitext(base)[0]
+            new_file_name = f"{base}_unzipped.mtx"
+            # If uncompressed file file does not exist create it.
+            if not os.path.isfile(new_file_name):
+                # Uncompress file and write to new_file_name.
+                with open(new_file_name, "w+") as f:
+                    subprocess.run(
+                        ["gunzip", "-c", file_path], stdout=f, universal_newlines=True
+                    )
+            # Set standard in to new uncompressed file
+            std_in = new_file_name
 
         # Grab gene expression data which starts at 'n', or start_idx, lines from top of file (-n +{start_idx}).
         # The header and mtx dimension aren't included or else the file would always be considered unsorted due to the mtx
         # dimensions always being larger than the first row of data.
         start_idx: int = MTXIngestor.get_data_start_line_number(file_handler)
-        p1_cmd = ["tail", "-n", f"+{start_idx}"]
-        if std_in:
-            p1_cmd.append(file_path)
-        p1 = subprocess.Popen(p1_cmd, stdout=subprocess.PIPE, stdin=std_in)
+        p1_cmd = ["tail", "-n", f"+{start_idx}", std_in]
+        p1 = subprocess.Popen(p1_cmd, stdout=subprocess.PIPE)
         return p1
 
     @staticmethod
@@ -233,7 +239,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
          ----------
             new_file_path (str) : Full path of newly sorted MTX file
         """
-        file_name = ntpath.split(file_path)[1]
+        file_name = ntpath.split(file_path)[1][:-3]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
 
         p1 = MTXIngestor.get_gene_expression_data(file_path, mtx_file_handler)
@@ -268,12 +274,12 @@ class MTXIngestor(GeneExpression, IngestFiles):
     def execute_ingest(self):
         """Parses MTX files"""
         self.extract_feature_barcode_matrices()
-        # MTXIngestor.check_valid(
-        #     self.cells,
-        #     self.genes,
-        #     self.mtx_dimensions,
-        #     query_params=(self.study_id, self.mongo_connection._client),
-        # )
+        MTXIngestor.check_valid(
+            self.cells,
+            self.genes,
+            self.mtx_dimensions,
+            query_params=(self.study_id, self.mongo_connection._client),
+        )
         # Need fresh mtx file handler for get_data_start_line_number()
         fresh_mtx_file_handler = self.resolve_path(self.mtx_path)[1]
         if not MTXIngestor.is_sorted(self.mtx_path, fresh_mtx_file_handler):
