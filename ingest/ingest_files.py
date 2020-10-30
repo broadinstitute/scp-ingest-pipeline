@@ -135,7 +135,7 @@ class IngestFiles:
             file_path = self.download_from_bucket(file_path)
             self.local_file_path = file_path
         # Remove BOM with encoding ='utf - 8 - sig'
-        if self.is_gzip_file:
+        if self.get_file_type(file_path)[1] == "gzip":
             open_file = gzip.open(file_path, "rt", encoding="utf-8-sig")
         else:
             open_file = open(file_path, "rt", encoding="utf-8-sig")
@@ -243,7 +243,8 @@ class IngestFiles:
 
         return re.findall(r"[^,\t]+", line)
 
-    def get_file_type(self, file_path):
+    @staticmethod
+    def get_file_type(file_path):
         """Returns file type"""
         return mimetypes.guess_type(file_path)
 
