@@ -49,6 +49,7 @@ from bson.objectid import ObjectId
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
+    from settings import init
 
     # For tracing
     from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
@@ -486,7 +487,7 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
-
+    init(arguments["study_file_id"])
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
