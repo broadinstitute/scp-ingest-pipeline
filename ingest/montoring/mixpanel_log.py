@@ -21,7 +21,7 @@ class MixpanelLog:
         self.mp = Mixpanel("5393bdc03aa94a3480fd2f8fc583e6f4")
 
     def post_event(self, study_accession, event_name, props):
-        self.mp.track("SCP123", event_name, props)
+        self.mp.track(study_accession, event_name, props)
 
 
 @dataclass
@@ -62,13 +62,13 @@ class CustomMetricTimedNode(ContextDecorator, MixpanelLog):
         MixpanelLog.__init__(self)
         file_path = func_values[0]
         file_size = os.path.getsize(file_path)
-        study_accession = CustomMetricTimedNode.get_study_accession(cls.study_id)
+        self.study_accession = CustomMetricTimedNode.get_study_accession(cls.study_id)
         if file_size == 0:
             raise ValueError(f"{file_size} is empty: " + str(file_size))
         self.model = CustomMetricTimedNode.Model(
             {
                 "name": name,
-                "study_accession": study_accession,
+                "study_accession": self.study_accession,
                 "function_name": func_name,
                 "file_path": file_path,
                 "file_type": file_type,
@@ -93,10 +93,10 @@ class CustomMetricTimedNode(ContextDecorator, MixpanelLog):
         end_time = timer()
         duration = end_time - self.start_time
         self.model["perf_time"] = duration
-        self.post_event("", "is_sorted", self.model)
+        self.post_event(self.study_accession, "is_sorted", self.model)
 
 
-def custom_metric(name, file_type, props: Dict):
+def custom_metric(event, name, file_type, props: Dict):
     def _decorator(f):
         func_name = f.__name__
 
