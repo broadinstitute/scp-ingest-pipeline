@@ -28,13 +28,10 @@ try:
     from .expression_files import GeneExpression
     from montoring.mixpanel_log import custom_metric
     import settings
-    from config import study_file, study
 except ImportError:
     # Used when importing as external package, e.g. imports in
     # single_cell_portal code
     from .expression_files import GeneExpression
-
-    # from ..mixpanel_log import custom_metric
     from ..ingest_files import IngestFiles
     from ..montoring.mixpanel_log import custom_metric
 
@@ -216,10 +213,10 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
     @classmethod
     @custom_metric(
-        "ingest_pipeline:mtx:sort",
+        "ingest-pipeline:mtx:sort",
         settings.get_study,
         settings.get_study_file,
-        props={"is_sorted": False},
+        props={"sorted": False},
     )
     def sort_mtx(cls, file_path, mtx_file_handler: IO) -> str:
         """

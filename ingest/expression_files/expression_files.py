@@ -27,6 +27,7 @@ except ImportError:
     from ..ingest_files import DataArray
     from ..monitor import setup_logger
     from ..mongo_connection import MongoConnection, graceful_auto_reconnect
+    from ..settings import init
 
 
 class GeneExpression:

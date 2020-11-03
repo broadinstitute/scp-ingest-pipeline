@@ -1,2 +1,0 @@
-study = []
-study_file = []

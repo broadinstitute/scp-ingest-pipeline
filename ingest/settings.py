@@ -1,7 +1,6 @@
 # File is responsible for defining globals and initializing them
 from mongo_connection import MongoConnection
 from bson.objectid import ObjectId
-from config import study, study_file
 
 MONGO_CONNECTION = MongoConnection()
 
