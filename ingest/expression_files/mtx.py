@@ -95,7 +95,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             base = os.path.basename(file_path)
             base = os.path.splitext(base)[0]
             new_file_name = f"{base}_unzipped.mtx"
-            # If uncompressed file file does not exist create it.
+            # If uncompressed file does not exist, create it.
             if not os.path.isfile(new_file_name):
                 # Uncompress file and write to new_file_name.
                 with open(new_file_name, "w+") as f:
