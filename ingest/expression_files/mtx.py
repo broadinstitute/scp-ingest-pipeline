@@ -17,13 +17,15 @@ from typing import Dict, Generator, List, Tuple, IO  # noqa: F401
 
 import ntpath
 import os
+import sys
 import datetime
 import subprocess
 
 
+sys.path.append("..")
 try:
     from ingest_files import IngestFiles
-    from expression_files import GeneExpression
+    from .expression_files import GeneExpression
     from montoring.mixpanel_log import custom_metric
     import settings
 except ImportError:
@@ -32,7 +34,6 @@ except ImportError:
     from .expression_files import GeneExpression
     from ..ingest_files import IngestFiles
     from ..montoring.mixpanel_log import custom_metric
-    from ..settings import settings
 
 
 class MTXIngestor(GeneExpression, IngestFiles):
@@ -55,10 +56,15 @@ class MTXIngestor(GeneExpression, IngestFiles):
         barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
         self.barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
 
+        self.is_sorted = None
+
         # A list ['N', 'K', 'M'] that represents a gene-barcode matrix where N
         # is the gene index, M is the barcode index, and K is the expression
         # score for the given gene index
         self.mtx_dimensions: List[int] = MTXIngestor.get_mtx_dimensions(self.mtx_file)
+
+    def get_file_path(self):
+        return self.mtx_path
 
     @staticmethod
     def check_valid(
@@ -87,8 +93,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
             raise ValueError("; ".join(error_messages))
         return True
 
-    @staticmethod
-    def is_sorted(file_path: str, file_handler):
+    @classmethod
+    def is_sorted(cls, file_path: str, file_handler):
         """Checks if a file is sorted by gene index"""
         file_size = os.path.getsize(file_path)
         if file_size == 0:
@@ -205,14 +211,14 @@ class MTXIngestor(GeneExpression, IngestFiles):
             gene_name = feature_data[1]
         return gene_id, gene_name
 
-    @staticmethod
+    @classmethod
     @custom_metric(
         "ingest-pipeline:mtx:sort",
         settings.get_study,
         settings.get_study_file,
         props={"sorted": False},
     )
-    def sort_mtx(file_path, mtx_file_handler: IO) -> str:
+    def sort_mtx(cls, file_path, mtx_file_handler: IO) -> str:
         """
         Sorts MTX file by gene. File header, dimensions, and comments are not included in sort.
 
@@ -266,16 +272,16 @@ class MTXIngestor(GeneExpression, IngestFiles):
     def execute_ingest(self):
         """Parses MTX files"""
         self.extract_feature_barcode_matrices()
-        MTXIngestor.check_valid(
-            self.cells,
-            self.genes,
-            self.mtx_dimensions,
-            query_params=(self.study_id, self.mongo_connection._client),
-        )
+        # MTXIngestor.check_valid(
+        #     self.cells,
+        #     self.genes,
+        #     self.mtx_dimensions,
+        #     query_params=(self.study_id, self.mongo_connection._client),
+        # )
         # Need fresh mtx file handler for get_data_start_line_number()
         fresh_mtx_file_handler = self.resolve_path(self.mtx_path)[1]
-        is_sorted = MTXIngestor.is_sorted(self.mtx_path, fresh_mtx_file_handler)
-        if not is_sorted:
+        self.is_sorted = MTXIngestor.is_sorted(self.mtx_path, fresh_mtx_file_handler)
+        if not self.is_sorted:
             new_mtx_file_path = MTXIngestor.sort_mtx(
                 self.mtx_path, fresh_mtx_file_handler
             )
