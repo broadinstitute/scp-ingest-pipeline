@@ -135,7 +135,7 @@ class IngestFiles:
             file_path = self.download_from_bucket(file_path)
             self.local_file_path = file_path
         # Remove BOM with encoding ='utf - 8 - sig'
-        if self.get_file_type(file_path)[1] == "gzip":
+        if IngestFiles.is_gzipped(file_path):
             open_file = gzip.open(file_path, "rt", encoding="utf-8-sig")
         else:
             open_file = open(file_path, "rt", encoding="utf-8-sig")
@@ -317,3 +317,7 @@ class IngestFiles:
                 return row
             except StopIteration:
                 break
+
+    @staticmethod
+    def is_gzipped(file_path):
+        return IngestFiles.get_file_type(file_path)[1] == "gzip"

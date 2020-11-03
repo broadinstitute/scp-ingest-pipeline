@@ -91,7 +91,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         if file_size == 0:
             raise ValueError(f"{file_path} is empty: " + str(file_size))
 
-        if IngestFiles.get_file_type(file_path)[1] == "gzip":
+        if IngestFiles.is_gzipped(file_path):
             base = os.path.basename(file_path)
             base = os.path.splitext(base)[0]
             new_file_name = f"{base}_unzipped.mtx"
