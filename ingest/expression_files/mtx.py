@@ -95,7 +95,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             base = os.path.basename(file_path)
             base = os.path.splitext(base)[0]
             new_file_name = f"{base}_unzipped.mtx"
-            # If uncompressed file file does not exist create it.
+            # If uncompressed file does not exist, create it.
             if not os.path.isfile(new_file_name):
                 # Uncompress file and write to new_file_name.
                 with open(new_file_name, "w+") as f:
@@ -239,7 +239,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
          ----------
             new_file_path (str) : Full path of newly sorted MTX file
         """
-        file_name = ntpath.split(file_path)[1][:-3]
+        file_name = os.path.basename(file_path)
+        file_name = os.path.splitext(base)[0]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
 
         p1 = MTXIngestor.get_gene_expression_data(file_path, mtx_file_handler)
