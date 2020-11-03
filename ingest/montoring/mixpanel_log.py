@@ -1,23 +1,28 @@
-from mixpanel import Mixpanel
 from timeit import default_timer as timer
-import os
-import inspect
 from typing import List, Dict  # noqa: F401
 import functools
 from contextlib import ContextDecorator
-from settings import study_file, study
-
 
 from .metrics_service import MetricsService
 
 
 class CustomMetricTimedNode(ContextDecorator):
-    def __init__(self, event_name, study_accession, file_type, file_size, props=None):
+    def __init__(
+        self,
+        event_name,
+        study_accession,
+        functionName,
+        file_type,
+        file_size,
+        props=None,
+    ):
         self.event_name = event_name
         self.metrics_model = {
             "studyAccession": study_accession,
+            "functionName": functionName,
             "fileType": file_type,
             "fileSize": file_size,
+            "appId": "single-cell-portal",
             **props,
         }
 
@@ -46,6 +51,7 @@ def custom_metric(event_name, get_study_fun, get_study_file_fn, props: Dict):
             with CustomMetricTimedNode(
                 event_name,
                 study.STUDY_ACCESSION,
+                func_name,
                 study_file.FILE_TYPE,
                 study_file.FILE_SIZE,
                 props=props,

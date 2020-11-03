@@ -4,7 +4,6 @@
 # Bard is a DSP service that mediates writes to Mixpanel.
 #
 
-import uuid
 import json
 import requests
 
@@ -27,4 +26,8 @@ class MetricsService:
     # https://terra-bard-prod.appspot.com/docs/
     @classmethod
     def post_event(cls, props):
-        requests.post(MetricsService.BARD_HOST_URL, json=props)
+        requests.post(
+            MetricsService.BARD_HOST_URL,
+            headers={"content-type": "application/json"},
+            data=props,
+        )
