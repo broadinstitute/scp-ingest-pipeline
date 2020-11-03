@@ -10,12 +10,12 @@ import requests
 
 
 class MetricsService:
-    BARD_HOST_URL = "https://terra-bard-prod.appspot.com/api/event'"
+    BARD_HOST_URL = "https://terra-bard-dev.appspot.com/api/event"
+    user_id = "2f30ec50-a04d-4d43-8fd1-b136a2045079"
 
     @classmethod
     def log(cls, event_name, props={}):
-        user_id = uuid.uuid1()
-        props["distinct_id"] = user_id
+        props["distinct_id"] = MetricsService.user_id
         properties = {"event": event_name, "properties": props}
 
         post_body = json.dumps(properties)

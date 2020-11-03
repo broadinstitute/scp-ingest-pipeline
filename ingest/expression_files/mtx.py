@@ -27,6 +27,8 @@ try:
     from ingest_files import IngestFiles
     from .expression_files import GeneExpression
     from montoring.mixpanel_log import custom_metric
+    import settings
+    from config import study_file, study
 except ImportError:
     # Used when importing as external package, e.g. imports in
     # single_cell_portal code
@@ -213,7 +215,12 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return gene_id, gene_name
 
     @classmethod
-    @custom_metric("ingest_pipeline:mtx:sort", "mtx", props={"is_sorted": False})
+    @custom_metric(
+        "ingest_pipeline:mtx:sort",
+        settings.get_study,
+        settings.get_study_file,
+        props={"is_sorted": False},
+    )
     def sort_mtx(cls, file_path, mtx_file_handler: IO) -> str:
         """
         Sorts MTX file by gene. File header, dimensions, and comments are not included in sort.

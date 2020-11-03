@@ -1,87 +1,25 @@
 from mixpanel import Mixpanel
 from timeit import default_timer as timer
 import os
-import abc
 import inspect
-from dataclasses import dataclass
-from typing import List, Dict, Generator  # noqa: F401
-from mongo_connection import MongoConnection
-from mypy_extensions import TypedDict
+from typing import List, Dict  # noqa: F401
 import functools
 from contextlib import ContextDecorator
+from settings import study_file, study
 
 
-class MixpanelLog:
-    __metaclass__ = abc.ABCMeta
-
-    def __init__(self):
-        # Project token in the project settings dialog
-        # of the Mixpanel web application
-        # token = os.environ.get("MIX_PANEL_TOKEN")
-        self.mp = Mixpanel("5393bdc03aa94a3480fd2f8fc583e6f4")
-
-    def post_event(self, study_accession, event_name, props):
-        self.mp.track(study_accession, event_name, props)
+from .metrics_service import MetricsService
 
 
-@dataclass
-class CustomMetricTimedNode(ContextDecorator, MixpanelLog):
-    MONGO_CONNECTION = MongoConnection()
-
-    @dataclass
-    class Model(TypedDict):
-        def __init__(
-            self,
-            name: str,
-            study_accession: str,
-            function_name: str,
-            file_path: int,
-            file_type: str,
-            file_size: int,
-            perf_time: int = None,
-        ):
-            self.name = name
-            self.study_accession = study_accession
-            self.function_name = function_name
-            self.file_path = file_path
-            self.file_type = file_type
-            self.file_size = file_size
-            self.perf_time = perf_time
-
-    def __init__(
-        self,
-        name,
-        func_name,
-        file_type,
-        func_values=None,
-        cls=None,
-        props=None,
-        *args,
-        **kwargs,
-    ):
-        MixpanelLog.__init__(self)
-        file_path = func_values[0]
-        file_size = os.path.getsize(file_path)
-        self.study_accession = CustomMetricTimedNode.get_study_accession(cls.study_id)
-        if file_size == 0:
-            raise ValueError(f"{file_size} is empty: " + str(file_size))
-        self.model = CustomMetricTimedNode.Model(
-            {
-                "name": name,
-                "study_accession": self.study_accession,
-                "function_name": func_name,
-                "file_path": file_path,
-                "file_type": file_type,
-                "file_size": file_size,
-                "perf_time": None,
-            }
-        )
-        self.model.update(props)
-
-    def get_study_accession(study_id):
-        return CustomMetricTimedNode.MONGO_CONNECTION["study_accessions"].find(
-            {"study_id": study_id}, {"study_id": 1, "_id": 0}
-        )
+class CustomMetricTimedNode(ContextDecorator):
+    def __init__(self, event_name, study_accession, file_type, file_size, props=None):
+        self.event_name = event_name
+        self.metrics_model = {
+            "studyAccession": study_accession,
+            "fileType": file_type,
+            "fileSize": file_size,
+            **props,
+        }
 
     def __enter__(self):
         self.start_time = timer()
@@ -92,26 +30,24 @@ class CustomMetricTimedNode(ContextDecorator, MixpanelLog):
             return
         end_time = timer()
         duration = end_time - self.start_time
-        self.model["perf_time"] = duration
-        self.post_event(self.study_accession, "is_sorted", self.model)
+        self.metrics_model["perfTime"] = duration
+        MetricsService.log(self.event_name, self.metrics_model)
 
 
-def custom_metric(event, name, file_type, props: Dict):
+def custom_metric(event_name, get_study_fun, get_study_file_fn, props: Dict):
     def _decorator(f):
+
         func_name = f.__name__
 
         @functools.wraps(f)
         def _wrapper(*args, **kwargs):
-            class_name = list(args).pop(0)
-            if not inspect.isclass(class_name):
-                raise ValueError("Decorator can only be used with class methods")
-            func_values = args[1:]
+            study = get_study_fun()
+            study_file = get_study_file_fn()
             with CustomMetricTimedNode(
-                name,
-                func_name,
-                file_type,
-                func_values=func_values,
-                cls=class_name,
+                event_name,
+                study.STUDY_ACCESSION,
+                study_file.FILE_TYPE,
+                study_file.FILE_SIZE,
                 props=props,
             ):
                 return f(*args, **kwargs)

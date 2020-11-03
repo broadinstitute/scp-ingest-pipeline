@@ -20,6 +20,7 @@ from mypy_extensions import TypedDict
 try:
     from ingest_files import DataArray
     from monitor import setup_logger
+    from settings import init
     from mongo_connection import MongoConnection, graceful_auto_reconnect
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
@@ -51,6 +52,7 @@ class GeneExpression:
         head, tail = ntpath.split(file_path)
         self.cluster_name = tail or ntpath.basename(head)
         self.mongo_connection = MongoConnection()
+        init(study_id, study_file_id)
         # Common data array kwargs
         self.data_array_kwargs = {
             "cluster_name": self.cluster_name,
@@ -245,10 +247,10 @@ class GeneExpression:
                 # Add new data arrays
                 data_arrays += current_data_arrays
                 current_data_arrays.clear()
-            if len(data_arrays) > 0:
-                self.load(data_arrays, DataArray.COLLECTION_NAME)
-            if len(gene_models) > 0:
-                self.load(gene_models, GeneExpression.COLLECTION_NAME)
+            # if len(data_arrays) > 0:
+            #     self.load(data_arrays, DataArray.COLLECTION_NAME)
+            # if len(gene_models) > 0:
+            #     self.load(gene_models, GeneExpression.COLLECTION_NAME)
             num_processed += len(gene_models)
             GeneExpression.dev_logger.info(
                 f"Processed {num_processed} genes. "

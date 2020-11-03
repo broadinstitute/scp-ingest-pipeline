@@ -1,7 +1,26 @@
 # File is responsible for defining globals and initializing them
 from mongo_connection import MongoConnection
+from bson.objectid import ObjectId
+from config import study, study_file
 
 MONGO_CONNECTION = MongoConnection()
+
+
+def init(study_id, study_file_id):
+    global study
+    study = Study(study_id)
+    global study_file
+    study_file = StudyFile(study_file_id)
+
+
+def get_study():
+    global study
+    return study
+
+
+def get_study_file():
+    global study_file
+    return study_file
 
 
 class Study:
@@ -16,10 +35,12 @@ class Study:
 
     @classmethod
     def update_study_accession(cls, study_id):
-        study_accession = MONGO_CONNECTION["study_accessions"].find(
-            {"study_id": study_id}, {"study_id": 1, "_id": 0}
-        )
-        cls.STUDY_ACCESSION = study_accession
+        study_accession = list(
+            MONGO_CONNECTION._client["study_accessions"].find(
+                {"study_id": ObjectId(study_id)}, {"accession": 1, "_id": 0}
+            )
+        ).pop()
+        cls.STUDY_ACCESSION = study_accession["accession"]
 
 
 class StudyFile:
@@ -33,13 +54,10 @@ class StudyFile:
     @classmethod
     def update(cls, study_file_id):
         cls.STUDY_FILE_ID = study_file_id
-        MONGO_CONNECTION["study_accessions"].find(
-            {"_id": study_file_id}, {"file_type": 1, "upload_file_size ": 1, "_id": 0}
+        query = MONGO_CONNECTION._client["study_files"].find(
+            {"_id": ObjectId("5e3dd9bcfa6429263aab24ba")},
+            {"upload_file_size": 1, "file_type": 1, "_id": 0},
         )
-
-
-def init(study_id, study_file_id):
-    global study
-    study = Study(study_id)
-    global study_file
-    study_file = StudyFile(study_file_id)
+        query_results = list(query).pop()
+        cls.FILE_TYPE = query_results["file_type"]
+        cls.FILE_SIZE = query_results["upload_file_size"]
