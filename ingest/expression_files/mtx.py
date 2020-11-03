@@ -15,7 +15,6 @@ Version of sort: (GNU coreutils) 8.25
 
 from typing import Dict, Generator, List, Tuple, IO  # noqa: F401
 
-import ntpath
 import os
 
 import datetime
@@ -240,7 +239,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             new_file_path (str) : Full path of newly sorted MTX file
         """
         file_name = os.path.basename(file_path)
-        file_name = os.path.splitext(base)[0]
+        file_name = os.path.splitext(file_name)[0]
         new_file_name = f"{file_name}_sorted_MTX.mtx"
 
         p1 = MTXIngestor.get_gene_expression_data(file_path, mtx_file_handler)
