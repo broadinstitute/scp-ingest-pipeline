@@ -46,6 +46,7 @@ class StudyFile:
     FILE_TYPE: str = None
     FILE_SIZE: int = None
     STUDY_FILE_ID = None
+    FILE_NAME = None
 
     def __init__(self, study_file_id):
         StudyFile.update(study_file_id)
@@ -55,8 +56,9 @@ class StudyFile:
         cls.STUDY_FILE_ID = study_file_id
         query = MONGO_CONNECTION._client["study_files"].find(
             {"_id": ObjectId("5e3dd9bcfa6429263aab24ba")},
-            {"upload_file_size": 1, "file_type": 1, "_id": 0},
+            {"upload_file_size": 1, "file_type": 1, "name": 1, "_id": 0},
         )
         query_results = list(query).pop()
         cls.FILE_TYPE = query_results["file_type"]
         cls.FILE_SIZE = query_results["upload_file_size"]
+        cls.FILE_NAME = query_results["name"]

@@ -6,12 +6,13 @@ from contextlib import ContextDecorator
 from .metrics_service import MetricsService
 
 
-class CustomMetricTimedNode(ContextDecorator):
+class MetricTimedNode(ContextDecorator):
     def __init__(
         self,
         event_name,
         study_accession,
         functionName,
+        file_name,
         file_type,
         file_size,
         props=None,
@@ -20,6 +21,7 @@ class CustomMetricTimedNode(ContextDecorator):
         self.metrics_model = {
             "studyAccession": study_accession,
             "functionName": functionName,
+            "fileName": file_name,
             "fileType": file_type,
             "fileSize": file_size,
             "appId": "single-cell-portal",
@@ -39,19 +41,19 @@ class CustomMetricTimedNode(ContextDecorator):
         MetricsService.log(self.event_name, self.metrics_model)
 
 
-def custom_metric(event_name, get_study_fun, get_study_file_fn, props: Dict):
+def custom_metric(event_name, get_study_fun, get_study_file_fn, props: Dict = {}):
     def _decorator(f):
-
         func_name = f.__name__
 
         @functools.wraps(f)
         def _wrapper(*args, **kwargs):
             study = get_study_fun()
             study_file = get_study_file_fn()
-            with CustomMetricTimedNode(
+            with MetricTimedNode(
                 event_name,
                 study.STUDY_ACCESSION,
                 func_name,
+                study_file.FILE_NAME,
                 study_file.FILE_TYPE,
                 study_file.FILE_SIZE,
                 props=props,
