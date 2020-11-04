@@ -322,6 +322,41 @@ class IngestTestCase(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
+    def test_ingest_zipped_mtx_matrix(self, mock_check_unique_cells):
+        """Ingest Pipeline should extract and transform MTX matrix bundles
+        """
+
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_expression",
+            "--taxon-name",
+            "Homo sapiens",
+            "--taxon-common-name",
+            "human",
+            "--ncbi-taxid",
+            "9606",
+            "--genome-assembly-accession",
+            "GCA_000001405.15",
+            "--genome-annotation",
+            "Ensembl 94",
+            "--matrix-file",
+            "../tests/data/mtx/AB_toy_data_toy.unsorted_mtx.mtx.gz",
+            "--matrix-file-type",
+            "mtx",
+            "--gene-file",
+            "../tests/data/mtx/AB_toy_data_toy.genes.tsv",
+            "--barcode-file",
+            "../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
+        ]
+        self.execute_ingest(args)
+
+    @patch(
+        "expression_files.expression_files.GeneExpression.check_unique_cells",
+        return_value=True,
+    )
     def test_remote_mtx_bundles(self, mock_check_unique_cells):
         """Ingest Pipeline should handle MTX matrix files fetched from bucket
         """
