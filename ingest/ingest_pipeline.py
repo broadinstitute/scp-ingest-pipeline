@@ -52,7 +52,7 @@ try:
 
     # For Mixpanel logging
     import settings
-    from montoring.mixpanel_log import custom_metric
+    from monitoring.mixpanel_log import custom_metric
 
     # For tracing
     from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
