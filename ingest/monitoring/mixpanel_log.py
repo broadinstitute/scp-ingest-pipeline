@@ -3,60 +3,47 @@ from typing import List, Dict  # noqa: F401
 import functools
 from contextlib import ContextDecorator
 
-from .metrics_service import MetricsService
+from settings import update_model, add_child_event
 
 
 class MetricTimedNode(ContextDecorator):
+    """Context manager that logs properties and performance times of Mixpanel events."""
+
     def __init__(
-        self,
-        event_name,
-        study_accession,
-        functionName,
-        file_name,
-        file_type,
-        file_size,
-        props=None,
+        self, function_name, perf_time_name, props=None, child_event_name=None
     ):
-        self.event_name = event_name
-        self.metrics_model = {
-            "studyAccession": study_accession,
-            "functionName": functionName,
-            "fileName": file_name,
-            "fileType": file_type,
-            "fileSize": file_size,
-            "appId": "single-cell-portal",
-            **props,
-        }
+        props["functionName"] = function_name
+        self.child_event_name = child_event_name
+        self.props = props
+        self.perf_time_name = perf_time_name if perf_time_name else "perfTime"
 
     def __enter__(self):
         self.start_time = timer()
         return self
 
     def __exit__(self, exc, value, tb):
-        if not self.start_time:
-            return
         end_time = timer()
+        # Calculate performance time
         duration = end_time - self.start_time
-        self.metrics_model["perfTime"] = duration
-        MetricsService.log(self.event_name, self.metrics_model)
+        self.props[self.perf_time_name] = round(duration, 3)
+        # Add current functions properties to base model
+        update_model(self.props)
+        # Add and child events to list of child events captured
+        if self.child_event_name:
+            add_child_event(self.child_event_name)
 
 
-def custom_metric(event_name, get_study_fun, get_study_file_fn, props: Dict = {}):
+def custom_metric(child_event_name=None, perf_time_name=None, props: Dict = {}):
     def _decorator(f):
         func_name = f.__name__
 
         @functools.wraps(f)
         def _wrapper(*args, **kwargs):
-            study = get_study_fun()
-            study_file = get_study_file_fn()
             with MetricTimedNode(
-                event_name,
-                study.STUDY_ACCESSION,
                 func_name,
-                study_file.FILE_NAME,
-                study_file.FILE_TYPE,
-                study_file.FILE_SIZE,
+                perf_time_name,
                 props=props,
+                child_event_name=child_event_name,
             ):
                 return f(*args, **kwargs)
 

@@ -52,7 +52,8 @@ try:
 
     # For Mixpanel logging
     import settings
-    from montoring.mixpanel_log import custom_metric
+    from monitoring.mixpanel_log import custom_metric
+    from monitoring.metrics_service import MetricsService
 
     # For tracing
     from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
@@ -76,8 +77,9 @@ except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
     from .settings import settings
+    from .monitoring.metrics_service import MetricsService
     from .subsample import SubSample
-    from .montoring.mixpanel_log import custom_metric
+    from .monitoring.mixpanel_log import custom_metric
     from .validation.validate_metadata import (
         validate_input_metadata,
         report_issues,
@@ -299,9 +301,7 @@ class IngestPipeline:
                 return 1
         return 0
 
-    @custom_metric(
-        "ingest-pipeline:expression:ingest", settings.get_study, settings.get_study_file
-    )
+    @custom_metric()
     def ingest_expression(self) -> int:
         """
         Ingests expression files.
@@ -319,12 +319,13 @@ class IngestPipeline:
                     self.study_file_id,
                     tracer=self.tracer,
                     **self.kwargs,
-                )  # Dense receiver
+                )
             self.expression_ingestor.execute_ingest()
+            status = 0
         except Exception as e:
             log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
-            return 1
-        return 0
+            status = 1
+        return status
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
@@ -495,9 +496,13 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
+    # Initialize global variables for ingest job
     settings.init(arguments["study_id"], arguments["study_file_id"])
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
+    metrics_model = settings.get_metrics_model()
+    # Log Mixpanel events
+    MetricsService.log("ingest-pipeline:expression:ingest", metrics_model)
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 

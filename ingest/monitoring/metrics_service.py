@@ -24,8 +24,8 @@ class MetricsService:
     #
     # Bard docs:
     # https://terra-bard-prod.appspot.com/docs/
-    @classmethod
-    def post_event(cls, props):
+    @staticmethod
+    def post_event(props):
         requests.post(
             MetricsService.BARD_HOST_URL,
             headers={"content-type": "application/json"},

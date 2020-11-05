@@ -1,15 +1,30 @@
 # File is responsible for defining globals and initializing them
 from mongo_connection import MongoConnection
 from bson.objectid import ObjectId
+from typing import Dict
 
 MONGO_CONNECTION = MongoConnection()
 
 
 def init(study_id, study_file_id):
+    global child_events
+    child_events = []
     global study
     study = Study(study_id)
     global study_file
     study_file = StudyFile(study_file_id)
+    global metrics_model
+    metrics_model = {
+        "studyAccession": study.STUDY_ACCESSION,
+        "fileName": study_file.FILE_NAME,
+        "fileType": study_file.FILE_TYPE,
+        "fileSize": study_file.FILE_SIZE,
+        "appId": "single-cell-portal",
+    }
+
+
+def add_child_event(event):
+    child_events.append(event)
 
 
 def get_study():
@@ -20,6 +35,16 @@ def get_study():
 def get_study_file():
     global study_file
     return study_file
+
+
+def update_model(props: Dict):
+    global metrics_model
+    metrics_model = {**metrics_model, **props}
+
+
+def get_metrics_model():
+    global metrics_model
+    return metrics_model
 
 
 class Study:
@@ -55,8 +80,7 @@ class StudyFile:
     def update(cls, study_file_id):
         cls.STUDY_FILE_ID = study_file_id
         query = MONGO_CONNECTION._client["study_files"].find(
-            {"_id": ObjectId("5e3dd9bcfa6429263aab24ba")},
-            {"upload_file_size": 1, "file_type": 1, "name": 1, "_id": 0},
+            {"_id": ObjectId("5e3dd9bcfa6429263aab24ba")}
         )
         query_results = list(query).pop()
         cls.FILE_TYPE = query_results["file_type"]
