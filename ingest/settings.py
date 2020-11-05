@@ -54,10 +54,6 @@ class Study:
         Study.update_study_accession(study_id)
 
     @classmethod
-    def update_file_type(cls, file_type):
-        cls.FILE_TYPE = file_type
-
-    @classmethod
     def update_study_accession(cls, study_id):
         study_accession = list(
             MONGO_CONNECTION._client["study_accessions"].find(
