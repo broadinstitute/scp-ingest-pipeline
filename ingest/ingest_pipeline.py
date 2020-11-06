@@ -301,7 +301,7 @@ class IngestPipeline:
                 return 1
         return 0
 
-    @custom_metric()
+    @custom_metric(settings.get_metric_properties)
     def ingest_expression(self) -> int:
         """
         Ingests expression files.
@@ -500,9 +500,11 @@ def main() -> None:
     settings.init(arguments["study_id"], arguments["study_file_id"])
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
-    metrics_model = settings.get_metrics_model()
+    metrics_model = settings.get_metric_properties()
     # Log Mixpanel events
-    MetricsService.log("ingest-pipeline:expression:ingest", metrics_model)
+    MetricsService.log(
+        "ingest-pipeline:expression:ingest", metrics_model.get_properties()
+    )
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 
