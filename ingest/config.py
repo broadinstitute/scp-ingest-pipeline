@@ -56,7 +56,7 @@ class Study:
         try:
             study_id = ObjectId(study_id)
         except Exception:
-            raise ValueError("Must pass in valid object id for study file id")
+            raise ValueError("Must pass in valid object ID for study ID")
         study = list(
             MONGO_CONNECTION._client["study_accessions"].find(
                 {"study_id": study_id}, {"_id": 0}
@@ -81,9 +81,11 @@ class StudyFile:
 
     @study_file.setter
     def study_file(self, study_file_id):
-        query = MONGO_CONNECTION._client["study_files"].find(
-            {"_id": ObjectId(study_file_id)}
-        )
+        try:
+            study_file_id = ObjectId(study_file_id)
+        except Exception:
+            raise ValueError("Must pass in valid object ID for study file ID")
+        query = MONGO_CONNECTION._client["study_files"].find({"_id": study_file_id})
         query_results = list(query)
         if not query_results:
             raise ValueError(
