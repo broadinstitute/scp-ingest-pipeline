@@ -321,11 +321,10 @@ class IngestPipeline:
                     **self.kwargs,
                 )
             self.expression_ingestor.execute_ingest()
-            status = 0
         except Exception as e:
             log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
-            status = 1
-        return status
+            return 1
+        return 0
 
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
