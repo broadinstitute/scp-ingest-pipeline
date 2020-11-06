@@ -34,7 +34,7 @@ class MetricTimedNode(ContextDecorator):
         self.props[self.perf_time_name] = round(duration, 3)
         # Add current functions properties to base model
         self.metric_properties.update(self.props)
-        # Add and child events to list of child events captured
+        # Add child events to list of child events captured
         if self.child_event_name:
             add_child_event(self.child_event_name)
 
