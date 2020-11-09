@@ -3,7 +3,8 @@ from typing import List, Dict  # noqa: F401
 import functools
 from contextlib import ContextDecorator
 
-from settings import add_child_event
+from config import add_child_event
+from monitor import testing_guard
 
 
 class MetricTimedNode(ContextDecorator):
@@ -39,6 +40,7 @@ class MetricTimedNode(ContextDecorator):
             add_child_event(self.child_event_name)
 
 
+@testing_guard
 def custom_metric(
     get_metric_properties_fn,
     child_event_name=None,
