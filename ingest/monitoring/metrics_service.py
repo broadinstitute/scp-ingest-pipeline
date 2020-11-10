@@ -5,8 +5,6 @@
 #
 
 import json
-
-# import os
 import requests
 
 try:
@@ -23,8 +21,8 @@ class MetricsService:
 
     @classmethod
     def log(cls, event_name, props={}):
-        props["distinct_id"] = MetricsService.user_id
-        properties = {"event": event_name, "properties": props}
+        props.update({"distinct_id": MetricsService.user_id})
+        properties = {"event": event_name, "properties": props.get_properties()}
 
         post_body = json.dumps(properties)
         MetricsService.post_event(post_body)
@@ -41,6 +39,7 @@ class MetricsService:
                 headers={"content-type": "application/json"},
                 data=props,
             )
+
             r.raise_for_status()
         # Don't want to stop parsing for logging errors. Errors will be logged and not raised.
         except requests.exceptions.HTTPError as e:

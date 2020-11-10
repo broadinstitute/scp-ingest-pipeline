@@ -51,7 +51,7 @@ try:
     from ingest_files import IngestFiles
 
     # For Mixpanel logging
-    import settings
+    import config
     from monitoring.mixpanel_log import custom_metric
     from monitoring.metrics_service import MetricsService
 
@@ -76,7 +76,7 @@ try:
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
-    from .settings import settings
+    from .config import config
     from .monitoring.metrics_service import MetricsService
     from .subsample import SubSample
     from .monitoring.mixpanel_log import custom_metric
@@ -301,7 +301,7 @@ class IngestPipeline:
                 return 1
         return 0
 
-    @custom_metric(settings.get_metric_properties)
+    @custom_metric(config.get_metric_properties)
     def ingest_expression(self) -> int:
         """
         Ingests expression files.
@@ -496,14 +496,12 @@ def main() -> None:
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     # Initialize global variables for ingest job
-    settings.init(arguments["study_id"], arguments["study_file_id"])
+    config.init(arguments["study_id"], arguments["study_file_id"])
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
-    metrics_model = settings.get_metric_properties()
     # Log Mixpanel events
-    MetricsService.log(
-        "ingest-pipeline:expression:ingest", metrics_model.get_properties()
-    )
+    MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
+    # Exit pipeline
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 
