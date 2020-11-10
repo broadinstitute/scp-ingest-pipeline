@@ -495,7 +495,7 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
-    # Initialize global variables for ingest job
+    # Initialize global variables for current ingest job
     config.init(arguments["study_id"], arguments["study_file_id"])
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
