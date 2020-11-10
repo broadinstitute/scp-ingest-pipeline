@@ -49,7 +49,7 @@ def log_exception(dev_logger, user_logger, exception):
     dev_logger.exception(exception)
 
 
-# Taken from https://jdkandersson.com/2019/05/19/testing-decorated-python-functions/
+# Modified from https://jdkandersson.com/2019/05/19/testing-decorated-python-functions/
 def testing_guard(decorator_func):
     """
     Decorator that only applies another decorator if the TESTING environment
@@ -66,13 +66,12 @@ def testing_guard(decorator_func):
     def decorator_wrapper(decorator_args):
         def replacement(original_func):
             """Function that is called instead of original function."""
-            testing = 1
 
             def apply_guard(*args, **kwargs):
                 """Decides whether to use decorator on function call."""
-                if testing is not None:
+                if os.getenv("TESTING") is not None:
                     return original_func(*args, **kwargs)
-                return decorator_func(*decorator_args)(original_func, **kwargs)
+                return decorator_func(decorator_args)(original_func)(*args, **kwargs)
 
             return apply_guard
 

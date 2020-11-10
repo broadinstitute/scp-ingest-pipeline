@@ -15,6 +15,16 @@ def init(study_id, study_file_id):
     __metric_properties = MetricProperties(study, study_file)
 
 
+def set_parent_event_name(event_name):
+    global __event_name
+    __event_name = event_name
+
+
+def get_parent_event_name():
+    global __event_name
+    return __event_name
+
+
 def get_metric_properties():
     global __metric_properties
     return __metric_properties
