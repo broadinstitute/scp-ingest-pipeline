@@ -9,6 +9,7 @@ import json
 import os
 import requests
 
+
 try:
     from monitor import setup_logger
 except ImportError:
@@ -23,13 +24,14 @@ class MetricsService:
 
     @classmethod
     def log(cls, event_name, props={}):
+        # Log metrics to Mixpanel via Bard web service
         props.update({"distinct_id": MetricsService.user_id})
         properties = {"event": event_name, "properties": props.get_properties()}
 
         post_body = json.dumps(properties)
         MetricsService.post_event(post_body)
 
-    # Log metrics to Mixpanel via Bard web service
+    # Post metrics to Mixpanel via Bard web service
     #
     # Bard docs:
     # https://terra-bard-prod.appspot.com/docs/
