@@ -78,6 +78,7 @@ class MetricsServiceTestCase(unittest.TestCase):
         ]
         # Initialize global variables
         config.init("5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337")
+        config.set_parent_event_name("ingest-pipeline:expression:ingest")
         IngestTestCase.execute_ingest(args)
         metrics_model = config.get_metric_properties()
         # Log Mixpanel events
