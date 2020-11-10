@@ -14,7 +14,11 @@ try:
 except ImportError:
     from ..monitor import setup_logger
 
-bard_host_url = os.environ["BARD_HOST_URL"] if os.environ["BARD_HOST_URL"] else None
+
+if os.environ.get("BARD_HOST_URL"):
+    bard_host_url = os.environ["BARD_HOST_URL"]
+else:
+    bard_host_url = None
 
 
 class MetricsService:
