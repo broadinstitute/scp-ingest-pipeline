@@ -71,10 +71,11 @@ GeneExpression.load = mock_expression_load
 
 
 class IngestTestCase(unittest.TestCase):
+    @staticmethod
     @patch("google.cloud.storage.Blob", side_effect=mock_storage_blob)
     @patch("google.cloud.storage.Client", side_effect=mock_storage_client)
-    def execute_ingest(self, args, mock_storage_client, mock_storage_blob):
-        self.maxDiff = None
+    def execute_ingest(args, mock_storage_client, mock_storage_blob):
+        # self.maxDiff = None
 
         parsed_args = create_parser().parse_args(args)
         validate_arguments(parsed_args)
