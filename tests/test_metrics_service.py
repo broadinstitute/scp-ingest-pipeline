@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import patch
 
 import pytest
-import copy
 from unittest.mock import MagicMock
 import json
 from test_ingest import IngestTestCase
@@ -10,6 +9,7 @@ import config
 from monitoring.metrics_service import MetricsService
 
 
+# Mocked function that replaces MetricsService.post_event
 def mock_post_event(props):
     expected_props = {
         "event": "ingest-pipeline:expression:ingest",
@@ -45,7 +45,7 @@ class MetricsServiceTestCase(unittest.TestCase):
     client_mock.__getitem__.side_effect = client_values.__getitem__
 
     @pytest.mark.usefixtures("delete_testing")
-    @patch("expression_files.DenseIngestor.execute_ingest", return_value="foo")
+    @patch("expression_files.DenseIngestor.execute_ingest")
     @patch("config.MONGO_CONNECTION")
     @patch(
         "monitoring.metrics_service.MetricsService.post_event",
@@ -76,9 +76,9 @@ class MetricsServiceTestCase(unittest.TestCase):
             "--matrix-file-type",
             "dense",
         ]
+        # Initialize global variables
         config.init("5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337")
         IngestTestCase.execute_ingest(args)
-        # Log Mixpanel events
-        metrics_model = copy.copy(config.get_metric_properties())
+        metrics_model = config.get_metric_properties()
         # Log Mixpanel events
         MetricsService.log(config.get_parent_event_name(), metrics_model)

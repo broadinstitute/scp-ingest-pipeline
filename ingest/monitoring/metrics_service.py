@@ -5,6 +5,8 @@
 #
 
 import json
+
+import os
 import requests
 
 try:
@@ -16,7 +18,7 @@ except ImportError:
 class MetricsService:
     # Logger provides more details
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
-    BARD_HOST_URL = "https://terra-bard-dev.appspot.com/api/event"
+    BARD_HOST_URL = os.environ["BARD_HOST_URL"]
     user_id = "2f30ec50-a04d-4d43-8fd1-b136a2045079"
 
     @classmethod
