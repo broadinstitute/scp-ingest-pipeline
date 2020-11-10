@@ -31,17 +31,14 @@ pytest -n auto -s
 pytest --cov=../ingest/
 
 """
-import sys
 import unittest
 from unittest.mock import patch
 from test_dense import mock_load_r_files
 
 from pymongo.errors import AutoReconnect
-
 from test_expression_files import mock_expression_load
 from mock_gcp import mock_storage_client, mock_storage_blob
 
-sys.path.append("../ingest")
 from ingest_pipeline import (
     create_parser,
     validate_arguments,
