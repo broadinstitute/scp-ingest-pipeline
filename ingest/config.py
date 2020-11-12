@@ -56,7 +56,8 @@ def add_child_event(event):
 
 
 class Study:
-    "Provides attributes for a given study"
+    """Provides attributes for a given study
+    """
 
     def __init__(self, study_id):
         self.study = study_id
