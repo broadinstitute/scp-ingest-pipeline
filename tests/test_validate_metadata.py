@@ -77,42 +77,6 @@ class TestValidateMetadata(unittest.TestCase):
         except OSError:
             print('no file to remove')
 
-    def test_header_format(self):
-        """Header rows of metadata file should conform to standard
-        """
-
-        args = '--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/error_headers_v2.0.0.tsv'
-        metadata = self.setup_metadata(args)[0]
-        self.assertFalse(metadata.validate_header_keyword())
-        self.assertIn(
-            'Malformed metadata file header row, missing NAME. (Case Sensitive)',
-            metadata.issues['error']['format'].keys(),
-            'Missing NAME keyword should fail format validation',
-        )
-
-        self.assertFalse(metadata.validate_type_keyword())
-        self.assertIn(
-            'Malformed metadata TYPE row, missing TYPE. (Case Sensitive)',
-            metadata.issues['error']['format'].keys(),
-            'Missing TYPE keyword should fail format validation',
-        )
-
-        self.assertFalse(
-            metadata.validate_type_annotations(),
-            'Invalid type annotations should fail format validation',
-        )
-
-        self.assertFalse(
-            metadata.validate_unique_header(),
-            'Duplicate headers should fail format validation',
-        )
-
-        self.assertTrue(
-            report_issues(metadata), 'Invalid metadata content should report issues'
-        )
-
-        self.teardown_metadata(metadata)
-
     def test_convention_content(self):
         """Metadata convention should be valid jsonschema
         """

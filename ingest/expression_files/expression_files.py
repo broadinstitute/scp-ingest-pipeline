@@ -93,39 +93,80 @@ class GeneExpression:
         )
 
     @staticmethod
-    def check_unique_cells(cell_names: List, study_id, client):
-        """Checks cell names against database to confirm matrix contains unique
-            cell names.
+    def is_raw_count(study_id, study_file_id, client):
+        "Checks if study file is a raw count matrix"
+        COLLECTION_NAME = "study_files"
+        QUERY = {"_id": study_file_id, "study_id": study_id}
 
-         Parameters:
-            cell_names (List[str]): List of cell names in matrix
-            study_id (ObjectId): The study id the cell names belong to
-            client: MongoDB client
-        """
-        COLLECTION_NAME = "data_arrays"
-        query = {
+        study_file_doc = list(client[COLLECTION_NAME].find(QUERY)).pop()
+        # Name of embedded document that holds 'is_raw_counts is named expression_file_info.
+        # If study files does not have document expression_file_info
+        # field, "is_raw_counts", will not exist.:
+        if "expression_file_info" in study_file_doc.keys():
+            return study_file_doc["expression_file_info"]["is_raw_counts"]
+        else:
+            return False
+
+    @staticmethod
+    def query_cells(study_id, client, query_kwargs):
+        QUERY = {
             "$and": [
                 {"linear_data_type": "Study"},
                 {"array_type": "cells"},
                 {"study_id": study_id},
             ],
             "$nor": [{"name": "All Cells"}],
+            **query_kwargs,
         }
         # Returned fields from query results
-        field_names = {"values": 1, "_id": 0}
-        # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
-        query_results: List[Dict] = list(
-            client[COLLECTION_NAME].find(query, field_names)
+        FIELD_NAMES = {"values": 1, "_id": 0}
+        COLLECTION_NAME = "data_arrays"
+
+        return list(client[COLLECTION_NAME].find(QUERY, FIELD_NAMES))
+
+    @staticmethod
+    def get_cell_names_from_study_file_id(study_id, study_file_id, client):
+        additional_query_kwargs = {}
+        study_files_ids = GeneExpression.get_study_expression_file_ids(
+            study_id, study_file_id, client
         )
-        # Query did not return results
+
+        # If there are study files of the same type create and add filters
+        if study_files_ids:
+            study_files_ids_list = [
+                study_files_id["_id"] for study_files_id in study_files_ids
+            ]
+            additional_query_kwargs["study_file_id"] = {"$in": study_files_ids_list}
+
+        # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
+        query_results: List[Dict] = GeneExpression.query_cells(
+            study_id, client, additional_query_kwargs
+        )
         if not query_results:
-            return True
+            return None
         # Flatten query results
         existing_cells = [
             values
             for cell_values in query_results
             for values in cell_values.get("values")
         ]
+        return existing_cells
+
+    @staticmethod
+    def check_unique_cells(cell_names: List, study_id, study_file_id, client):
+        """Method checks for unique cells  by matrix type
+
+
+         Parameters:
+            cell_names (List[str]): List of cell names in matrix
+            study_id (ObjectId): The study id the cell names belong to
+            study_file_id (ObjectId): The file id the cell names belong to
+            client: MongoDB client
+        """
+
+        existing_cells = GeneExpression.get_cell_names_from_study_file_id(
+            study_id, study_file_id, client
+        )
         dupes = set(existing_cells) & set(cell_names)
         if len(dupes) > 0:
             error_string = (
@@ -137,6 +178,41 @@ class GeneExpression:
             error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
             raise ValueError(error_string)
         return True
+
+    @staticmethod
+    def has_expression_file_info_doc(study_id, study_file_id, client):
+        COLLECTION_NAME = "study_files"
+        QUERY = {
+            "study_id": study_id,
+            "study_file_id": study_file_id,
+            "expression_file_info": {"$exists": True},
+        }
+        query_results = list(client[COLLECTION_NAME].find(QUERY))
+        if query_results:
+            return True
+        return False
+
+    @staticmethod
+    def get_study_expression_file_ids(
+        study_id, current_study_file_id, client
+    ) -> List[Dict]:
+        """Returns study file ids that are of the same type as 'current_study_file_id' in the study """
+
+        COLLECTION_NAME = "study_files"
+        field_names = {"_id": 1}
+        QUERY = {
+            "$and": [{"study_id": study_id}],
+            "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
+            "$nor": [{"_id": current_study_file_id}],
+        }
+        is_raw_counts = GeneExpression.is_raw_count(
+            study_id, current_study_file_id, client
+        )
+        if is_raw_counts:
+            QUERY["$and"].append({"expression_file_info.is_raw_counts": is_raw_counts})
+        # Returned fields query results
+        query_results = list(client[COLLECTION_NAME].find(QUERY, field_names))
+        return query_results
 
     @staticmethod
     def create_data_arrays(

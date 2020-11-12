@@ -50,6 +50,11 @@ try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
 
+    # For Mixpanel logging
+    import config
+    from monitoring.mixpanel_log import custom_metric
+    from monitoring.metrics_service import MetricsService
+
     # For tracing
     from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
     from opencensus.trace.samplers import AlwaysOnSampler
@@ -71,7 +76,10 @@ try:
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
+    from .config import config
+    from .monitoring.metrics_service import MetricsService
     from .subsample import SubSample
+    from .monitoring.mixpanel_log import custom_metric
     from .validation.validate_metadata import (
         validate_input_metadata,
         report_issues,
@@ -293,6 +301,7 @@ class IngestPipeline:
                 return 1
         return 0
 
+    @custom_metric(config.get_metric_properties)
     def ingest_expression(self) -> int:
         """
         Ingests expression files.
@@ -310,13 +319,14 @@ class IngestPipeline:
                     self.study_file_id,
                     tracer=self.tracer,
                     **self.kwargs,
-                )  # Dense receiver
+                )
             self.expression_ingestor.execute_ingest()
         except Exception as e:
             log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
             return 1
         return 0
 
+    @custom_metric(config.get_metric_properties)
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         self.cell_metadata.preprocess()
@@ -355,6 +365,7 @@ class IngestPipeline:
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
 
+    @custom_metric(config.get_metric_properties)
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate():
@@ -373,6 +384,7 @@ class IngestPipeline:
             return 1
         return status
 
+    @custom_metric(config.get_metric_properties)
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
         subsample = SubSample(
@@ -411,9 +423,11 @@ def run_ingest(ingest, arguments, parsed_args):
     status_cell_metadata = None
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
+        config.set_parent_event_name("ingest-pipeline:expression:ingest")
         status.append(ingest.ingest_expression())
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
+            config.set_parent_event_name("ingest-pipeline:cell_metadata:ingest")
             status_cell_metadata = ingest.ingest_cell_metadata()
             status.append(status_cell_metadata)
             if parsed_args.bq_table is not None and status_cell_metadata == 0:
@@ -421,9 +435,11 @@ def run_ingest(ingest, arguments, parsed_args):
                 status.append(status_metadata_bq)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
+            config.set_parent_event_name("ingest-pipeline:cluster:ingest")
             status.append(ingest.ingest_cluster())
     elif "subsample" in arguments:
         if arguments["subsample"]:
+            config.set_parent_event_name("ingest-pipeline:subsample:ingest")
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
@@ -486,9 +502,13 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
-
+    # Initialize global variables for current ingest job
+    config.init(arguments["study_id"], arguments["study_file_id"])
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
+    # Log Mixpanel events
+    MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
+    # Exit pipeline
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 

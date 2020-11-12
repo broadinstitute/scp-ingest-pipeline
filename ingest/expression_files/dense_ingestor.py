@@ -63,7 +63,11 @@ class DenseIngestor(GeneExpression, IngestFiles):
         DenseIngestor.check_valid(
             self.header,
             first_row,
-            query_params=(self.study_id, self.mongo_connection._client),
+            query_params=(
+                self.study_id,
+                self.study_file_id,
+                self.mongo_connection._client,
+            ),
         )
         # Reset csv reader to first gene row
         self.csv_file_handler = self.open_file(self.file_path)[0]

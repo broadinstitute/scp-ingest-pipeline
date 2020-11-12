@@ -40,6 +40,45 @@ class TestAnnotations(unittest.TestCase):
             self.CLUSTER_PATH, ['text/csv', 'text/plain', 'text/tab-separated-values']
         )
 
+    def test_duplicate_headers(self):
+        """Annotation headers should not contain duplicate values
+        """
+        dup_headers = Annotations(
+            '../tests/data/dup_headers_v2.0.0.tsv',
+            ['text/csv', 'text/plain', 'text/tab-separated-values'],
+        )
+
+        self.assertFalse(
+            dup_headers.validate_unique_header(),
+            'Duplicate headers should fail format validation',
+        )
+
+        with self.assertRaises(ValueError):
+            dup_headers.preprocess()
+
+    def test_header_format(self):
+        """Header rows of metadata file should conform to standard
+        """
+        error_headers = Annotations(
+            '../tests/data/error_headers_v2.0.0.tsv',
+            ['text/csv', 'text/plain', 'text/tab-separated-values'],
+        )
+
+        self.assertFalse(
+            error_headers.validate_header_keyword(),
+            'Missing NAME keyword should fail format validation',
+        )
+
+        self.assertFalse(
+            error_headers.validate_type_keyword(),
+            'Missing TYPE keyword should fail format validation',
+        )
+
+        self.assertFalse(
+            error_headers.validate_type_annotations(),
+            'Invalid type annotations should fail format validation',
+        )
+
     def test_low_mem_artifact(self):
         # pandas default of low_memory=True allows internal chunking during parsing
         # causing inconsistent dtype coercion artifact for larger annotation files
