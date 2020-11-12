@@ -63,7 +63,7 @@ def testing_guard(decorator_func):
         environment variable is not set and calls the plain function if it is set.
     """
 
-    def decorator_wrapper(decorator_args):
+    def decorator_wrapper(*decorator_args):
         def replacement(original_func):
             """Function that is called instead of original function."""
 
@@ -71,7 +71,7 @@ def testing_guard(decorator_func):
                 """Decides whether to use decorator on function call."""
                 if os.getenv("TESTING") is not None:
                     return original_func(*args, **kwargs)
-                return decorator_func(decorator_args)(original_func)(*args, **kwargs)
+                return decorator_func(*decorator_args)(original_func)(*args, **kwargs)
 
             return apply_guard
 
