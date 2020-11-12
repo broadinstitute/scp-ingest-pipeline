@@ -301,6 +301,7 @@ class IngestPipeline:
                 return 1
         return 0
 
+    @custom_metric(config.get_metric_properties)
     def ingest_expression(self) -> int:
         """
         Ingests expression files.
