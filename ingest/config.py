@@ -1,15 +1,16 @@
 # File is responsible for defining globals and initializing them
-from mongo_connection import MongoConnection
+try:
+    from mongo_connection import MongoConnection
+except ImportError:
+    from .mongo_connection import MongoConnection
 from bson.objectid import ObjectId
 
 MONGO_CONNECTION = MongoConnection()
 
 
 def init(study_id, study_file_id):
-    global __child_events
     global __metric_properties
 
-    __child_events = []
     study = Study(study_id)
     study_file = StudyFile(study_file_id)
     __metric_properties = MetricProperties(study, study_file)
@@ -48,11 +49,6 @@ class MetricProperties:
     def update(self, props):
         if props:
             self.__properties = {**self.__properties, **props}
-
-
-def add_child_event(event):
-    global __child_events
-    __child_events.append(event)
 
 
 class Study:
