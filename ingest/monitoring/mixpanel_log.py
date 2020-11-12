@@ -17,7 +17,7 @@ class MetricTimedNode(ContextDecorator):
     ):
         props["functionName"] = function_name
         self.props = props
-        self.perf_time_name = perf_time_name if perf_time_name else "perfTime"
+        self.perf_time_name = perf_time_name
         self.metric_properties = metric_properties
 
     def __enter__(self):
@@ -33,8 +33,11 @@ class MetricTimedNode(ContextDecorator):
         self.metric_properties.update(self.props)
 
 
+# @testing_guard is applied here so Mixpanel events are not logged during tests.
 @testing_guard
-def custom_metric(get_metric_properties_fn, perf_time_name=None, props: Dict = {}):
+def custom_metric(
+    get_metric_properties_fn, perf_time_name="perfTime", props: Dict = {}
+):
     def _decorator(f):
         func_name = f.__name__
 

@@ -32,7 +32,7 @@ def get_metric_properties():
 
 
 class MetricProperties:
-    """Sets default properties for MixPanel events"""
+    """Sets default properties for Mixpanel events"""
 
     def __init__(self, study, study_file):
         self.__properties = {
@@ -52,7 +52,8 @@ class MetricProperties:
 
 
 class Study:
-    "Provides attributes for a given study"
+    """Provides attributes for a given study
+    """
 
     def __init__(self, study_id):
         self.study = study_id

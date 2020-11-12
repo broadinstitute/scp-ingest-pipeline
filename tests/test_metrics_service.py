@@ -51,9 +51,7 @@ class MetricsServiceTestCase(unittest.TestCase):
         "monitoring.metrics_service.MetricsService.post_event",
         side_effect=mock_post_event,
     )
-    def test_ingest_dense_matrix(
-        self, mock_execute_ingest, mock_MONGO_CONNECTION, mock_post_event
-    ):
+    def test_log(self, mock_execute_ingest, mock_MONGO_CONNECTION, mock_post_event):
         mock_MONGO_CONNECTION._client = MetricsServiceTestCase.client_mock
         args = [
             "--study-id",
