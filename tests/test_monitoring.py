@@ -2,9 +2,9 @@ import unittest
 from unittest.mock import patch
 
 from test_ingest import IngestTestCase
-from ..mock_data.client import mock_client
 import config
 
+from unittest.mock import MagicMock
 import pytest
 
 
@@ -30,6 +30,20 @@ class MonitorTestCase(unittest.TestCase):
         "--matrix-file-type",
         "dense",
     ]
+    client_values = {}
+    client_values["study_accessions"] = MagicMock()
+    client_values["study_accessions"].find.return_value = [{"accession": "SCP123"}]
+    client_values["study_files"] = MagicMock()
+    client_values["study_files"].find.return_value = [
+        {
+            "file_type": "Expression matrix",
+            "upload_file_size": 400,
+            "name": "File_name.txt",
+        }
+    ]
+    # Build client mock with functions and return values needed to query
+    client_mock = MagicMock()
+    client_mock.__getitem__.side_effect = client_values.__getitem__
 
     @patch("expression_files.DenseIngestor.execute_ingest")
     @patch("config.MONGO_CONNECTION")
@@ -37,7 +51,7 @@ class MonitorTestCase(unittest.TestCase):
     def test_guard_decorator_testing_not_set(
         self, mock_execute_ingest, mock_MONGO_CONNECTION, mock_custom_metric
     ):
-        mock_MONGO_CONNECTION._client = mock_client
+        mock_MONGO_CONNECTION._client = MonitorTestCase.client_mock
         # Initialize global variables
         config.init("5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337")
         IngestTestCase.execute_ingest(MonitorTestCase.ingest_args)
