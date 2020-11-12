@@ -10,7 +10,7 @@ except ImportError:
 
 
 class MetricTimedNode(ContextDecorator):
-    """Context manager that logs properties and performance times of Mixpanel events."""
+    """Context manager that adds properties and performance times of Mixpanel events."""
 
     def __init__(
         self, function_name, perf_time_name, metric_properties: Dict, props: Dict = None

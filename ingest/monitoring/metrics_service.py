@@ -9,6 +9,7 @@ import json
 import os
 import requests
 
+
 try:
     from monitor import setup_logger
 except ImportError:
@@ -30,6 +31,7 @@ class MetricsService:
     # Log metrics to Mixpanel
     @classmethod
     def log(cls, event_name, props={}):
+        # Log metrics to Mixpanel via Bard web service
         props.update({"distinct_id": MetricsService.user_id})
         properties = {"event": event_name, "properties": props.get_properties()}
 
@@ -51,8 +53,8 @@ class MetricsService:
             r.raise_for_status()
         # Don't want to stop parsing for logging errors. Errors will be logged and not raised.
         except requests.exceptions.HTTPError as e:
-            MetricsService.dev_logger.exception(e)
             #  401 Unauthorized
+            MetricsService.dev_logger.exception(e)
         except requests.exceptions.RequestException as e:
             # Catastrophic error
             MetricsService.dev_logger.critcal(e)
