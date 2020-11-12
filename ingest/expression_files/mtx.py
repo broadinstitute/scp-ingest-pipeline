@@ -24,11 +24,15 @@ import subprocess
 try:
     from expression_files import GeneExpression
     from ingest_files import IngestFiles
+    from monitoring.mixpanel_log import custom_metric
+    import config
 except ImportError:
     # Used when importing as external package, e.g. imports in
     # single_cell_portal code
     from .expression_files import GeneExpression
     from ..ingest_files import IngestFiles
+    from ..monitoring.mixpanel_log import custom_metric
+    from ..config import config
 
 
 class MTXIngestor(GeneExpression, IngestFiles):
@@ -202,6 +206,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return gene_id, gene_name
 
     @staticmethod
+    @custom_metric(config.get_metric_properties, "isSortedPerfTime", {"sorted": False})
     def sort_mtx(file_path, mtx_file_handler: IO) -> str:
         """
         Sorts MTX file by gene. File header, dimensions, and comments are not included in sort.
