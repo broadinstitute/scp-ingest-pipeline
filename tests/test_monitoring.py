@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from test_ingest import IngestTestCase
-from mock_data.client import mock_client
+from .mock_data.client import mock_client
 import config
 
 import pytest
