@@ -43,15 +43,15 @@ class MonitorTestCase(unittest.TestCase):
         IngestTestCase.execute_ingest(MonitorTestCase.ingest_args)
         self.assertTrue(mock_custom_metric.called)
 
-        @pytest.mark.usefixtures("delete_testing")
-        @patch("expression_files.DenseIngestor.execute_ingest")
-        @patch("config.MONGO_CONNECTION")
-        @patch("monitoring.mixpanel_log.custom_metric")
-        def test_guard_decorator_testing_not_set(
-            self, mock_execute_ingest, mock_MONGO_CONNECTION, mock_custom_metric
-        ):
-            mock_MONGO_CONNECTION._client = MonitorTestCase.client_mock
-            # Initialize global variables
-            config.init("5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337")
-            IngestTestCase.execute_ingest(MonitorTestCase.ingest_args)
-            self.assertFalse(mock_custom_metric.called)
+    @pytest.mark.usefixtures("delete_testing")
+    @patch("expression_files.DenseIngestor.execute_ingest")
+    @patch("config.MONGO_CONNECTION")
+    @patch("monitoring.mixpanel_log.custom_metric")
+    def test_guard_decorator_testing_set(
+        self, mock_execute_ingest, mock_MONGO_CONNECTION, mock_custom_metric
+    ):
+        mock_MONGO_CONNECTION._client = MonitorTestCase.client_mock
+        # Initialize global variables
+        config.init("5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337")
+        IngestTestCase.execute_ingest(MonitorTestCase.ingest_args)
+        self.assertFalse(mock_custom_metric.called)
