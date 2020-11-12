@@ -206,7 +206,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return gene_id, gene_name
 
     @staticmethod
-    @custom_metric(config.get_metric_properties, "isSortedPerfTime", {"sorted": False})
+    @custom_metric(config.get_metric_properties, "sortPerfTime", {"sorted": False})
     def sort_mtx(file_path, mtx_file_handler: IO) -> str:
         """
         Sorts MTX file by gene. File header, dimensions, and comments are not included in sort.
