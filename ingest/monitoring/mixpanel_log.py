@@ -39,7 +39,7 @@ class MetricTimedNode(ContextDecorator):
         if self.child_event_name:
             add_child_event(self.child_event_name)
 
-
+# @testing_guard is applied here so Mixpanel events are not logged during tests.
 @testing_guard
 def custom_metric(
     get_metric_properties_fn,
