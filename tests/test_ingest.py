@@ -31,17 +31,14 @@ pytest -n auto -s
 pytest --cov=../ingest/
 
 """
-import sys
 import unittest
 from unittest.mock import patch
 from test_dense import mock_load_r_files
 
 from pymongo.errors import AutoReconnect
-
 from test_expression_files import mock_expression_load
 from mock_gcp import mock_storage_client, mock_storage_blob
 
-sys.path.append("../ingest")
 from ingest_pipeline import (
     create_parser,
     validate_arguments,
@@ -74,10 +71,10 @@ GeneExpression.load = mock_expression_load
 
 
 class IngestTestCase(unittest.TestCase):
+    @staticmethod
     @patch("google.cloud.storage.Blob", side_effect=mock_storage_blob)
     @patch("google.cloud.storage.Client", side_effect=mock_storage_client)
-    def execute_ingest(self, args, mock_storage_client, mock_storage_blob):
-        self.maxDiff = None
+    def execute_ingest(args, mock_storage_client, mock_storage_blob):
 
         parsed_args = create_parser().parse_args(args)
         validate_arguments(parsed_args)

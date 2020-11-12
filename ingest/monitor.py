@@ -49,6 +49,37 @@ def log_exception(dev_logger, user_logger, exception):
     dev_logger.exception(exception)
 
 
+# Modified from https://jdkandersson.com/2019/05/19/testing-decorated-python-functions/
+def testing_guard(decorator_func):
+    """
+    Decorator that only applies another decorator if the TESTING environment
+    variable is not set.
+
+    Args:
+        decorator_func: The decorator function.
+
+    Returns:
+        Function that calls a function after applying the decorator if TESTING
+        environment variable is not set and calls the plain function if it is set.
+    """
+
+    def decorator_wrapper(*decorator_args):
+        def replacement(original_func):
+            """Function that is called instead of original function."""
+
+            def apply_guard(*args, **kwargs):
+                """Decides whether to use decorator on function call."""
+                if os.getenv("TESTING") is not None:
+                    return original_func(*args, **kwargs)
+                return decorator_func(*decorator_args)(original_func)(*args, **kwargs)
+
+            return apply_guard
+
+        return replacement
+
+    return decorator_wrapper
+
+
 def trace(fn):
     """Function decorator that enables tracing via stackdriver for performance
     metrics."""
