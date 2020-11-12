@@ -13,15 +13,15 @@ class MetricTimedNode(ContextDecorator):
     def __init__(
         self,
         function_name,
-        perf_time_name,
         metric_properties: Dict,
+        perf_time_name="perfTime",
         props: Dict = None,
         child_event_name: str = None,
     ):
         props["functionName"] = function_name
         self.child_event_name = child_event_name
         self.props = props
-        self.perf_time_name = perf_time_name if perf_time_name else "perfTime"
+        self.perf_time_name = perf_time_name
         self.metric_properties = metric_properties
 
     def __enter__(self):
@@ -38,6 +38,7 @@ class MetricTimedNode(ContextDecorator):
         # Add child events to list of child events captured
         if self.child_event_name:
             add_child_event(self.child_event_name)
+
 
 # @testing_guard is applied here so Mixpanel events are not logged during tests.
 @testing_guard
@@ -62,8 +63,8 @@ def custom_metric(
             metric_properties = get_metric_properties_fn()
             with MetricTimedNode(
                 func_name,
-                perf_time_name,
                 metric_properties=metric_properties,
+                perf_time_name=perf_time_name,
                 props=props,
                 child_event_name=child_event_name,
             ):
