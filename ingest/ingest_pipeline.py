@@ -326,6 +326,7 @@ class IngestPipeline:
             return 1
         return 0
 
+    @custom_metric(config.get_metric_properties)
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         self.cell_metadata.preprocess()
@@ -364,6 +365,7 @@ class IngestPipeline:
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
 
+    @custom_metric(config.get_metric_properties)
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate():
@@ -382,6 +384,7 @@ class IngestPipeline:
             return 1
         return status
 
+    @custom_metric(config.get_metric_properties)
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
         subsample = SubSample(
@@ -420,9 +423,11 @@ def run_ingest(ingest, arguments, parsed_args):
     status_cell_metadata = None
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
+        config.set_parent_event_name("ingest-pipeline:expression:ingest")
         status.append(ingest.ingest_expression())
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
+            config.set_parent_event_name("ingest-pipeline:cell_metadata:ingest")
             status_cell_metadata = ingest.ingest_cell_metadata()
             status.append(status_cell_metadata)
             if parsed_args.bq_table is not None and status_cell_metadata == 0:
@@ -430,9 +435,11 @@ def run_ingest(ingest, arguments, parsed_args):
                 status.append(status_metadata_bq)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
+            config.set_parent_event_name("ingest-pipeline:cluster:ingest")
             status.append(ingest.ingest_cluster())
     elif "subsample" in arguments:
         if arguments["subsample"]:
+            config.set_parent_event_name("ingest-pipeline:subsample:ingest")
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 

@@ -16,12 +16,19 @@ except ImportError:
     from ..monitor import setup_logger
 
 
+if os.environ.get("BARD_HOST_URL"):
+    bard_host_url = os.environ["BARD_HOST_URL"]
+else:
+    bard_host_url = None
+
+
 class MetricsService:
     # Logger provides more details
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
-    BARD_HOST_URL = os.environ["BARD_HOST_URL"]
+    BARD_HOST_URL = bard_host_url
     user_id = "2f30ec50-a04d-4d43-8fd1-b136a2045079"
 
+    # Log metrics to Mixpanel
     @classmethod
     def log(cls, event_name, props={}):
         # Log metrics to Mixpanel via Bard web service
@@ -32,7 +39,6 @@ class MetricsService:
         MetricsService.post_event(post_body)
 
     # Post metrics to Mixpanel via Bard web service
-    #
     # Bard docs:
     # https://terra-bard-prod.appspot.com/docs/
     @staticmethod

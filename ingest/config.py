@@ -31,6 +31,8 @@ def get_metric_properties():
 
 
 class MetricProperties:
+    """Sets default properties for MixPanel events"""
+
     def __init__(self, study, study_file):
         self.__properties = {
             "studyAccession": study.accession,
@@ -54,6 +56,8 @@ def add_child_event(event):
 
 
 class Study:
+    "Provides attributes for a given study"
+
     def __init__(self, study_id):
         self.study = study_id
 
@@ -82,6 +86,8 @@ class Study:
 
 
 class StudyFile:
+    "Provides attributes for a given study file"
+
     def __init__(self, study_file_id):
         self.study_file = study_file_id
 
