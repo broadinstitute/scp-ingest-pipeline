@@ -13,7 +13,7 @@ def raise_error(*args):
 
 class TestIngestFiles(unittest.TestCase):
     def test_is_gzipped(self):
-        zipped_path = "../tests/data/mtx/unsorted_mtx.txt.gz"
+        zipped_path = "../tests/data/mtx/unsorted_matrix.mtx.gz"
         self.assertTrue(IngestFiles.is_gzipped(zipped_path))
         gzip_extension = "../tests/data/mtx/unsorted_mtx.txt.gzip"
         self.assertTrue(IngestFiles.is_gzipped(gzip_extension))
