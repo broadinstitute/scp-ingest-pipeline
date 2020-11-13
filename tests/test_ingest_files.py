@@ -1,7 +1,6 @@
 import unittest
 import sys
-import gzip
-from unittest.mock import MagicMock
+from unittest.mock import patch
 
 sys.path.append("../ingest")
 from ingest_files import IngestFiles
@@ -23,6 +22,5 @@ class TestIngestFiles(unittest.TestCase):
         self.assertFalse(IngestFiles.is_gzipped(not_zipped))
 
         # Test exception
-        gzip.open = MagicMock()
-        gzip.open.side_effect = TestIngestFiles.raise_error
-        self.assertRaises(ValueError, IngestFiles.is_gzipped, zipped_path)
+        with patch("gzip.open", side_effect=TestIngestFiles.raise_error):
+            self.assertRaises(ValueError, IngestFiles.is_gzipped, zipped_path)
