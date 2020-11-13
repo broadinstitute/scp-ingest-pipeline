@@ -320,4 +320,17 @@ class IngestFiles:
 
     @staticmethod
     def is_gzipped(file_path):
-        return IngestFiles.get_file_type(file_path)[1] == "gzip"
+        file_ext = os.path.splitext(file_path)[1]
+        # Validate that file extension is correct.
+        if file_ext == ".gzip" or file_ext == ".gz":
+            # Check if file can open with gzip
+            try:
+                gzip.open(file_path, "rb")
+                return True
+            except Exception:
+                msg = (
+                    "File has correct extension but can not be opened as a gzipped file. "
+                    "Please check that file is correctly gzipped."
+                )
+                raise ValueError(msg)
+        return False
