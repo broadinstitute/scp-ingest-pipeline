@@ -45,7 +45,7 @@ class MetricsService:
     def post_event(props):
         try:
             r = requests.post(
-                f"{MetricsService.BARD_HOST_URL}api/event",
+                f"{MetricsService.BARD_HOST_URL}/api/event",
                 headers={"content-type": "application/json"},
                 data=props,
             )
