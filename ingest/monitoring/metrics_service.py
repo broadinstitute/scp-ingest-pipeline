@@ -45,7 +45,7 @@ class MetricsService:
     def post_event(props):
         try:
             r = requests.post(
-                MetricsService.BARD_HOST_URL,
+                f"{MetricsService.BARD_HOST_URL}api/event",
                 headers={"content-type": "application/json"},
                 data=props,
             )
@@ -57,6 +57,6 @@ class MetricsService:
             MetricsService.dev_logger.exception(e)
         except requests.exceptions.RequestException as e:
             # Catastrophic error
-            MetricsService.dev_logger.critcal(e)
+            MetricsService.dev_logger.exception(e)
         except Exception as e:
             MetricsService.dev_logger.exception(e)
