@@ -10,13 +10,12 @@ import sys
 from unittest.mock import patch, MagicMock, PropertyMock
 from bson.objectid import ObjectId
 
-from test_expression_files import mock_load_genes_batched, mock_expression_load
-import gzip
-
 
 sys.path.append("../ingest")
 from expression_files.mtx import MTXIngestor
 from expression_files.expression_files import GeneExpression
+from test_expression_files import mock_load_genes_batched, mock_expression_load
+from ingest_files import IngestFiles
 
 
 class TestMTXIngestor(unittest.TestCase):
@@ -81,10 +80,11 @@ class TestMTXIngestor(unittest.TestCase):
         # Delete sorted MTX file
         os.remove(sorted_mtx)
 
-        sorted_mtx = MTXIngestor.sort_mtx(
-            zipped_unsorted_mtx,
-            gzip.open(zipped_unsorted_mtx, "rt", encoding="utf-8-sig"),
+        zipped_ingest_file = IngestFiles(
+            zipped_unsorted_mtx, ["text/tab-separated-values"]
         )
+        zipped_file = zipped_ingest_file.resolve_path(zipped_unsorted_mtx)[0]
+        sorted_mtx = MTXIngestor.sort_mtx(zipped_unsorted_mtx, zipped_file)
         # Verify files have the same contents
         self.assertTrue(filecmp.cmp(sorted_mtx, expected_sorted_mtx))
         os.remove(sorted_mtx)
