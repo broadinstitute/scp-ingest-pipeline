@@ -7,13 +7,15 @@ sys.path.append("../ingest")
 from ingest_files import IngestFiles
 
 
-def raise_error(*args):
-    raise Exception
-
-
 class TestIngestFiles(unittest.TestCase):
+    # Test exception
+
+    def raise_error(*args):
+        raise Exception
+
     def test_is_gzipped(self):
         zipped_path = "../tests/data/mtx/unsorted_matrix.mtx.gz"
+
         self.assertTrue(IngestFiles.is_gzipped(zipped_path))
         gzip_extension = "../tests/data/mtx/unsorted_mtx.txt.gzip"
         self.assertTrue(IngestFiles.is_gzipped(gzip_extension))
@@ -22,5 +24,5 @@ class TestIngestFiles(unittest.TestCase):
 
         # Test exception
         gzip.open = MagicMock()
-        gzip.open.side_effect = raise_error
+        gzip.open.side_effect = TestIngestFiles.raise_error
         self.assertRaises(ValueError, IngestFiles.is_gzipped, zipped_path)
