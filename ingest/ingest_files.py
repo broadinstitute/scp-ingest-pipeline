@@ -325,7 +325,7 @@ class IngestFiles:
         if file_ext == ".gzip" or file_ext == ".gz":
             # Check if file can open with gzip
             try:
-                gzip.open(file_path, "rb")
+                gzip.open(file_path)
                 return True
             except Exception:
                 msg = (
