@@ -125,7 +125,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             # numeric(-n). Use stable sort (--stable) so that columns are only compared by the first column.
             # Without this argument line '1 3 4' and ' 1 5 4' would be considered unsorted.
             p2 = subprocess.run(
-                ["sort", "-c", "--stable", "-n", "-k", "1,1"],
+                ["sort", "-s", "-c", "--stable", "-n", "-k", "1,1"],
                 stdin=p1.stdout,
                 capture_output=True,
             )
@@ -193,28 +193,33 @@ class MTXIngestor(GeneExpression, IngestFiles):
         """
         i = 0
         for line in file_handler:
-            if line.startswith("%"):
-                i += 1
-            else:
+            try:
+                line_values = line.split()
+                float(line_values[0])
                 # First line w/o '%' is mtx dimension. So skip this line (+1)
                 i += 2
                 return i
+            except ValueError:
+                i += 1
         raise ValueError(
             "MTX file did not contain expression data. Please check formatting and contents of file."
         )
 
     @staticmethod
     def get_mtx_dimensions(file_handler) -> List:
+        i = 0
         for line in file_handler:
-            if not line.startswith("%"):
-                mtx_dimensions: List[str] = line.strip().split()
-                try:
-                    # Convert values in mtx_dimensions to int
-                    dimensions = list(map(int, mtx_dimensions))
-                    return dimensions
-                except Exception as e:
-                    raise e
-        raise ValueError("MTX file did not contain data")
+            try:
+                line_values = line.split()
+                float(line_values[0])
+                # First line w/o '%' is mtx dimension. So skip this line (+1)
+                i += 2
+                return i
+            except ValueError:
+                i += 1
+        raise ValueError(
+            "MTX file did not contain expression data. Please check formatting and contents of file."
+        )
 
     @staticmethod
     def get_features(feature_row: str):
@@ -290,7 +295,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             ),
         )
         # Need fresh mtx file handler for get_data_start_line_number()
-        fresh_mtx_file_handler = self.resolve_path(self.mtx_path)[1]
+        fresh_mtx_file_handler = self.resolve_path(self.mtx_path)[0]
         if not MTXIngestor.is_sorted(self.mtx_path, fresh_mtx_file_handler):
             new_mtx_file_path = MTXIngestor.sort_mtx(
                 self.mtx_path, fresh_mtx_file_handler
