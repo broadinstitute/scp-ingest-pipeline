@@ -204,7 +204,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                         "Only header, comment lines starting with '%', and numeric data allowed in MTX file."
                     )
                 except IndexError:
-                    raise IndexError("MTX file can not start with a space")
+                    raise IndexError("MTX file cannot start with a space")
         raise ValueError(
             "MTX file did not contain expression data. Please check formatting and contents of file."
         )
