@@ -145,6 +145,20 @@ class TestExpressionFiles(unittest.TestCase):
 
         with patch(
             "expression_files.expression_files.GeneExpression.get_cell_names_from_study_file_id",
+            return_value=None,
+        ):
+            # Cells are unique
+            header = ["GENE", "foo", "foo2"]
+            self.assertTrue(
+                GeneExpression.check_unique_cells(
+                    header,
+                    TestExpressionFiles.STUDY_ID,
+                    TestExpressionFiles.STUDY_FILE_ID,
+                    TestExpressionFiles.client_mock,
+                )
+            )
+        with patch(
+            "expression_files.expression_files.GeneExpression.get_cell_names_from_study_file_id",
             return_value=["foo3", "foo4", "foo5", "foo6", "foo7", "foo8"],
         ):
             # Cells are unique
