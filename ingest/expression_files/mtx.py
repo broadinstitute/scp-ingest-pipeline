@@ -192,14 +192,17 @@ class MTXIngestor(GeneExpression, IngestFiles):
             i (IO): Line number where data starts
         """
         for count, line in enumerate(file_handler):
-            try:
-                line_values = line.split()
-                float(line_values[0])
-                # First line w/o '%' is mtx dimension. So skip this line (+1)
-                count += 2
-                return count
-            except ValueError:
-                pass
+            if not line.startswith("%"):
+                try:
+                    line_values = line.split()
+                    float(line_values[0])
+                    # First line w/o '%' is mtx dimension. So skip this line (+1)
+                    count += 2
+                    return count
+                except ValueError:
+                    raise ValueError(
+                        "Only header, comment lines starting with '%', and numeric data allowed in MTX file."
+                    )
         raise ValueError(
             "MTX file did not contain expression data. Please check formatting and contents of file."
         )
@@ -207,14 +210,15 @@ class MTXIngestor(GeneExpression, IngestFiles):
     @staticmethod
     def get_mtx_dimensions(file_handler) -> List:
         for line in file_handler:
-            if not line.startswith("%"):
-                mtx_dimensions: List[str] = line.strip().split()
-                try:
-                    # Convert values in mtx_dimensions to int
-                    dimensions = list(map(int, mtx_dimensions))
-                    return dimensions
-                except Exception as e:
-                    raise e
+            if not line.strip():
+                if not line.startswith("%"):
+                    mtx_dimensions: List[str] = line.strip().split()
+                    try:
+                        # Convert values in mtx_dimensions to int
+                        dimensions = list(map(int, mtx_dimensions))
+                        return dimensions
+                    except Exception as e:
+                        raise e
         raise ValueError("MTX file did not contain data")
 
     @staticmethod
