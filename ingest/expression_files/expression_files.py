@@ -167,16 +167,17 @@ class GeneExpression:
         existing_cells = GeneExpression.get_cell_names_from_study_file_id(
             study_id, study_file_id, client
         )
-        dupes = set(existing_cells) & set(cell_names)
-        if len(dupes) > 0:
-            error_string = (
-                f"Expression file contains {len(dupes)} cells "
-                "that also exist in another expression file."
-            )
+        if existing_cells:
+            dupes = set(existing_cells) & set(cell_names)
+            if len(dupes) > 0:
+                error_string = (
+                    f"Expression file contains {len(dupes)} cells "
+                    "that also exist in another expression file."
+                )
 
-            # add the first 3 duplicates to the error message
-            error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
-            raise ValueError(error_string)
+                # add the first 3 duplicates to the error message
+                error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
+                raise ValueError(error_string)
         return True
 
     @staticmethod
@@ -321,10 +322,10 @@ class GeneExpression:
                 # Add new data arrays
                 data_arrays += current_data_arrays
                 current_data_arrays.clear()
-            if len(data_arrays) > 0:
-                self.load(data_arrays, DataArray.COLLECTION_NAME)
-            if len(gene_models) > 0:
-                self.load(gene_models, GeneExpression.COLLECTION_NAME)
+            # if len(data_arrays) > 0:
+            #     self.load(data_arrays, DataArray.COLLECTION_NAME)
+            # if len(gene_models) > 0:
+            #     self.load(gene_models, GeneExpression.COLLECTION_NAME)
             num_processed += len(gene_models)
             GeneExpression.dev_logger.info(
                 f"Processed {num_processed} genes. "
