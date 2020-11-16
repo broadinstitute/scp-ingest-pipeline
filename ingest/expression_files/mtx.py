@@ -125,7 +125,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             # numeric(-n). Use stable sort (--stable) so that columns are only compared by the first column.
             # Without this argument line '1 3 4' and ' 1 5 4' would be considered unsorted.
             p2 = subprocess.run(
-                ["sort", "-s", "-c", "--stable", "-n", "-k", "1,1"],
+                ["sort", "-c", "--stable", "-n", "-k", "1,1"],
                 stdin=p1.stdout,
                 capture_output=True,
             )
