@@ -207,19 +207,16 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def get_mtx_dimensions(file_handler) -> List:
-        i = 0
         for line in file_handler:
-            try:
-                line_values = line.split()
-                float(line_values[0])
-                # First line w/o '%' is mtx dimension. So skip this line (+1)
-                i += 2
-                return i
-            except ValueError:
-                i += 1
-        raise ValueError(
-            "MTX file did not contain expression data. Please check formatting and contents of file."
-        )
+            if not line.startswith("%"):
+                mtx_dimensions: List[str] = line.strip().split()
+                try:
+                    # Convert values in mtx_dimensions to int
+                    dimensions = list(map(int, mtx_dimensions))
+                    return dimensions
+                except Exception as e:
+                    raise e
+        raise ValueError("MTX file did not contain data")
 
     @staticmethod
     def get_features(feature_row: str):
