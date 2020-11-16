@@ -191,14 +191,19 @@ class MTXIngestor(GeneExpression, IngestFiles):
          ----------
             i (IO): Line number where data starts
         """
-        i = 0
-        for line in file_handler:
-            if line.startswith("%"):
-                i += 1
-            else:
-                # First line w/o '%' is mtx dimension. So skip this line (+1)
-                i += 2
-                return i
+        for count, line in enumerate(file_handler):
+            if not line.startswith("%"):
+                try:
+                    line_values = line.strip().split()
+                    float(line_values[0])  # Determines if value is numeric
+                    # First line w/o '%' is mtx dimension. So skip this line (+1)
+                    return count + 2
+                except ValueError:
+                    raise ValueError(
+                        "Only header, comment lines starting with '%', and numeric data allowed in MTX file."
+                    )
+                except IndexError:
+                    raise IndexError("MTX file cannot start with a space")
         raise ValueError(
             "MTX file did not contain expression data. Please check formatting and contents of file."
         )
@@ -290,7 +295,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             ),
         )
         # Need fresh mtx file handler for get_data_start_line_number()
-        fresh_mtx_file_handler = self.resolve_path(self.mtx_path)[1]
+        fresh_mtx_file_handler = self.resolve_path(self.mtx_path)[0]
         if not MTXIngestor.is_sorted(self.mtx_path, fresh_mtx_file_handler):
             new_mtx_file_path = MTXIngestor.sort_mtx(
                 self.mtx_path, fresh_mtx_file_handler

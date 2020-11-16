@@ -167,16 +167,17 @@ class GeneExpression:
         existing_cells = GeneExpression.get_cell_names_from_study_file_id(
             study_id, study_file_id, client
         )
-        dupes = set(existing_cells) & set(cell_names)
-        if len(dupes) > 0:
-            error_string = (
-                f"Expression file contains {len(dupes)} cells "
-                "that also exist in another expression file."
-            )
+        if existing_cells:
+            dupes = set(existing_cells) & set(cell_names)
+            if len(dupes) > 0:
+                error_string = (
+                    f"Expression file contains {len(dupes)} cells "
+                    "that also exist in another expression file."
+                )
 
-            # add the first 3 duplicates to the error message
-            error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
-            raise ValueError(error_string)
+                # add the first 3 duplicates to the error message
+                error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
+                raise ValueError(error_string)
         return True
 
     @staticmethod
