@@ -212,15 +212,14 @@ class MTXIngestor(GeneExpression, IngestFiles):
     @staticmethod
     def get_mtx_dimensions(file_handler) -> List:
         for line in file_handler:
-            if not line.strip():
-                if not line.startswith("%"):
-                    mtx_dimensions: List[str] = line.strip().split()
-                    try:
-                        # Convert values in mtx_dimensions to int
-                        dimensions = list(map(int, mtx_dimensions))
-                        return dimensions
-                    except Exception as e:
-                        raise e
+            if not line.startswith("%"):
+                mtx_dimensions: List[str] = line.strip().split()
+                try:
+                    # Convert values in mtx_dimensions to int
+                    dimensions = list(map(int, mtx_dimensions))
+                    return dimensions
+                except Exception as e:
+                    raise e
         raise ValueError("MTX file did not contain data")
 
     @staticmethod
