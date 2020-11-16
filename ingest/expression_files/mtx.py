@@ -191,16 +191,15 @@ class MTXIngestor(GeneExpression, IngestFiles):
          ----------
             i (IO): Line number where data starts
         """
-        i = 0
-        for line in file_handler:
+        for count, line in enumerate(file_handler):
             try:
                 line_values = line.split()
                 float(line_values[0])
                 # First line w/o '%' is mtx dimension. So skip this line (+1)
-                i += 2
-                return i
+                count += 2
+                return count
             except ValueError:
-                i += 1
+                pass
         raise ValueError(
             "MTX file did not contain expression data. Please check formatting and contents of file."
         )
