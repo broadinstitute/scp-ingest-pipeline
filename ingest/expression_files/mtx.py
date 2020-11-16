@@ -195,10 +195,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
             if not line.startswith("%"):
                 try:
                     line_values = line.strip().split()
-                    float(line_values[0])
+                    float(line_values[0])  # Determines if value is numeric
                     # First line w/o '%' is mtx dimension. So skip this line (+1)
-                    count += 2
-                    return count
+                    return count + 2
                 except ValueError:
                     raise ValueError(
                         "Only header, comment lines starting with '%', and numeric data allowed in MTX file."
