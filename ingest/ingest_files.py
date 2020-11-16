@@ -109,7 +109,7 @@ class IngestFiles:
 
     def verify_file_exists(self, file_path):
         """Determines if file can be found, throws error if not"""
-        if IngestFiles.is_remote_file(file_path):
+        if self.is_remote_file:
             # File is in GCS bucket
             self.set_gcs_attrs(file_path)
             source_blob = storage.Blob(bucket=self.bucket, name=self.source)
@@ -131,11 +131,11 @@ class IngestFiles:
         Returns:
             Open file object
         """
-        if IngestFiles.is_remote_file(file_path):
+        if self.is_remote_file:
             file_path = self.download_from_bucket(file_path)
             self.local_file_path = file_path
         # Remove BOM with encoding ='utf - 8 - sig'
-        if IngestFiles.is_gzipped(file_path):
+        if self.is_gzip_file:
             open_file = gzip.open(file_path, "rt", encoding="utf-8-sig")
         else:
             open_file = open(file_path, "rt", encoding="utf-8-sig")
@@ -243,8 +243,7 @@ class IngestFiles:
 
         return re.findall(r"[^,\t]+", line)
 
-    @staticmethod
-    def get_file_type(file_path):
+    def get_file_type(self, file_path):
         """Returns file type"""
         return mimetypes.guess_type(file_path)
 
@@ -317,20 +316,3 @@ class IngestFiles:
                 return row
             except StopIteration:
                 break
-
-    @staticmethod
-    def is_gzipped(file_path):
-        file_ext = os.path.splitext(file_path)[1]
-        # Validate that file extension is correct.
-        if file_ext == ".gzip" or file_ext == ".gz":
-            # Check if file can open with gzip
-            try:
-                gzip.open(file_path)
-                return True
-            except Exception:
-                msg = (
-                    "File has correct extension but can not be opened as a gzipped file. "
-                    "Please check that file is correctly gzipped."
-                )
-                raise ValueError(msg)
-        return False
