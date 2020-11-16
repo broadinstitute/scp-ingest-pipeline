@@ -93,6 +93,8 @@ class TestMTXIngestor(unittest.TestCase):
         mtx_file_handler = open("data/mtx/unsorted_mtx.mtx.txt")
         self.assertEqual(3, MTXIngestor.get_data_start_line_number(mtx_file_handler))
 
+        mtx_file_handler = open("data/mtx/mtx_character_before_data.mtx")
+        self.assertEqual(5, MTXIngestor.get_data_start_line_number(mtx_file_handler))
         # Test for empty file
         empty_file_handler = open("data/empty_file.txt")
         self.assertRaises(
