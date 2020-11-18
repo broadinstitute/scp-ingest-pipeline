@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from bson.objectid import ObjectId
 
-from pymongo.errors import AutoReconnect
+from pymongo.errors import AutoReconnect, BulkWriteError
 
 # Dense models
 from mock_data.expression.dense_matrices.nineteen_genes_100k_cell_models import (
@@ -350,12 +350,22 @@ class TestExpressionFiles(unittest.TestCase):
         self.assertRaises(
             Exception, GeneExpression.insert, docs, "collection", client_mock
         )
+        client_mock.reset_mock()
 
-        # Test exponential back off
+        # Test exponential back off for auto reconnect
         client_mock["collection"].insert_many.side_effect = AutoReconnect
         self.assertRaises(
-            Exception, GeneExpression.insert, docs, "collection", client_mock
+            AutoReconnect, GeneExpression.insert, docs, "collection", client_mock
         )
+        self.assertEqual(client_mock["collection"].insert_many.call_count, 5)
+        client_mock.reset_mock()
 
-        # client_mock["collection"].insert_many called twice before scenario
-        self.assertEqual(client_mock["collection"].insert_many.call_count - 2, 5)
+        def raiseError(*args, **kwargs):
+            raise BulkWriteError({"details": "foo"})
+
+        # Test exponential back off for BulkWriteError
+        client_mock["collection"].insert_many.side_effect = raiseError
+        self.assertRaises(
+            BulkWriteError, GeneExpression.insert, docs, "collection", client_mock
+        )
+        self.assertEqual(client_mock["collection"].insert_many.call_count, 5)

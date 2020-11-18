@@ -42,27 +42,33 @@ def graceful_auto_reconnect(mongo_op_func):
     """Gracefully handles a reconnection event as well as other exceptions
         for mongo.
     """
+    MAX_ATTEMPTS = 5
 
-    MAX_AUTO_RECONNECT_ATTEMPTS = 5
+    def retry(attempt_num):
+        if attempt_num < MAX_ATTEMPTS - 1:
+            wait_time = 0.5 * pow(2, attempt_num)  # exponential back off
+            logging.warning(" Waiting %.1f seconds.", wait_time)
+            time.sleep(wait_time)
 
     @functools.wraps(mongo_op_func)
     def wrapper(*args, **kwargs):
-        for attempt in range(MAX_AUTO_RECONNECT_ATTEMPTS):
+        for attempt in range(MAX_ATTEMPTS):
             try:
                 return mongo_op_func(*args, **kwargs)
             except AutoReconnect as e:
-                if attempt < MAX_AUTO_RECONNECT_ATTEMPTS - 1:
-                    wait_time = 0.5 * pow(2, attempt)  # exponential back off
-                    logging.warning(
-                        "PyMongo auto-reconnecting... %s. Waiting %.1f seconds.",
-                        str(e),
-                        wait_time,
-                    )
-                    time.sleep(wait_time)
+                if attempt < MAX_ATTEMPTS - 1:
+                    logging.warning("PyMongo auto-reconnecting... %s.", str(e))
+                    retry(attempt)
                 else:
                     raise e
             except BulkWriteError as bwe:
-                raise BulkWriteError(bwe.details)
+                if attempt < MAX_ATTEMPTS - 1:
+                    logging.warning(
+                        "Batch ops error occurred. Reinsert attempt %s.", str(attempt)
+                    )
+                    retry(attempt)
+                else:
+                    raise BulkWriteError(bwe.details)
             except Exception as e:
                 raise e
 
