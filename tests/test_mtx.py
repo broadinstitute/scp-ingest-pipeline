@@ -331,6 +331,7 @@ class TestMTXIngestor(unittest.TestCase):
             gene_file="../tests/data/mtx/AB_toy_data_toy.genes.tsv",
             barcode_file="../tests/data/mtx/AB_toy_data_toy.barcodes.tsv",
         )
+        expression_matrix.is_raw_count = False
         with patch(
             "expression_files.expression_files.GeneExpression.DATA_ARRAY_BATCH_SIZE",
             new_callable=PropertyMock,
