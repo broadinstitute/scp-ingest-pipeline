@@ -201,7 +201,13 @@ class TestMTXIngestor(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_execute_ingest(self, mock_load, mock_transform, mock_has_unique_cells):
+    @patch(
+        "expression_files.expression_files.GeneExpression.is_raw_count_file",
+        return_value=False,
+    )
+    def test_execute_ingest(
+        self, mock_load, mock_transform, mock_has_unique_cells, mock_is_raw_count_file
+    ):
         """
             Integration test for execute_ingest()
         """
@@ -245,6 +251,7 @@ class TestMTXIngestor(unittest.TestCase):
         expression_matrix.test_models = None
         expression_matrix.models_processed = 0
         expression_matrix.extract_feature_barcode_matrices()
+        expression_matrix.is_raw_count = False
         expression_matrix.transform()
         amount_of_models = len(
             expression_matrix.test_models["data_arrays"].keys()
@@ -262,6 +269,7 @@ class TestMTXIngestor(unittest.TestCase):
         expression_matrix.test_models = None
         expression_matrix.models_processed = 0
         expression_matrix.extract_feature_barcode_matrices()
+        expression_matrix.is_raw_count = False
         expression_matrix.transform()
         amount_of_models = len(expression_matrix.test_models["data_arrays"]) + len(
             expression_matrix.test_models["gene_models"]
@@ -272,6 +280,9 @@ class TestMTXIngestor(unittest.TestCase):
         with patch(
             "expression_files.expression_files.GeneExpression.check_unique_cells",
             return_value=True,
+        ), patch(
+            "expression_files.expression_files.GeneExpression.is_raw_count_file",
+            return_value=False,
         ):
             expression_matrix = MTXIngestor(
                 "../tests/data/mtx/AB_toy_data_toy.unsorted_mtx.mtx",
@@ -287,6 +298,22 @@ class TestMTXIngestor(unittest.TestCase):
                 expression_matrix.test_models["gene_models"]
             )
             self.assertEqual(expression_matrix.models_processed, amount_of_models)
+
+        # Checks models for raw count matrices
+        expression_matrix = MTXIngestor(
+            "../tests/data/mtx/raw_count.sparse.mtx",
+            "5d276a50421aa9117c982845",
+            "5dd5ae25421aa910a723a337",
+            gene_file="../tests/data/mtx/raw_count.genes.tsv",
+            barcode_file="../tests/data/mtx/raw_count.barcodes.tsv",
+        )
+        expression_matrix.is_raw_count = True
+        expression_matrix.test_models = None
+        expression_matrix.models_processed = 0
+        expression_matrix.extract_feature_barcode_matrices()
+        expression_matrix.transform()
+        amount_of_models = len(expression_matrix.test_models["data_arrays"])
+        self.assertEqual(expression_matrix.models_processed, amount_of_models)
 
     @patch(
         "expression_files.expression_files.GeneExpression.load",
