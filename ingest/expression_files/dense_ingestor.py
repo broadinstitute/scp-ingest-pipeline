@@ -241,31 +241,35 @@ class DenseIngestor(GeneExpression, IngestFiles):
         ):
 
             data_arrays.append(all_cell_model)
-        # Represents row as a list
-        for row in self.csv_file_handler:
-            valid_expression_scores, exp_cells = DenseIngestor.filter_expression_scores(
-                row[1:], self.header
-            )
-            exp_scores = DenseIngestor.process_row(valid_expression_scores)
-            gene = row[0]
-            GeneExpression.dev_logger.debug(f"Processing {gene}")
-            if gene in self.gene_names:
-                raise ValueError(f"Duplicate gene: {gene}")
-            self.gene_names[gene] = True
+        # Expression values of raw counts are not stored. However, cell names are.
+        if not GeneExpression.is_raw_count_file(
+            self.study_id, self.study_file_id, self.mongo_connection._client
+        ):
+            # Represents row as a list
+            for row in self.csv_file_handler:
+                (
+                    valid_expression_scores,
+                    exp_cells,
+                ) = DenseIngestor.filter_expression_scores(row[1:], self.header)
+                exp_scores = DenseIngestor.process_row(valid_expression_scores)
+                gene = row[0]
+                if gene in self.gene_names:
+                    raise ValueError(f"Duplicate gene: {gene}")
+                self.gene_names[gene] = True
 
-            data_arrays, gene_models, num_processed = self.create_models(
-                exp_cells,
-                exp_scores,
-                gene,
-                None,
-                gene_models,
-                data_arrays,
-                num_processed,
-                False,
-            )
+                data_arrays, gene_models, num_processed = self.create_models(
+                    exp_cells,
+                    exp_scores,
+                    gene,
+                    None,
+                    gene_models,
+                    data_arrays,
+                    num_processed,
+                    False,
+                )
         # Load any remaining models. This is necessary because the amount of
-        # models maybe less than the batch size.
-        if len(gene_models) > 0:
+        # models may be less than the batch size.
+        if len(gene_models) > 0 or len(data_arrays) > 0:
             self.create_models(
                 [], [], None, None, gene_models, data_arrays, num_processed, True
             )
