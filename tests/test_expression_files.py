@@ -9,6 +9,9 @@ from pymongo.errors import AutoReconnect, BulkWriteError
 from mock_data.expression.dense_matrices.nineteen_genes_100k_cell_models import (
     nineteen_genes_100k_cell_models,
 )
+from mock_data.expression.dense_matrices.raw_counts_human_5k_cells_80_genes import (
+    raw_count_dense,
+)
 
 # MTX models
 from mock_data.expression.matrix_mtx.AB_toy_data_toy_models import (
@@ -20,6 +23,7 @@ from mock_data.expression.matrix_mtx.one_column_feature_file_data_models import 
 from mock_data.expression.matrix_mtx.AB_toy_data_toy_unsorted_mtx_models import (
     AB_toy_data_toy_unsorted_mtx_models,
 )
+from mock_data.expression.matrix_mtx.raw_count_mtx import raw_count_mtx
 
 sys.path.append("../ingest")
 from expression_files.expression_files import GeneExpression
@@ -65,6 +69,10 @@ def mock_expression_load(self, *args):
                 self.test_models = one_column_feature_file_data_models
             if model_name in nineteen_genes_100k_cell_models["data_arrays"]:
                 self.test_models = nineteen_genes_100k_cell_models
+            if model_name in raw_count_dense["data_arrays"]:
+                self.test_models = raw_count_dense
+            if model_name in raw_count_mtx["data_arrays"]:
+                self.test_models = raw_count_mtx
     # _id and linear_data_id are unique identifiers and can not be predicted
     # so we exclude it from the comparison
     for document in documents:
@@ -207,19 +215,19 @@ class TestExpressionFiles(unittest.TestCase):
             )
             self.assertEqual(cells, None)
 
-    def test_is_raw_count(self):
+    def test_is_raw_count_file(self):
         client = MagicMock()
         client["study_files"].find.return_value = [
-            {"expression_file_info": {"is_raw_counts": False}}
+            {"expression_file_info": {"is_raw_count_files": False}}
         ]
         self.assertFalse(
-            GeneExpression.is_raw_count(
+            GeneExpression.is_raw_count_file(
                 TestExpressionFiles.STUDY_ID, TestExpressionFiles.STUDY_FILE_ID, client
             )
         )
         client["study_files"].find.return_value = [{}]
         self.assertFalse(
-            GeneExpression.is_raw_count(
+            GeneExpression.is_raw_count_file(
                 TestExpressionFiles.STUDY_ID,
                 TestExpressionFiles.STUDY_FILE_ID,
                 TestExpressionFiles.client_mock,
@@ -227,19 +235,19 @@ class TestExpressionFiles(unittest.TestCase):
         )
 
         client["study_files"].find.return_value = [
-            {"expression_file_info": {"is_raw_counts": True}}
+            {"expression_file_info": {"is_raw_count_files": True}}
         ]
         self.assertTrue(
-            GeneExpression.is_raw_count(
+            GeneExpression.is_raw_count_file(
                 TestExpressionFiles.STUDY_ID, TestExpressionFiles.STUDY_FILE_ID, client
             )
         )
 
         client["study_files"].find.return_value = [
-            {"expression_file_info": {"is_raw_counts": False}}
+            {"expression_file_info": {"is_raw_count_files": False}}
         ]
         self.assertFalse(
-            GeneExpression.is_raw_count(
+            GeneExpression.is_raw_count_file(
                 TestExpressionFiles.STUDY_ID, TestExpressionFiles.STUDY_FILE_ID, client
             )
         )
@@ -256,12 +264,12 @@ class TestExpressionFiles(unittest.TestCase):
         # Study has study files with document expression_file_info
 
         with patch(
-            "expression_files.expression_files.GeneExpression.is_raw_count",
+            "expression_files.expression_files.GeneExpression.is_raw_count_file",
             return_value=True,
         ):
-            # Add query filter for is_raw_counts
+            # Add query filter for is_raw_count_files
             RAW_COUNTS_QUERY["$and"].append(
-                {"expression_file_info.is_raw_counts": True}
+                {"expression_file_info.is_raw_count_files": True}
             )
             GeneExpression.get_study_expression_file_ids(
                 TestExpressionFiles.STUDY_ID,
@@ -277,7 +285,7 @@ class TestExpressionFiles(unittest.TestCase):
 
         # When study file is not raw count
         with patch(
-            "expression_files.expression_files.GeneExpression.is_raw_count",
+            "expression_files.expression_files.GeneExpression.is_raw_count_file",
             return_value=False,
         ):
             GeneExpression.get_study_expression_file_ids(

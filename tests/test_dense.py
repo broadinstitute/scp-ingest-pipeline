@@ -198,7 +198,11 @@ class TestDense(unittest.TestCase):
         invalid_header = ["GENE", "foo", "foo", "foo3"]
         self.assertRaises(ValueError, DenseIngestor.check_unique_header, invalid_header)
 
-    def test_duplicate_gene(self):
+    @patch(
+        "expression_files.expression_files.GeneExpression.is_raw_count_file",
+        return_value=False,
+    )
+    def test_duplicate_gene(self, moock_is_raw_count_file):
         FILE_PATH = "../tests/data/expression_matrix_bad_duplicate_gene.txt"
         expression_matrix = DenseIngestor(
             FILE_PATH,
@@ -266,10 +270,12 @@ class TestDense(unittest.TestCase):
         self.assertTrue(mock_transform.called)
         self.assertTrue(mock_load.called)
 
-    def test_transform_fn(self):
+    @patch("expression_files.expression_files.GeneExpression.is_raw_count_file")
+    def test_transform_fn(self, mock_is_raw_count_file):
         """
         Assures transform function creates data models correctly.
         """
+        mock_is_raw_count_file.return_value = False
         expression_matrix = DenseIngestor(
             "../tests/data/dense_matrix_19_genes_1000_cells.txt",
             "5d276a50421aa9117c982845",
@@ -283,11 +289,28 @@ class TestDense(unittest.TestCase):
         ) + len(expression_matrix.test_models["gene_models"].keys())
         self.assertEqual(expression_matrix.models_processed, amount_of_models)
 
+        # Test raw count files
+        mock_is_raw_count_file.return_value = True
+        expression_matrix = DenseIngestor(
+            "../tests/data/raw1_human_5k_cells_80_genes.dense.txt",
+            "5d276a50421aa9117c982845",
+            "5dd5ae25421aa910a723a337",
+        )
+        expression_matrix.test_models = None
+        expression_matrix.models_processed = 0
+        expression_matrix.transform()
+        amount_of_models = len(expression_matrix.test_models["data_arrays"].keys())
+        self.assertEqual(expression_matrix.models_processed, amount_of_models)
+
     @patch(
         "expression_files.expression_files.GeneExpression.load",
         side_effect=mock_load_r_files,
     )
-    def test_transform_fn_r_format(self, mock_load):
+    @patch(
+        "expression_files.expression_files.GeneExpression.is_raw_count_file",
+        return_value=False,
+    )
+    def test_transform_fn_r_format(self, mock_load, mock_is_raw_count_file):
         """
             Assures transform function creates data models for r formatted
                 files correctly.
@@ -303,7 +326,11 @@ class TestDense(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.load",
         side_effect=mock_load_genes_batched,
     )
-    def test_transform_fn_batch(self, mock_load):
+    @patch(
+        "expression_files.expression_files.GeneExpression.is_raw_count_file",
+        return_value=False,
+    )
+    def test_transform_fn_batch(self, mock_load, mock_is_raw_count_file):
         """
         Assures transform function batches data array creation
         the +1 fudge factor is because we only check for batch size after a full row
@@ -343,7 +370,11 @@ class TestDense(unittest.TestCase):
         "expression_files.expression_files.GeneExpression.load",
         side_effect=mock_load_no_exp_data,
     )
-    def test_transform_fn_no_exp_data(self, mock_load):
+    @patch(
+        "expression_files.expression_files.GeneExpression.is_raw_count_file",
+        return_value=False,
+    )
+    def test_transform_fn_no_exp_data(self, mock_load, mock_is_raw_count_file):
         """
         Confirms gene models are created even when there is no expression data
         """
