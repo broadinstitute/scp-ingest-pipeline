@@ -274,7 +274,7 @@ class OntologyRetriever:
     def retrieve_mouse_brain_term(self, term, property_name):
         """Determine whether ID is in mouse brain atlas (MBA) file
         """
-        # MBA id is also the leaf entity of structure_id_path in the MBA file
+        # MBA ID is also the leaf entity of structure_id_path in the MBA file
         # Entries with short structure_id_path seem to be synonymous with
         # Uberon terms, suggesting MBA terms could be mapped as extensions of the
         # Uberon ontology in future
