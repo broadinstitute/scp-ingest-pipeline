@@ -179,6 +179,13 @@ class OntologyRetriever:
     def retrieve_ontology_term_label_remote(self, term, property_name, ontology_urls):
         """Look up official ontology term from an id, always checking against the remote
         """
+        # organ_region currently uses single a non-OLS ontology, the Allen Institute's Mouse Brain Atlas (MBA)
+        # MBA was originally downloaded April 2020 from Allen Brain Atlas data portal URL
+        # http://api.brain-map.org/api/v2/data/query.csv?criteria=model::Structure,rma::criteria,[ontology_id$eq1],rma::options[order$eq%27structures.graph_order%27][num_rows$eqall]
+        # Mouse Brain Atlas IDs are numeric, to make the IDs easily attributable to their ontology
+        # SCP study owners are expected to prepend "MBA" and pad IDs shorter than 9 digits with leading zeros
+        # the expected formatting brings the MBA IDs into a format similar to other ontologies
+        # and avoids potential name collisions
         if property_name == "organ_region":
             return self.retrieve_mouse_brain_term(term, property_name)
         else:
@@ -265,6 +272,12 @@ class OntologyRetriever:
             raise RuntimeError(error_msg)
 
     def retrieve_mouse_brain_term(self, term, property_name):
+        """Determine whether ID is in mouse brain atlas (MBA) file
+        """
+        # MBA id is also the leaf entity of structure_id_path in the MBA file
+        # Entries with short structure_id_path seem to be synonymous with
+        # Uberon terms, suggesting MBA terms could be mapped as extensions of the
+        # Uberon ontology in future
         mouse_brain_atlas = self.fetch_allen_mouse_brain_atlas()
         MBA_id = parse_organ_region_ontology_id(term)
         if MBA_id not in mouse_brain_atlas:
