@@ -9,8 +9,8 @@ try:
 except ImportError:
     from ..monitor import testing_guard, setup_logger
 
-    # Logger provides more details
-    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
+# Logger provides more details
+dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
 
 class MetricTimedNode(ContextDecorator):
