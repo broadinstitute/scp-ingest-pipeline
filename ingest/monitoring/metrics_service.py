@@ -44,12 +44,18 @@ class MetricsService:
     @staticmethod
     def post_event(props):
         try:
+            MetricsService.dev_logger.debug(
+                f"Making request to Mixpanel with properties: {props}"
+            )
+            MetricsService.dev_logger.debug(
+                f"Bard URL is :{MetricsService.BARD_HOST_URL}"
+            )
             r = requests.post(
                 f"{MetricsService.BARD_HOST_URL}/api/event",
                 headers={"content-type": "application/json"},
                 data=props,
             )
-
+            MetricsService.dev_logger.debug(f"Request returned: {r}")
             r.raise_for_status()
         # Don't want to stop parsing for logging errors. Errors will be logged and not raised.
         except requests.exceptions.HTTPError as e:

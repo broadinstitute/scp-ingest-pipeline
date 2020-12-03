@@ -499,14 +499,18 @@ def main() -> None:
     Returns:
         None
     """
+    # Logger provides more details for trouble shooting
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     # Initialize global variables for current ingest job
     config.init(arguments["study_id"], arguments["study_file_id"])
+    dev_logger.debug("Initialized global variables")
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
     # Log Mixpanel events
+    dev_logger.debug("Trying to log to mixpanel")
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     # Exit pipeline
     exit_pipeline(ingest, status, status_cell_metadata, arguments)

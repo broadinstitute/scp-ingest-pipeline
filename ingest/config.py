@@ -1,9 +1,14 @@
 # File is responsible for defining globals and initializing them
 try:
     from mongo_connection import MongoConnection
+    from monitor import setup_logger
 except ImportError:
     from .mongo_connection import MongoConnection
+    from .monitor import setup_logger
 from bson.objectid import ObjectId
+
+# Logger provides more details for trouble shooting
+dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
 MONGO_CONNECTION = MongoConnection()
 
@@ -13,6 +18,9 @@ def init(study_id, study_file_id):
 
     study = Study(study_id)
     study_file = StudyFile(study_file_id)
+    dev_logger.debug(
+        f"Initializing metric properties with study:{study}, and study file: {study_file}"
+    )
     __metric_properties = MetricProperties(study, study_file)
 
 
@@ -56,6 +64,7 @@ class Study:
     """
 
     def __init__(self, study_id):
+        dev_logger.debug(f"Finding information for study id : {study_id}")
         self.study = study_id
 
     @property
@@ -86,6 +95,7 @@ class StudyFile:
     "Provides attributes for a given study file"
 
     def __init__(self, study_file_id):
+        dev_logger.debug(f"Finding information for study file id : {study_file_id}")
         self.study_file = study_file_id
 
     @property
