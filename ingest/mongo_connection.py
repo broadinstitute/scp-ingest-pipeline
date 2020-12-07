@@ -75,8 +75,7 @@ def graceful_auto_reconnect(mongo_op_func):
                 else:
                     if attempt < MAX_ATTEMPTS - 1:
                         dev_logger.warning(
-                            "Batch ops error occurred. Error was  Reinsert attempt %s.",
-                            str(attempt),
+                            f"Batch ops error occurred. Error was: {bwe}"
                         )
                         retry(attempt)
                     else:
