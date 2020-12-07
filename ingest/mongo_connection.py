@@ -1,9 +1,14 @@
 import os
 import functools
-import logging
 import time
 from pymongo import MongoClient
 from pymongo.errors import AutoReconnect, BulkWriteError
+
+try:
+    from monitor import setup_logger
+except ImportError:
+    # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .monitor import setup_logger
 
 
 class MongoConnection:
@@ -42,12 +47,14 @@ def graceful_auto_reconnect(mongo_op_func):
     """Gracefully handles a reconnection event as well as other exceptions
         for mongo.
     """
+    # Logger provides more details
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
     MAX_ATTEMPTS = 5
 
     def retry(attempt_num):
         if attempt_num < MAX_ATTEMPTS - 1:
             wait_time = 0.5 * pow(2, attempt_num)  # exponential back off
-            logging.warning(" Waiting %.1f seconds.", wait_time)
+            dev_logger.warning(" Waiting %.1f seconds.", wait_time)
             time.sleep(wait_time)
 
     @functools.wraps(mongo_op_func)
@@ -57,18 +64,23 @@ def graceful_auto_reconnect(mongo_op_func):
                 return mongo_op_func(*args, **kwargs)
             except AutoReconnect as e:
                 if attempt < MAX_ATTEMPTS - 1:
-                    logging.warning("PyMongo auto-reconnecting... %s.", str(e))
+                    dev_logger.warning("PyMongo auto-reconnecting... %s.", str(e))
                     retry(attempt)
                 else:
                     raise e
             except BulkWriteError as bwe:
-                if attempt < MAX_ATTEMPTS - 1:
-                    logging.warning(
-                        "Batch ops error occurred. Reinsert attempt %s.", str(attempt)
-                    )
-                    retry(attempt)
+                if attempt == 0:
+                    time.sleep(180)
+                    dev_logger.warning(f"Batch ops error occurred. Error was :{bwe}")
                 else:
-                    raise BulkWriteError(bwe.details)
+                    if attempt < MAX_ATTEMPTS - 1:
+                        dev_logger.warning(
+                            "Batch ops error occurred. Error was  Reinsert attempt %s.",
+                            str(attempt),
+                        )
+                        retry(attempt)
+                    else:
+                        raise bwe
             except Exception as e:
                 raise e
 
