@@ -69,9 +69,9 @@ def graceful_auto_reconnect(mongo_op_func):
                 else:
                     raise e
             except BulkWriteError as bwe:
+                dev_logger.warning(f"Batch ops error occurred. Error was :{bwe}")
                 if attempt == 0:
                     time.sleep(180)
-                    dev_logger.warning(f"Batch ops error occurred. Error was :{bwe}")
                 else:
                     if attempt < MAX_ATTEMPTS - 1:
                         dev_logger.warning(
