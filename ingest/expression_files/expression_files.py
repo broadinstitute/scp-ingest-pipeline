@@ -8,7 +8,6 @@ PREREQUISITES
 Must have python 3.6 or higher.
 """
 import abc
-import time
 import datetime
 import ntpath
 import copy
@@ -251,7 +250,6 @@ class GeneExpression:
 
     def load(self, docs: List, collection_name: List):
         start_time = datetime.datetime.now()
-        time.sleep(0.33)
         GeneExpression.insert(docs, collection_name, self.mongo_connection._client)
         GeneExpression.dev_logger.info(
             f"Time to load {len(docs)} models: {str(datetime.datetime.now() - start_time)}"
