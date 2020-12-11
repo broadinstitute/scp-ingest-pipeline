@@ -5132,8 +5132,8 @@ raw_count_dense = {
             "subsample_threshold": None,
             "subsample_annotation": None,
             "linear_data_type": "Study",
-            "study_id": ObjectId("5f89a1cffa64297e24282767"),
-            "study_file_id": ObjectId("5f8d90e7fa642961b4ca5883"),
+            "study_id": ObjectId("5d276a50421aa9117c982845"),
+            "study_file_id": ObjectId("5dd5ae25421aa910a723a337"),
         }
     }
 }
