@@ -103,7 +103,7 @@ class GeneExpression:
         # If study files does not have document expression_file_info
         # field, "is_raw_count_files", will not exist.:
         if "expression_file_info" in study_file_doc.keys():
-            return study_file_doc["expression_file_info"]["is_raw_count_files"]
+            return study_file_doc["expression_file_info"]["is_raw_counts"]
         else:
             return False
 
@@ -126,24 +126,31 @@ class GeneExpression:
 
     @staticmethod
     def get_cell_names_from_study_file_id(study_id, study_file_id, client):
+        """Returns sti"""
         additional_query_kwargs = {}
+        query_results = []
         study_files_ids = GeneExpression.get_study_expression_file_ids(
             study_id, study_file_id, client
         )
+        # There are no study file ids of the same type
+        if not study_files_ids:
+            return None
 
         # If there are study files of the same type create and add filters
-        if study_files_ids:
-            study_files_ids_list = [
-                study_files_id["_id"] for study_files_id in study_files_ids
-            ]
-            additional_query_kwargs["study_file_id"] = {"$in": study_files_ids_list}
+        study_files_ids_list = [
+            study_files_id["_id"] for study_files_id in study_files_ids
+        ]
+        additional_query_kwargs["study_file_id"] = {"$in": study_files_ids_list}
 
         # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
         query_results: List[Dict] = GeneExpression.query_cells(
             study_id, client, additional_query_kwargs
         )
+        # The query did not return results
         if not query_results:
-            return None
+            raise ValueError(
+                "There are study files that do not have cell names associated with them"
+            )
         # Flatten query results
         existing_cells = [
             values
@@ -181,19 +188,6 @@ class GeneExpression:
         return True
 
     @staticmethod
-    def has_expression_file_info_doc(study_id, study_file_id, client):
-        COLLECTION_NAME = "study_files"
-        QUERY = {
-            "study_id": study_id,
-            "study_file_id": study_file_id,
-            "expression_file_info": {"$exists": True},
-        }
-        query_results = list(client[COLLECTION_NAME].find(QUERY))
-        if query_results:
-            return True
-        return False
-
-    @staticmethod
     def get_study_expression_file_ids(
         study_id, current_study_file_id, client
     ) -> List[Dict]:
@@ -211,7 +205,7 @@ class GeneExpression:
         )
         if is_raw_count_files:
             QUERY["$and"].append(
-                {"expression_file_info.is_raw_count_files": is_raw_count_files}
+                {"expression_file_info.is_raw_counts": is_raw_count_files}
             )
         # Returned fields query results
         query_results = list(client[COLLECTION_NAME].find(QUERY, field_names))
