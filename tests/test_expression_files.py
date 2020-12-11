@@ -210,15 +210,18 @@ class TestExpressionFiles(unittest.TestCase):
             self.assertEqual(cells, expected)
 
             mock_query_cells.return_value = []
-            cells = GeneExpression.get_cell_names_from_study_file_id(
-                ObjectId(), ObjectId(), MagicMock()
+            self.assertRaises(
+                ValueError,
+                GeneExpression.get_cell_names_from_study_file_id,
+                ObjectId(),
+                ObjectId(),
+                MagicMock(),
             )
-            self.assertEqual(cells, None)
 
     def test_is_raw_count_file(self):
         client = MagicMock()
         client["study_files"].find.return_value = [
-            {"expression_file_info": {"is_raw_count_files": False}}
+            {"expression_file_info": {"is_raw_counts": False}}
         ]
         self.assertFalse(
             GeneExpression.is_raw_count_file(
@@ -235,7 +238,7 @@ class TestExpressionFiles(unittest.TestCase):
         )
 
         client["study_files"].find.return_value = [
-            {"expression_file_info": {"is_raw_count_files": True}}
+            {"expression_file_info": {"is_raw_counts": True}}
         ]
         self.assertTrue(
             GeneExpression.is_raw_count_file(
@@ -244,7 +247,7 @@ class TestExpressionFiles(unittest.TestCase):
         )
 
         client["study_files"].find.return_value = [
-            {"expression_file_info": {"is_raw_count_files": False}}
+            {"expression_file_info": {"is_raw_counts": False}}
         ]
         self.assertFalse(
             GeneExpression.is_raw_count_file(
@@ -267,9 +270,9 @@ class TestExpressionFiles(unittest.TestCase):
             "expression_files.expression_files.GeneExpression.is_raw_count_file",
             return_value=True,
         ):
-            # Add query filter for is_raw_count_files
+            # Add query filter for is_raw_counts
             RAW_COUNTS_QUERY["$and"].append(
-                {"expression_file_info.is_raw_count_files": True}
+                {"expression_file_info.is_raw_counts": True}
             )
             GeneExpression.get_study_expression_file_ids(
                 TestExpressionFiles.STUDY_ID,
