@@ -93,17 +93,17 @@ class GeneExpression:
         )
 
     @staticmethod
-    def is_raw_count(study_id, study_file_id, client):
+    def is_raw_count_file(study_id, study_file_id, client):
         "Checks if study file is a raw count matrix"
         COLLECTION_NAME = "study_files"
         QUERY = {"_id": study_file_id, "study_id": study_id}
 
         study_file_doc = list(client[COLLECTION_NAME].find(QUERY)).pop()
-        # Name of embedded document that holds 'is_raw_counts is named expression_file_info.
+        # Name of embedded document that holds 'is_raw_count_files is named expression_file_info.
         # If study files does not have document expression_file_info
-        # field, "is_raw_counts", will not exist.:
+        # field, "is_raw_count_files", will not exist.:
         if "expression_file_info" in study_file_doc.keys():
-            return study_file_doc["expression_file_info"]["is_raw_counts"]
+            return study_file_doc["expression_file_info"]["is_raw_count_files"]
         else:
             return False
 
@@ -126,6 +126,8 @@ class GeneExpression:
 
     @staticmethod
     def get_cell_names_from_study_file_id(study_id, study_file_id, client):
+        """Returns cell names of study files of the same type. However, the cell names
+            from study file id that's passed into the function are not included."""
         additional_query_kwargs = {}
         study_files_ids = GeneExpression.get_study_expression_file_ids(
             study_id, study_file_id, client
@@ -206,11 +208,13 @@ class GeneExpression:
             "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
             "$nor": [{"_id": current_study_file_id}],
         }
-        is_raw_counts = GeneExpression.is_raw_count(
+        is_raw_count_files = GeneExpression.is_raw_count_file(
             study_id, current_study_file_id, client
         )
-        if is_raw_counts:
-            QUERY["$and"].append({"expression_file_info.is_raw_counts": is_raw_counts})
+        if is_raw_count_files:
+            QUERY["$and"].append(
+                {"expression_file_info.is_raw_count_files": is_raw_count_files}
+            )
         # Returned fields query results
         query_results = list(client[COLLECTION_NAME].find(QUERY, field_names))
         return query_results
@@ -282,7 +286,6 @@ class GeneExpression:
         start_time = datetime.datetime.now()
         model_id = ObjectId()
 
-        GeneExpression.dev_logger.debug(f"Creating models for {gene}")
         if gene:
             gene_models.append(
                 GeneExpression.create_gene_model(
