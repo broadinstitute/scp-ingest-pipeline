@@ -126,6 +126,8 @@ class GeneExpression:
 
     @staticmethod
     def get_cell_names_from_study_file_id(study_id, study_file_id, client):
+        """Returns cell names of study files of the same type. However, the cell names
+            from study file id that's passed into the function are not included."""
         additional_query_kwargs = {}
         study_files_ids = GeneExpression.get_study_expression_file_ids(
             study_id, study_file_id, client
