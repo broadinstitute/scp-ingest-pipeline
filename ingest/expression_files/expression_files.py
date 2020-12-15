@@ -212,6 +212,7 @@ class GeneExpression:
                 {"expression_file_info": None},
             ]
         else:
+            # Raw counts need appendage
             QUERY["$and"].append(
                 {"expression_file_info.is_raw_counts": is_raw_count_files}
             )
