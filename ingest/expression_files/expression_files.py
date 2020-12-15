@@ -206,13 +206,12 @@ class GeneExpression:
             study_id, current_study_file_id, client
         )
         if not is_raw_count_files:
-            # Legacy data entries will not have the embedede document 'expression_file_info'
+            # Legacy data entries will not have the embeded document 'expression_file_info'
             QUERY["$or"] = [
                 {"expression_file_info.is_raw_counts": is_raw_count_files},
                 {"expression_file_info": None},
             ]
         else:
-            # Raw counts need appendage
             QUERY["$and"].append(
                 {"expression_file_info.is_raw_counts": is_raw_count_files}
             )
