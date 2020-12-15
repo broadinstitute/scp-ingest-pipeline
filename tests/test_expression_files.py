@@ -291,10 +291,14 @@ class TestExpressionFiles(unittest.TestCase):
             "expression_files.expression_files.GeneExpression.is_raw_count_file",
             return_value=False,
         ):
-            RAW_COUNTS_QUERY["$or"] = [
-                {"expression_file_info.is_raw_counts": False},
-                {"expression_file_info": None},
-            ]
+            RAW_COUNTS_QUERY["$and"].append(
+                {
+                    "$or": [
+                        {"expression_file_info.is_raw_counts": False},
+                        {"expression_file_info": None},
+                    ]
+                }
+            )
             GeneExpression.get_study_expression_file_ids(
                 TestExpressionFiles.STUDY_ID,
                 TestExpressionFiles.STUDY_FILE_ID,
