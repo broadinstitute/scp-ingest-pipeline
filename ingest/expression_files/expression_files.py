@@ -207,10 +207,14 @@ class GeneExpression:
         )
         if not is_raw_count_files:
             # Legacy data entries will not have the embedded document 'expression_file_info'
-            QUERY["$or"] = [
-                {"expression_file_info.is_raw_counts": is_raw_count_files},
-                {"expression_file_info": None},
-            ]
+            QUERY["$and"].append(
+                {
+                    "$or": [
+                        {"expression_file_info.is_raw_counts": is_raw_count_files},
+                        {"expression_file_info": None},
+                    ]
+                }
+            )
         else:
             QUERY["$and"].append(
                 {"expression_file_info.is_raw_counts": is_raw_count_files}
