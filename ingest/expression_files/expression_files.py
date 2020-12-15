@@ -205,7 +205,12 @@ class GeneExpression:
         is_raw_count_files = GeneExpression.is_raw_count_file(
             study_id, current_study_file_id, client
         )
-        if not is_raw_count_files:
+        if is_raw_count_files:
+            QUERY["$and"].append(
+                {"expression_file_info.is_raw_counts": is_raw_count_files}
+            )
+
+        else:
             # Legacy data entries will not have the embedded document 'expression_file_info'
             QUERY["$and"].append(
                 {
@@ -215,11 +220,6 @@ class GeneExpression:
                     ]
                 }
             )
-        else:
-            QUERY["$and"].append(
-                {"expression_file_info.is_raw_counts": is_raw_count_files}
-            )
-        # Returned fields query results
         query_results = list(client[COLLECTION_NAME].find(QUERY, field_names))
         return query_results
 
