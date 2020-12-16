@@ -183,6 +183,10 @@ class MTXIngestor(GeneExpression, IngestFiles):
     def get_data_start_line_number(file_handler: IO) -> int:
         """ Determines what line number data starts.
 
+        Parameters:
+        ___________
+            file_handler (IO): File handler of MTX file that contains headers.
+
          Returns
          ----------
             count (int): Line number where data starts
