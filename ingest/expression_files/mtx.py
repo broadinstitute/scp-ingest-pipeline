@@ -299,7 +299,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             if not MTXIngestor.is_sorted(self.mtx_path, self.mtx_file):
                 new_mtx_file_path = MTXIngestor.sort_mtx(self.mtx_path, self.mtx_file)
                 # Reset mtx variables to newly sorted file
-                self.mtx_path, self.mtx_path = self.resolve_path(new_mtx_file_path)
+                self.mtx_file, self.mtx_path = self.resolve_path(new_mtx_file_path)
         else:
             # Cell names are the only data stored for raw counts.
             # Therefore, no need to determine if file is sorted or sort files.
