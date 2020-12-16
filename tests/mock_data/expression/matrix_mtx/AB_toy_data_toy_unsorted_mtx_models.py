@@ -11200,7 +11200,6 @@ AB_toy_data_toy_unsorted_mtx_models = {
                 "FoobarAB2_BazMoo_7DABDADBDBADACDB-1",
                 "FoobarAB5_BazMoo_2DDBCCDBADBADCBC-1",
                 "FoobarAB7_BazMoo_7BCABCCCACBAADDC-1",
-                "FoobarAB2_BazMoo_3BCDCBCCBCCCCBAC-1",
                 "FoobarAB2_BazMoo_8BDBABBACDCCDDBD-1",
                 "FoobarAB7_BazMoo_1DBAACCBDDDCBCDB-1",
                 "FoobarAB3_BazMoo_1DABABDBDCCDBCBA-1",
