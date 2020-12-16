@@ -309,7 +309,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             # Cell names are the only data stored for raw counts.
             # Therefore, no need to determine if file is sorted or sort file.
             self.is_raw_count = True
-            self.transform()
+        self.transform()
 
     def extract_feature_barcode_matrices(self):
         """
