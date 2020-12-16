@@ -249,6 +249,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
          Returns
          ----------
             new_file_path (str) : Full path of newly sorted MTX file. This file does not contain original headers
+                or MTX dimensions.
         """
         file_name = os.path.basename(file_path)
         file_name = os.path.splitext(file_name)[0]
