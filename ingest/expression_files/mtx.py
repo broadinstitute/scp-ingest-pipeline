@@ -302,7 +302,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                 self.mtx_file, self.mtx_path = self.resolve_path(new_mtx_file_path)
         else:
             # Cell names are the only data stored for raw counts.
-            # Therefore, no need to determine if file is sorted or sort files.
+            # Therefore, no need to determine if file is sorted or sort file.
             self.is_raw_count = True
             self.transform()
 
