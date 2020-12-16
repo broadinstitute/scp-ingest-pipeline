@@ -11266,7 +11266,6 @@ AB_toy_data_toy_unsorted_mtx_models = {
                 2.0,
                 2.81,
                 1.58,
-                4352.0,
                 2.81,
                 2.81,
                 1.0,
