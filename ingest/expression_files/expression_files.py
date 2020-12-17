@@ -209,7 +209,17 @@ class GeneExpression:
             QUERY["$and"].append(
                 {"expression_file_info.is_raw_counts": is_raw_count_files}
             )
-        # Returned fields query results
+
+        else:
+            # Legacy data entries will not have the embedded document 'expression_file_info'
+            QUERY["$and"].append(
+                {
+                    "$or": [
+                        {"expression_file_info.is_raw_counts": is_raw_count_files},
+                        {"expression_file_info": None},
+                    ]
+                }
+            )
         query_results = list(client[COLLECTION_NAME].find(QUERY, field_names))
         return query_results
 

@@ -117,7 +117,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         return p1
 
     @staticmethod
-    def is_sorted(file_path: str, file_handler):
+    def is_sorted(file_path: str, file_handler: IO):
         """Checks if a file is sorted by gene index"""
         p1 = MTXIngestor.get_gene_expression_data(file_path, file_handler)
         try:
@@ -185,19 +185,21 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
         Parameters:
         ___________
-            file_handler (IO): File handler that points to top of MTX file
+            file_handler (IO): File handler of MTX file that contains headers.
 
          Returns
          ----------
-            i (IO): Line number where data starts
+            count (int): Line number where data starts
         """
-        for count, line in enumerate(file_handler):
+        # Move file pointer to top of file
+        file_handler.seek(0, 0)
+        for count, line in enumerate(file_handler, start=1):
             if not line.startswith("%"):
                 try:
                     line_values = line.strip().split()
                     float(line_values[0])  # Determines if value is numeric
                     # First line w/o '%' is mtx dimension. So skip this line (+1)
-                    return count + 2
+                    return count + 1
                 except ValueError:
                     raise ValueError(
                         "Only header, comment lines starting with '%', and numeric data allowed in MTX file."
@@ -246,7 +248,8 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
          Returns
          ----------
-            new_file_path (str) : Full path of newly sorted MTX file
+            new_file_path (str) : Full path of newly sorted MTX file. This file does not contain original headers
+                or MTX dimensions.
         """
         file_name = os.path.basename(file_path)
         file_name = os.path.splitext(file_name)[0]
@@ -298,17 +301,13 @@ class MTXIngestor(GeneExpression, IngestFiles):
             self.study_id, self.study_file_id, self.mongo_connection._client
         ):
             self.is_raw_count = False
-            # Need fresh mtx file handler for get_data_start_line_number()
-            fresh_mtx_file_handler = self.resolve_path(self.mtx_path)[0]
-            if not MTXIngestor.is_sorted(self.mtx_path, fresh_mtx_file_handler):
-                new_mtx_file_path = MTXIngestor.sort_mtx(
-                    self.mtx_path, fresh_mtx_file_handler
-                )
+            if not MTXIngestor.is_sorted(self.mtx_path, self.mtx_file):
+                new_mtx_file_path = MTXIngestor.sort_mtx(self.mtx_path, self.mtx_file)
                 # Reset mtx variables to newly sorted file
                 self.mtx_file, self.mtx_path = self.resolve_path(new_mtx_file_path)
         else:
             # Cell names are the only data stored for raw counts.
-            # Therefore, no need to sort files.
+            # Therefore, no need to determine if file is sorted or sort file.
             self.is_raw_count = True
         self.transform()
 
