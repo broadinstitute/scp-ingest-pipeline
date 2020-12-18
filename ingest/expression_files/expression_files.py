@@ -125,12 +125,13 @@ class GeneExpression:
         return list(client[COLLECTION_NAME].find(QUERY, FIELD_NAMES))
 
     @staticmethod
-    def get_cell_names_from_study_file_id(study_id, study_file_id, client):
+    def get_cell_names_from_study_file_id(study_id, study_file_id, client, attempts=1):
         """Returns cell names of study files of the same type. However, the cell names
             from study file id that's passed into the function are not included."""
 
         additional_query_kwargs = {}
-        query_results = []
+        query_results: List[Dict] = []
+
         study_files_ids = GeneExpression.get_study_expression_file_ids(
             study_id, study_file_id, client
         )
@@ -138,21 +139,26 @@ class GeneExpression:
         if not study_files_ids:
             return None
 
-        # If there are study files of the same type create and add filters
-        study_files_ids_list = [
-            study_files_id["_id"] for study_files_id in study_files_ids
-        ]
-        additional_query_kwargs["study_file_id"] = {"$in": study_files_ids_list}
-
+        additional_query_kwargs["study_file_id"] = {"$in": study_files_ids}
         # Dict = {values_1: [<cell names>]... values_n:[<cell names>]}
-        query_results: List[Dict] = GeneExpression.query_cells(
+        query_results = GeneExpression.query_cells(
             study_id, client, additional_query_kwargs
         )
-        # The query did not return results
+        # The query did not return results. Most likely because there are files being parsed.
         if not query_results:
-            raise ValueError(
-                "There are study files that do not have cell names associated with them"
+            # Get study ids that are parsing
+            parsing_study_files: List[str] = GeneExpression.find_parsing_study_file_ids(
+                study_files_ids, study_file_id
             )
+            if not parsing_study_files:
+                raise ValueError(
+                    "There are study files that do not have cell names associated with them. Please contact SCP support."
+                )
+            additional_query_kwargs["study_file_id"] = {"$in": parsing_study_files}
+            query_results = List[Dict] = GeneExpression.query_cells(
+                study_id, client, additional_query_kwargs
+            )
+
         # Flatten query results
         existing_cells = [
             values
@@ -160,6 +166,27 @@ class GeneExpression:
             for values in cell_values.get("values")
         ]
         return existing_cells
+
+    @staticmethod
+    def find_parsing_study_file_ids(study_file_ids: List, current_study_file_id):
+        COLLECTION_NAME = "study_files"
+        QUERY = (
+            {
+                "_id": study_file_ids,
+                "parse_status": "parsing",
+                "$nor": [{"_id": current_study_file_id}],
+                # This statement is not necessary. But it doesn't hurt to be explicit
+                "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
+            },
+        )
+        query_results: List[Dict] = list(
+            GeneExpression.client[COLLECTION_NAME].find(QUERY, {"id_": 1})
+        )
+        # If there are study files of the same type create and add filters
+        parsing_study_file_ids = [
+            study_files_id["_id"] for study_files_id in query_results
+        ]
+        return parsing_study_file_ids
 
     @staticmethod
     def check_unique_cells(cell_names: List, study_id, study_file_id, client):
@@ -221,7 +248,12 @@ class GeneExpression:
                 }
             )
         query_results = list(client[COLLECTION_NAME].find(QUERY, field_names))
-        return query_results
+        if query_results:
+            # Flatten results
+            study_files_ids = [
+                study_files_id["_id"] for study_files_id in query_results
+            ]
+        return study_files_ids
 
     @staticmethod
     def create_data_arrays(
