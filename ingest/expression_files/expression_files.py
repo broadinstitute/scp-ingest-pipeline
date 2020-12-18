@@ -125,7 +125,7 @@ class GeneExpression:
         return list(client[COLLECTION_NAME].find(QUERY, FIELD_NAMES))
 
     @staticmethod
-    def get_cell_names_from_study_file_id(study_id, study_file_id, client, attempts=1):
+    def get_cell_names_from_study_file_id(study_id, study_file_id, client):
         """Returns cell names of study files of the same type. However, the cell names
             from study file id that's passed into the function are not included."""
 
@@ -148,7 +148,7 @@ class GeneExpression:
         if not query_results:
             # Get study ids that are parsing
             parsing_study_files: List[str] = GeneExpression.find_parsing_study_file_ids(
-                study_files_ids, study_file_id
+                study_files_ids, study_file_id, client
             )
             if not parsing_study_files:
                 raise ValueError(
@@ -168,7 +168,9 @@ class GeneExpression:
         return existing_cells
 
     @staticmethod
-    def find_parsing_study_file_ids(study_file_ids: List, current_study_file_id):
+    def find_parsing_study_file_ids(
+        study_file_ids: List, current_study_file_id, client
+    ):
         COLLECTION_NAME = "study_files"
         QUERY = (
             {
@@ -180,7 +182,7 @@ class GeneExpression:
             },
         )
         query_results: List[Dict] = list(
-            GeneExpression.client[COLLECTION_NAME].find(QUERY, {"id_": 1})
+            client[COLLECTION_NAME].find(QUERY, {"id_": 1})
         )
         # If there are study files of the same type create and add filters
         parsing_study_file_ids = [
