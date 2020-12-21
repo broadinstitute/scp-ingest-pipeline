@@ -155,7 +155,7 @@ class GeneExpression:
                     "There are study files that do not have cell names associated with them. Please contact SCP support."
                 )
             additional_query_kwargs["study_file_id"] = {"$in": parsing_study_files}
-            GeneExpression.dev_logger(
+            GeneExpression.dev_logger.debug(
                 f"{ study_id}, {client}, {additional_query_kwargs}"
             )
             query_results = List[Dict] = GeneExpression.query_cells(
