@@ -155,6 +155,9 @@ class GeneExpression:
                     "There are study files that do not have cell names associated with them. Please contact SCP support."
                 )
             additional_query_kwargs["study_file_id"] = {"$in": parsing_study_files}
+            GeneExpression.dev_logger(
+                f"{ study_id}, {client}, {additional_query_kwargs}"
+            )
             query_results = List[Dict] = GeneExpression.query_cells(
                 study_id, client, additional_query_kwargs
             )
@@ -227,7 +230,7 @@ class GeneExpression:
         field_names = {"_id": 1}
         QUERY = {
             "$and": [{"study_id": study_id}],
-            "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
+            # "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
             "$nor": [{"_id": current_study_file_id}],
         }
         is_raw_count_files = GeneExpression.is_raw_count_file(
