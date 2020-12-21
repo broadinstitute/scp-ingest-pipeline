@@ -70,7 +70,7 @@ class TestSubsample(unittest.TestCase):
                 self.assertEqual(
                     len(subsampled_values),
                     sample_size,
-                    f"Amount of values is incorrect. Expecting a sample size of {sample_size}",
+                    f"Number of values is incorrect. Expecting a sample size of {sample_size}",
                 )
 
     def test_bin(self):
