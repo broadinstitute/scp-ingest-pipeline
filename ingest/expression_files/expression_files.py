@@ -172,17 +172,15 @@ class GeneExpression:
         study_file_ids: List, current_study_file_id, client
     ):
         COLLECTION_NAME = "study_files"
-        QUERY = (
-            {
-                "_id": study_file_ids,
-                "parse_status": "parsing",
-                "$nor": [{"_id": current_study_file_id}],
-                # This statement is not necessary. But it doesn't hurt to be explicit
-                "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
-            },
-        )
+        QUERY = {
+            "_id": {"$in": study_file_ids},
+            "parse_status": "parsing",
+            "$nor": [{"_id": current_study_file_id}],
+            # This statement is not necessary. But it doesn't hurt to be explicit
+            "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
+        }
         query_results: List[Dict] = list(
-            client[COLLECTION_NAME].find(QUERY, {"id_": 1})
+            client[COLLECTION_NAME].find(QUERY, {"_id": 1})
         )
         # If there are study files of the same type create and add filters
         parsing_study_file_ids = [
@@ -225,6 +223,7 @@ class GeneExpression:
         """Returns study file ids that are of the same type as 'current_study_file_id' in the study """
 
         COLLECTION_NAME = "study_files"
+        study_files_ids = []
         field_names = {"_id": 1}
         QUERY = {
             "$and": [{"study_id": study_id}],
