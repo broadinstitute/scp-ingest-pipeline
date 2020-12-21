@@ -644,7 +644,7 @@ class IngestTestCase(unittest.TestCase):
 
     @patch("ingest_pipeline.IngestPipeline.load_subsample", return_value=0)
     def test_subsample_no_cell_intersection(self, mock_load_subsample):
-        """When cell values in cluster are no present in cell metadata file ingest should fail.
+        """When cell values in cluster are not present in cell metadata file ingest should fail.
         """
         args = [
             "--study-id",
