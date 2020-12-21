@@ -71,7 +71,7 @@ try:
     from clusters import Clusters
     from expression_files.mtx import MTXIngestor
     from expression_files.dense_ingestor import DenseIngestor
-    from monitor import setup_logger, trace, log_exception
+    from monitor import setup_logger, log_exception
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
@@ -85,7 +85,7 @@ except ImportError:
         report_issues,
         write_metadata_to_bq,
     )
-    from .monitor import setup_logger, trace, log_exception
+    from .monitor import setup_logger, log_exception
     from .cell_metadata import CellMetadata
     from .clusters import Clusters
     from .expression_files.dense_ingestor import DenseIngestor
@@ -186,7 +186,6 @@ class IngestPipeline:
     def insert_many(self, collection_name, documents):
         self.db[collection_name].insert_many(documents)
 
-    @trace
     # @profile
     def load(
         self,
@@ -400,16 +399,26 @@ class IngestPipeline:
 
         if self.cell_metadata_file is not None:
             try:
-                subsample.prepare_cell_metadata()
-                for data in subsample.subsample("study"):
-                    load_status = self.load_subsample(
-                        Clusters.COLLECTION_NAME,
-                        data,
-                        subsample.set_data_array,
-                        "study",
+                # Annotation names for cluster file
+                annot_names = SubSample.get_annot_names(subsample.annot_column_headers)
+                # Check that cell names in cluster file exist in cell metadata file
+                if SubSample.has_cells_in_metadata_file(
+                    subsample.cell_metadata.headers, annot_names
+                ):
+                    subsample.prepare_cell_metadata()
+                    for data in subsample.subsample("study"):
+                        load_status = self.load_subsample(
+                            Clusters.COLLECTION_NAME,
+                            data,
+                            subsample.set_data_array,
+                            "study",
+                        )
+                        if load_status != 0:
+                            return load_status
+                else:
+                    raise ValueError(
+                        "Cluster file has cell names that are not present in cell metadata file"
                     )
-                    if load_status != 0:
-                        return load_status
             except Exception as e:
                 log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
                 return 1
