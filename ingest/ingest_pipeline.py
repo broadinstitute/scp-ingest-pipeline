@@ -417,7 +417,7 @@ class IngestPipeline:
                             return load_status
                 else:
                     raise ValueError(
-                        "Cluster file has cell names that are not present in cell metadata file"
+                        "Cluster file has cell names that are not present in cell metadata file."
                     )
             except Exception as e:
                 log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)

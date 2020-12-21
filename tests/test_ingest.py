@@ -67,7 +67,6 @@ def mock_load(self, *args, **kwargs):
 
 # Mock method that writes to database
 IngestPipeline.load = mock_load
-IngestPipeline.load_subsample = mock_load
 GeneExpression.load = mock_expression_load
 
 
