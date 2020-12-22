@@ -112,8 +112,3 @@ class TestSubsample(unittest.TestCase):
         self.assertTrue(SubSample.has_cells_in_metadata_file(b, c))
         self.assertFalse(SubSample.has_cells_in_metadata_file(a, b))
         self.assertFalse(SubSample.has_cells_in_metadata_file(b, bad_set))
-
-    def test_get_annot_names(self):
-        df_annot_headers = [("total_counts", "numeric"), ("Sub-Cluster", "group")]
-        expected = ["total_counts", "Sub-Cluster"]
-        self.assertEqual(SubSample.get_annot_names(df_annot_headers), expected)
