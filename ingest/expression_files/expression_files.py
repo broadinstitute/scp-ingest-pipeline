@@ -135,6 +135,7 @@ class GeneExpression:
         study_files_ids = GeneExpression.get_study_expression_file_ids(
             study_id, study_file_id, client
         )
+        GeneExpression.dev_logger.warning(study_files_ids)
         # There are no study file ids of the same type
         if not study_files_ids:
             return None
@@ -144,20 +145,22 @@ class GeneExpression:
         query_results = GeneExpression.query_cells(
             study_id, client, additional_query_kwargs
         )
+        GeneExpression.dev_logger.warning(query_results)
         # The query did not return results. Most likely because there are files being parsed.
         if not query_results:
             # Get study ids that are parsing
             parsing_study_files: List[str] = GeneExpression.find_parsing_study_file_ids(
                 study_files_ids, study_file_id, client
             )
+            GeneExpression.dev_logger.warning(parsing_study_files)
             if not parsing_study_files:
                 raise ValueError(
                     "There are study files that do not have cell names associated with them. Please contact SCP support."
                 )
             additional_query_kwargs["study_file_id"] = {"$in": parsing_study_files}
-            GeneExpression.dev_logger.debug(
-                f"{ study_id}, {client}, {additional_query_kwargs}"
-            )
+            GeneExpression.dev_logger.warning(study_id)
+            GeneExpression.dev_logger.warning(client)
+            GeneExpression.dev_logger.warning(additional_query_kwargs)
             query_results = List[Dict] = GeneExpression.query_cells(
                 study_id, client, additional_query_kwargs
             )
@@ -230,7 +233,7 @@ class GeneExpression:
         field_names = {"_id": 1}
         QUERY = {
             "$and": [{"study_id": study_id}],
-            # "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
+            "file_type": {"$in": ["Expression Matrix", "MM Coordinate Matrix"]},
             "$nor": [{"_id": current_study_file_id}],
         }
         is_raw_count_files = GeneExpression.is_raw_count_file(
