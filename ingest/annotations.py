@@ -73,6 +73,12 @@ class Annotations(IngestFiles):
             if annot[0].lower() not in ("z", "y", "x", "name")
         ]
 
+    @staticmethod
+    def get_cell_names(df):
+        cell_names_str: str = df[("NAME", "TYPE")].to_string(index=False)
+        cell_names: list = cell_names_str.strip().splitlines()
+        return cell_names
+
     def merge_df(self, first_df, second_df):
         """ Does an inner join on a dataframe """
         self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])

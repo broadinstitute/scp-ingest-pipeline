@@ -620,6 +620,51 @@ class IngestTestCase(unittest.TestCase):
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
+    @patch("ingest_pipeline.IngestPipeline.load_subsample", return_value=0)
+    def test_subsample(self, mock_load_subsample):
+        """When cell values in cluster are present in cell metadata file ingest should succeed.
+        """
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_subsample",
+            "--cluster-file",
+            "../tests/data/cluster_example.txt",
+            "--name",
+            "custer1",
+            "--cell-metadata-file",
+            "../tests/data/metadata_example.txt",
+            "--subsample",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], 0)
+
+    @patch("ingest_pipeline.IngestPipeline.load_subsample", return_value=0)
+    def test_subsample_no_cell_intersection(self, mock_load_subsample):
+        """When cell values in cluster are not present in cell metadata file ingest should fail.
+        """
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_subsample",
+            "--cluster-file",
+            "../tests/data/good_subsample_cluster.csv",
+            "--name",
+            "custer1",
+            "--cell-metadata-file",
+            "../tests/data/test_cell_metadata.csv",
+            "--subsample",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+        with self.assertRaises(SystemExit) as cm, self.assertRaises(ValueError):
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+        self.assertEqual(cm.exception.code, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
