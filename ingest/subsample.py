@@ -29,11 +29,6 @@ class SubSample(Annotations):
             )
 
     @staticmethod
-    def get_annot_names(df_headers: List):
-        """Returns annotation names without annotation types"""
-        return [header[0] for header in df_headers]
-
-    @staticmethod
     def has_cells_in_metadata_file(metadata_cells, cluster_cells):
         """Checks if cells in cluster are in metadata cells"""
         return set(cluster_cells).issubset(set(metadata_cells))
