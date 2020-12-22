@@ -631,7 +631,7 @@ class IngestTestCase(unittest.TestCase):
             "5dd5ae25421aa910a723a337",
             "ingest_subsample",
             "--cluster-file",
-            "../tests/data/good_subsample_cluster.csv",
+            "../tests/data/cluster_example.txt",
             "--name",
             "custer1",
             "--cell-metadata-file",
