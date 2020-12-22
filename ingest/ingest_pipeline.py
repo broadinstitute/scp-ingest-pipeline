@@ -399,13 +399,16 @@ class IngestPipeline:
 
         if self.cell_metadata_file is not None:
             try:
-                # Annotation names for cluster file
-                annot_names = SubSample.get_annot_names(subsample.annot_column_headers)
+                subsample.prepare_cell_metadata()
+                # Get cell names from cluster and metadata files
+                cluster_cell_names = SubSample.get_cell_names(subsample.file)
+                metadata_cell_names = SubSample.get_cell_names(
+                    subsample.cell_metadata.file
+                )
                 # Check that cell names in cluster file exist in cell metadata file
                 if SubSample.has_cells_in_metadata_file(
-                    subsample.cell_metadata.headers, annot_names
+                    metadata_cell_names, cluster_cell_names
                 ):
-                    subsample.prepare_cell_metadata()
                     for data in subsample.subsample("study"):
                         load_status = self.load_subsample(
                             Clusters.COLLECTION_NAME,
