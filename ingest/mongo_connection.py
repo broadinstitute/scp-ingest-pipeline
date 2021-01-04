@@ -51,6 +51,7 @@ def graceful_auto_reconnect(mongo_op_func):
     import math
 
     MAX_ATTEMPTS = 5
+    # Adopted from https://stackoverflow.com/questions/46939285
 
     def retry(attempt_num):
         if attempt_num < MAX_ATTEMPTS - 1:
