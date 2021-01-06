@@ -15,7 +15,7 @@ except ImportError:
 
 
 class SubSample(Annotations):
-    ALLOWED_FILE_TYPES = ['text/csv', 'text/plain', 'text/tab-separated-values']
+    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
     MAX_THRESHOLD = 100_000
     SUBSAMPLE_THRESHOLDS = [MAX_THRESHOLD, 20_000, 10_000, 1_000]
 
@@ -27,6 +27,11 @@ class SubSample(Annotations):
             self.cell_metadata = Annotations(
                 cell_metadata_file, CellMetadata.ALLOWED_FILE_TYPES
             )
+
+    @staticmethod
+    def has_cells_in_metadata_file(metadata_cells, cluster_cells):
+        """Checks if cells in cluster are in metadata cells"""
+        return set(cluster_cells).issubset(set(metadata_cells))
 
     def prepare_cell_metadata(self):
         """ Does an inner join on cell and cluster file """
@@ -55,9 +60,9 @@ class SubSample(Annotations):
         bin = {}
         # sample the annotation along with coordinates and cell names
         columns_to_sample = copy.copy(self.coordinates_and_cell_headers)
-        if scope == 'cluster':
+        if scope == "cluster":
             columns_to_sample.append(annotation[0])
-        if 'group' in annotation:
+        if "group" in annotation:
             # get unique values in column
             unique_values = self.file[annotation].unique()
 
@@ -96,7 +101,7 @@ class SubSample(Annotations):
                 group_size = len(annotation_dict.keys())
                 # Dict of values for the x, y, and z coordinates
                 points = {k: [] for k in self.coordinates_and_cell_headers}
-                if scope == 'cluster':
+                if scope == "cluster":
                     points[annotation_name[0]] = []
                 num_per_group = int(sample_size / group_size)
                 cells_left = sample_size
@@ -137,7 +142,7 @@ class SubSample(Annotations):
     def return_sorted_bin(self, bin, annot_name):
         """Sorts binned groups in order of size from smallest to largest for group annotations """
 
-        if 'group' in annot_name:
+        if "group" in annot_name:
             return sorted(bin.items(), key=lambda x: len(x[1]))
         else:
             return bin.items()

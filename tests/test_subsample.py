@@ -26,20 +26,20 @@ from subsample import SubSample
 
 class TestSubsample(unittest.TestCase):
     AMOUNT_OF_NUMERIC_BINS = 20
-    CLUSTER_PATH = '../tests/data/test_1k_cluster_data.csv'
+    CLUSTER_PATH = "../tests/data/test_1k_cluster_data.csv"
 
     def setUp(self):
         # This cluster file should be sampled at 1k
         self.subsample_obj = SubSample(self.CLUSTER_PATH)
 
     def test_subsample(self):
-        for data in self.subsample_obj.subsample('cluster'):
+        for data in self.subsample_obj.subsample("cluster"):
             header_value = data[1]
             annot_name = data[1][0].lower()
             annot_type = data[1][1]
             subsampled_data = data[0]
             sample_size = data[2]
-            if annot_type == 'group':
+            if annot_type == "group":
                 amount_of_bins = len(self.subsample_obj.file[header_value].unique())
             else:
                 amount_of_bins = self.AMOUNT_OF_NUMERIC_BINS
@@ -70,17 +70,17 @@ class TestSubsample(unittest.TestCase):
                 self.assertEqual(
                     len(subsampled_values),
                     sample_size,
-                    f'Amount of values is incorrect. Expecting a sample size of {sample_size}',
+                    f"Number of values is incorrect. Expecting a sample size of {sample_size}",
                 )
 
     def test_bin(self):
         for bin_data in map(
-            self.subsample_obj.bin, self.subsample_obj.annot_column_headers, 'clusters'
+            self.subsample_obj.bin, self.subsample_obj.annot_column_headers, "clusters"
         ):
             bins = bin_data[0]
             column_name = bin_data[1]
             annot_type = bin_data[1][1]
-            if annot_type == 'group':
+            if annot_type == "group":
                 expected_unique_groups = self.subsample_obj.file[column_name].unique()
 
                 print(f"Expected values {expected_unique_groups}")
@@ -102,3 +102,13 @@ class TestSubsample(unittest.TestCase):
                     self.AMOUNT_OF_NUMERIC_BINS,
                     "Metadata validation issues do not match reference issues",
                 )
+
+    def test_has_cells_in_metadata_file(self):
+        a = ["a", "b", "c"]
+        b = ["b", "f", 1, "a", "c"]
+        bad_set = [2, "b", "c"]
+        c = ["b", "f", 1, "a", "c"]
+        self.assertTrue(SubSample.has_cells_in_metadata_file(b, a))
+        self.assertTrue(SubSample.has_cells_in_metadata_file(b, c))
+        self.assertFalse(SubSample.has_cells_in_metadata_file(a, b))
+        self.assertFalse(SubSample.has_cells_in_metadata_file(b, bad_set))

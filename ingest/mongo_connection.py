@@ -47,13 +47,21 @@ def graceful_auto_reconnect(mongo_op_func):
     """Gracefully handles a reconnection event as well as other exceptions
         for mongo.
     """
+    import random
+    import math
+
     MAX_ATTEMPTS = 5
+    # Adopted from https://stackoverflow.com/questions/46939285
 
     def retry(attempt_num):
         if attempt_num < MAX_ATTEMPTS - 1:
-            wait_time = 0.5 * pow(2, attempt_num)  # exponential back off
-            dev_logger.warning(" Waiting %.1f seconds.", wait_time)
-            time.sleep(wait_time)
+            exp_backoff = pow(2, attempt_num)
+            max_jitter = math.ceil(exp_backoff * 0.2)
+            final_wait_time = exp_backoff + random.randint(
+                0, max_jitter
+            )  # exponential back off
+            dev_logger.warning(" Waiting %.1f seconds.", final_wait_time)
+            time.sleep(final_wait_time)
 
     @functools.wraps(mongo_op_func)
     def wrapper(*args, **kwargs):
