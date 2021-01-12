@@ -83,7 +83,7 @@ class Annotations(IngestFiles):
         """ Does an inner join on a dataframe """
         self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
 
-    def preprocess(self):
+    def preprocess(self, is_metadata_convention=False):
         """Ensures that:
             - 'NAME' in first header row is capitalized
             - 'TYPE' in second header row is capitalized
@@ -93,7 +93,7 @@ class Annotations(IngestFiles):
         self.headers[0] = self.headers[0].upper()
         self.annot_types[0] = self.annot_types[0].upper()
         if self.validate_unique_header():
-            self.create_data_frame()
+            self.create_data_frame(self, is_metadata_convention)
         else:
             msg = (
                 "Unable to parse file - Duplicate annotation header names are not allowed. \n"
@@ -102,49 +102,78 @@ class Annotations(IngestFiles):
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
             raise ValueError(msg)
 
-    def create_data_frame(self):
+    def reset_header(df, columns):
+        index = pd.MultiIndex.from_tuples(columns, names=["Name", "TYPE"])
+        df.columns = pd.MultiIndex.from_tuples(index)
+        return df
+
+    @staticmethod
+    def set_dtypes(header, annot_types, is_metadata_convention=False):
+        import numpy as np
+
+        dtypes = {}
+        for annotation, annot_type in zip(header, annot_types):
+            if annot_type == "group":
+                dtypes[annotation] = np.str
+            # Number metadata convention may have an array that's pipedelimited.
+            # In that case, we leave the column as a string.
+            elif annot_type != "numeric" and not is_metadata_convention:
+                dtypes[annotation] = np.float32
+        return dtypes
+
+    def create_columns(headers, annot_types):
+        new_column_names = []
+        for annotation, annot_type in zip(headers, annot_types):
+            new_column_names.append((annotation, annot_type))
+        return new_column_names
+
+    def create_data_frame(self, is_metadata_convention=False):
         """
         - Create dataframe with proper dtypes to ensure:
             - Labels are treated as strings (objects)
             - Numeric annotations are treated as float32
             - Numeric columns are rounded to 3 decimals points
         """
-        columns = []
-        dtypes = {}
-        for annotation, annot_type in zip(self.headers, self.annot_types):
-            dtypes[annotation] = "object" if annot_type != "numeric" else "float32"
-            columns.append((annotation, annot_type))
-            # multiIndex = pd.MultiIndex.from_tuples(index)
-        index = pd.MultiIndex.from_tuples(columns)
-        self.file = self.open_file(
-            self.file_path, open_as="dataframe", dtype=dtypes, names=index, skiprows=2
+
+        dtypes = Annotations.set_dtypes(
+            self.headers[1:], self.annot_types[1:], is_metadata_convention
+        )
+        df = self.open_file(
+            self.file_path,
+            open_as="dataframe",
+            converters=dtypes,
+            # names=index,
+            skiprows=[1],
+            engine="python",
         )[0]
-        # dtype of object allows mixed dtypes in columns, including numeric dtypes
-        # coerce group annotations that pandas detects as non-object types to type string
-        if "group" in self.annot_types:
-            group_columns = self.file.xs(
-                "group", axis=1, level=1, drop_level=False
-            ).columns.tolist()
-            try:
-                # coerce group annotations to type string
-                self.file[group_columns] = self.file[group_columns].astype(str)
-            except Exception as e:
-                log_exception(
-                    Annotations.dev_logger,
-                    Annotations.user_logger,
-                    "Unable to coerce group annotation to string type" + str(e),
-                )
-        if "numeric" in self.annot_types:
-            numeric_columns = self.file.xs(
-                "numeric", axis=1, level=1, drop_level=False
-            ).columns.tolist()
-            try:
-                # Round numeric columns to 3 decimal places
-                self.file[numeric_columns] = (
-                    self.file[numeric_columns].round(3).astype(float)
-                )
-            except Exception as e:
-                log_exception(Annotations.dev_logger, Annotations.user_logger, e)
+        new_header_namese = Annotations.create_columns(self.headers, self.annot_types)
+        self.file = Annotations.reset_header(df, new_header_namese)
+        # # dtype of object allows mixed dtypes in columns, including numeric dtypes
+        # # coerce group annotations that pandas detects as non-object types to type string
+        # if "group" in self.annot_types:
+        #     group_columns = self.file.xs(
+        #         "group", axis=1, level=1, drop_level=False
+        #     ).columns.tolist()
+        #     try:
+        #         # coerce group annotations to type string
+        #         self.file[group_columns] = self.file[group_columns].astype(str)
+        #     except Exception as e:
+        #         log_exception(
+        #             Annotations.dev_logger,
+        #             Annotations.user_logger,
+        #             "Unable to coerce group annotation to string type" + str(e),
+        #         )
+        # if "numeric" in self.annot_types:
+        #     numeric_columns = self.file.xs(
+        #         "numeric", axis=1, level=1, drop_level=False
+        #     ).columns.tolist()
+        #     try:
+        #         # Round numeric columns to 3 decimal places
+        #         self.file[numeric_columns] = (
+        #             self.file[numeric_columns].round(3).astype(float)
+        #         )
+        #     except Exception as e:
+        #         log_exception(Annotations.dev_logger, Annotations.user_logger, e)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
