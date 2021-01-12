@@ -261,7 +261,7 @@ class IngestPipeline:
             return 1
         return 0
 
-    def conforms_to_metadata_convention(self):
+    def conforms_to_metadata_convention(self, cell_metadata_obj):
         """ Determines if cell metadata file follows metadata convention"""
         convention_file_object = IngestFiles(self.JSON_CONVENTION, ["application/json"])
         json_file = convention_file_object.open_file(self.JSON_CONVENTION)
@@ -272,12 +272,12 @@ class IngestPipeline:
                 and self.kwargs["bq_dataset"]
                 and self.kwargs["bq_table"]
             ):
-                validate_input_metadata(self.cell_metadata, convention, bq_json=True)
+                validate_input_metadata(cell_metadata_obj, convention, bq_json=True)
             else:
-                validate_input_metadata(self.cell_metadata, convention)
+                validate_input_metadata(cell_metadata_obj, convention)
 
         json_file.close()
-        return not report_issues(self.cell_metadata)
+        return not report_issues(cell_metadata_obj)
 
     def upload_metadata_to_bq(self):
         """Uploads metadata to BigQuery"""
@@ -300,7 +300,7 @@ class IngestPipeline:
                 return 1
         return 0
 
-    @custom_metric(config.get_metric_properties)
+    # @custom_metric(config.get_metric_properties)
     def ingest_expression(self) -> int:
         """
         Ingests expression files.
@@ -325,25 +325,30 @@ class IngestPipeline:
             return 1
         return 0
 
-    @custom_metric(config.get_metric_properties)
+    # @custom_metric(config.get_metric_properties)
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        self.cell_metadata.preprocess()
+        validate_against_convention = False
+        if self.kwargs["validate_convention"] is not None:
+            if self.kwargs["validate_convention"]:
+                validate_against_convention = True
+                self.cell_metadata.set_validate_convention(validate_convention=True)
+        self.cell_metadata.preprocess(self.validate_convention)
         if self.cell_metadata.validate():
             IngestPipeline.dev_logger.info("Cell metadata file format valid")
             # Check file against metadata convention
-            if self.kwargs["validate_convention"] is not None:
-                if self.kwargs["validate_convention"]:
-                    if self.conforms_to_metadata_convention():
-                        IngestPipeline.dev_logger.info(
-                            "Cell metadata file conforms to metadata convention"
-                        )
-                        pass
-                    else:
-                        return 1
+            if validate_against_convention:
+                import copy
 
-            self.cell_metadata.reset_file()
-            for metadata_model in self.cell_metadata.transform():
+                if self.conforms_to_metadata_convention(copy.copy(self.cell_metadata)):
+                    IngestPipeline.dev_logger.info(
+                        "Cell metadata file conforms to metadata convention"
+                    )
+                    pass
+                else:
+                    return 1
+
+            for metadata_model in self.cell_metadata.execute_ingest():
                 IngestPipeline.dev_logger.info(
                     f"Attempting to load cell metadata header : {metadata_model.annot_header}"
                 )
@@ -364,7 +369,7 @@ class IngestPipeline:
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
 
-    @custom_metric(config.get_metric_properties)
+    # @custom_metric(config.get_metric_properties)
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate():
@@ -383,7 +388,7 @@ class IngestPipeline:
             return 1
         return status
 
-    @custom_metric(config.get_metric_properties)
+    # @custom_metric(config.get_metric_properties)
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
         subsample = SubSample(
@@ -410,12 +415,12 @@ class IngestPipeline:
                     metadata_cell_names, cluster_cell_names
                 ):
                     for data in subsample.subsample("study"):
-                        load_status = self.load_subsample(
-                            Clusters.COLLECTION_NAME,
-                            data,
-                            subsample.set_data_array,
-                            "study",
-                        )
+                        # load_status = self.load_subsample(
+                        #     Clusters.COLLECTION_NAME,
+                        #     data,
+                        #     subsample.set_data_array,
+                        #     "study",
+                        # )
                         if load_status != 0:
                             return load_status
                 else:
@@ -435,11 +440,11 @@ def run_ingest(ingest, arguments, parsed_args):
     status_cell_metadata = None
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
-        config.set_parent_event_name("ingest-pipeline:expression:ingest")
+        # config.set_parent_event_name("ingest-pipeline:expression:ingest")
         status.append(ingest.ingest_expression())
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
-            config.set_parent_event_name("ingest-pipeline:cell_metadata:ingest")
+            # config.set_parent_event_name("ingest-pipeline:cell_metadata:ingest")
             status_cell_metadata = ingest.ingest_cell_metadata()
             status.append(status_cell_metadata)
             if parsed_args.bq_table is not None and status_cell_metadata == 0:
@@ -447,11 +452,11 @@ def run_ingest(ingest, arguments, parsed_args):
                 status.append(status_metadata_bq)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
-            config.set_parent_event_name("ingest-pipeline:cluster:ingest")
+            # config.set_parent_event_name("ingest-pipeline:cluster:ingest")
             status.append(ingest.ingest_cluster())
     elif "subsample" in arguments:
         if arguments["subsample"]:
-            config.set_parent_event_name("ingest-pipeline:subsample:ingest")
+            # config.set_parent_event_name("ingest-pipeline:subsample:ingest")
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
@@ -515,11 +520,11 @@ def main() -> None:
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     # Initialize global variables for current ingest job
-    config.init(arguments["study_id"], arguments["study_file_id"])
+    # config.init(arguments["study_id"], arguments["study_file_id"])
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
     # Log Mixpanel events
-    MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
+    # MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     # Exit pipeline
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
