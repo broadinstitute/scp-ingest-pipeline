@@ -49,7 +49,6 @@ class CellMetadata(Annotations):
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.ontology_label = dict()
         self.cells = []
-        self.preprocess()
 
     # This model pertains to columns from cell metadata files
     @dataclass
@@ -61,6 +60,13 @@ class CellMetadata(Annotations):
         study_id: ObjectId
         # unique values from "group" type annotations
         values: List
+
+    def set_validate_convention(self, validate_convention=False):
+        self.validate_convention = validate_convention
+
+    def execute_ingest(self):
+        for metadata_model in self.cell_metadata.transform():
+            yield metadata_model
 
     # Will evolve to do cross file validation
     def validate(self):
