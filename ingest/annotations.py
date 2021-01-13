@@ -93,7 +93,8 @@ class Annotations(IngestFiles):
         self.headers[0] = self.headers[0].upper()
         self.annot_types[0] = self.annot_types[0].upper()
         if self.validate_unique_header():
-            self.create_data_frame(self, is_metadata_convention)
+            self.create_data_frame(is_metadata_convention)
+            self.round_numeric_annotations()
         else:
             msg = (
                 "Unable to parse file - Duplicate annotation header names are not allowed. \n"
@@ -101,6 +102,7 @@ class Annotations(IngestFiles):
             )
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
             raise ValueError(msg)
+
 
     def reset_header(df, columns):
         index = pd.MultiIndex.from_tuples(columns, names=["Name", "TYPE"])
@@ -115,13 +117,28 @@ class Annotations(IngestFiles):
         for annotation, annot_type in zip(header, annot_types):
             if annot_type == "group":
                 dtypes[annotation] = np.str
-            # Number metadata convention may have an array that's pipedelimited.
-            # In that case, we leave the column as a string.
+            # Metadata convention can have an array that are numbers or strings.
+            # When setting dtypes for metadata convention we only specify group annotations.
             elif annot_type != "numeric" and not is_metadata_convention:
                 dtypes[annotation] = np.float32
         return dtypes
 
+    def round_numeric_annotations(self):
+        """ Rounds numeric annotation to 3 decimal places"""
+        if "numeric" in self.annot_types:
+            numeric_columns = self.file.xs(
+                "numeric", axis=1, level=1, drop_level=False
+            ).columns.tolist()
+            try:
+                # Round numeric columns to 3 decimal places
+                self.file[numeric_columns] = (
+                    self.file[numeric_columns].round(3).astype(float)
+                )
+            except Exception as e:
+                log_exception(Annotations.dev_logger, Annotations.user_logger, e)
+
     def create_columns(headers, annot_types):
+        """"""
         new_column_names = []
         for annotation, annot_type in zip(headers, annot_types):
             new_column_names.append((annotation, annot_type))
@@ -134,46 +151,19 @@ class Annotations(IngestFiles):
             - Numeric annotations are treated as float32
             - Numeric columns are rounded to 3 decimals points
         """
-
         dtypes = Annotations.set_dtypes(
             self.headers[1:], self.annot_types[1:], is_metadata_convention
         )
+        new_header_names = Annotations.create_columns(self.headers, self.annot_types)
         df = self.open_file(
             self.file_path,
             open_as="dataframe",
             converters=dtypes,
-            # names=index,
+            names=new_header_names,
             skiprows=[1],
             engine="python",
         )[0]
-        new_header_namese = Annotations.create_columns(self.headers, self.annot_types)
-        self.file = Annotations.reset_header(df, new_header_namese)
-        # # dtype of object allows mixed dtypes in columns, including numeric dtypes
-        # # coerce group annotations that pandas detects as non-object types to type string
-        # if "group" in self.annot_types:
-        #     group_columns = self.file.xs(
-        #         "group", axis=1, level=1, drop_level=False
-        #     ).columns.tolist()
-        #     try:
-        #         # coerce group annotations to type string
-        #         self.file[group_columns] = self.file[group_columns].astype(str)
-        #     except Exception as e:
-        #         log_exception(
-        #             Annotations.dev_logger,
-        #             Annotations.user_logger,
-        #             "Unable to coerce group annotation to string type" + str(e),
-        #         )
-        # if "numeric" in self.annot_types:
-        #     numeric_columns = self.file.xs(
-        #         "numeric", axis=1, level=1, drop_level=False
-        #     ).columns.tolist()
-        #     try:
-        #         # Round numeric columns to 3 decimal places
-        #         self.file[numeric_columns] = (
-        #             self.file[numeric_columns].round(3).astype(float)
-        #         )
-        #     except Exception as e:
-        #         log_exception(Annotations.dev_logger, Annotations.user_logger, e)
+        self.file = Annotations.reset_header(df, new_header_names)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
