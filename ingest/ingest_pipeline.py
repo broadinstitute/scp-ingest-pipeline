@@ -332,8 +332,7 @@ class IngestPipeline:
         if self.kwargs["validate_convention"] is not None:
             if self.kwargs["validate_convention"]:
                 validate_against_convention = True
-                self.cell_metadata.set_validate_convention(validate_convention=True)
-        self.cell_metadata.preprocess(self.validate_convention)
+        self.cell_metadata.preprocess(validate_against_convention)
         if self.cell_metadata.validate():
             IngestPipeline.dev_logger.info("Cell metadata file format valid")
             # Check file against metadata convention
