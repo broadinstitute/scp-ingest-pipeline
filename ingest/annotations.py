@@ -9,6 +9,7 @@ Must have python 3.6 or higher.
 
 import abc
 from collections import defaultdict
+from typing import Dict, Generator, List, Tuple  # noqa: F401
 
 import pandas as pd
 from bson.objectid import ObjectId
@@ -84,9 +85,13 @@ class Annotations(IngestFiles):
         self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
 
     def preprocess(self, is_metadata_convention=False):
-        """Ensures that:
-            - 'NAME' in first header row is capitalized
-            - 'TYPE' in second header row is capitalized
+        """ Creates dataframe. Ensures that:
+                - 'NAME' in first header row is capitalized
+                - 'TYPE' in second header row is capitalized
+                - Numeric values are rounded to 3 decimal places
+             Parameters
+            ----------
+                is_metadata_convention (Boolean): If current object is for a metadata convention file
         """
 
         # Uppercase NAME and TYPE
@@ -94,6 +99,7 @@ class Annotations(IngestFiles):
         self.annot_types[0] = self.annot_types[0].upper()
         if self.validate_unique_header():
             self.create_data_frame(is_metadata_convention)
+            # Round numeric columns
             self.round_numeric_annotations()
         else:
             msg = (
@@ -103,13 +109,26 @@ class Annotations(IngestFiles):
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
             raise ValueError(msg)
 
-    def reset_header(df, columns):
-        index = pd.MultiIndex.from_tuples(columns, names=["Name", "TYPE"])
+    @staticmethod
+    def convert_header_to_multiIndex(df, header_names):
+        """ Header in annotation files are represented as multi-index based on first 2 rows.
+
+        Parameters
+        ----------
+            df (pandas dataframe) : Dataframe
+            columns (List[tuples]): Header names
+
+        Returns
+        -------
+            df (pandas dataframe): Dataframe with multi-indexed header
+
+        """
+        index = pd.MultiIndex.from_tuples(header_names, names=["Name", "TYPE"])
         df.columns = pd.MultiIndex.from_tuples(index)
         return df
 
     @staticmethod
-    def set_dtypes(header, annot_types, is_metadata_convention=False):
+    def set_dtypes(header: List, annot_types: List, is_metadata_convention=False):
         import numpy as np
 
         dtypes = {}
@@ -136,6 +155,7 @@ class Annotations(IngestFiles):
             except Exception as e:
                 log_exception(Annotations.dev_logger, Annotations.user_logger, e)
 
+    @staticmethod
     def create_columns(headers, annot_types):
         """ Creates 'header' argument to be passing into pd.read_csv()
             by ziping annotation names and headers
@@ -145,8 +165,11 @@ class Annotations(IngestFiles):
         annot_types (List): Annotation types. I.e "group" or "numeric"
         headers (List): Header names found in first line of file
 
+        Returns
+        ----------
+        new_column_names (List[Tuples]): Columns names. Ex [(NAME, TYPE), (biosample_id, GROUP)]
             """
-        new_column_names = []
+        new_column_names: List[Tuple] = []
         for annotation, annot_type in zip(headers, annot_types):
             new_column_names.append((annotation, annot_type))
         return new_column_names
@@ -156,28 +179,37 @@ class Annotations(IngestFiles):
         - Create dataframe with proper dtypes to ensure:
             - Labels are treated as strings (objects)
             - Numeric annotations are treated as float32
-            - Numeric columns are rounded to 3 decimals points
         """
         dtypes = Annotations.set_dtypes(
             self.headers[1:], self.annot_types[1:], is_metadata_convention
         )
-        new_header_names = Annotations.create_columns(self.headers, self.annot_types)
+        new_header_names: List[Tuple] = Annotations.create_columns(
+            self.headers, self.annot_types
+        )
         df = self.open_file(
             self.file_path,
             open_as="dataframe",
+            # Coerce values in column
             converters=dtypes,
+            # Header/column names
             names=new_header_names,
+            # Unsure why this works
             skiprows=[1],
+            # Use python parser engine. Python has more support for parsing csv files
+            # compares to default 'c' engine
             engine="python",
         )[0]
-        self.file = Annotations.reset_header(df, new_header_names)
+        self.file = Annotations.convert_header_to_multiIndex(df, new_header_names)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
-            :param type: type of issue (error or warn)
-        :param category: issue category (format, jsonschema, ontology)
-        :param msg: issue message
-        :param value: list of IDs associated with the issue
+
+        Parameters
+        ----------
+            type: type of issue (error or warn)
+            category: issue category (format, jsonschema, ontology)
+            param msg: issue message
+            param value: list of IDs associated with the issue
         """
         if associated_info:
             self.issues[type][category][msg].extend(associated_info)
