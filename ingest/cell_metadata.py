@@ -61,17 +61,16 @@ class CellMetadata(Annotations):
         # unique values from "group" type annotations
         values: List
 
-    def set_validate_convention(self, validate_convention=False):
-        self.validate_convention = validate_convention
-
+    # More work needs to be done to fully remove ingest from IngestPipeline
+    # Tracked in SCP-3023
     def execute_ingest(self):
-        for metadata_model in self.cell_metadata.transform():
+        """ Method for ingesting cell metadata files."""
+        for metadata_model in self.transform():
             yield metadata_model
 
     # Will evolve to do cross file validation
     def validate(self):
-        """ Runs all validation checks
-        """
+        """ Runs all validation checks """
         return all([self.is_valid_format(), self.validate_numeric_annots()])
 
     def is_valid_format(self):
@@ -100,7 +99,7 @@ class CellMetadata(Annotations):
         AnnotationModel = collections.namedtuple(
             "AnnotationModel", ["annot_header", "model"]
         )
-        for annot_header in self.file.columns[0:]:
+        for annot_header in self.file.columns[:]:
             annot_name = annot_header[0]
             annot_type = annot_header[1]
             yield AnnotationModel(
@@ -120,6 +119,7 @@ class CellMetadata(Annotations):
             )
 
     def set_data_array(self, linear_data_id: str, annot_header: str):
+        """Builds data array"""
         data_array_attrs = locals()
         del data_array_attrs["annot_header"]
         del data_array_attrs["self"]
