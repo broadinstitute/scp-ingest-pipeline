@@ -181,8 +181,6 @@ class IngestPipeline:
             **self.kwargs,
         )
 
-    # @profile
-    # TODO: Make @profile conditional (SCP-2081)
     def insert_many(self, collection_name, documents):
         self.db[collection_name].insert_many(documents)
 
@@ -524,7 +522,7 @@ def main() -> None:
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
     # Log Mixpanel events
-    MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
+    # MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     # Exit pipeline
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
