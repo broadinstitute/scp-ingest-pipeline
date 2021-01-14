@@ -133,11 +133,11 @@ class Annotations(IngestFiles):
 
         dtypes = {}
         for annotation, annot_type in zip(header, annot_types):
-            if annot_type == "group":
+            if annot_type != "numeric":
                 dtypes[annotation] = np.str
             # Metadata convention can have an array that are numbers or strings.
             # When setting dtypes for metadata convention we only specify group annotations.
-            elif annot_type != "numeric" and not is_metadata_convention:
+            elif annot_type == "numeric" and not is_metadata_convention:
                 dtypes[annotation] = np.float32
         return dtypes
 
@@ -181,7 +181,7 @@ class Annotations(IngestFiles):
             - Numeric annotations are treated as float32
         """
         dtypes = Annotations.set_dtypes(
-            self.headers[1:], self.annot_types[1:], is_metadata_convention
+            self.headers, self.annot_types, is_metadata_convention
         )
         new_header_names: List[Tuple] = Annotations.create_columns(
             self.headers, self.annot_types
@@ -193,8 +193,9 @@ class Annotations(IngestFiles):
             converters=dtypes,
             # Header/column names
             names=new_header_names,
-            # Unsure why this works
-            skiprows=[1],
+            # Prevent pandas from reading first 2 lines in file
+            # since they're passed in with param 'names'
+            skiprows=2,
             # Use python parser engine. Python has more support for parsing csv files
             # compares to default 'c' engine
             engine="python",
