@@ -103,7 +103,6 @@ class Annotations(IngestFiles):
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
             raise ValueError(msg)
 
-
     def reset_header(df, columns):
         index = pd.MultiIndex.from_tuples(columns, names=["Name", "TYPE"])
         df.columns = pd.MultiIndex.from_tuples(index)
@@ -138,7 +137,15 @@ class Annotations(IngestFiles):
                 log_exception(Annotations.dev_logger, Annotations.user_logger, e)
 
     def create_columns(headers, annot_types):
-        """"""
+        """ Creates 'header' argument to be passing into pd.read_csv()
+            by ziping annotation names and headers
+
+        Parameters
+        ----------
+        annot_types (List): Annotation types. I.e "group" or "numeric"
+        headers (List): Header names found in first line of file
+
+            """
         new_column_names = []
         for annotation, annot_type in zip(headers, annot_types):
             new_column_names.append((annotation, annot_type))
