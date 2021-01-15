@@ -137,7 +137,7 @@ class Annotations(IngestFiles):
                 dtypes[annotation] = np.str
             # Metadata convention can have an array that are numbers or strings.
             # When setting dtypes for metadata convention we only specify group annotations.
-            elif annot_type == "numeric" and not is_metadata_convention:
+            elif annot_type == "numeric":
                 dtypes[annotation] = np.float32
         return dtypes
 
@@ -192,7 +192,7 @@ class Annotations(IngestFiles):
             # Coerce values in column
             converters=dtypes,
             # Header/column names
-            names=new_header_names,
+            names=self.headers,
             # Prevent pandas from reading first 2 lines in file
             # since they're passed in with param 'names'
             skiprows=2,

@@ -40,6 +40,17 @@ class TestAnnotations(unittest.TestCase):
             self.CLUSTER_PATH, ["text/csv", "text/plain", "text/tab-separated-values"]
         )
 
+    def test_create_columns(self):
+        header = ["Intensity", "donor_id", "species__ontology_label"]
+        annotatiion_types = ["numeric", "group", "group"]
+        colums = Annotations.create_columns(header, annotatiion_types)
+        expected = [
+            ("Intensity", "numeric"),
+            ("donor_id", "group"),
+            ("species__ontology_label", "group"),
+        ]
+        self.assertEqual(colums, expected)
+
     def test_duplicate_headers(self):
         """Annotation headers should not contain duplicate values
         """
@@ -107,7 +118,7 @@ class TestAnnotations(unittest.TestCase):
             lmtest.file["mixed_data"]["group"][32800], str
         ), "numeric value should be coerced to string"
 
-    def test_round(self):
+    def test_round_numeric_annotations(self):
         # Pick a random number between 1 and amount of lines in file
         ran_num = random.randint(1, 2000)
         self.df.preprocess()
