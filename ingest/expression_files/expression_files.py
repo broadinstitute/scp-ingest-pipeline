@@ -150,9 +150,15 @@ class GeneExpression:
         )
         # The query did not return results
         if not query_results:
-            raise ValueError(
-                "There are study files that do not have cell names associated with them"
-            )
+            # check if the other expression matrices are "parsing", in which case ignore
+            for matrix_file_id in study_files_ids:
+                matrix_file = list(client['study_files'].find({"_id": matrix_file_id})).pop()
+                if matrix_file['parse_status'] == 'parsing':
+                    continue
+                else:
+                    raise ValueError(
+                        "There are study files that do not have cell names associated with them"
+                    )
         # Flatten query results
         existing_cells = [
             values

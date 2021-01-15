@@ -210,12 +210,32 @@ class TestExpressionFiles(unittest.TestCase):
             self.assertEqual(cells, expected)
 
             mock_query_cells.return_value = []
+
+            # mock another study file returning as "parsing"
+            client = MagicMock()
+            client['study_files'].find.return_value = [
+                {
+                    'parse_status': 'parsing'
+                }
+            ]
+
+            cells = GeneExpression.get_cell_names_from_study_file_id(
+                ObjectId(), ObjectId(), client
+            )
+            self.assertEqual(cells, [])
+
+            # mock another study_file returning as "parsed", but has no cells
+            client['study_files'].find.return_value = [
+                {
+                    'parse_status': 'parsed'
+                }
+            ]
             self.assertRaises(
                 ValueError,
                 GeneExpression.get_cell_names_from_study_file_id,
                 ObjectId(),
                 ObjectId(),
-                MagicMock(),
+                client,
             )
 
     def test_is_raw_count_file(self):
