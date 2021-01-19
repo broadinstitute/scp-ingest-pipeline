@@ -148,23 +148,17 @@ class GeneExpression:
         query_results: List[Dict] = GeneExpression.query_cells(
             study_id, client, additional_query_kwargs
         )
-        # The query did not return results
+
+        # there are no results so return an empty array
         if not query_results:
-            # check if the other expression matrices are "parsing", in which case ignore
-            for matrix_file_id in study_files_ids:
-                matrix_file = list(client['study_files'].find({"_id": matrix_file_id})).pop()
-                if matrix_file['parse_status'] == 'parsing':
-                    continue
-                else:
-                    raise ValueError(
-                        "There are study files that do not have cell names associated with them"
-                    )
-        # Flatten query results
-        existing_cells = [
-            values
-            for cell_values in query_results
-            for values in cell_values.get("values")
-        ]
+            existing_cells = []
+        else:
+            # Flatten query results
+            existing_cells = [
+                values
+                for cell_values in query_results
+                for values in cell_values.get("values")
+            ]
         return existing_cells
 
     @staticmethod
@@ -178,6 +172,9 @@ class GeneExpression:
             study_file_id (ObjectId): The file id the cell names belong to
             client: MongoDB client
         """
+        # raise error if there are no cell names present
+        if not cell_names:
+            raise ValueError("There were no cell names found in the header row of this matrix")
 
         existing_cells = GeneExpression.get_cell_names_from_study_file_id(
             study_id, study_file_id, client

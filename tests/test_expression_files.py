@@ -180,6 +180,16 @@ class TestExpressionFiles(unittest.TestCase):
                 )
             )
 
+        # ensure empty cell names throws error
+        with patch(
+                "expression_files.expression_files.GeneExpression.get_cell_names_from_study_file_id",
+                return_value=None,
+        ), self.assertRaises(ValueError) as em:
+            GeneExpression.check_unique_cells(
+                [], ObjectId(), ObjectId(), TestExpressionFiles.client_mock
+            )
+            self.assertEqual("There were no cell names found in the header row of this matrix", str(em.exception))
+
     @patch("expression_files.expression_files.GeneExpression.query_cells")
     def test_get_cell_names_from_study_file_id(self, mock_query_cells):
         with patch(
@@ -211,32 +221,10 @@ class TestExpressionFiles(unittest.TestCase):
 
             mock_query_cells.return_value = []
 
-            # mock another study file returning as "parsing"
-            client = MagicMock()
-            client['study_files'].find.return_value = [
-                {
-                    'parse_status': 'parsing'
-                }
-            ]
-
             cells = GeneExpression.get_cell_names_from_study_file_id(
-                ObjectId(), ObjectId(), client
+                ObjectId(), ObjectId(), MagicMock()
             )
             self.assertEqual(cells, [])
-
-            # mock another study_file returning as "parsed", but has no cells
-            client['study_files'].find.return_value = [
-                {
-                    'parse_status': 'parsed'
-                }
-            ]
-            self.assertRaises(
-                ValueError,
-                GeneExpression.get_cell_names_from_study_file_id,
-                ObjectId(),
-                ObjectId(),
-                client,
-            )
 
     def test_is_raw_count_file(self):
         client = MagicMock()
