@@ -62,7 +62,7 @@ class TestValidateMetadata(unittest.TestCase):
             "SCPtest",
             study_accession="SCPtest",
         )
-        metadata.preprocess()
+        metadata.preprocess(is_metadata_convention=True)
         # The following line should become metadata.validate() as part of bugfix SCP-2756
         metadata.validate_format()
         print(f"Format is correct {metadata.validate_format()}")

@@ -9,10 +9,10 @@ Must have python 3.6 or higher.
 
 import abc
 from collections import defaultdict
-from typing import Dict, Generator, List, Tuple  # noqa: F401
 
 import pandas as pd
 from bson.objectid import ObjectId
+from typing import Dict, Generator, List, Tuple  # noqa: F401
 
 try:
     # Used when importing internally and in tests
@@ -85,13 +85,9 @@ class Annotations(IngestFiles):
         self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
 
     def preprocess(self, is_metadata_convention=False):
-        """ Creates dataframe. Ensures that:
-                - 'NAME' in first header row is capitalized
-                - 'TYPE' in second header row is capitalized
-                - Numeric values are rounded to 3 decimal places
-             Parameters
-            ----------
-                is_metadata_convention (Boolean): If current object is for a metadata convention file
+        """Ensures that:
+            - 'NAME' in first header row is capitalized
+            - 'TYPE' in second header row is capitalized
         """
 
         # Uppercase NAME and TYPE
@@ -112,16 +108,13 @@ class Annotations(IngestFiles):
     @staticmethod
     def convert_header_to_multiIndex(df, header_names):
         """ Header in annotation files are represented as multi-index based on first 2 rows.
-
         Parameters
         ----------
             df (pandas dataframe) : Dataframe
             columns (List[tuples]): Header names
-
         Returns
         -------
             df (pandas dataframe): Dataframe with multi-indexed header
-
         """
         index = pd.MultiIndex.from_tuples(header_names, names=["Name", "TYPE"])
         df.columns = pd.MultiIndex.from_tuples(index)
@@ -129,6 +122,7 @@ class Annotations(IngestFiles):
 
     @staticmethod
     def set_dtypes(header: List, annot_types: List, is_metadata_convention=False):
+        """Sets data types for dataframe"""
         import numpy as np
 
         dtypes = {}
@@ -136,10 +130,28 @@ class Annotations(IngestFiles):
             if annot_type != "numeric":
                 dtypes[annotation] = np.str
             # Metadata convention can have an array that are numbers or strings.
-            # When setting dtypes for metadata convention we only specify group annotations.
-            elif annot_type == "numeric":
+            # Therefore skip setting dtypes for numeric annotation types for metadata convention
+            elif annot_type == "numeric" and not is_metadata_convention:
                 dtypes[annotation] = np.float32
         return dtypes
+
+    @staticmethod
+    def create_columns(headers, annot_types):
+        """ Creates 'names' argument to be passing into pd.read_csv()
+            by ziping annotation names and headers
+        Parameters
+        ----------
+        annot_types (List): Annotation types. I.e "group" or "numeric"
+        headers (List): Header names found in first line of file
+
+        Returns
+        ----------
+        new_column_names (List[Tuples]): Columns names. Ex [(NAME, TYPE), (biosample_id, GROUP)]
+            """
+        new_column_names: List[Tuple] = []
+        for annotation, annot_type in zip(headers, annot_types):
+            new_column_names.append((annotation, annot_type))
+        return new_column_names
 
     def round_numeric_annotations(self):
         """ Rounds numeric annotation to 3 decimal places"""
@@ -155,36 +167,15 @@ class Annotations(IngestFiles):
             except Exception as e:
                 log_exception(Annotations.dev_logger, Annotations.user_logger, e)
 
-    @staticmethod
-    def create_columns(headers, annot_types):
-        """ Creates 'header' argument to be passing into pd.read_csv()
-            by ziping annotation names and headers
-
-        Parameters
-        ----------
-        annot_types (List): Annotation types. I.e "group" or "numeric"
-        headers (List): Header names found in first line of file
-
-        Returns
-        ----------
-        new_column_names (List[Tuples]): Columns names. Ex [(NAME, TYPE), (biosample_id, GROUP)]
-            """
-        new_column_names: List[Tuple] = []
-        for annotation, annot_type in zip(headers, annot_types):
-            new_column_names.append((annotation, annot_type))
-        return new_column_names
-
     def create_data_frame(self, is_metadata_convention=False):
         """
         - Create dataframe with proper dtypes to ensure:
             - Labels are treated as strings (objects)
             - Numeric annotations are treated as float32
         """
+        column_names = Annotations.create_columns(self.headers, self.annot_types)
         dtypes = Annotations.set_dtypes(
             self.headers, self.annot_types, is_metadata_convention
-        )
-        new_header_names: List[Tuple] = Annotations.create_columns(
-            self.headers, self.annot_types
         )
         df = self.open_file(
             self.file_path,
@@ -200,17 +191,14 @@ class Annotations(IngestFiles):
             # compares to default 'c' engine
             engine="python",
         )[0]
-        self.file = Annotations.convert_header_to_multiIndex(df, new_header_names)
+        self.file = Annotations.convert_header_to_multiIndex(df, column_names)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Store validation issues in proper arrangement
-
-        Parameters
-        ----------
-            type: type of issue (error or warn)
-            category: issue category (format, jsonschema, ontology)
-            param msg: issue message
-            param value: list of IDs associated with the issue
+            :param type: type of issue (error or warn)
+        :param category: issue category (format, jsonschema, ontology)
+        :param msg: issue message
+        :param value: list of IDs associated with the issue
         """
         if associated_info:
             self.issues[type][category][msg].extend(associated_info)

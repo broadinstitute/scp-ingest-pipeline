@@ -67,6 +67,10 @@ class TestAnnotations(unittest.TestCase):
         with self.assertRaises(ValueError):
             dup_headers.preprocess()
 
+    def test_set_dtypes(self):
+        headers = ["NAME", "", ""]
+        annot_types = ["TYPE", "GROUP", "numeric"]
+
     def test_header_format(self):
         """Header rows of metadata file should conform to standard
         """
