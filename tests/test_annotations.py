@@ -68,8 +68,56 @@ class TestAnnotations(unittest.TestCase):
             dup_headers.preprocess()
 
     def test_set_dtypes(self):
-        headers = ["NAME", "", ""]
-        annot_types = ["TYPE", "GROUP", "numeric"]
+        headers = ["NAME", "cell_type", "organism_age"]
+        annot_types = ["TYPE", "group", "numeric"]
+        expected_dtypes = {
+            "NAME": np.str,
+            "cell_type": np.str,
+            "organism_age": np.float32,
+        }
+        dtypes = Annotations.set_dtypes(headers, annot_types)
+        self.assertEqual(expected_dtypes, dtypes)
+
+        # Test dtypes for cell metadata convention
+        # Numeric values should not have a dtype association
+        expected_dtypes.pop("organism_age")
+        dtypes = Annotations.set_dtypes(
+            headers, annot_types, is_metadata_convention=True
+        )
+        self.assertEqual(expected_dtypes, dtypes)
+
+    def test_convert_header_to_multiIndex(self):
+        expected = [
+            ("Name", "TYPE"),
+            ("X", "numeric"),
+            ("Y", "numeric"),
+            ("Z", "numeric"),
+            ("Average Intensity", "numeric"),
+        ]
+        path = "../tests/data/good_subsample_cluster.csv"
+        annotation = Annotations(
+            path, ["text/csv", "text/plain", "text/tab-separated-values"]
+        )
+        df = annotation.open_file(
+            path, open_as="dataframe", skiprows=2, names=annotation.headers
+        )[0]
+        new_df = Annotations.convert_header_to_multiIndex(df, expected)
+        # Remove white spaces
+        new_df_columns = [tuple(s.strip() for s in y) for y in new_df.columns]
+        self.assertEqual(new_df_columns, expected)
+
+    def test_leading_zeros(self):
+        """Ensures leading zeros are not stripped from group annotations"""
+        path = "../tests/data/metadata_convention_with_leading_0s.tsv"
+        annotation = Annotations(
+            path, ["text/csv", "text/plain", "text/tab-separated-values"]
+        )
+        annotation.preprocess()
+        # Grab value from donor id column.
+        value_with_leading_zeros = annotation.file.iloc[
+            :, annotation.file.columns.get_level_values(0) == "donor_id"
+        ].values.item(0)
+        self.assertTrue(value_with_leading_zeros.startswith("0"))
 
     def test_header_format(self):
         """Header rows of metadata file should conform to standard

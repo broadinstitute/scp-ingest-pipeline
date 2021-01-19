@@ -1,0 +1,6 @@
+NAME	biosample_id	donor_id	species	species__ontology_label	disease	disease__ontology_label	library_preparation_protocol	library_preparation_protocol__ontology_label	sex	organ	organ__ontology_label
+TYPE	group	group	group	group	group	group	group	group	group	group	group
+0	01115149-TC	01115149	NCBITaxon_9606	Homo sapiens	MONDO_0004956	metastatic prostate carcinoma	EFO_0008931	Smart-seq2	male	UBERON_0002481	bone tissue
+1	01115149-TC	01115149	NCBITaxon_9606	Homo sapiens	MONDO_0004956	metastatic prostate carcinoma	EFO_0008931	Smart-seq2	male	UBERON_0002481	bone tissue
+2	01115149-TC	01115149	NCBITaxon_9606	Homo sapiens	MONDO_0004956	metastatic prostate carcinoma	EFO_0008931	Smart-seq2	male	UBERON_0002481	bone tissue
+3	01115149-TC	01115149	NCBITaxon_9606	Homo sapiens	MONDO_0004956	metastatic prostate carcinoma	EFO_0008931	Smart-seq2	male	UBERON_0002481	bone tissu

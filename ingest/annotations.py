@@ -88,6 +88,7 @@ class Annotations(IngestFiles):
         """Ensures that:
             - 'NAME' in first header row is capitalized
             - 'TYPE' in second header row is capitalized
+            - Numeric values are rounded to 3 decimal places
         """
 
         # Uppercase NAME and TYPE
@@ -106,8 +107,9 @@ class Annotations(IngestFiles):
             raise ValueError(msg)
 
     @staticmethod
-    def convert_header_to_multiIndex(df, header_names):
-        """ Header in annotation files are represented as multi-index based on first 2 rows.
+    def convert_header_to_multiIndex(df, header_names: List[Tuple]):
+        """Header in annotation files are represented as multi-index based on first 2 rows AKA causes
+            the first two rows in file to be headers.
         Parameters
         ----------
             df (pandas dataframe) : Dataframe
@@ -122,7 +124,9 @@ class Annotations(IngestFiles):
 
     @staticmethod
     def set_dtypes(header: List, annot_types: List, is_metadata_convention=False):
-        """Sets data types for dataframe"""
+        """Sets data types for dataframe. This function assumes that annotation types
+        passed into the function are valid.
+        """
         import numpy as np
 
         dtypes = {}
@@ -136,17 +140,18 @@ class Annotations(IngestFiles):
         return dtypes
 
     @staticmethod
-    def create_columns(headers, annot_types):
-        """ Creates 'names' argument to be passing into pd.read_csv()
-            by ziping annotation names and headers
+    def create_columns(headers: List, annot_types: List):
+        """Creates 'names' argument to be passing into pd.read_csv()
+            by zipping annotation names and headers
+
         Parameters
         ----------
-        annot_types (List): Annotation types. I.e "group" or "numeric"
+        annot_types (List): Annotation types. E.g. "group" or "numeric"
         headers (List): Header names found in first line of file
 
         Returns
         ----------
-        new_column_names (List[Tuples]): Columns names. Ex [(NAME, TYPE), (biosample_id, GROUP)]
+        new_column_names (List[Tuples]): Columns names. E.g. [(NAME, TYPE), (biosample_id, GROUP)]
             """
         new_column_names: List[Tuple] = []
         for annotation, annot_type in zip(headers, annot_types):
@@ -154,7 +159,7 @@ class Annotations(IngestFiles):
         return new_column_names
 
     def round_numeric_annotations(self):
-        """ Rounds numeric annotation to 3 decimal places"""
+        """Rounds numeric annotation to 3 decimal places"""
         if "numeric" in self.annot_types:
             numeric_columns = self.file.xs(
                 "numeric", axis=1, level=1, drop_level=False
@@ -194,7 +199,7 @@ class Annotations(IngestFiles):
         self.file = Annotations.convert_header_to_multiIndex(df, column_names)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
-        """Store validation issues in proper arrangement
+        """Stores validation issues in proper arrangement
             :param type: type of issue (error or warn)
         :param category: issue category (format, jsonschema, ontology)
         :param msg: issue message
