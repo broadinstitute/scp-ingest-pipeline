@@ -45,6 +45,7 @@ class TestCellMetadata(unittest.TestCase):
             study_accession="SCPtest",
             tracer=None,
         )
+        cm.preprocess()
 
         # integers, empty cell and string as inputs for numeric annotation
         assert isinstance(

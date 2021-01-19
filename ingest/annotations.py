@@ -187,14 +187,12 @@ class Annotations(IngestFiles):
             open_as="dataframe",
             # Coerce values in column
             converters=dtypes,
+            na_filter=False,
             # Header/column names
             names=self.headers,
             # Prevent pandas from reading first 2 lines in file
             # since they're passed in with param 'names'
             skiprows=2,
-            # Use python parser engine. Python has more support for parsing csv files
-            # compares to default 'c' engine
-            engine="python",
         )[0]
         self.file = Annotations.convert_header_to_multiIndex(df, column_names)
 
