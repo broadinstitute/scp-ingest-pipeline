@@ -67,23 +67,11 @@ class TestAnnotations(unittest.TestCase):
         with self.assertRaises(ValueError):
             dup_headers.preprocess()
 
-    def test_set_dtypes(self):
+    def test_coerce_group_values(self):
         headers = ["NAME", "cell_type", "organism_age"]
         annot_types = ["TYPE", "group", "numeric"]
-        expected_dtypes = {
-            "NAME": np.str,
-            "cell_type": np.str,
-            "organism_age": np.float32,
-        }
-        dtypes = Annotations.set_dtypes(headers, annot_types)
-        self.assertEqual(expected_dtypes, dtypes)
-
-        # Test dtypes for cell metadata convention
-        # Numeric values should not have a dtype association
-        expected_dtypes.pop("organism_age")
-        dtypes = Annotations.set_dtypes(
-            headers, annot_types, is_metadata_convention=True
-        )
+        expected_dtypes = {"NAME": np.str, "cell_type": np.str}
+        dtypes = Annotations.coerce_group_values(headers, annot_types)
         self.assertEqual(expected_dtypes, dtypes)
 
     def test_convert_header_to_multiIndex(self):
@@ -171,13 +159,22 @@ class TestAnnotations(unittest.TestCase):
         ), "numeric value should be coerced to string"
 
     def test_coerce_numeric_values(self):
+        cm = Annotations(
+            "/Users/eaugusti/scp-ingest-pipeline/tests/data/metadata_example.txt",
+            ["text/csv", "text/plain", "text/tab-separated-values"],
+        )
+        cm.create_data_frame()
+        cm.file = Annotations.coerce_numeric_values(cm.file, cm.annot_types)
+        dtype = cm.file.dtypes[("Average Intensity", "numeric")]
+        self.assertEqual(dtype, np.float)
+
+        # Test that numeric values wer
         # Pick a random number between 1 and amount of lines in file
-        ran_num = random.randint(1, 2000)
-        self.df.preprocess()
-        for column in self.df.file.columns:
+        ran_num = random.randint(1, 20)
+        for column in cm.file.columns:
             annot_type = column[1]
             if annot_type == "numeric":
-                value = str(self.df.file[column][ran_num])
+                value = str(cm.file[column][ran_num])
                 print(Decimal(value).as_tuple().exponent)
                 assert (
                     abs(Decimal(value).as_tuple().exponent) >= self.EXPONENT
