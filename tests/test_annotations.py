@@ -170,7 +170,7 @@ class TestAnnotations(unittest.TestCase):
             lmtest.file["mixed_data"]["group"][32800], str
         ), "numeric value should be coerced to string"
 
-    def test_round_numeric_annotations(self):
+    def test_coerce_numeric_values(self):
         # Pick a random number between 1 and amount of lines in file
         ran_num = random.randint(1, 2000)
         self.df.preprocess()
@@ -182,6 +182,18 @@ class TestAnnotations(unittest.TestCase):
                 assert (
                     abs(Decimal(value).as_tuple().exponent) >= self.EXPONENT
                 ), "Numbers did not round to 3 or less decimals places"
+
+        cm_has_bad_value = Annotations(
+            "../tests/data/metadata_bad_contains_coordinates.txt",
+            ["text/csv", "text/plain", "text/tab-separated-values"],
+        )
+        cm_has_bad_value.create_data_frame()
+        self.assertRaises(
+            ValueError,
+            Annotations.coerce_numeric_values,
+            cm_has_bad_value.file,
+            cm_has_bad_value.annot_types,
+        )
 
     def test_group_annotations(self):
         self.df.preprocess()

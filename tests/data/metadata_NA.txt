@@ -2,6 +2,6 @@ NAME	NA_i__num	NA_f_num	NA_i_n_num	NA_f_n_num	NA_i_s_num	NA_f_s_num	NA_i_grp	NA_
 TYPE	numeric	numeric	numeric	numeric	numeric	numeric	group	group	group	group	group	group	numeric	group	numeric	group	numeric	group
 CELL_0001	1	1.1	1	1.1	1	1.1	1	1.1	1	1.1	1	1.1	1	1	1	1	1.1	1.1
 CELL_0002	2	2.2	2	2.2	2	2.2	2	2.2	2	2.2	2	2.2	2	2	2	2	2.2	2.2
-CELL_0003	3	3.3	3	3.3	3	3.3	3	3.3	3	3.3	3	3.3	3	3	foo	foo	foo	foo
-CELL_0004	4	4.4			foo	foo	4	4.4			foo	foo	4.4	4.4				
+CELL_0003	3	3.3	3	3.3	3	3.3	3	3.3	3	3.3	3	3.3	3	3		foo		foo
+CELL_0004	4	4.4					4	4.4			foo		4.4	4.4				
 CELL_0005	5	5.5	5	5.5	5	5.5	5	5.5	5	5.5	5	5.5	5	5	5	5	5.5	5.5

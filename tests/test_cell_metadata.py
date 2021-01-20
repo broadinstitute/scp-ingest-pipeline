@@ -12,7 +12,7 @@ class TestCellMetadata(unittest.TestCase):
         Note: cluster has similar set of tests
          """
         cm = CellMetadata(
-            "../tests/data/metadata_bad_contains_coordinates.txt",
+            "../tests/data/metadata_has_coordinate_header.txt",
             "5d276a50421aa9117c982845",
             "5dd5ae25421aa910a723a337",
             study_accession="SCP2",
@@ -76,8 +76,3 @@ class TestCellMetadata(unittest.TestCase):
         assert isinstance(
             cm.file["NA_f_n_s__num"]["numeric"][3], float
         ), "empty cell -> NaN that remains float (not coerced)"
-
-        self.assertFalse(
-            cm.validate_numeric_annots(),
-            "numeric annotations supplied with strings should be invalid",
-        )

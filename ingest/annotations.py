@@ -95,9 +95,13 @@ class Annotations(IngestFiles):
         self.headers[0] = self.headers[0].upper()
         self.annot_types[0] = self.annot_types[0].upper()
         if self.validate_unique_header():
-            self.create_data_frame(is_metadata_convention)
-            # Round numeric columns
-            self.round_numeric_annotations()
+            self.create_data_frame()
+            # Metadata convention can have an array that are numbers or strings.
+            # Therefore skip setting dtypes for numeric annotation types for metadata convention
+            if not is_metadata_convention:
+                self.file = Annotations.coerce_numeric_values(
+                    self.file, self.annot_types
+                )
         else:
             msg = (
                 "Unable to parse file - Duplicate annotation header names are not allowed. \n"
@@ -123,21 +127,17 @@ class Annotations(IngestFiles):
         return df
 
     @staticmethod
-    def set_dtypes(header: List, annot_types: List, is_metadata_convention=False):
-        """Sets data types for dataframe. This function assumes that annotation types
+    def coerce_group_values(header: List, annot_types: List):
+        """Sets data types for group annotations. This function assumes that annotation types
         passed into the function are valid.
         """
         import numpy as np
 
-        dtypes = {}
+        group_dtypes = {}
         for annotation, annot_type in zip(header, annot_types):
             if annot_type != "numeric":
-                dtypes[annotation] = np.str
-            # Metadata convention can have an array that are numbers or strings.
-            # Therefore skip setting dtypes for numeric annotation types for metadata convention
-            elif annot_type == "numeric" and not is_metadata_convention:
-                dtypes[annotation] = np.float32
-        return dtypes
+                group_dtypes[annotation] = np.str
+        return group_dtypes
 
     @staticmethod
     def create_columns(headers: List, annot_types: List):
@@ -158,36 +158,35 @@ class Annotations(IngestFiles):
             new_column_names.append((annotation, annot_type))
         return new_column_names
 
-    def round_numeric_annotations(self):
-        """Rounds numeric annotation to 3 decimal places"""
-        if "numeric" in self.annot_types:
-            numeric_columns = self.file.xs(
+    @staticmethod
+    def coerce_numeric_values(df, annot_types):
+        """Coerces numeric columns and rounds annotation to 3 decimal places
+        """
+        if "numeric" in annot_types:
+            numeric_columns = df.xs(
                 "numeric", axis=1, level=1, drop_level=False
             ).columns.tolist()
             try:
                 # Round numeric columns to 3 decimal places
-                self.file[numeric_columns] = (
-                    self.file[numeric_columns].round(3).astype(float)
-                )
-            except Exception as e:
+                df[numeric_columns] = df[numeric_columns].round(3).astype(float)
+            except ValueError as e:
                 log_exception(Annotations.dev_logger, Annotations.user_logger, e)
+                raise ValueError(e)
+        return df
 
-    def create_data_frame(self, is_metadata_convention=False):
+    def create_data_frame(self):
         """
         - Create dataframe with proper dtypes to ensure:
             - Labels are treated as strings (objects)
             - Numeric annotations are treated as float32
         """
         column_names = Annotations.create_columns(self.headers, self.annot_types)
-        dtypes = Annotations.set_dtypes(
-            self.headers, self.annot_types, is_metadata_convention
-        )
+        dtypes = Annotations.coerce_group_values(self.headers, self.annot_types)
         df = self.open_file(
             self.file_path,
             open_as="dataframe",
             # Coerce values in column
             converters=dtypes,
-            na_filter=False,
             # Header/column names
             names=self.headers,
             # Prevent pandas from reading first 2 lines in file
@@ -337,13 +336,11 @@ class Annotations(IngestFiles):
         """Check numeric annotations are not string dtype
         """
         valid = True
-        for annot_header in self.file.columns[0:]:
+        for annot_header in self.file.columns[1:]:
             annot_name = annot_header[0]
             annot_type = annot_header[1]
-            if (
-                annot_type == "numeric"
-                and self.file[annot_name].dtypes[annot_type] == "object"
-            ):
+            column_dtype = self.file.dtypes[annot_header]
+            if annot_type == "numeric" and column_dtype == "object":
                 valid = False
                 msg = f"Numeric annotation, {annot_name}, contains non-numeric data (or unidentified NA values)"
                 self.store_validation_issue("error", "format", msg)
