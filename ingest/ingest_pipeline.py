@@ -323,6 +323,8 @@ class IngestPipeline:
             return 1
         return 0
 
+    # More work needs to be done to fully remove ingest from IngestPipeline
+    # Tracked in SCP-3023
     @custom_metric(config.get_metric_properties)
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
