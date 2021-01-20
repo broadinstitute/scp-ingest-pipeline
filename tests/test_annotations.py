@@ -33,6 +33,8 @@ class TestAnnotations(unittest.TestCase):
     CLUSTER_PATH = "../tests/data/test_1k_cluster_data.csv"
     CELL_METADATA_PATH = "../tests/data/valid_no_array_v2.0.0.txt"
 
+    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
+
     EXPONENT = -3
 
     def setUp(self):
@@ -239,6 +241,14 @@ class TestAnnotations(unittest.TestCase):
             result,
             f"Merge was not performed correctly. Merge should be performed on 'NAME'",
         )
+
+    def test_validate_numeric_annots(self):
+        cluster = Annotations(
+            "../tests/data/cluster_bad_missing_coordinate.txt",
+            TestAnnotations.ALLOWED_FILE_TYPES,
+        )
+        cluster.create_data_frame()
+        self.assertTrue(cluster.validate_numeric_annots)
 
     def test_get_cell_names(self):
         import pandas as pd

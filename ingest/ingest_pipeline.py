@@ -298,7 +298,7 @@ class IngestPipeline:
                 return 1
         return 0
 
-    # @custom_metric(config.get_metric_properties)
+    @custom_metric(config.get_metric_properties)
     def ingest_expression(self) -> int:
         """
         Ingests expression files.
@@ -323,7 +323,7 @@ class IngestPipeline:
             return 1
         return 0
 
-    # @custom_metric(config.get_metric_properties)
+    @custom_metric(config.get_metric_properties)
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
         validate_against_convention = False
@@ -367,7 +367,7 @@ class IngestPipeline:
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
 
-    # @custom_metric(config.get_metric_properties)
+    @custom_metric(config.get_metric_properties)
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate():
@@ -386,7 +386,7 @@ class IngestPipeline:
             return 1
         return status
 
-    # @custom_metric(config.get_metric_properties)
+    @custom_metric(config.get_metric_properties)
     def subsample(self):
         """Method for subsampling cluster and metadata files"""
         subsample = SubSample(
@@ -518,11 +518,11 @@ def main() -> None:
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     # Initialize global variables for current ingest job
-    # config.init(arguments["study_id"], arguments["study_file_id"])
+    config.init(arguments["study_id"], arguments["study_file_id"])
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
     # Log Mixpanel events
-    # MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
+    MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     # Exit pipeline
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
