@@ -183,8 +183,9 @@ class TestAnnotations(unittest.TestCase):
                     abs(Decimal(value).as_tuple().exponent) >= self.EXPONENT
                 ), "Numbers did not round to 3 or less decimals places"
 
+        # Test for string in numeric column
         cm_has_bad_value = Annotations(
-            "../tests/data/metadata_bad_contains_coordinates.txt",
+            "../tests/data/metadata_bad_contains_str_in_numeric_column.txt",
             ["text/csv", "text/plain", "text/tab-separated-values"],
         )
         cm_has_bad_value.create_data_frame()
