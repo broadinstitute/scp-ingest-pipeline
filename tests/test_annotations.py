@@ -162,7 +162,7 @@ class TestAnnotations(unittest.TestCase):
 
     def test_coerce_numeric_values(self):
         cm = Annotations(
-            "/Users/eaugusti/scp-ingest-pipeline/tests/data/metadata_example.txt",
+            "../tests/data/metadata_example.txt",
             ["text/csv", "text/plain", "text/tab-separated-values"],
         )
         cm.create_data_frame()

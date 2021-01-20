@@ -440,11 +440,11 @@ def run_ingest(ingest, arguments, parsed_args):
     status_cell_metadata = None
     # TODO: Add validation for gene file types
     if "matrix_file" in arguments:
-        # config.set_parent_event_name("ingest-pipeline:expression:ingest")
+        config.set_parent_event_name("ingest-pipeline:expression:ingest")
         status.append(ingest.ingest_expression())
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
-            # config.set_parent_event_name("ingest-pipeline:cell_metadata:ingest")
+            config.set_parent_event_name("ingest-pipeline:cell_metadata:ingest")
             status_cell_metadata = ingest.ingest_cell_metadata()
             status.append(status_cell_metadata)
             if parsed_args.bq_table is not None and status_cell_metadata == 0:
@@ -452,11 +452,11 @@ def run_ingest(ingest, arguments, parsed_args):
                 status.append(status_metadata_bq)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
-            # config.set_parent_event_name("ingest-pipeline:cluster:ingest")
+            config.set_parent_event_name("ingest-pipeline:cluster:ingest")
             status.append(ingest.ingest_cluster())
     elif "subsample" in arguments:
         if arguments["subsample"]:
-            # config.set_parent_event_name("ingest-pipeline:subsample:ingest")
+            config.set_parent_event_name("ingest-pipeline:subsample:ingest")
             status_subsample = ingest.subsample()
             status.append(status_subsample)
 
