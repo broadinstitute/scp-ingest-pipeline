@@ -38,6 +38,7 @@ from validate_metadata import (
     validate_input_metadata,
     request_json_with_backoff,
     MAX_HTTP_ATTEMPTS,
+    is_empty_string,
 )
 
 
@@ -634,6 +635,12 @@ class TestValidateMetadata(unittest.TestCase):
             "Metadata validation issues do not match reference issues",
         )
         self.teardown_metadata(metadata)
+
+    def test_is_empty_string(self):
+        self.assertTrue(is_empty_string(""))
+        self.assertTrue(is_empty_string("  "))
+        self.assertFalse(is_empty_string("Hello"))
+        self.assertFalse(is_empty_string(4))
 
     @patch("requests.get", side_effect=mocked_requests_get)
     def test_request_backoff_handling(self, mocked_requests_get):

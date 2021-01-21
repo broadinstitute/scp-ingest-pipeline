@@ -858,13 +858,19 @@ def process_metadata_row(metadata, convention, line):
         # for metadata not in convention, no need to process
         if k not in convention["properties"].keys():
             continue
-        # for optional metadata, do not pass empty cells (nan)
-        if k not in convention["required"] and value_is_nan(v) or not v:
-            continue
+        # for optional metadata, do not pass empty cells (nan) or strings
+        if k not in convention["required"]:
+            if value_is_nan(v) or is_empty_string(v):
+                continue
         processed_row.update(
             cast_metadata_type(k, v, row_info["CellID"], convention, metadata)
         )
     return processed_row
+
+
+def is_empty_string(value):
+    if isinstance(value, str):
+        return value == "" or value.isspace()
 
 
 def collect_jsonschema_errors(metadata, convention, bq_json=None):
