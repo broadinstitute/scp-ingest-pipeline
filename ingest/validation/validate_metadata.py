@@ -859,7 +859,7 @@ def process_metadata_row(metadata, convention, line):
         if k not in convention["properties"].keys():
             continue
         # for optional metadata, do not pass empty cells (nan)
-        if k not in convention["required"] and value_is_nan(v):
+        if k not in convention["required"] and value_is_nan(v) or not v:
             continue
         processed_row.update(
             cast_metadata_type(k, v, row_info["CellID"], convention, metadata)

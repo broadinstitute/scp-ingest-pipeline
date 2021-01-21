@@ -10,6 +10,7 @@ Must have python 3.6 or higher.
 import abc
 from collections import defaultdict
 
+import numpy as np
 import pandas as pd
 from bson.objectid import ObjectId
 from typing import Dict, Generator, List, Tuple  # noqa: F401
@@ -96,6 +97,7 @@ class Annotations(IngestFiles):
         self.annot_types[0] = self.annot_types[0].upper()
         if self.validate_unique_header():
             self.create_data_frame()
+            self.coerce_empty_numeric_values()
             # Metadata convention can have an array that are numbers or strings.
             # Therefore skip setting dtypes for numeric annotation types for metadata convention
             if not is_metadata_convention:
@@ -111,8 +113,12 @@ class Annotations(IngestFiles):
             raise ValueError(msg)
 
     @staticmethod
+    def replace_empty_cells_with_nan(df):
+        return df.replace("", np.nan, inplace=True)
+
+    @staticmethod
     def convert_header_to_multiIndex(df, header_names: List[Tuple]):
-        """Header in annotation files are represented as multi-index based on first 2 rows AKA causes
+        """Header in annotation files are represented as multi-index based on first 2 rows i.e causes
             the first two rows in file to be headers.
         Parameters
         ----------
@@ -141,12 +147,12 @@ class Annotations(IngestFiles):
 
     @staticmethod
     def create_columns(headers: List, annot_types: List):
-        """Creates 'names' argument to be passing into pd.read_csv()
+        """Creates 'names' argument that's passed into pd.read_csv()
             by zipping annotation names and headers
 
         Parameters
         ----------
-        annot_types (List): Annotation types. E.g. "group" or "numeric"
+        annot_types (List): Annotation types. E.g. [group,numeric]
         headers (List): Header names found in first line of file
 
         Returns
@@ -160,7 +166,7 @@ class Annotations(IngestFiles):
 
     @staticmethod
     def coerce_numeric_values(df, annot_types):
-        """Coerces numeric columns and rounds annotation to 3 decimal places
+        """Coerces numeric columns to floats and rounds annotation to 3 decimal places
         """
         if "numeric" in annot_types:
             numeric_columns = df.xs(
@@ -174,11 +180,18 @@ class Annotations(IngestFiles):
                 raise ValueError(e)
         return df
 
+    def coerce_empty_numeric_values(self):
+        """Converts empty cells in numeric annotations to NaN"""
+        if "numeric" in self.annot_types:
+            numeric_columns = self.file.xs(
+                "numeric", axis=1, level=1, drop_level=False
+            ).columns.tolist()
+            self.file[numeric_columns].replace("", np.nan, inplace=True)
+
     def create_data_frame(self):
         """
         - Create dataframe with proper dtypes to ensure:
             - Labels are treated as strings (objects)
-            - Numeric annotations are treated as float32
         """
         column_names = Annotations.create_columns(self.headers, self.annot_types)
         dtypes = Annotations.coerce_group_values(self.headers, self.annot_types)
