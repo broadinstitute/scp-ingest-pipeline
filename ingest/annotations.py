@@ -86,10 +86,11 @@ class Annotations(IngestFiles):
         self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
 
     def preprocess(self, is_metadata_convention=False):
-        """Ensures that:
+        """ Prepares file for ingest
+        Ensures that:
             - 'NAME' in first header row is capitalized
             - 'TYPE' in second header row is capitalized
-            - Numeric values are rounded to 3 decimal places
+            - Numeric and group annotation values are coerced properly
         """
 
         # Uppercase NAME and TYPE
@@ -98,8 +99,8 @@ class Annotations(IngestFiles):
         if self.validate_unique_header():
             self.create_data_frame()
             self.coerce_empty_numeric_values()
-            # Metadata convention can have an array that are numbers or strings.
-            # Therefore skip setting dtypes for numeric annotation types for metadata convention
+            # Metadata convention can contain arrays that have numeric or string values.
+            # Therefore dtypes for numeric annotations are skipped.
             if not is_metadata_convention:
                 self.file = Annotations.coerce_numeric_values(
                     self.file, self.annot_types
@@ -111,10 +112,6 @@ class Annotations(IngestFiles):
             )
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
             raise ValueError(msg)
-
-    @staticmethod
-    def replace_empty_cells_with_nan(df):
-        return df.replace("", np.nan, inplace=True)
 
     @staticmethod
     def convert_header_to_multiIndex(df, header_names: List[Tuple]):
@@ -137,8 +134,6 @@ class Annotations(IngestFiles):
         """Sets data types for group annotations. This function assumes that annotation types
         passed into the function are valid.
         """
-        import numpy as np
-
         group_dtypes = {}
         for annotation, annot_type in zip(header, annot_types):
             if annot_type != "numeric":
@@ -166,8 +161,7 @@ class Annotations(IngestFiles):
 
     @staticmethod
     def coerce_numeric_values(df, annot_types):
-        """Coerces numeric columns to floats and rounds annotation to 3 decimal places
-        """
+        """Coerces numeric columns to floats and rounds annotation to 3 decimal places"""
         if "numeric" in annot_types:
             numeric_columns = df.xs(
                 "numeric", axis=1, level=1, drop_level=False
@@ -189,9 +183,8 @@ class Annotations(IngestFiles):
             self.file[numeric_columns].replace("", np.nan, inplace=True)
 
     def create_data_frame(self):
-        """
-        - Create dataframe with proper dtypes to ensure:
-            - Labels are treated as strings (objects)
+        """Create dataframe with proper dtypes for group annotations. Numeric annotations require special handling
+            and are addressed functions presented in preprocess().
         """
         column_names = Annotations.create_columns(self.headers, self.annot_types)
         dtypes = Annotations.coerce_group_values(self.headers, self.annot_types)
