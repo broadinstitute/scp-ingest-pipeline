@@ -69,11 +69,11 @@ class TestAnnotations(unittest.TestCase):
         with self.assertRaises(ValueError):
             dup_headers.preprocess()
 
-    def test_coerce_group_values(self):
+    def test_get_dtypes_for_group_annots(self):
         headers = ["NAME", "cell_type", "organism_age"]
         annot_types = ["TYPE", "group", "numeric"]
         expected_dtypes = {"NAME": np.str, "cell_type": np.str}
-        dtypes = Annotations.coerce_group_values(headers, annot_types)
+        dtypes = Annotations.get_dtypes_for_group_annots(headers, annot_types)
         self.assertEqual(expected_dtypes, dtypes)
 
     def test_convert_header_to_multiIndex(self):

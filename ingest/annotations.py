@@ -129,7 +129,7 @@ class Annotations(IngestFiles):
         return df
 
     @staticmethod
-    def coerce_group_values(header: List, annot_types: List):
+    def get_dtypes_for_group_annots(header: List, annot_types: List):
         """Sets data types for group annotations. This function assumes that annotation types
         passed into the function are valid.
         """
@@ -186,7 +186,7 @@ class Annotations(IngestFiles):
             and are addressed functions presented in preprocess().
         """
         column_names = Annotations.create_columns(self.headers, self.annot_types)
-        dtypes = Annotations.coerce_group_values(self.headers, self.annot_types)
+        dtypes = Annotations.get_dtypes_for_group_annots(self.headers, self.annot_types)
         df = self.open_file(
             self.file_path,
             open_as="dataframe",
