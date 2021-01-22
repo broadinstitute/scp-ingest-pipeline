@@ -114,9 +114,8 @@ class Annotations(IngestFiles):
             raise ValueError(msg)
 
     @staticmethod
-    def convert_header_to_multiIndex(df, header_names: List[Tuple]):
-        """Header in annotation files are represented as multi-index based on first 2 rows i.e causes
-            the first two rows in file to be headers.
+    def convert_header_to_multi_index(df, header_names: List[Tuple]):
+        """ Create a multiindex based on the first two row of the annotation files
         Parameters
         ----------
             df (pandas dataframe) : Dataframe
@@ -125,7 +124,7 @@ class Annotations(IngestFiles):
         -------
             df (pandas dataframe): Dataframe with multi-indexed header
         """
-        index = pd.MultiIndex.from_tuples(header_names, names=["Name", "TYPE"])
+        index = pd.MultiIndex.from_tuples(header_names, names=["NAME", "TYPE"])
         df.columns = pd.MultiIndex.from_tuples(index)
         return df
 
