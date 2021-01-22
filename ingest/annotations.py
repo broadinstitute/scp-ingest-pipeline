@@ -98,13 +98,7 @@ class Annotations(IngestFiles):
         self.annot_types[0] = self.annot_types[0].upper()
         if self.validate_unique_header():
             self.create_data_frame()
-            self.coerce_empty_numeric_values()
-            # Metadata convention can contain arrays that have numeric or string values.
-            # Therefore dtypes for numeric annotations are skipped.
-            if not is_metadata_convention:
-                self.file = Annotations.coerce_numeric_values(
-                    self.file, self.annot_types
-                )
+            self.self.preprocess_numeric_annot(is_metadata_convention)
         else:
             msg = (
                 "Unable to parse file - Duplicate annotation header names are not allowed. \n"
@@ -112,6 +106,13 @@ class Annotations(IngestFiles):
             )
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
             raise ValueError(msg)
+
+    def preprocess_numeric_annot(self, is_metadata_convention):
+        self.coerce_empty_numeric_values()
+        # Metadata convention can contain arrays that have numeric or string values.
+        # Therefore dtypes for numeric annotations are skipped.
+        if not is_metadata_convention:
+            self.file = Annotations.coerce_numeric_values(self.file, self.annot_types)
 
     @staticmethod
     def convert_header_to_multi_index(df, header_names: List[Tuple]):
@@ -183,14 +184,14 @@ class Annotations(IngestFiles):
 
     def create_data_frame(self):
         """Create dataframe with proper dtypes for group annotations. Numeric annotations require special handling
-            and are addressed functions presented in preprocess().
+            and are addressed in functions presented in preprocess() and preprocess_numeric_annot().
         """
         column_names = Annotations.create_columns(self.headers, self.annot_types)
         dtypes = Annotations.get_dtypes_for_group_annots(self.headers, self.annot_types)
         df = self.open_file(
             self.file_path,
             open_as="dataframe",
-            # Coerce values in column
+            # Coerce values in group annotations
             converters=dtypes,
             # Header/column names
             names=self.headers,
