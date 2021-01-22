@@ -264,12 +264,11 @@ class IngestPipeline:
         convention_file_object = IngestFiles(self.JSON_CONVENTION, ["application/json"])
         json_file = convention_file_object.open_file(self.JSON_CONVENTION)
         convention = json.load(json_file)
-        if self.kwargs["validate_convention"] is not None:
-            if (
-                self.kwargs["validate_convention"]
-                and self.kwargs["bq_dataset"]
-                and self.kwargs["bq_table"]
-            ):
+        if (
+            self.kwargs["validate_convention"] is not None
+            and self.kwargs["validate_convention"]
+        ):
+            if self.kwargs["bq_dataset"] and self.kwargs["bq_table"]:
                 validate_input_metadata(cell_metadata_obj, convention, bq_json=True)
             else:
                 validate_input_metadata(cell_metadata_obj, convention)
@@ -333,7 +332,7 @@ class IngestPipeline:
             if self.kwargs["validate_convention"]:
                 validate_against_convention = True
         self.cell_metadata.preprocess(validate_against_convention)
-        if self.cell_metadata.validate():
+        if self.cell_metadata.validate(validate_against_convention):
             IngestPipeline.dev_logger.info("Cell metadata file format valid")
             # Check file against metadata convention
             if validate_against_convention:
