@@ -69,12 +69,12 @@ class CellMetadata(Annotations):
             yield metadata_model
 
     # Will evolve to do cross file validation
-    def validate(self, validate_against_convention):
+    def validate(self, validate_against_convention=False):
         """ Runs all validation checks """
         if validate_against_convention:
             return self.is_valid_format()
         else:
-            all([self.is_valid_format(), self.validate_numeric_annots()])
+            return all([self.is_valid_format(), self.validate_numeric_annots()])
 
     def is_valid_format(self):
         """Validates format by calling all format validation methods"""
