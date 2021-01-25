@@ -255,8 +255,10 @@ def is_valid_uuid(value):
     import uuid
 
     try:
-        if not value:
+        if value:
             uuid.UUID(value)
-        return value
+            return value
+        else:
+            return None
     except ValueError as e:
         raise argparse.ArgumentTypeError(e)
