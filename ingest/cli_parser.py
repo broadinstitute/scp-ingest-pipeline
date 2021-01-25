@@ -20,7 +20,7 @@ def bq_dataset_exists(dataset):
         bigquery_client.get_dataset(dataset_ref)
         exists = True
     except NotFound:
-        print(f'Dataset {dataset} not found')
+        print(f"Dataset {dataset} not found")
     return exists
 
 
@@ -33,7 +33,7 @@ def bq_table_exists(dataset, table):
         bigquery_client.get_table(table_ref)
         exists = True
     except NotFound:
-        print(f'Dataset {table} not found')
+        print(f"Dataset {table} not found")
     return exists
 
 
@@ -60,19 +60,19 @@ def validate_arguments(parsed_args):
             parsed_args.bq_dataset is None and parsed_args.bq_table is not None
         ):
             raise ValueError(
-                'Missing argument: --bq_dataset and --bq_table are both required for BigQuery upload.'
+                "Missing argument: --bq_dataset and --bq_table are both required for BigQuery upload."
             )
         if parsed_args.bq_dataset is not None and not bq_dataset_exists(
             parsed_args.bq_dataset
         ):
             raise ValueError(
-                f' Invalid argument: unable to connect to a BigQuery dataset called {parsed_args.bq_dataset}.'
+                f" Invalid argument: unable to connect to a BigQuery dataset called {parsed_args.bq_dataset}."
             )
         if parsed_args.bq_table is not None and not bq_table_exists(
             parsed_args.bq_dataset, parsed_args.bq_table
         ):
             raise ValueError(
-                f' Invalid argument: unable to connect to a BigQuery table called {parsed_args.bq_table}.'
+                f" Invalid argument: unable to connect to a BigQuery table called {parsed_args.bq_table}."
             )
 
 
@@ -104,6 +104,13 @@ def create_parser():
         See https://github.com/pythonprofilers/memory_profiler#time-based-memory-usage"
     parser.add_argument(
         "--profile-memory", action="store_true", help=profile_memory_text
+    )
+
+    parser.add_argument(
+        "--user-metrics-uuid",
+        required=False,
+        type=is_valid_uuid,
+        help="User identifier for bard client",
     )
 
     subparsers = parser.add_subparsers()
@@ -242,3 +249,13 @@ def create_parser():
     )
 
     return parser
+
+
+def is_valid_uuid(value):
+    import uuid
+
+    try:
+        if not value:
+            uuid.UUID(value)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(e)

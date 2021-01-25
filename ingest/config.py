@@ -8,12 +8,12 @@ from bson.objectid import ObjectId
 MONGO_CONNECTION = MongoConnection()
 
 
-def init(study_id, study_file_id):
+def init(study_id, study_file_id, user_metric_uuid=None):
     global __metric_properties
 
     study = Study(study_id)
     study_file = StudyFile(study_file_id)
-    __metric_properties = MetricProperties(study, study_file)
+    __metric_properties = MetricProperties(study, study_file, user_metric_uuid)
 
 
 def set_parent_event_name(event_name):
@@ -34,8 +34,11 @@ def get_metric_properties():
 class MetricProperties:
     """Sets default properties for Mixpanel events"""
 
-    def __init__(self, study, study_file):
+    USER_ID = "2f30ec50-a04d-4d43-8fd1-b136a2045079"
+
+    def __init__(self, study, study_file, user_uuid=None):
         self.__properties = {
+            "distinct_id": user_uuid if user_uuid else MetricProperties.USER_ID,
             "studyAccession": study.accession,
             "fileName": study_file.file_name,
             "fileType": study_file.file_type,

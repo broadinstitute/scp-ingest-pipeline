@@ -26,13 +26,10 @@ class MetricsService:
     # Logger provides more details
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
     BARD_HOST_URL = bard_host_url
-    user_id = "2f30ec50-a04d-4d43-8fd1-b136a2045079"
 
     # Log metrics to Mixpanel
     @classmethod
     def log(cls, event_name, props={}):
-        # Log metrics to Mixpanel via Bard web service
-        props.update({"distinct_id": MetricsService.user_id})
         properties = {"event": event_name, "properties": props.get_properties()}
 
         post_body = json.dumps(properties)
