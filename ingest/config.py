@@ -1,6 +1,4 @@
 # File is responsible for defining globals and initializing them
-import uuid
-
 try:
 
     from mongo_connection import MongoConnection
@@ -40,7 +38,7 @@ class MetricProperties:
     USER_ID = "2f30ec50-a04d-4d43-8fd1-b136a2045079"
 
     def __init__(self, study, study_file, user_uuid=None):
-        distinct_id = (uuid.UUID(user_uuid) if user_uuid else MetricProperties.USER_ID,)
+        distinct_id = user_uuid if user_uuid else MetricProperties.USER_ID
         self.__properties = {
             "distinct_id": distinct_id,
             "studyAccession": study.accession,
