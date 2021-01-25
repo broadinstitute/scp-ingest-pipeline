@@ -98,7 +98,7 @@ class Annotations(IngestFiles):
         self.annot_types[0] = self.annot_types[0].upper()
         if self.validate_unique_header():
             self.create_data_frame()
-            self.self.preprocess_numeric_annot(is_metadata_convention)
+            self.preprocess_numeric_annot(is_metadata_convention)
         else:
             msg = (
                 "Unable to parse file - Duplicate annotation header names are not allowed. \n"
@@ -199,7 +199,7 @@ class Annotations(IngestFiles):
             # since they're passed in with param 'names'
             skiprows=2,
         )[0]
-        self.file = Annotations.convert_header_to_multiIndex(df, column_names)
+        self.file = Annotations.convert_header_to_multi_index(df, column_names)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
         """Stores validation issues in proper arrangement
