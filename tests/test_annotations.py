@@ -91,7 +91,7 @@ class TestAnnotations(unittest.TestCase):
         df = annotation.open_file(
             path, open_as="dataframe", skiprows=2, names=annotation.headers
         )[0]
-        new_df = Annotations.convert_header_to_multiIndex(df, expected)
+        new_df = Annotations.convert_header_to_multi_index(df, expected)
         # Remove white spaces
         new_df_columns = [tuple(s.strip() for s in y) for y in new_df.columns]
         self.assertEqual(new_df_columns, expected)
