@@ -257,5 +257,6 @@ def is_valid_uuid(value):
     try:
         if not value:
             uuid.UUID(value)
+        return value
     except ValueError as e:
         raise argparse.ArgumentTypeError(e)
