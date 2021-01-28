@@ -110,7 +110,7 @@ def create_parser():
         "--user-metrics-uuid",
         required=False,
         type=is_valid_uuid,
-        help="User identifier for bard client",
+        help="User identifier for Bard, i.e. the user's Mixpanel distinct ID",
     )
 
     subparsers = parser.add_subparsers()
