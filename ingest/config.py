@@ -35,6 +35,7 @@ def get_metric_properties():
 class MetricProperties:
     """Sets default properties for Mixpanel events"""
 
+    # This is a generic write-only log token, not a secret
     USER_ID = "2f30ec50-a04d-4d43-8fd1-b136a2045079"
 
     def __init__(self, study, study_file, user_uuid=None):
