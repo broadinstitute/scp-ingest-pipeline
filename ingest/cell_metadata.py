@@ -12,6 +12,7 @@ import ntpath
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+import copy
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
@@ -134,7 +135,8 @@ class CellMetadata(Annotations):
             )
 
     def set_data_array(self, linear_data_id: str, annot_header: str):
-        data_array_attrs = locals()
+
+        data_array_attrs = copy.copy(locals())
         del data_array_attrs["annot_header"]
         del data_array_attrs["self"]
         annot_name = annot_header[0]
