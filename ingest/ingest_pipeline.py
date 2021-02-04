@@ -336,10 +336,7 @@ class IngestPipeline:
             IngestPipeline.dev_logger.info("Cell metadata file format valid")
             # Check file against metadata convention
             if validate_against_convention:
-                import copy
-
-                # A step in decoupling CellMetadata and IngestPipeline
-                if self.conforms_to_metadata_convention(copy.copy(self.cell_metadata)):
+                if self.conforms_to_metadata_convention(self.cell_metadata):
                     IngestPipeline.dev_logger.info(
                         "Cell metadata file conforms to metadata convention"
                     )
