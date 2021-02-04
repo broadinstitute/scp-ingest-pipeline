@@ -774,7 +774,7 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
     }
     if is_array_metadata(convention, metadatum):
         cast_values = []
-        metadata.add_update_annotation(metadatum)
+        metadata.update_numeric_array_columns(metadatum)
         try:
             # splitting on pipe character for array data, valid for Sarah's
             # programmatically generated SCP TSV metadata files. When ingesting

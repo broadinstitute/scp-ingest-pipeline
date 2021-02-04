@@ -69,7 +69,7 @@ class CellMetadata(Annotations):
         for metadata_model in self.transform():
             yield metadata_model
 
-    def update_array_numeric_columns(self, annotation_name):
+    def update_numeric_array_columns(self, annotation_name):
         if not self.numeric_array_columns.values():
             self.numeric_array_columns[annotation_name] = True
 
