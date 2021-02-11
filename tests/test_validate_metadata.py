@@ -79,6 +79,28 @@ class TestValidateMetadata(unittest.TestCase):
         except OSError:
             print("no file to remove")
 
+    def test_comma_delimited_array(self):
+        args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/metadata/metadata_has_commas_in_arrays.txt"
+        metadata, convention = self.setup_metadata(args)
+        self.assertTrue(
+            metadata.validate_format(), "Valid metadata headers should not elicit error"
+        )
+        collect_jsonschema_errors(metadata, convention)
+        validate_collected_ontology_data(metadata, convention)
+        report_issues(metadata)
+
+        reference_file = open(
+            "../tests/mock_data/metadata/issues_metadata_has_commas_in_arrays.json"
+        )
+        reference_issues = json.load(reference_file)
+        reference_file.close()
+        self.assertEqual(
+            metadata.issues,
+            reference_issues,
+            "Metadata validation issues do not match reference issues",
+        )
+        self.teardown_metadata(metadata)
+
     def test_convention_content(self):
         """Metadata convention should be valid jsonschema
         """
@@ -540,9 +562,9 @@ class TestValidateMetadata(unittest.TestCase):
         )
         validate_input_metadata(metadata, convention)
 
-        self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
-        )
+        # self.assertFalse(
+        #     report_issues(metadata), "Valid ontology content should not elicit error"
+        # )
         # valid array data emits one warning message for disease__time_since_onset__unit
         # because no ontology label supplied in metadata file for the unit ontology
         reference_file = open("../tests/data/issues_warn_v2.1.2.json")
