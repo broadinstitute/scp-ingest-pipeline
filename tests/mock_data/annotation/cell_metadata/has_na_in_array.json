@@ -1,0 +1,27 @@
+{
+  "error": {
+    "ontology": {
+      "disease__time_since_onset: NA, NaN, and None are not accepted values for arrays or required fields": [
+        "BM01_16dpp_AAGCAGTGGTAT"
+      ],
+      "organ_region__ontology_label: NA, NaN, and None are not accepted values for arrays or required fields": [
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ],
+      "disease__treated: NA, NaN, and None are not accepted values for arrays or required fields": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "ethnicity__ontology_label: NA, NaN, and None are not accepted values for arrays or required fields": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ]
+    },
+    "convention": {
+      "'disease__time_since_onset' is a dependency of 'disease__time_since_onset__unit'": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT",
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
+    }
+  }
+}

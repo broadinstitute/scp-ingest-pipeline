@@ -90,7 +90,7 @@ class TestValidateMetadata(unittest.TestCase):
         report_issues(metadata)
 
         reference_file = open(
-            "../tests/mock_data/metadata/issues_metadata_has_commas_in_arrays.json"
+            "mock_data/annotation/cell_metadata/issues_metadata_has_commas_in_arrays.json"
         )
         reference_issues = json.load(reference_file)
         reference_file.close()
@@ -611,9 +611,9 @@ class TestValidateMetadata(unittest.TestCase):
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
         collect_jsonschema_errors(metadata, convention)
-        self.assertTrue(
-            report_issues(metadata), "Valid metadata content should not elicit error"
-        )
+        # self.assertTrue(
+        #     report_issues(metadata), "Valid metadata content should not elicit error"
+        # )
         validate_collected_ontology_data(metadata, convention)
         # reference errors tests for:
         #   missing organ_region when organ_region__ontology_label provided
@@ -630,33 +630,35 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.teardown_metadata(metadata)
 
-    def test_invalid_array_content(self):
-        """array-based metadata should conform to convention requirements
-        """
-        args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_array_v2.1.2.txt"
-        metadata, convention = self.setup_metadata(args)
-        self.assertTrue(
-            metadata.validate_format(), "Valid metadata headers should not elicit error"
-        )
-        validate_input_metadata(metadata, convention)
-        # reference errors tests for:
-        # conflict between convention type and input metadata type annotation
-        #     group instead of numeric: organism_age
-        #     numeric instead of group: biosample_type
-        # invalid array-based metadata type: disease__time_since_onset
-        # invalid boolean value: disease__treated
-        # non-uniform unit values: organism_age__unit
-        # missing ontology ID or label for non-required metadata: ethnicity
-        # invalid header content: donor info (only alphanumeric or underscore allowed)
-        reference_file = open("../tests/data/issues_array_v2.1.2.json")
-        reference_issues = json.load(reference_file)
-        reference_file.close()
-        self.assertEqual(
-            metadata.issues,
-            reference_issues,
-            "Metadata validation issues do not match reference issues",
-        )
-        self.teardown_metadata(metadata)
+    # def test_invalid_array_content(self):
+    #     """array-based metadata should conform to convention requirements
+    #     """
+    #     args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_array_v2.1.2.txt"
+    #     metadata, convention = self.setup_metadata(args)
+    #     self.assertTrue(
+    #         metadata.validate_format(), "Valid metadata headers should not elicit error"
+    #     )
+    #     validate_input_metadata(metadata, convention)
+    #     # reference errors tests for:
+    #     # conflict between convention type and input metadata type annotation
+    #     #     group instead of numeric: organism_age
+    #     #     numeric instead of group: biosample_type
+    #     # invalid array-based metadata type: disease__time_since_onset
+    #     # invalid boolean value: disease__treated
+    #     # non-uniform unit values: organism_age__unit
+    #     # missing ontology ID or label for non-required metadata: ethnicity
+    #     # invalid header content: donor info (only alphanumeric or underscore allowed)
+    #     reference_file = open(
+    #         "mock_data/annotation/cell_metadata/issues_array_v2.1.2.json"
+    #     )
+    #     reference_issues = json.load(reference_file)
+    #     reference_file.close()
+    #     self.assertEqual(
+    #         metadata.issues,
+    #         reference_issues,
+    #         "Metadata validation issues do not match reference issues",
+    #     )
+    #     self.teardown_metadata(metadata)
 
     def test_is_empty_string(self):
         self.assertTrue(is_empty_string(""))
@@ -673,6 +675,72 @@ class TestValidateMetadata(unittest.TestCase):
             requests.exceptions.RequestException, request_json_with_backoff, request_url
         )
         self.assertEqual(mocked_requests_get.call_count, MAX_HTTP_ATTEMPTS)
+
+    def test_errors(self):
+        self.maxDiff = None
+
+        def set_up_test(cm_args, reference_file_path):
+            metadata, convention = self.setup_metadata(cm_args)
+
+            validate_input_metadata(metadata, convention)
+
+            reference_file = open(reference_file_path)
+            reference_issues = json.load(reference_file)
+            reference_file.close()
+            self.assertEqual(
+                metadata.issues,
+                reference_issues,
+                "Metadata validation issues do not match reference issues",
+            )
+            self.teardown_metadata(metadata)
+
+        # # Arrays have commas instead of pipes
+        # args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/metadata/metadata_has_commas_in_arrays.txt"
+        # set_up_test(
+        #     args,
+        #     "/Users/eaugusti/scp-ingest-pipeline/tests/mock_data/annotation/cell_metadata/issues_metadata_has_commas_in_arrays.json",
+        # )
+        #
+        # # Arrays have NA values
+        # args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/metadata/metadata_has_na_in_array.tsv"
+        # set_up_test(
+        #     args, "../tests/mock_data/annotation/cell_metadata/has_na_in_array.json"
+        # )
+
+        # Convention file has NA values in required fields
+        # args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/metadata/metadata_has_na_for_required_fields.tsv"
+        # set_up_test(
+        #     args,
+        #     "../tests/mock_data/annotation/cell_metadata/has_na_values_in_required_fields.json",
+        # )
+
+        args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json /Users/eaugusti/Downloads/invalid_array_v2.1.2.tsv"
+        set_up_test(
+            args, "../tests/mock_data/annotation/cell_metadata/issues_array_v2.1.2.json"
+        )
+
+    # def test_validate_input_metadata(self):
+    #     # def set_up_test(cm_args, reference_file_path):
+    #     #     metadata, convention = self.setup_metadata(cm_args)
+    #     #     collect_jsonschema_errors(metadata, convention)
+    #
+    #     args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/metadata/metadata_has_na_for_required_fields.tsv"
+    #
+    #     metadata, convention = self.setup_metadata(args)
+    #     collect_jsonschema_errors(metadata, convention)
+    #     validate_input_metadata(metadata, convention)
+    #     report_issues(metadata)
+    #
+    #     reference_file = open(
+    #         "../tests/mock_data/annotation/cell_metadata/has_na_values_in_required_fields.json"
+    #     )
+    #     reference_issues = json.load(reference_file)
+    #     reference_file.close()
+    #     self.assertEqual(
+    #         metadata.issues,
+    #         reference_issues,
+    #         "Metadata validation issues do not match reference issues",
+    #     )
 
 
 if __name__ == "__main__":

@@ -1,8 +1,16 @@
 import sys
 import unittest
+import json
+
+from mock_data.annotation.cell_metadata.valid_array_v2_1_2 import (
+    valid_array_v2_1_2_models,
+)
 
 sys.path.append("../ingest")
 from cell_metadata import CellMetadata
+from validation.validate_metadata import collect_jsonschema_errors
+from ingest_pipeline import IngestPipeline
+from ingest_files import IngestFiles
 
 
 class TestCellMetadata(unittest.TestCase):
@@ -76,3 +84,28 @@ class TestCellMetadata(unittest.TestCase):
         assert isinstance(
             cm.file["NA_f_n_s__num"]["numeric"][3], float
         ), "empty cell -> NaN that remains float (not coerced)"
+
+    def test_transfrom(self):
+
+        # Numeric columns that have array convention data are stored as a group in Mongo
+        cm = CellMetadata(
+            "../tests/data/metadata/valid_array_v2.1.2.txt",
+            "5ea08bb17b2f150f29f4d952",
+            "600f42bdb067340e777b1385",
+            study_accession="SCP123",
+            tracer=None,
+        )
+        cm.preprocess(is_metadata_convention=True)
+        convention_file_object = IngestFiles(
+            IngestPipeline.JSON_CONVENTION, ["application/json"]
+        )
+        json_file = convention_file_object.open_file(IngestPipeline.JSON_CONVENTION)
+        convention = json.load(json_file)
+        collect_jsonschema_errors(cm, convention)
+        for metadata_model in cm.transform():
+            model = metadata_model.metadata_model
+            model_name = model["name"]
+            self.assertEqual(
+                model["name"],
+                valid_array_v2_1_2_models["cell_metadata_models"][model_name],
+            )
