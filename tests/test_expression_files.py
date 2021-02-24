@@ -391,7 +391,7 @@ class TestExpressionFiles(unittest.TestCase):
         client_mock.reset_mock()
 
         def raiseError(*args, **kwargs):
-            details = {"writeErrors": {"code": 2345}}
+            details = {"writeErrors": [{"code": 2345}]}
 
             raise BulkWriteError(details)
 
