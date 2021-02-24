@@ -1,6 +1,7 @@
 import os
 import functools
 import time
+from bson.objectid import ObjectId
 from pymongo import MongoClient
 from pymongo.errors import AutoReconnect, BulkWriteError
 
@@ -65,6 +66,7 @@ def graceful_auto_reconnect(mongo_op_func):
 
     @functools.wraps(mongo_op_func)
     def wrapper(*args, **kwargs):
+        args = list(args)
         for attempt in range(MAX_ATTEMPTS):
             try:
                 return mongo_op_func(*args, **kwargs)
@@ -75,13 +77,25 @@ def graceful_auto_reconnect(mongo_op_func):
                 else:
                     raise e
             except BulkWriteError as bwe:
+
                 if attempt < MAX_ATTEMPTS - 1:
                     dev_logger.warning(
                         "Batch ops error occurred. Reinsert attempt %s.", str(attempt)
                     )
+                    error_docs = bwe.details["writeErrors"]
+                    # Check error code to see if any failures are due to duplicate ids (error code 11000)
+                    if any(doc["code"] == 11000 for doc in error_docs):
+                        args[0] = reassign_id(args[0])
                     retry(attempt)
                 else:
                     dev_logger.debug(str(bwe.details))
                     raise bwe
 
     return wrapper
+
+
+def reassign_id(documents):
+    """Reassign ids in documents"""
+    for doc in documents:
+        doc["_id"] = ObjectId()
+    return documents
