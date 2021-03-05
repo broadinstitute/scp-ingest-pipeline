@@ -2,7 +2,7 @@ import sys
 import unittest
 import json
 
-from mock_data.annotation.cell_metadata.valid_array_v2_1_2 import (
+from mock_data.annotation.metadata.convention.valid_array_v2_1_2 import (
     valid_array_v2_1_2_models,
 )
 
@@ -47,11 +47,10 @@ class TestCellMetadata(unittest.TestCase):
         in instantiated data frame
         """
         cm = CellMetadata(
-            "../tests/data/metadata_NA.txt",
+            "../tests/data/annotation/metadata/metadata_NA.txt",
             "addedfeed000000000000000",
             "dec0dedfeed1111111111111",
-            study_accession="SCPtest",
-            tracer=None,
+            study_accession="SCPtest"
         )
         cm.preprocess()
 
@@ -89,11 +88,10 @@ class TestCellMetadata(unittest.TestCase):
 
         # Numeric columns that have array convention data are stored as a group in Mongo
         cm = CellMetadata(
-            "../tests/data/metadata/valid_array_v2.1.2.txt",
+            "../tests/data/annotation/metadata/convention/valid_array_v2.1.2.txt",
             "5ea08bb17b2f150f29f4d952",
             "600f42bdb067340e777b1385",
-            study_accession="SCP123",
-            tracer=None,
+            study_accession="SCP123"
         )
         cm.preprocess(is_metadata_convention=True)
         convention_file_object = IngestFiles(
@@ -103,9 +101,10 @@ class TestCellMetadata(unittest.TestCase):
         convention = json.load(json_file)
         collect_jsonschema_errors(cm, convention)
         for metadata_model in cm.transform():
-            model = metadata_model.metadata_model
+            model = metadata_model.model
             model_name = model["name"]
+            expect_model = valid_array_v2_1_2_models["cell_metadata_models"][model_name]
             self.assertEqual(
-                model["name"],
-                valid_array_v2_1_2_models["cell_metadata_models"][model_name],
+                model,
+                expect_model,
             )
