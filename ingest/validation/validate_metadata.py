@@ -129,7 +129,7 @@ def create_parser():
         "--study-accession", help="SCP study accession", default="SCPtest"
     )
     parser.add_argument(
-        "--bq-dataset", help="BigQuery dataset identifier", default="cell_metadata"
+        "--bq-dataset", help="BigQuery dataset identifier", default="metadata"
     )
     parser.add_argument(
         "--bq-table", help="BigQuery table identifier", default="alexandria_convention"
@@ -815,7 +815,7 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         metadata.update_numeric_array_columns(metadatum)
         try:
             if "|" not in value:
-                msg = f"There is only one array value, for {metadatum}: {value}."\
+                msg = f"There is only one array value, for {metadatum}: {value}. "\
                     "If unexpected, multiple values must be pipe ('|') delimited."
                 metadata.store_validation_issue(
                     "warn", "type", msg, [id_for_error_detail]
