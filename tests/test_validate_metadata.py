@@ -119,16 +119,21 @@ class TestValidateMetadata(unittest.TestCase):
         metadata, convention = self.setup_metadata(args)
 
         # handle empty string ontology label for required array metadata
-        row = {
+        input_row = {
             "CellID": "test1",
             "disease": ["MONDO_0005015"],
             "disease__ontology_label": "",
         }
+        expected_row= {
+            "CellID": "test1",
+            "disease": ["MONDO_0005015"],
+            "disease__ontology_label": [],
+        }
         updated_row = collect_cell_for_ontology(
-            "disease", row, metadata, convention, True, True
+            "disease", input_row, metadata, convention, True, True
         )
         self.assertEqual(
-            row,
+            expected_row,
             updated_row,
             "Row should not be altered if label for required ontology is missing",
         )

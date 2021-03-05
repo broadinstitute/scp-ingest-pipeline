@@ -506,7 +506,7 @@ def insert_array_ontology_label_row_data(
             label_lookup = ""
             try:
                 label_lookup = retriever.retrieve_ontology_term_label(
-                    id, property_name, convention
+                    id, property_name, convention, "array"
                 )
                 reference_ontology = (
                     "EBI OLS lookup"
@@ -546,9 +546,10 @@ def insert_ontology_label_row_data(
 
     if not row[ontology_label]:
         # for optional columns, try to fill it in
+        property_type=convention["properties"][property_name]["type"]
         try:
             label = retriever.retrieve_ontology_term_label(
-                id, property_name, convention
+                id, property_name, convention, property_type
             )
             row[ontology_label] = label
             reference_ontology = (
@@ -580,6 +581,18 @@ def collect_cell_for_ontology(
     and added to BigQuery json to populate metadata backend
     Missing ontology_label for required metadata is not inserted, should fail validation
     """
+    def omitted_values(ontology_label,cell_name):
+        return (
+            # check for missing values
+            ontology_label not in updated_row
+            # check for empty cells
+            or value_is_nan(cell_name)
+            # check for empty cells
+            or is_empty_string(cell_name)
+        )
+    # check for missing values
+    # check for empty cells
+    # check for empty cells
 
     if property_name.endswith("__unit"):
         ontology_label = property_name + "_label"
@@ -589,18 +602,13 @@ def collect_cell_for_ontology(
     cell_id = updated_row["CellID"]
 
     # for case where they've omitted a column altogether or left it blank, add a blank entry
-    if (
-        ontology_label not in updated_row
-        or value_is_nan(updated_row[ontology_label])
-        or is_empty_string(updated_row[ontology_label])
-    ):
+    if omitted_values(ontology_label,  updated_row.get(ontology_label)):
         if array:
             updated_row[ontology_label] = []
         else:
             updated_row[ontology_label] = ""
 
-    # !!!property_name checking is probably not needed
-    if property_name not in updated_row or value_is_nan(updated_row[property_name]):
+    if omitted_values(property_name, updated_row[property_name]):
         if array:
             updated_row[property_name] = []
         else:
@@ -807,9 +815,10 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         metadata.update_numeric_array_columns(metadatum)
         try:
             if "|" not in value:
-                user_logger.warn(
-                    f"There is only one array value, for {metadatum}: {value}."
+                msg = f"There is only one array value, for {metadatum}: {value}."\
                     "If unexpected, multiple values must be pipe ('|') delimited."
+                metadata.store_validation_issue(
+                    "warn", "type", msg, [id_for_error_detail]
                 )
 
             # splitting on pipe character for array data, valid for Sarah's
@@ -899,7 +908,7 @@ def process_metadata_row(metadata, convention, line):
             continue
         # for optional metadata, do not pass empty cells (nan)
         if k not in convention["required"]:
-            if value_is_nan(v):
+            if (value_is_nan(v) or is_empty_string(v)):
                 continue
         else:
             if is_array_metadata(convention, k):

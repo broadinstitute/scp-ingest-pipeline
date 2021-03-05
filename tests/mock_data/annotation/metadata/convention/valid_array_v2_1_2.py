@@ -179,7 +179,7 @@ valid_array_v2_1_2_models = {
         "All Cells": {
             "_id": ObjectId("600f4325e164652b111111a5"),
             "name": "All Cells",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "cells",
             "array_index": 0,
             "values": [
@@ -199,7 +199,7 @@ valid_array_v2_1_2_models = {
         "disease__time_since_onset": {
             "_id": ObjectId("600f4325e164652b111111a7"),
             "name": "disease__time_since_onset",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": ["12|2", "1", "24|2", "36|3|1", "0"],
@@ -213,7 +213,7 @@ valid_array_v2_1_2_models = {
         "disease__time_since_onset__unit": {
             "_id": ObjectId("600f4325e164652b111111a9"),
             "name": "disease__time_since_onset__unit",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": [
@@ -233,7 +233,7 @@ valid_array_v2_1_2_models = {
         "organ_region": {
             "_id": ObjectId("600f4325e164652b111111ab"),
             "name": "organ_region",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": [
@@ -253,7 +253,7 @@ valid_array_v2_1_2_models = {
         "organ_region__ontology_label": {
             "_id": ObjectId("600f4325e164652b111111ad"),
             "name": "organ_region__ontology_label",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": [
@@ -273,7 +273,7 @@ valid_array_v2_1_2_models = {
         "donor": {
             "_id": ObjectId("600f4325e164652b111111af"),
             "name": "donor",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": ["BM01", "BM01", "BM01", "BM01", "BM01"],
@@ -287,7 +287,7 @@ valid_array_v2_1_2_models = {
         "disease__treated": {
             "_id": ObjectId("600f4325e164652b111111b1"),
             "name": "disease__treated",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": [
@@ -307,7 +307,7 @@ valid_array_v2_1_2_models = {
         "species": {
             "_id": ObjectId("600f4325e164652b111111b3"),
             "name": "species",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": [
@@ -327,7 +327,7 @@ valid_array_v2_1_2_models = {
         "species__ontology_label": {
             "_id": ObjectId("600f4325e164652b111111b5"),
             "name": "species__ontology_label",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": [
@@ -347,7 +347,7 @@ valid_array_v2_1_2_models = {
         "geographical_region": {
             "_id": ObjectId("600f4325e164652b111111b7"),
             "name": "geographical_region",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": [
@@ -367,7 +367,7 @@ valid_array_v2_1_2_models = {
         "geographical_region__ontology_label": {
             "_id": ObjectId("600f4325e164652b111111b9"),
             "name": "geographical_region__ontology_label",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": ["Boston", "Boston", "Boston", "Boston", "Boston"],
@@ -381,7 +381,7 @@ valid_array_v2_1_2_models = {
         "library_preparation_protocol": {
             "_id": ObjectId("600f4325e164652b111111bb"),
             "name": "library_preparation_protocol",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": [
@@ -401,7 +401,7 @@ valid_array_v2_1_2_models = {
         "library_preparation_protocol__ontology_label": {
             "_id": ObjectId("600f4325e164652b111111bd"),
             "name": "library_preparation_protocol__ontology_label",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": ["Seq-Well", "Seq-Well", "Seq-Well", "Seq-Well", "Seq-Well"],
@@ -415,7 +415,7 @@ valid_array_v2_1_2_models = {
         "organ": {
             "_id": ObjectId("600f4325e164652b111111bf"),
             "name": "organ",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": [
@@ -435,7 +435,7 @@ valid_array_v2_1_2_models = {
         "organ__ontology_label": {
             "_id": ObjectId("600f4325e164652b111111c1"),
             "name": "organ__ontology_label",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": ["milk", "milk", "milk", "milk", "milk"],
@@ -449,7 +449,7 @@ valid_array_v2_1_2_models = {
         "sex": {
             "_id": ObjectId("600f4325e164652b111111c3"),
             "name": "sex",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": ["female", "female", "female", "female", "female"],
@@ -463,7 +463,7 @@ valid_array_v2_1_2_models = {
         "is_living": {
             "_id": ObjectId("600f4325e164652b111111c5"),
             "name": "is_living",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": ["yes", "yes", "yes", "yes", "yes"],
@@ -477,7 +477,7 @@ valid_array_v2_1_2_models = {
         "organism_age__unit": {
             "_id": ObjectId("600f4325e164652b111111c7"),
             "name": "organism_age__unit",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": [
@@ -497,7 +497,7 @@ valid_array_v2_1_2_models = {
         "organism_age__unit_label": {
             "_id": ObjectId("600f4325e164652b111111c9"),
             "name": "organism_age__unit_label",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": ["year", "year", "year", "year", "year"],
@@ -511,7 +511,7 @@ valid_array_v2_1_2_models = {
         "ethnicity__ontology_label": {
             "_id": ObjectId("600f4325e164652b111111cb"),
             "name": "ethnicity__ontology_label",
-            "cluster_name": "valid_array_v2.1.2.txt",
+            "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
             "values": ["European", "European", "European|British", "", "European"],
