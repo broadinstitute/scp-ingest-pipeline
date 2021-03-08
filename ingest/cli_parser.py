@@ -106,6 +106,13 @@ def create_parser():
         "--profile-memory", action="store_true", help=profile_memory_text
     )
 
+    parser.add_argument(
+        "--user-metrics-uuid",
+        required=False,
+        type=is_valid_uuid,
+        help="User identifier for Bard, i.e. the user's Mixpanel distinct ID",
+    )
+
     subparsers = parser.add_subparsers()
 
     # Ingest expression files subparsers
@@ -242,3 +249,16 @@ def create_parser():
     )
 
     return parser
+
+
+def is_valid_uuid(value):
+    import uuid
+
+    try:
+        if value:
+            uuid.UUID(value)
+            return value
+        else:
+            return None
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(e)
