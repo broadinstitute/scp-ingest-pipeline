@@ -1,96 +1,98 @@
 {
-    "error": {
-        "type": {
-            'organism_age: "group" annotation in metadata file conflicts with metadata convention. Convention expects "numeric" values.': null,
-            'biosample_type: "numeric" annotation in metadata file conflicts with metadata convention. Convention expects "group" values.': null,
-            "disease__treated: 'F' in 'F' does not match expected 'boolean' type": [
-                "BM01_16dpp_TAAGCAGTGGTA"
-            ],
-            "disease__treated: 'T' in 'T|F' does not match expected 'boolean' type": [
-                "BM01_16dpp_CTAAGCAGTGGT"
-            ],
-            "disease__time_since_onset: 'three' in '36|three|1' does not match expected 'number' type": [
-                "BM01_16dpp_CGGTAAACCATT"
-            ],
-            "disease__time_since_onset: 'zero' in 'zero' does not match expected 'number' type": [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-        },
-        "ontology": {
-            'organ: required column "organ" missing data': ["BM01_16dpp_TAAGCAGTGGTA"],
-            'organ: required column "organ__ontology_label" missing data': [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-        },
-        "convention": {
-            "organ: '' does not match '^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'": [
-                "BM01_16dpp_TAAGCAGTGGTA"
-            ],
-            "'disease__time_since_onset' is a dependency of 'disease__time_since_onset__unit'": [
-                "BM01_16dpp_CGGTAAACCATT",
-                "BM01_16dpp_CCGAATTCACCG",
-            ],
-            "'ethnicity' is a dependency of 'ethnicity__ontology_label'": [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-            "disease__time_since_onset__unit: values for each unit metadata required to be uniform": null,
-        },
-        "metadata_name": {
-            "donor info: only alphanumeric characters and underscore allowed in metadata name": null
-        },
+  "error": {
+    "type": {
+      "organism_age: \"group\" annotation in metadata file conflicts with metadata convention. Convention expects \"numeric\" values.": null,
+      "biosample_type: \"numeric\" annotation in metadata file conflicts with metadata convention. Convention expects \"group\" values.": null,
+      "disease__treated: 'F' in 'F' does not match expected 'boolean' type": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "disease__treated: 'T' in 'T|F' does not match expected 'boolean' type": [
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ],
+      "disease__time_since_onset: 'three' in '36|three|1' does not match expected 'number' type": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "disease__time_since_onset: 'zero' in 'zero' does not match expected 'number' type": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
     },
-    "warn": {
-        "type": {
-            "There is only one array value, for ethnicity__ontology_label: European. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_AAGCAGTGGTAT",
-                "BM01_16dpp_CTAAGCAGTGGT",
-                "BM01_16dpp_CGGTAAACCATT",
-                "BM01_16dpp_CCGAATTCACCG",
-            ],
-            "There is only one array value, for ethnicity: HANCESTRO_0005. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_AAGCAGTGGTAT",
-                "BM01_16dpp_TAAGCAGTGGTA",
-                "BM01_16dpp_CTAAGCAGTGGT",
-                "BM01_16dpp_CGGTAAACCATT",
-            ],
-            "There is only one array value, for disease__time_since_onset: 1. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_TAAGCAGTGGTA"
-            ],
-            "There is only one array value, for disease__treated: F. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_TAAGCAGTGGTA"
-            ],
-            "There is only one array value, for disease: MONDO_0005709. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_TAAGCAGTGGTA"
-            ],
-            "There is only one array value, for disease__ontology_label: common cold. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_TAAGCAGTGGTA"
-            ],
-            "There is only one array value, for disease__time_since_onset: zero. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-            "There is only one array value, for disease__treated: False. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-            "There is only one array value, for disease: MONDO_0000001. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-            "There is only one array value, for disease__ontology_label: disease or disorder. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-        },
-        "ontology": {
-            'disease__time_since_onset__unit: missing ontology label "UO_0000035" - using "month" per EBI OLS lookup': [
-                "BM01_16dpp_AAGCAGTGGTAT",
-                "BM01_16dpp_TAAGCAGTGGTA",
-                "BM01_16dpp_CTAAGCAGTGGT",
-                "BM01_16dpp_CGGTAAACCATT",
-            ],
-            'ethnicity: missing ontology label "HANCESTRO_0005" - using "European" per EBI OLS lookup': [
-                "BM01_16dpp_TAAGCAGTGGTA"
-            ],
-            'disease__time_since_onset__unit: missing ontology label "UO_0000033" - using "day" per EBI OLS lookup': [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-        },
+    "ontology": {
+      "organ: required column \"organ\" missing data": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "organ: required column \"organ__ontology_label\" missing data": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
     },
+    "convention": {
+      "organ: '' does not match '^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "'disease__time_since_onset' is a dependency of 'disease__time_since_onset__unit'": [
+        "BM01_16dpp_CGGTAAACCATT",
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "'ethnicity' is a dependency of 'ethnicity__ontology_label'": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "disease__time_since_onset__unit: values for each unit metadata required to be uniform": null
+    },
+    "metadata_name": {
+      "donor info: only alphanumeric characters and underscore allowed in metadata name": null
+    }
+  },
+  "warn": {
+    "type": {
+      "There is only one array value, for ethnicity__ontology_label: European. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT",
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for ethnicity: HANCESTRO_0005. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "There is only one array value, for disease__time_since_onset: 1. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "There is only one array value, for disease__treated: F. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "There is only one array value, for disease: MONDO_0005709. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "There is only one array value, for disease__ontology_label: common cold. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "There is only one array value, for disease__time_since_onset: zero. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for disease__treated: False. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for disease: MONDO_0000001. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for disease__ontology_label: disease or disorder. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
+    },
+    "ontology": {
+      "disease__time_since_onset__unit: missing ontology label \"UO_0000035\" - using \"month\" per EBI OLS lookup": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "ethnicity: missing ontology label \"HANCESTRO_0005\" - using \"European\" per EBI OLS lookup": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "disease__time_since_onset__unit: missing ontology label \"UO_0000033\" - using \"day\" per EBI OLS lookup": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
+    }
+  }
 }
