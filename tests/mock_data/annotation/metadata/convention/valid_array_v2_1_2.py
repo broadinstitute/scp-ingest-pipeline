@@ -2,12 +2,12 @@ from bson.objectid import ObjectId
 
 valid_array_v2_1_2_models = {
     "cell_metadata_models": {
-        'NAME': {
-            'name': 'NAME',
-            'annotation_type': 'TYPE',
-            'values': [],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
+        "NAME": {
+            "name": "NAME",
+            "annotation_type": "TYPE",
+            "values": [],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
         "disease__time_since_onset": {
             "name": "disease__time_since_onset",
@@ -23,7 +23,13 @@ valid_array_v2_1_2_models = {
             "study_file_id": ObjectId("600f42bdb067340e777b1385"),
             "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
-        'preservation_method': {'name': 'preservation_method', 'annotation_type': 'group', 'values': ['Fresh'], 'study_file_id': ObjectId('600f42bdb067340e777b1385'), 'study_id': ObjectId('5ea08bb17b2f150f29f4d952')},
+        "preservation_method": {
+            "name": "preservation_method",
+            "annotation_type": "group",
+            "values": ["Fresh"],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
+        },
         "organ_region": {
             "name": "organ_region",
             "annotation_type": "group",
@@ -72,32 +78,32 @@ valid_array_v2_1_2_models = {
             "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
         "biosample_id": {
-            'name': 'biosample_id',
-            'annotation_type': 'group',
-            'values': ['BM01_16dpp_r3'],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
+            "name": "biosample_id",
+            "annotation_type": "group",
+            "values": ["BM01_16dpp_r3"],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
-        'biosample_type': {
-            'name': 'biosample_type',
-            'annotation_type': 'group',
-            'values': ['PrimaryBioSample_BodyFluid'],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
+        "biosample_type": {
+            "name": "biosample_type",
+            "annotation_type": "group",
+            "values": ["PrimaryBioSample_BodyFluid"],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
-        'donor': {
-            'name': 'donor',
-            'annotation_type': 'group',
-            'values': ['BM01'],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
+        "donor": {
+            "name": "donor",
+            "annotation_type": "group",
+            "values": ["BM01"],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
-        'donor_id': {
-            'name': 'donor_id',
-            'annotation_type': 'group',
-            'values': ['BM01'],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
+        "donor_id": {
+            "name": "donor_id",
+            "annotation_type": "group",
+            "values": ["BM01"],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
         "species__ontology_label": {
             "name": "species__ontology_label",
@@ -191,61 +197,73 @@ valid_array_v2_1_2_models = {
             "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
         "organism_age__unit": {
-            'name': 'organism_age__unit',
-            'annotation_type': 'group',
-            'values': ['UO_0000036'],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
+            "name": "organism_age__unit",
+            "annotation_type": "group",
+            "values": ["UO_0000036"],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
         "organ": {
-            'name': 'organ',
-            'annotation_type': 'group',
-            'values': ['UBERON_0001913'],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
+            "name": "organ",
+            "annotation_type": "group",
+            "values": ["UBERON_0001913"],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
         "disease": {
-            'name': 'disease',
-            'annotation_type': 'group',
-            'values': ['MONDO_0005015|MONDO_0006849', 'MONDO_0005709', 'MONDO_0005015|MONDO_0005709', 'MONDO_0005015|MONDO_0006849|MONDO_0005709', 'MONDO_0000001'],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
+            "name": "disease",
+            "annotation_type": "group",
+            "values": [
+                "MONDO_0005015|MONDO_0006849",
+                "MONDO_0005709",
+                "MONDO_0005015|MONDO_0005709",
+                "MONDO_0005015|MONDO_0006849|MONDO_0005709",
+                "MONDO_0000001",
+            ],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
         "organism_age": {
-            'name': 'organism_age',
-            'annotation_type': 'numeric',
-            'values': [],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
+            "name": "organism_age",
+            "annotation_type": "numeric",
+            "values": [],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
         "ethnicity": {
-            'name': 'ethnicity',
-            'annotation_type': 'group',
-            'values': ['HANCESTRO_0005', 'HANCESTRO_0005|HANCESTRO_0462'],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
+            "name": "ethnicity",
+            "annotation_type": "group",
+            "values": ["HANCESTRO_0005", "HANCESTRO_0005|HANCESTRO_0462"],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
         "disease__ontology_label": {
-            'name': 'disease__ontology_label',
-            'annotation_type': 'group',
-            'values': ['diabetes mellitus (disease)|mastitis', 'common cold', 'diabetes mellitus (disease)|common cold', 'diabetes mellitus (disease)|mastitis|common cold', 'disease or disorder'],
-             'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-             'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
-             },
+            "name": "disease__ontology_label",
+            "annotation_type": "group",
+            "values": [
+                "diabetes mellitus (disease)|mastitis",
+                "common cold",
+                "diabetes mellitus (disease)|common cold",
+                "diabetes mellitus (disease)|mastitis|common cold",
+                "disease or disorder",
+            ],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
+        },
         "cell_type": {
-            'name': 'cell_type',
-            'annotation_type': 'group',
-            'values': ['CL_0000066'],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
+            "name": "cell_type",
+            "annotation_type": "group",
+            "values": ["CL_0000066"],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
         "cell_type__ontology_label": {
-            'name': 'cell_type__ontology_label',
-            'annotation_type': 'group',
-            'values': ['epithelial cell'],
-            'study_file_id': ObjectId('600f42bdb067340e777b1385'),
-            'study_id': ObjectId('5ea08bb17b2f150f29f4d952')
-        }
+            "name": "cell_type__ontology_label",
+            "annotation_type": "group",
+            "values": ["epithelial cell"],
+            "study_file_id": ObjectId("600f42bdb067340e777b1385"),
+            "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
+        },
     },
     "data_arrays": {
         "All Cells": {
@@ -282,7 +300,6 @@ valid_array_v2_1_2_models = {
             "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
             "study_file_id": ObjectId("600f42bdb067340e777b1385"),
         },
-
         "disease__time_since_onset__unit": {
             "_id": ObjectId("600f4325e164652b111111a9"),
             "name": "disease__time_since_onset__unit",
