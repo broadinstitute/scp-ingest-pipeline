@@ -1,4 +1,4 @@
-g{
+{
     "warn": {
         "type": {
             "There is only one array value, for organ_region: MBA:000000944. If unexpected, multiple values must be pipe ('|') delimited.": [
