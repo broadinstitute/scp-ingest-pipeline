@@ -50,7 +50,7 @@ class TestCellMetadata(unittest.TestCase):
             "../tests/data/annotation/metadata/metadata_NA.txt",
             "addedfeed000000000000000",
             "dec0dedfeed1111111111111",
-            study_accession="SCPtest"
+            study_accession="SCPtest",
         )
         cm.preprocess()
 
@@ -91,7 +91,7 @@ class TestCellMetadata(unittest.TestCase):
             "../tests/data/annotation/metadata/convention/valid_array_v2.1.2.txt",
             "5ea08bb17b2f150f29f4d952",
             "600f42bdb067340e777b1385",
-            study_accession="SCP123"
+            study_accession="SCP123",
         )
         cm.preprocess(is_metadata_convention=True)
         convention_file_object = IngestFiles(
@@ -104,7 +104,4 @@ class TestCellMetadata(unittest.TestCase):
             model = metadata_model.model
             model_name = model["name"]
             expect_model = valid_array_v2_1_2_models["cell_metadata_models"][model_name]
-            self.assertEqual(
-                model,
-                expect_model,
-            )
+            self.assertEqual(model, expect_model)
