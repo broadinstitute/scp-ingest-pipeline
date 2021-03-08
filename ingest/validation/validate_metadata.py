@@ -37,7 +37,6 @@ import csv
 import copy
 import itertools
 import math
-from typing import Union
 
 import colorama
 from colorama import Fore
@@ -67,8 +66,6 @@ colorama.init(autoreset=True)
 # Configure maximum number of seconds to spend & total attempts at external HTTP requests to services, e.g. OLS
 MAX_HTTP_REQUEST_TIME = 120
 MAX_HTTP_ATTEMPTS = 8
-
-from dataclasses import dataclass
 
 
 def create_parser():
