@@ -519,7 +519,11 @@ def main() -> None:
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     # Initialize global variables for current ingest job
-    config.init(arguments["study_id"], arguments["study_file_id"])
+    config.init(
+        arguments["study_id"],
+        arguments["study_file_id"],
+        arguments["user_metrics_uuid"],
+    )
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
     # Log Mixpanel events

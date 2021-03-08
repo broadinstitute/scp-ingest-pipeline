@@ -180,6 +180,19 @@ class TestExpressionFiles(unittest.TestCase):
                 )
             )
 
+        # ensure empty cell names throws error
+        with patch(
+            "expression_files.expression_files.GeneExpression.get_cell_names_from_study_file_id",
+            return_value=None,
+        ), self.assertRaises(ValueError) as em:
+            GeneExpression.check_unique_cells(
+                [], ObjectId(), ObjectId(), TestExpressionFiles.client_mock
+            )
+            self.assertEqual(
+                "There were no cell names found in the header row of this matrix",
+                str(em.exception),
+            )
+
     @patch("expression_files.expression_files.GeneExpression.query_cells")
     def test_get_cell_names_from_study_file_id(self, mock_query_cells):
         with patch(
@@ -210,13 +223,11 @@ class TestExpressionFiles(unittest.TestCase):
             self.assertEqual(cells, expected)
 
             mock_query_cells.return_value = []
-            self.assertRaises(
-                ValueError,
-                GeneExpression.get_cell_names_from_study_file_id,
-                ObjectId(),
-                ObjectId(),
-                MagicMock(),
+
+            cells = GeneExpression.get_cell_names_from_study_file_id(
+                ObjectId(), ObjectId(), MagicMock()
             )
+            self.assertEqual(cells, [])
 
     def test_is_raw_count_file(self):
         client = MagicMock()
@@ -380,7 +391,9 @@ class TestExpressionFiles(unittest.TestCase):
         client_mock.reset_mock()
 
         def raiseError(*args, **kwargs):
-            raise BulkWriteError({"details": "foo"})
+            details = {"writeErrors": [{"code": 2345}]}
+
+            raise BulkWriteError(details)
 
         # Test exponential back off for BulkWriteError
         client_mock["collection"].insert_many.side_effect = raiseError
