@@ -1,81 +1,81 @@
 {
-    "warn": {
-        "type": {
-            "There is only one array value, for organ_region: MBA:000000944. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_AAGCAGTGGTAT"
-            ],
-            "There is only one array value, for organ_region__ontology_label: Folium-tuber vermis (VII). If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_AAGCAGTGGTAT"
-            ],
-            "There is only one array value, for ethnicity__ontology_label: European. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_AAGCAGTGGTAT",
-                "BM01_16dpp_TAAGCAGTGGTA",
-                "BM01_16dpp_CCGAATTCACCG",
-            ],
-            "There is only one array value, for ethnicity: HANCESTRO_0005. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_AAGCAGTGGTAT",
-                "BM01_16dpp_TAAGCAGTGGTA",
-                "BM01_16dpp_CCGAATTCACCG",
-            ],
-            "There is only one array value, for disease__treated: FALSE. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_TAAGCAGTGGTA"
-            ],
-            "There is only one array value, for disease: MONDO_0005709. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_TAAGCAGTGGTA"
-            ],
-            "There is only one array value, for disease__ontology_label: common cold. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_TAAGCAGTGGTA"
-            ],
-            "There is only one array value, for disease__time_since_onset: None. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_CTAAGCAGTGGT"
-            ],
-            "There is only one array value, for organ_region: MBA:000001041. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_CGGTAAACCATT"
-            ],
-            "There is only one array value, for organ_region__ontology_label: Paraflocculus. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_CGGTAAACCATT"
-            ],
-            "There is only one array value, for disease__time_since_onset: 0. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-            "There is only one array value, for disease: MONDO_0000001. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-            "There is only one array value, for disease__ontology_label: disease or disorder. If unexpected, multiple values must be pipe ('|') delimited.": [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-        },
-        "ontology": {
-            'organ_region: missing ontology label "MBA_000000714" - using "Orbital area" per Mouse Brain Atlas ontology': [
-                "BM01_16dpp_CTAAGCAGTGGT"
-            ],
-            'organ_region: missing ontology label "MBA_000000972" - using "Prelimbic area" per Mouse Brain Atlas ontology': [
-                "BM01_16dpp_CTAAGCAGTGGT"
-            ],
-            'ethnicity: missing ontology label "HANCESTRO_0005" - using "European" per EBI OLS lookup': [
-                "BM01_16dpp_CGGTAAACCATT"
-            ],
-            'ethnicity: missing ontology label "HANCESTRO_0462" - using "British" per EBI OLS lookup': [
-                "BM01_16dpp_CGGTAAACCATT"
-            ],
-        },
+  "warn": {
+    "type": {
+      "There is only one array value, for organ_region: MBA:000000944. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_AAGCAGTGGTAT"
+      ],
+      "There is only one array value, for organ_region__ontology_label: Folium-tuber vermis (VII). If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_AAGCAGTGGTAT"
+      ],
+      "There is only one array value, for ethnicity__ontology_label: European. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for ethnicity: HANCESTRO_0005. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for disease__treated: FALSE. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "There is only one array value, for disease: MONDO_0005709. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "There is only one array value, for disease__ontology_label: common cold. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "There is only one array value, for disease__time_since_onset: None. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ],
+      "There is only one array value, for organ_region: MBA:000001041. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "There is only one array value, for organ_region__ontology_label: Paraflocculus. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "There is only one array value, for disease__time_since_onset: 0. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for disease: MONDO_0000001. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for disease__ontology_label: disease or disorder. If unexpected, multiple values must be pipe ('|') delimited.": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
     },
-    "error": {
-        "type": {
-            "disease__time_since_onset: 'None' in 'None' does not match expected 'number' type": [
-                "BM01_16dpp_CTAAGCAGTGGT"
-            ],
-            "disease__treated: 'N/A' in 'True|N/A|False' does not match expected 'boolean' type": [
-                "BM01_16dpp_CGGTAAACCATT"
-            ],
-            "disease__treated: 'None' in 'FALSE|None' does not match expected 'boolean' type": [
-                "BM01_16dpp_CCGAATTCACCG"
-            ],
-        },
-        "convention": {
-            "'disease__time_since_onset' is a dependency of 'disease__time_since_onset__unit'": [
-                "BM01_16dpp_CTAAGCAGTGGT"
-            ]
-        },
+    "ontology": {
+      "organ_region: missing ontology label \"MBA_000000714\" - using \"Orbital area\" per Mouse Brain Atlas ontology": [
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ],
+      "organ_region: missing ontology label \"MBA_000000972\" - using \"Prelimbic area\" per Mouse Brain Atlas ontology": [
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ],
+      "ethnicity: missing ontology label \"HANCESTRO_0005\" - using \"European\" per EBI OLS lookup": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "ethnicity: missing ontology label \"HANCESTRO_0462\" - using \"British\" per EBI OLS lookup": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ]
+    }
+  },
+  "error": {
+    "type": {
+      "disease__time_since_onset: 'None' in 'None' does not match expected 'number' type": [
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ],
+      "disease__treated: 'N/A' in 'True|N/A|False' does not match expected 'boolean' type": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "disease__treated: 'None' in 'FALSE|None' does not match expected 'boolean' type": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
     },
+    "convention": {
+      "'disease__time_since_onset' is a dependency of 'disease__time_since_onset__unit'": [
+        "BM01_16dpp_CTAAGCAGTGGT"
+      ]
+    }
+  }
 }
