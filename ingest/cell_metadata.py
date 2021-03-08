@@ -111,7 +111,7 @@ class CellMetadata(Annotations):
         for annot_header in self.file.columns:
             annot_name = annot_header[0]
             annot_type = annot_header[1]
-            # When file is conventional and contain's numeric arrays
+            # When file is conventional and contains numeric arrays
             # the annotation type is changed to group for visualization purposes
             stored_mongo_annot_type: str = (
                 annot_type
