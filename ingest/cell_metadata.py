@@ -12,6 +12,7 @@ import ntpath
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+import copy
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
@@ -49,6 +50,7 @@ class CellMetadata(Annotations):
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.ontology_label = dict()
         self.cells = []
+        self.numeric_array_columns = {}
 
     # This model pertains to columns from cell metadata files
     @dataclass
@@ -67,6 +69,10 @@ class CellMetadata(Annotations):
         """ Method for ingesting cell metadata files."""
         for metadata_model in self.transform():
             yield metadata_model
+
+    def update_numeric_array_columns(self, annotation_name):
+        if not self.numeric_array_columns.values():
+            self.numeric_array_columns[annotation_name] = True
 
     # Will evolve to do cross file validation
     def validate(self, validate_against_convention=False):
@@ -105,12 +111,19 @@ class CellMetadata(Annotations):
         for annot_header in self.file.columns:
             annot_name = annot_header[0]
             annot_type = annot_header[1]
+            # When file is conventional and contains numeric arrays
+            # the annotation type is changed to group for visualization purposes
+            stored_mongo_annot_type: str = (
+                annot_type
+                if not self.numeric_array_columns.get(annot_name)
+                else "group"
+            )
             yield AnnotationModel(
                 annot_header,
                 self.Model(
                     {
                         "name": annot_name,
-                        "annotation_type": annot_type,
+                        "annotation_type": stored_mongo_annot_type,
                         # unique values from "group" type annotations else []
                         "values": list(self.file[annot_header].unique())
                         if annot_type == "group"
@@ -122,8 +135,8 @@ class CellMetadata(Annotations):
             )
 
     def set_data_array(self, linear_data_id: str, annot_header: str):
-        """Builds data array"""
-        data_array_attrs = locals()
+
+        data_array_attrs = copy.copy(locals())
         del data_array_attrs["annot_header"]
         del data_array_attrs["self"]
         annot_name = annot_header[0]
