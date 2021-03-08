@@ -880,7 +880,6 @@ def process_metadata_row(metadata, convention, line):
     check metadata type is of type assigned in convention
     returns processed row of convention data as dict
     """
-    import pdb
 
     # extract first row of metadata from pandas array as python list
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
