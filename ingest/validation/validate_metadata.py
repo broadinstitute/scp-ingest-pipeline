@@ -71,17 +71,6 @@ MAX_HTTP_ATTEMPTS = 8
 from dataclasses import dataclass
 
 
-@dataclass
-class MetadatumItem:
-    """Class for keeping track of an item in inventory."""
-
-    ontology_id: Union[str, int]
-    ontology_label: str
-    property_name: str
-    type: str
-    require: bool
-
-
 def create_parser():
     """Parse command line values for validate_metadata
     """
@@ -129,7 +118,7 @@ def create_parser():
         "--study-accession", help="SCP study accession", default="SCPtest"
     )
     parser.add_argument(
-        "--bq-dataset", help="BigQuery dataset identifier", default="metadata"
+        "--bq-dataset", help="BigQuery dataset identifier", default="cell_metadata"
     )
     parser.add_argument(
         "--bq-table", help="BigQuery table identifier", default="alexandria_convention"
@@ -546,7 +535,7 @@ def insert_ontology_label_row_data(
 
     if not row[ontology_label]:
         # for optional columns, try to fill it in
-        property_type=convention["properties"][property_name]["type"]
+        property_type = convention["properties"][property_name]["type"]
         try:
             label = retriever.retrieve_ontology_term_label(
                 id, property_name, convention, property_type
@@ -581,7 +570,8 @@ def collect_cell_for_ontology(
     and added to BigQuery json to populate metadata backend
     Missing ontology_label for required metadata is not inserted, should fail validation
     """
-    def omitted_values(ontology_label,cell_name):
+
+    def omitted_values(ontology_label, cell_name):
         return (
             # check for missing values
             ontology_label not in updated_row
@@ -590,6 +580,7 @@ def collect_cell_for_ontology(
             # check for empty cells
             or is_empty_string(cell_name)
         )
+
     # check for missing values
     # check for empty cells
     # check for empty cells
@@ -602,7 +593,7 @@ def collect_cell_for_ontology(
     cell_id = updated_row["CellID"]
 
     # for case where they've omitted a column altogether or left it blank, add a blank entry
-    if omitted_values(ontology_label,  updated_row.get(ontology_label)):
+    if omitted_values(ontology_label, updated_row.get(ontology_label)):
         if array:
             updated_row[ontology_label] = []
         else:
@@ -815,8 +806,10 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         metadata.update_numeric_array_columns(metadatum)
         try:
             if "|" not in value:
-                msg = f"There is only one array value, for {metadatum}: {value}. "\
+                msg = (
+                    f"There is only one array value, for {metadatum}: {value}. "
                     "If unexpected, multiple values must be pipe ('|') delimited."
+                )
                 metadata.store_validation_issue(
                     "warn", "type", msg, [id_for_error_detail]
                 )
@@ -908,7 +901,7 @@ def process_metadata_row(metadata, convention, line):
             continue
         # for optional metadata, do not pass empty cells (nan)
         if k not in convention["required"]:
-            if (value_is_nan(v) or is_empty_string(v)):
+            if value_is_nan(v) or is_empty_string(v):
                 continue
         else:
             if is_array_metadata(convention, k):
