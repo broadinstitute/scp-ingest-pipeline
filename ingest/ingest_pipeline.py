@@ -385,6 +385,7 @@ class IngestPipeline:
 
     @custom_metric(config.get_metric_properties)
     def subsample(self):
+
         """Method for subsampling cluster and metadata files"""
         subsample = SubSample(
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
@@ -401,9 +402,10 @@ class IngestPipeline:
             try:
                 subsample.prepare_cell_metadata()
                 # Get cell names from cluster and metadata files
-                cluster_cell_names = SubSample.get_cell_names(subsample.file)
-                metadata_cell_names = SubSample.get_cell_names(
-                    subsample.cell_metadata.file
+                # strip of whitespace that pandas might add
+                cluster_cell_names = map(lambda s: s.strip(), SubSample.get_cell_names(subsample.file))
+                metadata_cell_names = map(lambda s: s.strip(), SubSample.get_cell_names(
+                    subsample.cell_metadata.file)
                 )
                 # Check that cell names in cluster file exist in cell metadata file
                 if SubSample.has_cells_in_metadata_file(
