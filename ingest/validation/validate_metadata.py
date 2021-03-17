@@ -154,12 +154,16 @@ class OntologyRetriever:
     cached_ontologies = {}
     cached_terms = {}
 
-    def retrieve_ontology_term_label(self, term, property_name, convention, attribute_type):
+    def retrieve_ontology_term_label(self, term, property_name, convention, attribute_type: str):
         """Retrieve an individual term label from an ontology
         returns JSON payload of ontology, or None if unsuccessful
         Will store any retrieved terms for faster validation of downstream terms
 
         throws ValueError if the term does not exist or is malformatted
+                :param term: ontology term
+                :param property_name: term attribute Ex. biosample_id, CellID, etc.
+                :param convention: metadata convention being checked against
+                :param attribute_type: attribute type for term (string, array, boolean)
         """
 
         # initialize cached terms for this property if we haven't seen it yet
