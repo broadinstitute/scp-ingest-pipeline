@@ -1,42 +1,42 @@
 {
   "warn": {
     "type": {
-      "There is only one array value, for organ_region: MBA:484682508. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region: MBA:484682508. If multiple values are expected, use a pipe ('|') to separate values.": [
         "SIMa_M006_CACCAAAGTAGAGATT"
       ],
-      "There is only one array value, for disease: PATO_0000461. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for disease: PATO_0000461. If multiple values are expected, use a pipe ('|') to separate values.": [
         "SIMa_M006_CACCAAAGTAGAGATT",
         "VIIIb_F002_CTTCCTTGTGCATCTA",
         "IXa_M003_AGGGTGACAGTCCCGA",
         "AN1b_F002_TCTCACGAGAAGGGAT",
         "PFa_M001_TCCACCAAGGAACTAT"
       ],
-      "There is only one array value, for disease__ontology_label: normal. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for disease__ontology_label: normal. If multiple values are expected, use a pipe ('|') to separate values.": [
         "SIMa_M006_CACCAAAGTAGAGATT",
         "VIIIb_F002_CTTCCTTGTGCATCTA",
         "IXa_M003_AGGGTGACAGTCCCGA",
         "AN1b_F002_TCTCACGAGAAGGGAT",
         "PFa_M001_TCCACCAAGGAACTAT"
       ],
-      "There is only one array value, for organ_region__ontology_label: Pyramus (VIII). If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region__ontology_label: Pyramus (VIII). If multiple values are expected, use a pipe ('|') to separate values.": [
         "VIIIb_F002_CTTCCTTGTGCATCTA"
       ],
-      "There is only one array value, for organ_region: MBA:999999999. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region: MBA:999999999. If multiple values are expected, use a pipe ('|') to separate values.": [
         "IXa_M003_AGGGTGACAGTCCCGA"
       ],
-      "There is only one array value, for organ_region__ontology_label: Uvula (IX), molecular layer. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region__ontology_label: Uvula (IX), molecular layer. If multiple values are expected, use a pipe ('|') to separate values.": [
         "IXa_M003_AGGGTGACAGTCCCGA"
       ],
-      "There is only one array value, for organ_region: MBA:000010676. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region: MBA:000010676. If multiple values are expected, use a pipe ('|') to separate values.": [
         "AN1b_F002_TCTCACGAGAAGGGAT"
       ],
-      "There is only one array value, for organ_region__ontology_label: Crus 1, urkinje layer. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region__ontology_label: Crus 1, urkinje layer. If multiple values are expected, use a pipe ('|') to separate values.": [
         "AN1b_F002_TCTCACGAGAAGGGAT"
       ],
-      "There is only one array value, for organ_region: MBA:000010686. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region: MBA:000010686. If multiple values are expected, use a pipe ('|') to separate values.": [
         "PFa_M001_TCCACCAAGGAACTAT"
       ],
-      "There is only one array value, for organ_region__ontology_label: Paraflocculus, granular layer. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region__ontology_label: Paraflocculus, granular layer. If multiple values are expected, use a pipe ('|') to separate values.": [
         "PFa_M001_TCCACCAAGGAACTAT"
       ]
     },

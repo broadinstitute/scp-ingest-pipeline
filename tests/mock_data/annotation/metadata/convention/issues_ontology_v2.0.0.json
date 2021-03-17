@@ -1,53 +1,53 @@
 {
   "warn": {
     "type": {
-      "There is only one array value, for disease: MONDO_0000001. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for disease: MONDO_0000001. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_AAGCAGTGGTAT",
         "BM01_16dpp_TAAGCAGTGGTA",
         "BM01_16dpp_CTAAGCAGTGGT",
         "BM01_16dpp_CGGTAAACCATT",
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "There is only one array value, for disease__ontology_label: disease or disorder. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for disease__ontology_label: disease or disorder. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_AAGCAGTGGTAT",
         "BM01_16dpp_TAAGCAGTGGTA",
         "BM01_16dpp_CTAAGCAGTGGT",
         "BM01_16dpp_CGGTAAACCATT",
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "There is only one array value, for ethnicity__ontology_label: European. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for ethnicity__ontology_label: European. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_AAGCAGTGGTAT",
         "BM01_16dpp_TAAGCAGTGGTA",
         "BM01_16dpp_CTAAGCAGTGGT",
         "BM01_16dpp_CGGTAAACCATT",
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "There is only one array value, for ethnicity: HANCESTRO_0005. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for ethnicity: HANCESTRO_0005. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_AAGCAGTGGTAT",
         "BM01_16dpp_TAAGCAGTGGTA",
         "BM01_16dpp_CTAAGCAGTGGT",
         "BM01_16dpp_CGGTAAACCATT",
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "There is only one array value, for race: NCIT_C-43862. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for race: NCIT_C-43862. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_AAGCAGTGGTAT"
       ],
-      "There is only one array value, for race__ontology_label: Norwegian. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for race__ontology_label: Norwegian. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_AAGCAGTGGTAT",
         "BM01_16dpp_TAAGCAGTGGTA"
       ],
-      "There is only one array value, for race: NCIT_C43862. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for race: NCIT_C43862. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_TAAGCAGTGGTA"
       ],
-      "There is only one array value, for race: NC-IT_C126538. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for race: NC-IT_C126538. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_CTAAGCAGTGGT"
       ],
-      "There is only one array value, for race__ontology_label: Scandinavian. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for race__ontology_label: Scandinavian. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_CTAAGCAGTGGT",
         "BM01_16dpp_CGGTAAACCATT",
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "There is only one array value, for race: NCIT_C126538. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for race: NCIT_C126538. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_CGGTAAACCATT",
         "BM01_16dpp_CCGAATTCACCG"
       ]

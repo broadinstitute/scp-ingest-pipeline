@@ -1,48 +1,48 @@
 {
   "warn": {
     "type": {
-      "There is only one array value, for organ_region: MBA:000000944. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region: MBA:000000944. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_AAGCAGTGGTAT"
       ],
-      "There is only one array value, for organ_region__ontology_label: Folium-tuber vermis (VII). If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region__ontology_label: Folium-tuber vermis (VII). If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_AAGCAGTGGTAT"
       ],
-      "There is only one array value, for ethnicity__ontology_label: European. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for ethnicity__ontology_label: European. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_AAGCAGTGGTAT",
         "BM01_16dpp_TAAGCAGTGGTA",
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "There is only one array value, for ethnicity: HANCESTRO_0005. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for ethnicity: HANCESTRO_0005. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_AAGCAGTGGTAT",
         "BM01_16dpp_TAAGCAGTGGTA",
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "There is only one array value, for disease__time_since_onset: 1. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for disease__time_since_onset: 1. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_TAAGCAGTGGTA"
       ],
-      "There is only one array value, for disease__treated: FALSE. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for disease__treated: FALSE. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_TAAGCAGTGGTA",
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "There is only one array value, for disease: MONDO_0005709. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for disease: MONDO_0005709. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_TAAGCAGTGGTA"
       ],
-      "There is only one array value, for disease__ontology_label: common cold. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for disease__ontology_label: common cold. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_TAAGCAGTGGTA"
       ],
-      "There is only one array value, for organ_region: MBA:000001041. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region: MBA:000001041. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_CGGTAAACCATT"
       ],
-      "There is only one array value, for organ_region__ontology_label: Paraflocculus. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for organ_region__ontology_label: Paraflocculus. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_CGGTAAACCATT"
       ],
-      "There is only one array value, for disease__time_since_onset: 0. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for disease__time_since_onset: 0. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "There is only one array value, for disease: MONDO_0000001. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for disease: MONDO_0000001. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_CCGAATTCACCG"
       ],
-      "There is only one array value, for disease__ontology_label: disease or disorder. If unexpected, multiple values must be pipe ('|') delimited.": [
+      "There is only one array value, for disease__ontology_label: disease or disorder. If multiple values are expected, use a pipe ('|') to separate values.": [
         "BM01_16dpp_CCGAATTCACCG"
       ]
     },
