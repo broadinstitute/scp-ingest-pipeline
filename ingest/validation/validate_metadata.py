@@ -578,10 +578,6 @@ def collect_cell_for_ontology(
             or is_empty_string(cell_name)
         )
 
-    # check for missing values
-    # check for empty cells
-    # check for empty cells
-
     if property_name.endswith("__unit"):
         ontology_label = property_name + "_label"
     else:
