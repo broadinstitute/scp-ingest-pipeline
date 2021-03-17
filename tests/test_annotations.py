@@ -31,7 +31,9 @@ from clusters import Clusters
 
 class TestAnnotations(unittest.TestCase):
     CLUSTER_PATH = "../tests/data/test_1k_cluster_data.csv"
-    CELL_METADATA_PATH = "../tests/data/valid_no_array_v2.0.0.txt"
+    CELL_METADATA_PATH = "data/annotation/metadata/convention/valid_no_array_v2.0.0.txt"
+
+    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
     EXPONENT = -3
 
@@ -39,6 +41,17 @@ class TestAnnotations(unittest.TestCase):
         self.df = Annotations(
             self.CLUSTER_PATH, ["text/csv", "text/plain", "text/tab-separated-values"]
         )
+
+    def test_create_columns(self):
+        header = ["Intensity", "donor_id", "species__ontology_label"]
+        annotatiion_types = ["numeric", "group", "group"]
+        colums = Annotations.create_columns(header, annotatiion_types)
+        expected = [
+            ("Intensity", "numeric"),
+            ("donor_id", "group"),
+            ("species__ontology_label", "group"),
+        ]
+        self.assertEqual(colums, expected)
 
     def test_duplicate_headers(self):
         """Annotation headers should not contain duplicate values
@@ -55,6 +68,46 @@ class TestAnnotations(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             dup_headers.preprocess()
+
+    def test_get_dtypes_for_group_annots(self):
+        headers = ["NAME", "cell_type", "organism_age"]
+        annot_types = ["TYPE", "group", "numeric"]
+        expected_dtypes = {"NAME": np.str, "cell_type": np.str}
+        dtypes = Annotations.get_dtypes_for_group_annots(headers, annot_types)
+        self.assertEqual(expected_dtypes, dtypes)
+
+    def test_convert_header_to_multiIndex(self):
+        expected = [
+            ("Name", "TYPE"),
+            ("X", "numeric"),
+            ("Y", "numeric"),
+            ("Z", "numeric"),
+            ("Average Intensity", "numeric"),
+        ]
+        path = "../tests/data/good_subsample_cluster.csv"
+        annotation = Annotations(
+            path, ["text/csv", "text/plain", "text/tab-separated-values"]
+        )
+        df = annotation.open_file(
+            path, open_as="dataframe", skiprows=2, names=annotation.headers
+        )[0]
+        new_df = Annotations.convert_header_to_multi_index(df, expected)
+        # Remove white spaces
+        new_df_columns = [tuple(s.strip() for s in y) for y in new_df.columns]
+        self.assertEqual(new_df_columns, expected)
+
+    def test_leading_zeros(self):
+        """Ensures leading zeros are not stripped from group annotations"""
+        path = "../tests/data/metadata_convention_with_leading_0s.tsv"
+        annotation = Annotations(
+            path, ["text/csv", "text/plain", "text/tab-separated-values"]
+        )
+        annotation.preprocess()
+        # Grab value from donor id column.
+        value_with_leading_zeros = annotation.file.iloc[
+            :, annotation.file.columns.get_level_values(0) == "donor_id"
+        ].values.item(0)
+        self.assertTrue(value_with_leading_zeros.startswith("0"))
 
     def test_header_format(self):
         """Header rows of metadata file should conform to standard
@@ -107,18 +160,40 @@ class TestAnnotations(unittest.TestCase):
             lmtest.file["mixed_data"]["group"][32800], str
         ), "numeric value should be coerced to string"
 
-    def test_round(self):
+    def test_coerce_numeric_values(self):
+        cm = Annotations(
+            "../tests/data/metadata_example.txt",
+            ["text/csv", "text/plain", "text/tab-separated-values"],
+        )
+        cm.create_data_frame()
+        cm.file = Annotations.coerce_numeric_values(cm.file, cm.annot_types)
+        dtype = cm.file.dtypes[("Average Intensity", "numeric")]
+        self.assertEqual(dtype, np.float)
+
+        # Test that numeric values wer
         # Pick a random number between 1 and amount of lines in file
-        ran_num = random.randint(1, 2000)
-        self.df.preprocess()
-        for column in self.df.file.columns:
+        ran_num = random.randint(1, 20)
+        for column in cm.file.columns:
             annot_type = column[1]
             if annot_type == "numeric":
-                value = str(self.df.file[column][ran_num])
+                value = str(cm.file[column][ran_num])
                 print(Decimal(value).as_tuple().exponent)
                 assert (
                     abs(Decimal(value).as_tuple().exponent) >= self.EXPONENT
                 ), "Numbers did not round to 3 or less decimals places"
+
+        # Test for string in numeric column
+        cm_has_bad_value = Annotations(
+            "../tests/data/metadata_bad_contains_str_in_numeric_column.txt",
+            ["text/csv", "text/plain", "text/tab-separated-values"],
+        )
+        cm_has_bad_value.create_data_frame()
+        self.assertRaises(
+            ValueError,
+            Annotations.coerce_numeric_values,
+            cm_has_bad_value.file,
+            cm_has_bad_value.annot_types,
+        )
 
     def test_group_annotations(self):
         self.df.preprocess()
@@ -166,6 +241,14 @@ class TestAnnotations(unittest.TestCase):
             result,
             f"Merge was not performed correctly. Merge should be performed on 'NAME'",
         )
+
+    def test_validate_numeric_annots(self):
+        cluster = Annotations(
+            "../tests/data/cluster_bad_missing_coordinate.txt",
+            TestAnnotations.ALLOWED_FILE_TYPES,
+        )
+        cluster.create_data_frame()
+        self.assertTrue(cluster.validate_numeric_annots)
 
     def test_get_cell_names(self):
         import pandas as pd

@@ -154,12 +154,16 @@ class OntologyRetriever:
     cached_ontologies = {}
     cached_terms = {}
 
-    def retrieve_ontology_term_label(self, term, property_name, convention):
+    def retrieve_ontology_term_label(self, term, property_name, convention, attribute_type: str):
         """Retrieve an individual term label from an ontology
         returns JSON payload of ontology, or None if unsuccessful
         Will store any retrieved terms for faster validation of downstream terms
 
         throws ValueError if the term does not exist or is malformatted
+                :param term: ontology term
+                :param property_name: term attribute Ex. biosample_id, CellID, etc.
+                :param convention: metadata convention being checked against
+                :param attribute_type: attribute type for term (string, array, boolean)
         """
 
         # initialize cached terms for this property if we haven't seen it yet
@@ -171,12 +175,14 @@ class OntologyRetriever:
             self.cached_terms[property_name][
                 term
             ] = self.retrieve_ontology_term_label_remote(
-                term, property_name, ontology_urls
+                term, property_name, ontology_urls, attribute_type
             )
 
         return self.cached_terms[property_name][term]
 
-    def retrieve_ontology_term_label_remote(self, term, property_name, ontology_urls):
+    def retrieve_ontology_term_label_remote(
+        self, term, property_name, ontology_urls, attribute_type
+    ):
         """Look up official ontology term from an id, always checking against the remote
         """
         # organ_region currently uses single a non-OLS ontology, the Allen Institute's Mouse Brain Atlas (MBA)
@@ -189,7 +195,7 @@ class OntologyRetriever:
         if property_name == "organ_region":
             return self.retrieve_mouse_brain_term(term, property_name)
         else:
-            return self.retrieve_ols_term(ontology_urls, term, property_name)
+            return self.retrieve_ols_term(ontology_urls, term, property_name, attribute_type)
 
     # Attach exponential backoff to external HTTP requests
     @backoff.on_exception(
@@ -200,7 +206,7 @@ class OntologyRetriever:
         on_backoff=backoff_handler,
         logger="dev_logger",
     )
-    def retrieve_ols_term(self, ontology_urls, term, property_name):
+    def retrieve_ols_term(self, ontology_urls, term, property_name, attribute_type):
         """Retrieve an individual term from an ontology
         returns JSON payload of ontology, or None if unsuccessful
         Will store any retrieved ontologies for faster validation of downstream terms
@@ -211,9 +217,15 @@ class OntologyRetriever:
         try:
             ontology_shortname, term_id = re.split("[_:]", term)
         except (ValueError, TypeError):
-            raise ValueError(
-                f'{property_name}: Could not parse provided ontology id, "{term}"'
-            )
+            msg = f'{property_name}: Could not parse provided ontology id, "{term}".'
+            if attribute_type == "array":
+                if "|" not in term:
+                    msg += (
+                        f" There is only one array value, for ontology id, '{term}.' "
+                        "If multiple values are expected, use a pipe ('|') to separate values."
+                    )
+
+            raise ValueError(msg)
         # check if we have already retrieved this ontology reference
         if ontology_shortname not in self.cached_ontologies:
             metadata_url = OLS_BASE_URL + ontology_shortname
@@ -484,7 +496,7 @@ def insert_array_ontology_label_row_data(
             label_lookup = ""
             try:
                 label_lookup = retriever.retrieve_ontology_term_label(
-                    id, property_name, convention
+                    id, property_name, convention, "array"
                 )
                 reference_ontology = (
                     "EBI OLS lookup"
@@ -524,9 +536,10 @@ def insert_ontology_label_row_data(
 
     if not row[ontology_label]:
         # for optional columns, try to fill it in
+        property_type = convention["properties"][property_name]["type"]
         try:
             label = retriever.retrieve_ontology_term_label(
-                id, property_name, convention
+                id, property_name, convention, property_type
             )
             row[ontology_label] = label
             reference_ontology = (
@@ -559,6 +572,16 @@ def collect_cell_for_ontology(
     Missing ontology_label for required metadata is not inserted, should fail validation
     """
 
+    def omitted_values(ontology_label, cell_name):
+        return (
+            # check for missing values
+            ontology_label not in updated_row
+            # check for empty cells
+            or value_is_nan(cell_name)
+            # check for empty cells
+            or is_empty_string(cell_name)
+        )
+
     if property_name.endswith("__unit"):
         ontology_label = property_name + "_label"
     else:
@@ -567,14 +590,13 @@ def collect_cell_for_ontology(
     cell_id = updated_row["CellID"]
 
     # for case where they've omitted a column altogether or left it blank, add a blank entry
-    if ontology_label not in updated_row or value_is_nan(updated_row[ontology_label]):
+    if omitted_values(ontology_label, updated_row.get(ontology_label)):
         if array:
             updated_row[ontology_label] = []
         else:
             updated_row[ontology_label] = ""
 
-    # !!!property_name checking is probably not needed
-    if property_name not in updated_row or value_is_nan(updated_row[property_name]):
+    if omitted_values(property_name, updated_row[property_name]):
         if array:
             updated_row[property_name] = []
         else:
@@ -713,11 +735,14 @@ def value_is_nan(value):
     """
     # We coerces nan to string for group annotations (SCP-2545)
     # string value 'nan' should also be considered value_is_nan=True
-    if value == "nan":
+    if str(value).lower() == "n/a":
         return True
     try:
-        return math.isnan(value)
+        number = float(value)
+        return math.isnan(number)
     except TypeError:
+        return False
+    except ValueError:
         return False
 
 
@@ -774,7 +799,18 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
     }
     if is_array_metadata(convention, metadatum):
         cast_values = []
+        # check
+        metadata.update_numeric_array_columns(metadatum)
         try:
+            if "|" not in value:
+                msg = (
+                    f"There is only one array value, for {metadatum}: {value}. "
+                    "If multiple values are expected, use a pipe ('|') to separate values."
+                )
+                metadata.store_validation_issue(
+                    "warn", "type", msg, [id_for_error_detail]
+                )
+
             # splitting on pipe character for array data, valid for Sarah's
             # programmatically generated SCP TSV metadata files. When ingesting
             # files that support array-based metadata navtively (eg. loom,
@@ -844,6 +880,7 @@ def process_metadata_row(metadata, convention, line):
     check metadata type is of type assigned in convention
     returns processed row of convention data as dict
     """
+
     # extract first row of metadata from pandas array as python list
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     # if input was TSV metadata file, SCP format requires 'NAME' for the first
@@ -859,12 +896,28 @@ def process_metadata_row(metadata, convention, line):
         if k not in convention["properties"].keys():
             continue
         # for optional metadata, do not pass empty cells (nan)
-        if k not in convention["required"] and value_is_nan(v):
-            continue
+        if k not in convention["required"]:
+            if value_is_nan(v) or is_empty_string(v):
+                continue
+        else:
+            if is_array_metadata(convention, k):
+                for element in v.split("|"):
+                    if value_is_nan(element) or is_empty_string(element):
+                        msg = f"{k}: NA, NaN, and None are not accepted values for arrays or required fields"
+                        metadata.store_validation_issue(
+                            "error", "ontology", msg, {row_info["CellID"]}
+                        )
+                        dev_logger.error(msg)
+
         processed_row.update(
             cast_metadata_type(k, v, row_info["CellID"], convention, metadata)
         )
     return processed_row
+
+
+def is_empty_string(value):
+    if isinstance(value, str):
+        return value == "" or value.isspace()
 
 
 def collect_jsonschema_errors(metadata, convention, bq_json=None):
@@ -907,6 +960,7 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
                 line = next(rows)
             except StopIteration:
                 break
+        # if js_errors:
         metadata.issues["error"]["convention"] = js_errors
         validate_cells_unique(metadata)
     else:
@@ -949,6 +1003,11 @@ def report_issues(metadata):
                     has_warnings = True
                 for issue_text, cells in category_dict.items():
                     if cells:
+                        try:
+                            re.compile(issue_text)
+                            is_valid = True
+                        except re.error:
+                            pass
                         issue_msg = f"{issue_text} [ Error count: {len(cells)} ]"
                         record_issue(issue_type, issue_msg)
                     else:
@@ -992,14 +1051,18 @@ def validate_collected_ontology_data(metadata, convention):
                 # immediately return as validation should not continue if ontology file unavailable
                 return
         # split on comma in case this property from the convention supports multiple ontologies
+
         ontology_urls = convention["properties"][property_name]["ontology"].split(",")
 
         for ontology_info in metadata.ontology[property_name].keys():
             ontology_id, ontology_label = ontology_info
+
             try:
+                attribute_type = convention["properties"][property_name]["type"]
                 matched_label_for_id = retriever.retrieve_ontology_term_label(
-                    ontology_id, property_name, convention
+                    ontology_id, property_name, convention, attribute_type
                 )
+
                 if matched_label_for_id != ontology_label:
                     ontology_source_name = "EBI OLS"
                     if property_name == "organ_region":
@@ -1197,6 +1260,7 @@ if __name__ == "__main__":
         study_file_id=args.study_file_id,
         study_accession=args.study_accession,
     )
+    metadata.preprocess(True)
     print("Validating", args.input_metadata)
 
     validate_input_metadata(metadata, convention, args.bq_json)
