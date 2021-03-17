@@ -222,7 +222,7 @@ class OntologyRetriever:
                 if "|" not in term:
                     msg += (
                         f" There is only one array value, for ontology id, '{term}.' "
-                        "If unexpected, multiple values must be pipe ('|') delimited."
+                        "If multiple values are expected, use a pipe ('|') to separate values."
                     )
 
             raise ValueError(msg)
@@ -805,7 +805,7 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
             if "|" not in value:
                 msg = (
                     f"There is only one array value, for {metadatum}: {value}. "
-                    "If unexpected, multiple values must be pipe ('|') delimited."
+                    "If multiple values are expected, use a pipe ('|') to separate values."
                 )
                 metadata.store_validation_issue(
                     "warn", "type", msg, [id_for_error_detail]
