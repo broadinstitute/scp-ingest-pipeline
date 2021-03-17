@@ -154,7 +154,7 @@ class OntologyRetriever:
     cached_ontologies = {}
     cached_terms = {}
 
-    def retrieve_ontology_term_label(self, term, property_name, convention, type):
+    def retrieve_ontology_term_label(self, term, property_name, convention, attribute_type):
         """Retrieve an individual term label from an ontology
         returns JSON payload of ontology, or None if unsuccessful
         Will store any retrieved terms for faster validation of downstream terms
@@ -171,13 +171,13 @@ class OntologyRetriever:
             self.cached_terms[property_name][
                 term
             ] = self.retrieve_ontology_term_label_remote(
-                term, property_name, ontology_urls, type
+                term, property_name, ontology_urls, attribute_type
             )
 
         return self.cached_terms[property_name][term]
 
     def retrieve_ontology_term_label_remote(
-        self, term, property_name, ontology_urls, type
+        self, term, property_name, ontology_urls, attribute_type
     ):
         """Look up official ontology term from an id, always checking against the remote
         """
@@ -191,7 +191,7 @@ class OntologyRetriever:
         if property_name == "organ_region":
             return self.retrieve_mouse_brain_term(term, property_name)
         else:
-            return self.retrieve_ols_term(ontology_urls, term, property_name, type)
+            return self.retrieve_ols_term(ontology_urls, term, property_name, attribute_type)
 
     # Attach exponential backoff to external HTTP requests
     @backoff.on_exception(
@@ -202,7 +202,7 @@ class OntologyRetriever:
         on_backoff=backoff_handler,
         logger="dev_logger",
     )
-    def retrieve_ols_term(self, ontology_urls, term, property_name, type):
+    def retrieve_ols_term(self, ontology_urls, term, property_name, attribute_type):
         """Retrieve an individual term from an ontology
         returns JSON payload of ontology, or None if unsuccessful
         Will store any retrieved ontologies for faster validation of downstream terms
@@ -214,7 +214,7 @@ class OntologyRetriever:
             ontology_shortname, term_id = re.split("[_:]", term)
         except (ValueError, TypeError):
             msg = f'{property_name}: Could not parse provided ontology id, "{term}".'
-            if type == "array":
+            if attribute_type == "array":
                 if "|" not in term:
                     msg += (
                         f" There is only one array value, for ontology id, '{term}.' "
