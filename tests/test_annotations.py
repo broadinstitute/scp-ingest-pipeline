@@ -31,7 +31,7 @@ from clusters import Clusters
 
 class TestAnnotations(unittest.TestCase):
     CLUSTER_PATH = "../tests/data/test_1k_cluster_data.csv"
-    CELL_METADATA_PATH = "../tests/data/valid_no_array_v2.0.0.txt"
+    CELL_METADATA_PATH = "data/annotation/metadata/convention/valid_no_array_v2.0.0.txt"
 
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
