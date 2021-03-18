@@ -1,0 +1,58 @@
+{
+  "warn": {
+    "type": {
+      "There is only one array value, for disease: MONDO_0000001. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT",
+        "BM01_16dpp_AAGCAGTGGTAT"
+      ],
+      "There is only one array value, for disease__ontology_label: disease or disorder. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT",
+        "BM01_16dpp_AAGCAGTGGTAT"
+      ],
+      "There is only one array value, for ethnicity__ontology_label: European. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT",
+        "BM01_16dpp_AAGCAGTGGTAT"
+      ]
+    }
+  },
+  "error": {
+    "type": {
+      "organism_age: \"foo\" does not match expected type": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ]
+    },
+    "convention": {
+      "'ethnicity' is a dependency of 'ethnicity__ontology_label'": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT",
+        "BM01_16dpp_AAGCAGTGGTAT"
+      ],
+      "'sex' is a required property": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT",
+        "BM01_16dpp_AAGCAGTGGTAT"
+      ],
+      "'organism_age' is a dependency of 'organism_age__unit'": [
+        "BM01_16dpp_CGGTAAACCATT"
+      ]
+    },
+    "format": {
+      "Duplicate CellID(s) in metadata file": [
+        "BM01_16dpp_AAGCAGTGGTAT"
+      ]
+    }
+  }
+}

@@ -542,7 +542,7 @@ class IngestTestCase(unittest.TestCase):
             "5dd5ae25421aa910a723a337",
             "ingest_cell_metadata",
             "--cell-metadata-file",
-            "../tests/data/metadata_bad_contains_coordinates.txt",
+            "../tests/data/metadata_has_coordinate_header.txt",
             "--study-accession",
             "SCP123",
             "--ingest-cell-metadata",

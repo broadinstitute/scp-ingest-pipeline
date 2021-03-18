@@ -42,6 +42,44 @@
     }
   },
   "warn": {
+    "type": {
+      "There is only one array value, for ethnicity__ontology_label: European. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT",
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for ethnicity: HANCESTRO_0005. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_AAGCAGTGGTAT",
+        "BM01_16dpp_TAAGCAGTGGTA",
+        "BM01_16dpp_CTAAGCAGTGGT",
+        "BM01_16dpp_CGGTAAACCATT"
+      ],
+      "There is only one array value, for disease__time_since_onset: 1. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "There is only one array value, for disease__treated: F. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "There is only one array value, for disease: MONDO_0005709. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "There is only one array value, for disease__ontology_label: common cold. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_TAAGCAGTGGTA"
+      ],
+      "There is only one array value, for disease__time_since_onset: zero. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for disease__treated: False. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for disease: MONDO_0000001. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ],
+      "There is only one array value, for disease__ontology_label: disease or disorder. If multiple values are expected, use a pipe ('|') to separate values.": [
+        "BM01_16dpp_CCGAATTCACCG"
+      ]
+    },
     "ontology": {
       "disease__time_since_onset__unit: missing ontology label \"UO_0000035\" - using \"month\" per EBI OLS lookup": [
         "BM01_16dpp_AAGCAGTGGTAT",

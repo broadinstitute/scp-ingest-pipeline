@@ -181,8 +181,6 @@ class IngestPipeline:
             **self.kwargs,
         )
 
-    # @profile
-    # TODO: Make @profile conditional (SCP-2081)
     def insert_many(self, collection_name, documents):
         self.db[collection_name].insert_many(documents)
 
@@ -261,23 +259,22 @@ class IngestPipeline:
             return 1
         return 0
 
-    def conforms_to_metadata_convention(self):
+    def conforms_to_metadata_convention(self, cell_metadata_obj):
         """ Determines if cell metadata file follows metadata convention"""
         convention_file_object = IngestFiles(self.JSON_CONVENTION, ["application/json"])
         json_file = convention_file_object.open_file(self.JSON_CONVENTION)
         convention = json.load(json_file)
-        if self.kwargs["validate_convention"] is not None:
-            if (
-                self.kwargs["validate_convention"]
-                and self.kwargs["bq_dataset"]
-                and self.kwargs["bq_table"]
-            ):
-                validate_input_metadata(self.cell_metadata, convention, bq_json=True)
+        if (
+            self.kwargs["validate_convention"] is not None
+            and self.kwargs["validate_convention"]
+        ):
+            if self.kwargs["bq_dataset"] and self.kwargs["bq_table"]:
+                validate_input_metadata(cell_metadata_obj, convention, bq_json=True)
             else:
-                validate_input_metadata(self.cell_metadata, convention)
+                validate_input_metadata(cell_metadata_obj, convention)
 
         json_file.close()
-        return not report_issues(self.cell_metadata)
+        return not report_issues(cell_metadata_obj)
 
     def upload_metadata_to_bq(self):
         """Uploads metadata to BigQuery"""
@@ -325,25 +322,29 @@ class IngestPipeline:
             return 1
         return 0
 
+    # More work needs to be done to fully remove ingest from IngestPipeline
+    # Tracked in SCP-3023
     @custom_metric(config.get_metric_properties)
     def ingest_cell_metadata(self):
         """Ingests cell metadata files into Firestore."""
-        self.cell_metadata.preprocess()
-        if self.cell_metadata.validate():
+        validate_against_convention = False
+        if self.kwargs["validate_convention"] is not None:
+            if self.kwargs["validate_convention"]:
+                validate_against_convention = True
+        self.cell_metadata.preprocess(validate_against_convention)
+        if self.cell_metadata.validate(validate_against_convention):
             IngestPipeline.dev_logger.info("Cell metadata file format valid")
             # Check file against metadata convention
-            if self.kwargs["validate_convention"] is not None:
-                if self.kwargs["validate_convention"]:
-                    if self.conforms_to_metadata_convention():
-                        IngestPipeline.dev_logger.info(
-                            "Cell metadata file conforms to metadata convention"
-                        )
-                        pass
-                    else:
-                        return 1
+            if validate_against_convention:
+                if self.conforms_to_metadata_convention(self.cell_metadata):
+                    IngestPipeline.dev_logger.info(
+                        "Cell metadata file conforms to metadata convention"
+                    )
+                    pass
+                else:
+                    return 1
 
-            self.cell_metadata.reset_file()
-            for metadata_model in self.cell_metadata.transform():
+            for metadata_model in self.cell_metadata.execute_ingest():
                 IngestPipeline.dev_logger.info(
                     f"Attempting to load cell metadata header : {metadata_model.annot_header}"
                 )

@@ -10,8 +10,10 @@ Must have python 3.6 or higher.
 import abc
 from collections import defaultdict
 
+import numpy as np
 import pandas as pd
 from bson.objectid import ObjectId
+from typing import Dict, Generator, List, Tuple  # noqa: F401
 
 try:
     # Used when importing internally and in tests
@@ -83,10 +85,12 @@ class Annotations(IngestFiles):
         """ Does an inner join on a dataframe """
         self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
 
-    def preprocess(self):
-        """Ensures that:
+    def preprocess(self, is_metadata_convention=False):
+        """ Prepares file for ingest
+        Ensures that:
             - 'NAME' in first header row is capitalized
             - 'TYPE' in second header row is capitalized
+            - Numeric and group annotation values are coerced properly
         """
 
         # Uppercase NAME and TYPE
@@ -94,6 +98,7 @@ class Annotations(IngestFiles):
         self.annot_types[0] = self.annot_types[0].upper()
         if self.validate_unique_header():
             self.create_data_frame()
+            self.preprocess_numeric_annot(is_metadata_convention)
         else:
             msg = (
                 "Unable to parse file - Duplicate annotation header names are not allowed. \n"
@@ -102,52 +107,102 @@ class Annotations(IngestFiles):
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
             raise ValueError(msg)
 
-    def create_data_frame(self):
+    def preprocess_numeric_annot(self, is_metadata_convention):
+        self.coerce_empty_numeric_values()
+        # Metadata convention can contain arrays that have numeric or string values.
+        # Therefore dtypes for numeric annotations are skipped.
+        if not is_metadata_convention:
+            self.file = Annotations.coerce_numeric_values(self.file, self.annot_types)
+
+    @staticmethod
+    def convert_header_to_multi_index(df, header_names: List[Tuple]):
+        """ Create a multiindex based on the first two row of the annotation files
+        Parameters
+        ----------
+            df (pandas dataframe) : Dataframe
+            columns (List[tuples]): Header names
+        Returns
+        -------
+            df (pandas dataframe): Dataframe with multi-indexed header
         """
-        - Create dataframe with proper dtypes to ensure:
-            - Labels are treated as strings (objects)
-            - Numeric annotations are treated as float32
-            - Numeric columns are rounded to 3 decimals points
+        index = pd.MultiIndex.from_tuples(header_names, names=["NAME", "TYPE"])
+        df.columns = pd.MultiIndex.from_tuples(index)
+        return df
+
+    @staticmethod
+    def get_dtypes_for_group_annots(header: List, annot_types: List):
+        """Sets data types for group annotations. This function assumes that annotation types
+        passed into the function are valid.
         """
-        columns = []
-        dtypes = {}
-        for annotation, annot_type in zip(self.headers, self.annot_types):
-            dtypes[annotation] = "object" if annot_type != "numeric" else "float32"
-            columns.append((annotation, annot_type))
-            # multiIndex = pd.MultiIndex.from_tuples(index)
-        index = pd.MultiIndex.from_tuples(columns)
-        self.file = self.open_file(
-            self.file_path, open_as="dataframe", dtype=dtypes, names=index, skiprows=2
-        )[0]
-        # dtype of object allows mixed dtypes in columns, including numeric dtypes
-        # coerce group annotations that pandas detects as non-object types to type string
-        if "group" in self.annot_types:
-            group_columns = self.file.xs(
-                "group", axis=1, level=1, drop_level=False
-            ).columns.tolist()
-            try:
-                # coerce group annotations to type string
-                self.file[group_columns] = self.file[group_columns].astype(str)
-            except Exception as e:
-                log_exception(
-                    Annotations.dev_logger,
-                    Annotations.user_logger,
-                    "Unable to coerce group annotation to string type" + str(e),
-                )
-        if "numeric" in self.annot_types:
-            numeric_columns = self.file.xs(
+        group_dtypes = {}
+        for annotation, annot_type in zip(header, annot_types):
+            if annot_type != "numeric":
+                group_dtypes[annotation] = np.str
+        return group_dtypes
+
+    @staticmethod
+    def create_columns(headers: List, annot_types: List):
+        """Creates 'names' argument that's passed into pd.read_csv()
+            by zipping annotation names and headers
+
+        Parameters
+        ----------
+        annot_types (List): Annotation types. E.g. [group,numeric]
+        headers (List): Header names found in first line of file
+
+        Returns
+        ----------
+        new_column_names (List[Tuples]): Columns names. E.g. [(NAME, TYPE), (biosample_id, GROUP)]
+            """
+        new_column_names: List[Tuple] = []
+        for annotation, annot_type in zip(headers, annot_types):
+            new_column_names.append((annotation, annot_type))
+        return new_column_names
+
+    @staticmethod
+    def coerce_numeric_values(df, annot_types):
+        """Coerces numeric columns to floats and rounds annotation to 3 decimal places"""
+        if "numeric" in annot_types:
+            numeric_columns = df.xs(
                 "numeric", axis=1, level=1, drop_level=False
             ).columns.tolist()
             try:
                 # Round numeric columns to 3 decimal places
-                self.file[numeric_columns] = (
-                    self.file[numeric_columns].round(3).astype(float)
-                )
-            except Exception as e:
+                df[numeric_columns] = df[numeric_columns].round(3).astype(float)
+            except ValueError as e:
                 log_exception(Annotations.dev_logger, Annotations.user_logger, e)
+                raise ValueError(e)
+        return df
+
+    def coerce_empty_numeric_values(self):
+        """Converts empty cells in numeric annotations to NaN"""
+        if "numeric" in self.annot_types:
+            numeric_columns = self.file.xs(
+                "numeric", axis=1, level=1, drop_level=False
+            ).columns.tolist()
+            self.file[numeric_columns].replace("", np.nan, inplace=True)
+
+    def create_data_frame(self):
+        """Create dataframe with proper dtypes for group annotations. Numeric annotations require special handling
+            and are addressed in functions presented in preprocess() and preprocess_numeric_annot().
+        """
+        column_names = Annotations.create_columns(self.headers, self.annot_types)
+        dtypes = Annotations.get_dtypes_for_group_annots(self.headers, self.annot_types)
+        df = self.open_file(
+            self.file_path,
+            open_as="dataframe",
+            # Coerce values in group annotations
+            converters=dtypes,
+            # Header/column names
+            names=self.headers,
+            # Prevent pandas from reading first 2 lines in file
+            # since they're passed in with param 'names'
+            skiprows=2,
+        )[0]
+        self.file = Annotations.convert_header_to_multi_index(df, column_names)
 
     def store_validation_issue(self, type, category, msg, associated_info=None):
-        """Store validation issues in proper arrangement
+        """Stores validation issues in proper arrangement
             :param type: type of issue (error or warn)
         :param category: issue category (format, jsonschema, ontology)
         :param msg: issue message
@@ -287,13 +342,11 @@ class Annotations(IngestFiles):
         """Check numeric annotations are not string dtype
         """
         valid = True
-        for annot_header in self.file.columns[0:]:
+        for annot_header in self.file.columns[1:]:
             annot_name = annot_header[0]
             annot_type = annot_header[1]
-            if (
-                annot_type == "numeric"
-                and self.file[annot_name].dtypes[annot_type] == "object"
-            ):
+            column_dtype = self.file.dtypes[annot_header]
+            if annot_type == "numeric" and column_dtype == "object":
                 valid = False
                 msg = f"Numeric annotation, {annot_name}, contains non-numeric data (or unidentified NA values)"
                 self.store_validation_issue("error", "format", msg)

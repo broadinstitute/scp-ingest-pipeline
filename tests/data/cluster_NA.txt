@@ -2,6 +2,6 @@ NAME	x	y	NA_i__num	NA_f_num	NA_i_n_num	NA_f_n_num	NA_i_s_num	NA_f_s_num	NA_i_grp
 TYPE	numeric	numeric	numeric	numeric	numeric	numeric	numeric	numeric	group	group	group	group	group	group	numeric	group	numeric	group	numeric	group
 CELL_0001	34.472	32.211	1	1.1	1	1.1	1	1.1	1	1.1	1	1.1	1	1.1	1	1	1	1	1.1	1.1
 CELL_0002	15.975	10.043	2	2.2	2	2.2	2	2.2	2	2.2	2	2.2	2	2.2	2	2	2	2	2.2	2.2
-CELL_0003	-11.688	-53.645	3	3.3	3	3.3	3	3.3	3	3.3	3	3.3	3	3.3	3	3	foo	foo	foo	foo
-CELL_0004	30.04	31.138	4	4.4			foo	foo	4	4.4			foo	foo	4.4	4.4				
+CELL_0003	-11.688	-53.645	3	3.3	3	3.3	3	3.3	3	3.3	3	3.3	3	3.3	3	3		foo		foo
+CELL_0004	30.04	31.138	4	4.4					4	4.4			foo		4.4	4.4				
 CELL_0005	23.862	33.092	5	5.5	5	5.5	5	5.5	5	5.5	5	5.5	5	5.5	5	5	5	5	5.5	5.5
