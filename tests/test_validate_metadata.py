@@ -39,6 +39,7 @@ from validate_metadata import (
     request_json_with_backoff,
     MAX_HTTP_ATTEMPTS,
     is_empty_string,
+    find_best_label_match
 )
 
 
@@ -713,6 +714,18 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.assertEqual(mocked_requests_get.call_count, MAX_HTTP_ATTEMPTS)
 
+    def test_find_best_label_match(self):
+        label = "10x 3' v2"
+        possible_matches = ["10x 3' v2", "10X 3' v2", "10x 3' v2 sequencing"]
+        match = find_best_label_match(possible_matches, label)
+        self.assertEqual(label, match)
+        possible_matches.pop(0) # remove 10x 3' v2, ensure case-insensitive match is found
+        casefold_match = find_best_label_match(possible_matches, label)
+        self.assertNotEqual(label, casefold_match)
+        self.assertEqual(label.casefold(), casefold_match.casefold())
+        possible_matches.pop(0) # remove 10X 3' v2, test default return of ''
+        empty_match = find_best_label_match(possible_matches, label)
+        self.assertEqual('', empty_match)
 
 if __name__ == "__main__":
     unittest.main()

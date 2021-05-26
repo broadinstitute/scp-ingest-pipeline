@@ -1043,17 +1043,13 @@ def exit_if_errors(metadata):
     return errors
 
 def find_best_label_match(labels, provided_label):
-    """
-
+    """Return the best possible match from a list of candidates
     :param labels: cached ontology labels from retriever.retrieve_ontology_term_label
     :param provided_label: user-provided label from metadata file
     :return: best match, case-sensitive first, falling back to case-insensitive
     """
-    best_match = next(t for t in labels if provided_label == t)
-    if best_match:
-        return best_match
-    else:
-        next(t for t in labels if provided_label.casefold() == t.casefold())
+    next((t for t in labels if provided_label == t), '') or \
+    next((t for t in labels if provided_label.casefold() == t.casefold()), '')
 
 def validate_collected_ontology_data(metadata, convention):
     """Evaluate collected ontology_id, ontology_label info in
