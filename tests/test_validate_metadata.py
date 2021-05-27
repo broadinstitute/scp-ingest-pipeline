@@ -724,5 +724,20 @@ class TestValidateMetadata(unittest.TestCase):
         label = "10x 5' v3"
         self.assertFalse(is_label_or_synonym(possible_matches, label))
 
+    def test_will_allow_synonym_matches(self):
+        args = (
+            "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
+            "../tests/data/annotation/metadata/convention/valid_no_array_synonyms_v2.0.0.txt"
+        )
+        metadata, convention = self.setup_metadata(args)
+        self.assertTrue(
+            metadata.validate_format(), "Valid metadata headers should not elicit error"
+        )
+        validate_input_metadata(metadata, convention)
+        self.assertFalse(
+            report_issues(metadata), "Valid ontology content should not elicit error"
+        )
+        self.teardown_metadata(metadata)
+
 if __name__ == "__main__":
     unittest.main()
