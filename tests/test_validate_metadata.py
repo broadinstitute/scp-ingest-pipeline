@@ -671,7 +671,6 @@ class TestValidateMetadata(unittest.TestCase):
             "../tests/data/annotation/metadata/convention/invalid_mba_v2.1.2.tsv"
         )
         metadata, convention = self.setup_metadata(args)
-        print(dir(metadata))
         self.maxDiff = None
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"

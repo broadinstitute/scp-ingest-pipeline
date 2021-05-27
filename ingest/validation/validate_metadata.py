@@ -551,9 +551,10 @@ def insert_ontology_label_row_data(
         property_type = convention["properties"][property_name]["type"]
         try:
             labels_and_synonyms = retriever.retrieve_ontology_term_labels_and_synonyms(
-                id, property_name, convention, "array"
+                id, property_name, convention, property_type
             )
             label = labels_and_synonyms.get('label')
+            row[ontology_label] = label
             reference_ontology = (
                 "EBI OLS lookup"
                 if property_name != "organ_region"
@@ -651,7 +652,6 @@ def collect_cell_for_ontology(
                 convention,
                 ontology_label,
             )
-
     return updated_row
 
 
