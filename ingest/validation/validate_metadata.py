@@ -507,6 +507,7 @@ def insert_array_ontology_label_row_data(
                 labels_and_synonyms = retriever.retrieve_ontology_term_label(
                     id, property_name, convention, "array"
                 )
+                matched_label_for_id = find_best_label_match(labels_and_synonyms, ontology_label)
                 reference_ontology = (
                     "EBI OLS lookup"
                     if property_name != "organ_region"
@@ -514,7 +515,7 @@ def insert_array_ontology_label_row_data(
                 )
                 error_msg = (
                     f"{property_name}: missing ontology label "
-                    f'"{id}" - using "{labels_and_synonyms}" per {reference_ontology}'
+                    f'"{id}" - using "{matched_label_for_id}" per {reference_ontology}'
                 )
                 metadata.store_validation_issue(
                     "warn", "ontology", error_msg, [cell_id]
@@ -551,7 +552,7 @@ def insert_ontology_label_row_data(
                 id, property_name, convention, property_type
             )
             matched_label_for_id = find_best_label_match(labels_and_synonyms, ontology_label)
-            row[ontology_label] = matched_label_for_id
+            row[ontology_label] = matched_label_for_id[0]
             reference_ontology = (
                 "EBI OLS lookup"
                 if property_name != "organ_region"
@@ -1048,8 +1049,12 @@ def find_best_label_match(labels, provided_label):
     :param provided_label: user-provided label from metadata file
     :return: best match, case-sensitive first, falling back to case-insensitive
     """
-    next((t for t in labels if provided_label == t), '') or \
-    next((t for t in labels if provided_label.casefold() == t.casefold()), '')
+    exact_match = next((t for t in labels if provided_label == t), '')
+    casefold_match = next((t for t in labels if provided_label.casefold() == t.casefold()), '')
+    if exact_match:
+        return exact_match
+    else:
+        return casefold_match
 
 def validate_collected_ontology_data(metadata, convention):
     """Evaluate collected ontology_id, ontology_label info in
