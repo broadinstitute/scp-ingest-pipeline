@@ -154,10 +154,10 @@ class OntologyRetriever:
     cached_ontologies = {}
     cached_terms = {}
 
-    def retrieve_ontology_term_label(self, term, property_name, convention, attribute_type: str):
-        """Retrieve an individual term label from an ontology
+    def retrieve_ontology_term_label_and_synonyms(self, term, property_name, convention, attribute_type: str):
+        """Retrieve an individual term label and any synonymns from an ontology
         returns JSON payload of ontology, or None if unsuccessful
-        Will store any retrieved terms for faster validation of downstream terms
+        Will store any retrieved labels/synonyms for faster validation of downstream terms
 
         throws ValueError if the term does not exist or is malformatted
                 :param term: ontology term
@@ -264,7 +264,19 @@ class OntologyRetriever:
             # inserting sleep to minimize 'Connection timed out' error with too many concurrent requests
             time.sleep(0.25)
             if response.status_code == 200:
-                return response.json()["label"]
+                # return canonical label, along with synonyms and any 'related synonyms' to match later
+                term_json = response.json()
+                labels = {"label": term_json["label"], "synonyms": []}
+                synonyms = []
+                if term_json['synonyms']:
+                    synonyms += term_json['synonyms']
+                # safe lookup of nested dictionary
+                related_synonyms = term_json.get('annotation', {}).get('has_related_synonym')
+                if related_synonyms:
+                    synonyms += related_synonyms
+                # uniquify list via set and return
+                labels["synonyms"] = list(set(synonyms))
+                return labels
             else:
                 error_msg = f"{property_name}: No match found in EBI OLS for provided ontology ID: {term}"
                 raise ValueError(error_msg)
@@ -296,7 +308,7 @@ class OntologyRetriever:
             raise ValueError(
                 f"{property_name}: No match found in Allen Mouse Brain Atlas for provided ontology ID: {term}"
             )
-        return mouse_brain_atlas[MBA_id]
+        return {"label": mouse_brain_atlas[MBA_id]}
 
     def fetch_allen_mouse_brain_atlas(self):
         """Get the mouse brain atlas file, either remote or cached, and parse it into an id -> name dictionary
@@ -306,7 +318,6 @@ class OntologyRetriever:
                 "allen_mouse_brain_atlas"
             ] = fetch_allen_mouse_brain_atlas_remote()
         return self.cached_ontologies["allen_mouse_brain_atlas"]
-
 
 def parse_organ_region_ontology_id(term):
     """Extract term id from valid identifiers or raise a ValueError
@@ -495,9 +506,10 @@ def insert_array_ontology_label_row_data(
         for id in row[property_name]:
             label_lookup = ""
             try:
-                label_lookup = retriever.retrieve_ontology_term_label(
+                label_and_synonyms = retriever.retrieve_ontology_term_label_and_synonyms(
                     id, property_name, convention, "array"
                 )
+                label_lookup = label_and_synonyms.get('label')
                 reference_ontology = (
                     "EBI OLS lookup"
                     if property_name != "organ_region"
@@ -538,9 +550,10 @@ def insert_ontology_label_row_data(
         # for optional columns, try to fill it in
         property_type = convention["properties"][property_name]["type"]
         try:
-            label = retriever.retrieve_ontology_term_label(
+            label_and_synonyms = retriever.retrieve_ontology_term_label_and_synonyms(
                 id, property_name, convention, property_type
             )
+            label = label_and_synonyms.get('label')
             row[ontology_label] = label
             reference_ontology = (
                 "EBI OLS lookup"
@@ -639,7 +652,6 @@ def collect_cell_for_ontology(
                 convention,
                 ontology_label,
             )
-
     return updated_row
 
 
@@ -1032,6 +1044,23 @@ def exit_if_errors(metadata):
         exit(1)
     return errors
 
+def is_label_or_synonym(labels, provided_label):
+    """Determine if a user-provided ontology label is a valid label or synonymn
+    :param labels: cached ontology label/synonyms from retriever.retrieve_ontology_term_label_and_synonyms
+    :param provided_label: user-provided label from metadata file
+    :return: True/False on match for label or synonym
+    """
+    label = labels.get('label')
+    synonyms = labels.get('synonyms')
+    if label.casefold() == provided_label.casefold():
+        return True
+    elif synonyms:
+        if next((t for t in synonyms if t.casefold() == provided_label.casefold()), ''):
+            return True
+        else:
+            return False
+    else:
+        return False
 
 def validate_collected_ontology_data(metadata, convention):
     """Evaluate collected ontology_id, ontology_label info in
@@ -1059,11 +1088,12 @@ def validate_collected_ontology_data(metadata, convention):
 
             try:
                 attribute_type = convention["properties"][property_name]["type"]
-                matched_label_for_id = retriever.retrieve_ontology_term_label(
+                # get actual label along with synonyms for more robust matching
+                label_and_synonyms = retriever.retrieve_ontology_term_label_and_synonyms(
                     ontology_id, property_name, convention, attribute_type
                 )
-
-                if matched_label_for_id != ontology_label:
+                if not is_label_or_synonym(label_and_synonyms, ontology_label):
+                    matched_label_for_id = label_and_synonyms.get("label")
                     ontology_source_name = "EBI OLS"
                     if property_name == "organ_region":
                         ontology_source_name = "Allen Mouse Brain Atlas"

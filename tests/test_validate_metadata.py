@@ -39,6 +39,7 @@ from validate_metadata import (
     request_json_with_backoff,
     MAX_HTTP_ATTEMPTS,
     is_empty_string,
+    is_label_or_synonym
 )
 
 
@@ -670,7 +671,6 @@ class TestValidateMetadata(unittest.TestCase):
             "../tests/data/annotation/metadata/convention/invalid_mba_v2.1.2.tsv"
         )
         metadata, convention = self.setup_metadata(args)
-        print(dir(metadata))
         self.maxDiff = None
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
@@ -713,6 +713,31 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.assertEqual(mocked_requests_get.call_count, MAX_HTTP_ATTEMPTS)
 
+    def test_is_label_or_synonym(self):
+        label = "10x 3' v2"
+        possible_matches = {"label": "10x 3' v2", "synonyms": ["10X 3' v2", "10x 3' v2 sequencing"]}
+        self.assertTrue(is_label_or_synonym(possible_matches, label))
+        label = "10X 3' v2"
+        self.assertTrue(is_label_or_synonym(possible_matches, label))
+        label = "10X 3' v2 sequencing"
+        self.assertTrue(is_label_or_synonym(possible_matches, label))
+        label = "10x 5' v3"
+        self.assertFalse(is_label_or_synonym(possible_matches, label))
+
+    def test_will_allow_synonym_matches(self):
+        args = (
+            "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
+            "../tests/data/annotation/metadata/convention/valid_no_array_synonyms_v2.0.0.txt"
+        )
+        metadata, convention = self.setup_metadata(args)
+        self.assertTrue(
+            metadata.validate_format(), "Valid metadata headers should not elicit error"
+        )
+        validate_input_metadata(metadata, convention)
+        self.assertFalse(
+            report_issues(metadata), "Valid ontology content should not elicit error"
+        )
+        self.teardown_metadata(metadata)
 
 if __name__ == "__main__":
     unittest.main()
