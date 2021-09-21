@@ -36,7 +36,7 @@ def fetch_gzipped_content(url, output_path):
         # If local report absent, fetch remote content and cache it
         request_obj = request.Request(url, headers={"Accept-Encoding": "gzip"})
         with request.urlopen(request_obj) as response:
-            remote_content = gzip.decompress(response.read())
+            remote_content = response.read()
             with open(output_path, 'wb') as f:
                 f.write(remote_content)
 
