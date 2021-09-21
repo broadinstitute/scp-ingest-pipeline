@@ -85,8 +85,12 @@ def graceful_auto_reconnect(mongo_op_func):
                     error_docs = bwe.details["writeErrors"]
                     # Check error code to see if any failures are due to violating a unique index (error code 11000)
                     # and discard those documents before retrying
-                    args[0] = discard_inserted_documents(error_docs, args[0])
-                    retry(attempt)
+                    filtered_docs = discard_inserted_documents(error_docs, args[0])
+                    if len(filtered_docs) > 0:
+                        args[0] = filtered_docs
+                        retry(attempt)
+                    else:
+                        return args[0]
                 else:
                     dev_logger.debug(str(bwe.details))
                     raise bwe
