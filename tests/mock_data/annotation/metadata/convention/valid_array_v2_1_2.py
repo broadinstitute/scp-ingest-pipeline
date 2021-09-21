@@ -241,10 +241,10 @@ valid_array_v2_1_2_models = {
             "name": "disease__ontology_label",
             "annotation_type": "group",
             "values": [
-                "diabetes mellitus (disease)|mastitis",
+                "diabetes mellitus|mastitis",
                 "common cold",
-                "diabetes mellitus (disease)|common cold",
-                "diabetes mellitus (disease)|mastitis|common cold",
+                "diabetes mellitus|common cold",
+                "diabetes mellitus|mastitis|common cold",
                 "disease or disorder",
             ],
             "study_file_id": ObjectId("600f42bdb067340e777b1385"),
