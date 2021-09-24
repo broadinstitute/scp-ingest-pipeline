@@ -6,10 +6,8 @@ from pymongo.errors import AutoReconnect, BulkWriteError
 
 try:
     from monitor import setup_logger
-    from monitoring.metrics_service import MetricsService
 except ImportError:
     from .monitor import setup_logger
-    from .monitoring.metrics_service import MetricsService
 dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
 
@@ -93,17 +91,7 @@ def graceful_auto_reconnect(mongo_op_func):
                     else:
                         return args[0]
                 else:
-                    raw_error = str(bwe.details)
-                    dev_logger.debug(raw_error)
-                    MetricsService.log(
-                        "error",
-                        {
-                            "text": "Recovery failed for BulkWriteError: batch ops error",
-                            "code": 11000,
-                            "logger": "scp-ingest-pipeline",
-                            "rawError": raw_error
-                        }
-                    )
+                    dev_logger.debug(str(bwe.details))
                     raise bwe
 
     return wrapper
