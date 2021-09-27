@@ -1,7 +1,6 @@
 import os
 import functools
 import time
-from bson.objectid import ObjectId
 from pymongo import MongoClient
 from pymongo.errors import AutoReconnect, BulkWriteError
 
@@ -83,10 +82,14 @@ def graceful_auto_reconnect(mongo_op_func):
                         "Batch ops error occurred. Reinsert attempt %s.", str(attempt)
                     )
                     error_docs = bwe.details["writeErrors"]
-                    # Check error code to see if any failures are due to duplicate ids (error code 11000)
-                    if any(doc["code"] == 11000 for doc in error_docs):
-                        args[0] = reassign_id(args[0])
-                    retry(attempt)
+                    # Check error code to see if any failures are due to violating a unique index (error code 11000)
+                    # and discard those documents before retrying
+                    filtered_docs = discard_inserted_documents(error_docs, args[0])
+                    if len(filtered_docs) > 0:
+                        args[0] = filtered_docs
+                        retry(attempt)
+                    else:
+                        return args[0]
                 else:
                     dev_logger.debug(str(bwe.details))
                     raise bwe
@@ -94,8 +97,19 @@ def graceful_auto_reconnect(mongo_op_func):
     return wrapper
 
 
-def reassign_id(documents):
-    """Reassign ids in documents"""
-    for doc in documents:
-        doc["_id"] = ObjectId()
-    return documents
+def discard_inserted_documents(error_documents, original_documents):
+    """Discard any documents that have already been inserted which are violating index constraints
+       such documents will have an error code of 11000 for a DuplicateKey error
+       from https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml#L467
+
+       Parameters:
+           error_documents (List[Dict]): list of documents that failed to insert in original transaction
+           original_documents (List[Dict]): list of documents from original transaction that failed
+           error_code (Int): error status code to filter on
+
+       Returns:
+           List[Dict]: list of documents with matching error code entries removed
+    """
+    # doc['op'] returns the actual document from the previous transaction
+    errors = list(doc['op'] for doc in error_documents if doc['code'] == 11000)
+    return list(doc for doc in original_documents if doc not in errors)
