@@ -31,7 +31,7 @@ except ImportError:
     from .expression_files import GeneExpression
     from ..ingest_files import IngestFiles
     from ..monitoring.mixpanel_log import custom_metric
-    from ..config import config
+    from .. import config
 
 
 class MTXIngestor(GeneExpression, IngestFiles):
