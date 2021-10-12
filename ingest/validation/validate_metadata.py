@@ -46,11 +46,9 @@ from google.cloud import bigquery
 sys.path.append("..")
 try:
     # Used when importing internally and in tests
-    from cell_metadata import CellMetadata
     from monitor import setup_logger
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
-    from ..cell_metadata import CellMetadata
     from ..monitor import setup_logger
 
 
@@ -154,7 +152,9 @@ class OntologyRetriever:
     cached_ontologies = {}
     cached_terms = {}
 
-    def retrieve_ontology_term_label_and_synonyms(self, term, property_name, convention, attribute_type: str):
+    def retrieve_ontology_term_label_and_synonyms(
+        self, term, property_name, convention, attribute_type: str
+    ):
         """Retrieve an individual term label and any synonymns from an ontology
         returns JSON payload of ontology, or None if unsuccessful
         Will store any retrieved labels/synonyms for faster validation of downstream terms
@@ -195,7 +195,9 @@ class OntologyRetriever:
         if property_name == "organ_region":
             return self.retrieve_mouse_brain_term(term, property_name)
         else:
-            return self.retrieve_ols_term(ontology_urls, term, property_name, attribute_type)
+            return self.retrieve_ols_term(
+                ontology_urls, term, property_name, attribute_type
+            )
 
     # Attach exponential backoff to external HTTP requests
     @backoff.on_exception(
@@ -271,7 +273,9 @@ class OntologyRetriever:
                 if term_json['synonyms']:
                     synonyms += term_json['synonyms']
                 # safe lookup of nested dictionary
-                related_synonyms = term_json.get('annotation', {}).get('has_related_synonym')
+                related_synonyms = term_json.get('annotation', {}).get(
+                    'has_related_synonym'
+                )
                 if related_synonyms:
                     synonyms += related_synonyms
                 # uniquify list via set and return
@@ -318,6 +322,7 @@ class OntologyRetriever:
                 "allen_mouse_brain_atlas"
             ] = fetch_allen_mouse_brain_atlas_remote()
         return self.cached_ontologies["allen_mouse_brain_atlas"]
+
 
 def parse_organ_region_ontology_id(term):
     """Extract term id from valid identifiers or raise a ValueError
@@ -1044,6 +1049,7 @@ def exit_if_errors(metadata):
         exit(1)
     return errors
 
+
 def is_label_or_synonym(labels, provided_label):
     """Determine if a user-provided ontology label is a valid label or synonymn
     :param labels: cached ontology label/synonyms from retriever.retrieve_ontology_term_label_and_synonyms
@@ -1061,6 +1067,7 @@ def is_label_or_synonym(labels, provided_label):
             return False
     else:
         return False
+
 
 def validate_collected_ontology_data(metadata, convention):
     """Evaluate collected ontology_id, ontology_label info in
