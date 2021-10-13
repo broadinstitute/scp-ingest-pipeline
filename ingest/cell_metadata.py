@@ -13,6 +13,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import copy
+import json
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
@@ -20,16 +21,25 @@ from mypy_extensions import TypedDict
 try:
     # Used when importing internally and in tests
     from annotations import Annotations
-    from ingest_files import DataArray
+    from ingest_files import DataArray, IngestFiles
+    from validation.validate_metadata import (
+        report_issues,
+        validate_input_metadata,
+        write_metadata_to_bq,
+    )
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .annotations import Annotations
-    from .ingest_files import DataArray
+    from .ingest_files import DataArray, IngestFiles
 
 
 class CellMetadata(Annotations):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
     COLLECTION_NAME = "cell_metadata"
+    # File location for metadata json convention
+    JSON_CONVENTION = (
+        "../schema/alexandria_convention/alexandria_convention_schema.json"
+    )
 
     def __init__(
         self,
@@ -51,6 +61,7 @@ class CellMetadata(Annotations):
         self.ontology_label = dict()
         self.cells = []
         self.numeric_array_columns = {}
+        self.kwargs = kwargs
 
     # This model pertains to columns from cell metadata files
     @dataclass
@@ -102,6 +113,18 @@ class CellMetadata(Annotations):
             msg = "Header names can not be coordinate values x, y, or z (case insensitive)"
             self.store_validation_issue("error", "format", msg)
             return False
+
+    def conforms_to_metadata_convention(self):
+        """ Determines if cell metadata file follows metadata convention"""
+        convention_file_object = IngestFiles(self.JSON_CONVENTION, ["application/json"])
+        json_file = convention_file_object.open_file(self.JSON_CONVENTION)
+        convention = json.load(json_file)
+
+        import_to_bq = self.kwargs["bq_dataset"] and self.kwargs["bq_table"]
+        validate_input_metadata(self, convention, bq_json=import_to_bq)
+
+        json_file.close()
+        return not report_issues(self)
 
     def transform(self):
         """ Builds cell metadata model"""

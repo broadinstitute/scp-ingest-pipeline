@@ -76,7 +76,7 @@ try:
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
-    from .config import config
+    from . import config
     from .monitoring.metrics_service import MetricsService
     from .subsample import SubSample
     from .monitoring.mixpanel_log import custom_metric

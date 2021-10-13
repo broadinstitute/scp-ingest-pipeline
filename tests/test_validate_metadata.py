@@ -27,19 +27,19 @@ import numpy as np
 sys.path.append("../ingest")
 sys.path.append("../ingest/validation")
 
+from cell_metadata import CellMetadata
 from validate_metadata import (
     create_parser,
     report_issues,
     collect_jsonschema_errors,
     validate_schema,
-    CellMetadata,
     validate_collected_ontology_data,
     collect_cell_for_ontology,
     validate_input_metadata,
     request_json_with_backoff,
     MAX_HTTP_ATTEMPTS,
     is_empty_string,
-    is_label_or_synonym
+    is_label_or_synonym,
 )
 
 
@@ -715,7 +715,10 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_is_label_or_synonym(self):
         label = "10x 3' v2"
-        possible_matches = {"label": "10x 3' v2", "synonyms": ["10X 3' v2", "10x 3' v2 sequencing"]}
+        possible_matches = {
+            "label": "10x 3' v2",
+            "synonyms": ["10X 3' v2", "10x 3' v2 sequencing"],
+        }
         self.assertTrue(is_label_or_synonym(possible_matches, label))
         label = "10X 3' v2"
         self.assertTrue(is_label_or_synonym(possible_matches, label))
@@ -738,6 +741,7 @@ class TestValidateMetadata(unittest.TestCase):
             report_issues(metadata), "Valid ontology content should not elicit error"
         )
         self.teardown_metadata(metadata)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -95,9 +95,9 @@ class TestCellMetadata(unittest.TestCase):
         )
         cm.preprocess(is_metadata_convention=True)
         convention_file_object = IngestFiles(
-            IngestPipeline.JSON_CONVENTION, ["application/json"]
+            CellMetadata.JSON_CONVENTION, ["application/json"]
         )
-        json_file = convention_file_object.open_file(IngestPipeline.JSON_CONVENTION)
+        json_file = convention_file_object.open_file(CellMetadata.JSON_CONVENTION)
         convention = json.load(json_file)
         collect_jsonschema_errors(cm, convention)
         for metadata_model in cm.transform():
