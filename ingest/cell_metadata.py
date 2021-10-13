@@ -119,15 +119,9 @@ class CellMetadata(Annotations):
         convention_file_object = IngestFiles(self.JSON_CONVENTION, ["application/json"])
         json_file = convention_file_object.open_file(self.JSON_CONVENTION)
         convention = json.load(json_file)
-        if (
-            self.kwargs["validate_convention"] is not None
-            and self.kwargs["validate_convention"]
-        ):
-            import_to_bq = self.kwargs["bq_dataset"] and self.kwargs["bq_table"]
-            validate_input_metadata(self, convention, bq_json=import_to_bq)
-                validate_input_metadata(self, convention, bq_json=True)
-            else:
-                validate_input_metadata(self, convention)
+
+        import_to_bq = self.kwargs["bq_dataset"] and self.kwargs["bq_table"]
+        validate_input_metadata(self, convention, bq_json=import_to_bq)
 
         json_file.close()
         return not report_issues(self)
