@@ -123,7 +123,8 @@ class CellMetadata(Annotations):
             self.kwargs["validate_convention"] is not None
             and self.kwargs["validate_convention"]
         ):
-            if self.kwargs["bq_dataset"] and self.kwargs["bq_table"]:
+            import_to_bq = self.kwargs["bq_dataset"] and self.kwargs["bq_table"]
+            validate_input_metadata(self, convention, bq_json=import_to_bq)
                 validate_input_metadata(self, convention, bq_json=True)
             else:
                 validate_input_metadata(self, convention)
