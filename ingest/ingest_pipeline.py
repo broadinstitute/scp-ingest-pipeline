@@ -259,23 +259,6 @@ class IngestPipeline:
             return 1
         return 0
 
-    def conforms_to_metadata_convention(self, cell_metadata_obj):
-        """ Determines if cell metadata file follows metadata convention"""
-        convention_file_object = IngestFiles(self.JSON_CONVENTION, ["application/json"])
-        json_file = convention_file_object.open_file(self.JSON_CONVENTION)
-        convention = json.load(json_file)
-        if (
-            self.kwargs["validate_convention"] is not None
-            and self.kwargs["validate_convention"]
-        ):
-            if self.kwargs["bq_dataset"] and self.kwargs["bq_table"]:
-                validate_input_metadata(cell_metadata_obj, convention, bq_json=True)
-            else:
-                validate_input_metadata(cell_metadata_obj, convention)
-
-        json_file.close()
-        return not report_issues(cell_metadata_obj)
-
     def upload_metadata_to_bq(self):
         """Uploads metadata to BigQuery"""
         if self.kwargs["validate_convention"] is not None:
@@ -336,7 +319,7 @@ class IngestPipeline:
             IngestPipeline.dev_logger.info("Cell metadata file format valid")
             # Check file against metadata convention
             if validate_against_convention:
-                if self.conforms_to_metadata_convention(self.cell_metadata):
+                if self.cell_metadata.conforms_to_metadata_convention():
                     IngestPipeline.dev_logger.info(
                         "Cell metadata file conforms to metadata convention"
                     )
@@ -404,9 +387,12 @@ class IngestPipeline:
                 subsample.prepare_cell_metadata()
                 # Get cell names from cluster and metadata files
                 # strip of whitespace that pandas might add
-                cluster_cell_names = map(lambda s: s.strip(), SubSample.get_cell_names(subsample.file))
-                metadata_cell_names = map(lambda s: s.strip(), SubSample.get_cell_names(
-                    subsample.cell_metadata.file)
+                cluster_cell_names = map(
+                    lambda s: s.strip(), SubSample.get_cell_names(subsample.file)
+                )
+                metadata_cell_names = map(
+                    lambda s: s.strip(),
+                    SubSample.get_cell_names(subsample.cell_metadata.file),
                 )
                 # Check that cell names in cluster file exist in cell metadata file
                 if SubSample.has_cells_in_metadata_file(

@@ -278,6 +278,12 @@ class OntologyRetriever:
                 )
                 if related_synonyms:
                     synonyms += related_synonyms
+                # safe lookup of nested dictionary
+                exact_synonyms = term_json.get('annotation', {}).get(
+                    'has_exact_synonym'
+                )
+                if exact_synonyms:
+                    synonyms += exact_synonyms
                 # uniquify list via set and return
                 labels["synonyms"] = list(set(synonyms))
                 return labels
