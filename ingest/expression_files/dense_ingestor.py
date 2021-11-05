@@ -187,6 +187,8 @@ class DenseIngestor(GeneExpression, IngestFiles):
                     ):
                         valid_expression_scores.append(expression_score)
                         associated_cells.append(cells[idx])
+            except ValueError as err:
+                raise ValueError(f"Expected numeric expression score - {err}")
             except Exception:
                 raise ValueError("Score '{expression_score}' is not valid")
         return valid_expression_scores, associated_cells
