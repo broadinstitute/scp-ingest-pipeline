@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import copy
 import json
+import logging
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
@@ -27,10 +28,18 @@ try:
         validate_input_metadata,
         write_metadata_to_bq,
     )
+    from monitor import setup_logger
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .annotations import Annotations
     from .ingest_files import DataArray, IngestFiles
+    from ..monitor import setup_logger
+
+dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
+
+user_logger = setup_logger(
+    __name__ + ".user_logger", "user_log.txt", level=logging.ERROR
+)
 
 
 class CellMetadata(Annotations):
@@ -141,21 +150,32 @@ class CellMetadata(Annotations):
                 if not self.numeric_array_columns.get(annot_name)
                 else "group"
             )
-            yield AnnotationModel(
-                annot_header,
-                self.Model(
-                    {
-                        "name": annot_name,
-                        "annotation_type": stored_mongo_annot_type,
-                        # unique values from "group" type annotations else []
-                        "values": list(self.file[annot_header].unique())
-                        if annot_type == "group"
-                        else [],
-                        "study_file_id": self.study_file_id,
-                        "study_id": self.study_id,
-                    }
-                ),
-            )
+
+            group = True if annot_type == "group" else False
+            large = True if len(list(self.file[annot_header].unique())) > 201 else False
+
+            if large and group:
+                skip_msg = f"\'{annot_name}\' not stored for visualization - more than 200 unique values "
+
+                user_logger.error(skip_msg)
+                print(skip_msg)
+                continue
+            else:
+                yield AnnotationModel(
+                    annot_header,
+                    self.Model(
+                        {
+                            "name": annot_name,
+                            "annotation_type": stored_mongo_annot_type,
+                            # unique values from "group" type annotations else []
+                            "values": list(self.file[annot_header].unique())
+                            if annot_type == "group"
+                            else [],
+                            "study_file_id": self.study_file_id,
+                            "study_id": self.study_id,
+                        }
+                    ),
+                )
 
     def set_data_array(self, linear_data_id: str, annot_header: str):
 
