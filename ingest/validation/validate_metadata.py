@@ -1031,7 +1031,10 @@ def report_issues(metadata):
                             is_valid = True
                         except re.error:
                             pass
-                        issue_msg = f"{issue_text} [ Error count: {len(cells)} ]"
+                        if issue_type == "error":
+                            issue_msg = f"{issue_text} [ Error count: {len(cells)} ]"
+                        elif issue_type == "warn":
+                            issue_msg = f"{issue_text} [ Warn count: {len(cells)} ]"
                         record_issue(issue_type, issue_msg)
                     else:
                         record_issue(issue_type, issue_text)
