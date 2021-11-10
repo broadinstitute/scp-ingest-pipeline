@@ -152,11 +152,13 @@ class CellMetadata(Annotations):
             )
 
             group = True if annot_type == "group" else False
-            large = True if len(list(self.file[annot_header].unique())) > 201 else False
+            # should not store annotations with >200 unique values for viz
+            # annot_header is the column of data, which includes name and type
+            # large is any annotation with more than 200 + 2 unique values
+            large = True if len(list(self.file[annot_header].unique())) > 202 else False
 
             if large and group:
                 skip_msg = f"\'{annot_name}\' not stored for visualization - too many unique values "
-
                 user_logger.error(skip_msg)
                 print(skip_msg)
                 continue
