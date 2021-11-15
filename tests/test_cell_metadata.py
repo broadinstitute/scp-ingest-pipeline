@@ -105,3 +105,30 @@ class TestCellMetadata(unittest.TestCase):
             model_name = model["name"]
             expect_model = valid_array_v2_1_2_models["cell_metadata_models"][model_name]
             self.assertEqual(model, expect_model)
+
+    def test_skip_large_group_transform(self):
+        # metadata "barcodekey" - 250 unique values, should not transform
+        # metadata "scale" - 200 unique values , should transform
+        cm = CellMetadata(
+            "../tests/data/annotation/metadata/convention/large_group_metadata_to_skip.txt",
+            "612e90364e68d4b7e3ece4d0",
+            "612e998b4e68d4b7e3ece504",
+            study_accession="SCP3",
+        )
+        cm.preprocess(is_metadata_convention=True)
+        convention_file_object = IngestFiles(
+            CellMetadata.JSON_CONVENTION, ["application/json"]
+        )
+        json_file = convention_file_object.open_file(CellMetadata.JSON_CONVENTION)
+        convention = json.load(json_file)
+        collect_jsonschema_errors(cm, convention)
+        values_array_empty = []
+        for metadata_model in cm.transform():
+            if not metadata_model.model["values"]:
+                values_array_empty.append(metadata_model.model["name"])
+        barcodekey = True if "barcodekey" in values_array_empty else False
+        scale = True if "scale" in values_array_empty else False
+        self.assertTrue(
+            barcodekey, "metadata with too many unique values should not store values"
+        )
+        self.assertFalse(scale, "metadata with exactly 200 values should be stored")
