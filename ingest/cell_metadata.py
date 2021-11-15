@@ -158,7 +158,7 @@ class CellMetadata(Annotations):
             large = True if len(list(self.file[annot_header].unique())) > 202 else False
 
             if large and group:
-                skip_msg = f"\'{annot_name}\' not stored for visualization - too many unique values "
+                skip_msg = f"\'{annot_name}\' not stored for visualization - too many unique values"
                 user_logger.error(skip_msg)
                 print(skip_msg)
                 continue
