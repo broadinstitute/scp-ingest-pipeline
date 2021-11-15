@@ -106,11 +106,11 @@ class TestCellMetadata(unittest.TestCase):
             expect_model = valid_array_v2_1_2_models["cell_metadata_models"][model_name]
             self.assertEqual(model, expect_model)
 
-    def test_skip_lg_group_transform(self):
+    def test_skip_large_group_transform(self):
         # metadata "barcodekey" - 250 unique values, should not transform
         # metadata "scale" - 200 unique values , should transform
         cm = CellMetadata(
-            "../tests/data/annotation/metadata/convention/lg_grp_metadata_to_skip.txt",
+            "../tests/data/annotation/metadata/convention/large_group_metadata_to_skip.txt",
             "612e90364e68d4b7e3ece4d0",
             "612e998b4e68d4b7e3ece504",
             study_accession="SCP3",
