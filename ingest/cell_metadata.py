@@ -155,29 +155,22 @@ class CellMetadata(Annotations):
             # should not store annotations with >200 unique values for viz
             # annot_header is the column of data, which includes name and type
             # large is any annotation with more than 200 + 2 unique values
-            large = True if len(list(self.file[annot_header].unique())) > 202 else False
+            unique_values = list(self.file[annot_header].unique())
+            large = True if len(unique_values) > 202 else False
 
-            if large and group:
-                skip_msg = f"\'{annot_name}\' not stored for visualization - too many unique values"
-                user_logger.error(skip_msg)
-                print(skip_msg)
-                continue
-            else:
-                yield AnnotationModel(
-                    annot_header,
-                    self.Model(
-                        {
-                            "name": annot_name,
-                            "annotation_type": stored_mongo_annot_type,
-                            # unique values from "group" type annotations else []
-                            "values": list(self.file[annot_header].unique())
-                            if annot_type == "group"
-                            else [],
-                            "study_file_id": self.study_file_id,
-                            "study_id": self.study_id,
-                        }
-                    ),
-                )
+            yield AnnotationModel(
+                annot_header,
+                self.Model(
+                    {
+                        "name": annot_name,
+                        "annotation_type": stored_mongo_annot_type,
+                        # unique values from "group" type annotations else []
+                        "values": unique_values if (group and not large) else [],
+                        "study_file_id": self.study_file_id,
+                        "study_id": self.study_id,
+                    }
+                ),
+            )
 
     def set_data_array(self, linear_data_id: str, annot_header: str):
 

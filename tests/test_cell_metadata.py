@@ -122,12 +122,13 @@ class TestCellMetadata(unittest.TestCase):
         json_file = convention_file_object.open_file(CellMetadata.JSON_CONVENTION)
         convention = json.load(json_file)
         collect_jsonschema_errors(cm, convention)
-        transformed_models = []
+        values_array_empty = []
         for metadata_model in cm.transform():
-            transformed_models.append(metadata_model.model["name"])
-        barcodekey = True if "barcodekey" in transformed_models else False
-        scale = True if "scale" in transformed_models else False
-        self.assertFalse(
-            barcodekey, "metadata with too many unique values should not be stored"
+            if not metadata_model.model["values"]:
+                values_array_empty.append(metadata_model.model["name"])
+        barcodekey = True if "barcodekey" in values_array_empty else False
+        scale = True if "scale" in values_array_empty else False
+        self.assertTrue(
+            barcodekey, "metadata with too many unique values should not store values"
         )
-        self.assertTrue(scale, "metadata with exactly 200 values should be stored")
+        self.assertFalse(scale, "metadata with exactly 200 values should be stored")
