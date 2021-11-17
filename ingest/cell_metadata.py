@@ -142,7 +142,11 @@ class CellMetadata(Annotations):
                 else "group"
             )
 
-            group = True if annot_type == "group" else False
+            group = (
+                True
+                if (annot_type == "group" or stored_mongo_annot_type == "group")
+                else False
+            )
             # should not store annotations with >200 unique values for viz
             # annot_header is the column of data, which includes name and type
             # large is any annotation with more than 200 + 2 unique values
