@@ -1,3 +1,4 @@
+import numpy
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 
@@ -73,7 +74,30 @@ class Clusters(Annotations):
     def validate(self):
         """ Runs all validation checks
         """
-        return all([self.is_valid_format(), self.validate_numeric_annots()])
+        return all(
+            [
+                self.is_valid_format(),
+                self.validate_numeric_annots(),
+                self.require_X_Y_not_nan(),
+            ]
+        )
+
+    def require_X_Y_not_nan(self):
+        """
+        X Y and Z are expected to be fully populated in cluster files
+        Fail coordinate data columns that have nan values
+        """
+        valid = True
+        for annot_name in self.headers:
+            if annot_name.lower() in ("x", "y", "z"):
+                if self.file[annot_name].isna().any().bool():
+                    valid = False
+                    msg = f"Missing coordinate values in {annot_name} column"
+                    self.store_validation_issue("error", "format", msg)
+        if valid:
+            return True
+        else:
+            return False
 
     def is_valid_format(self):
         """Validates format by calling all format validation methods"""
