@@ -97,7 +97,7 @@ class TestCellMetadata(unittest.TestCase):
         are then interpreted as having all NaN values (technically numeric)
         """
         cluster = Clusters(
-            "../tests/data/cluster_space_delimited.txt",
+            "../tests/data/cluster_bad_space_delimited.txt",
             "dec0dedfeed1111111111111",
             "addedfeed000000000000000",
             "testCluster",
@@ -108,7 +108,7 @@ class TestCellMetadata(unittest.TestCase):
         """Ensures coordinate values for X Y Z are all populated
         """
         cluster = Clusters(
-            "../tests/data/cluster_missing_coordinate_values.txt",
+            "../tests/data/cluster_bad_missing_coordinate_values.txt",
             "dec0dedfeed1111111111111",
             "addedfeed000000000000000",
             "testCluster",
