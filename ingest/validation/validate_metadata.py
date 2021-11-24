@@ -920,7 +920,7 @@ def process_metadata_row(metadata, convention, line):
             type_index = metadata.headers.index(k)
             k_type = metadata.annot_types[type_index]
             if k_type == "numeric":
-                k_numeric = type(v) == int or type(v) == float
+                k_numeric = type(v) in [int, float]
                 if not k_numeric:
                     # pandas coercion will stringify numbers
                     try:
