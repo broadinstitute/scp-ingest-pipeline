@@ -923,9 +923,13 @@ def process_metadata_row(metadata, convention, line):
                 k_numeric = type(v) in [int, float]
                 if not k_numeric:
                     # pandas coercion will stringify numbers
+                    # error messages including v are more confusing than helpful
+                    # e.g. percent_mt: supplied value 0.0825991189427313 is not numeric
+                    # 0.0825991189427313 was stringified due to non-numeric in the data column
+                    # but the value 0.0825991189427313 was validly supplied as a numeric
                     try:
                         float(v)
-                        msg = f"{k}: one or more values are not numeric"
+                        msg = f"{k}: one or more values in data column are not numeric"
                     # only true non-numerics should be reported in detail
                     except ValueError:
                         msg = f"{k}: supplied value {v} is not numeric"
