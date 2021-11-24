@@ -94,7 +94,7 @@ class Clusters(Annotations):
                     is_valid = False
                     msg = f"Missing coordinate values in {annot_name} column"
                     self.store_validation_issue("error", "format", msg)
-    return is_valid
+        return is_valid
 
     def is_valid_format(self):
         """Validates format by calling all format validation methods"""
