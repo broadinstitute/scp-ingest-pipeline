@@ -171,7 +171,7 @@ class TestAnnotations(unittest.TestCase):
         self.assertEqual(dtype, np.float)
 
         # Test that numeric values were properly rounded
-        # Pick a random number to chose a line in the test file
+        # Pick a random number to choose a line in the test file
         ran_num = random.randint(0, 17)
         for column in cm.file.columns:
             annot_type = column[1]
