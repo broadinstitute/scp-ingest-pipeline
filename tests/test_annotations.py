@@ -170,9 +170,9 @@ class TestAnnotations(unittest.TestCase):
         dtype = cm.file.dtypes[("Average Intensity", "numeric")]
         self.assertEqual(dtype, np.float)
 
-        # Test that numeric values wer
-        # Pick a random number between 1 and amount of lines in file
-        ran_num = random.randint(1, 20)
+        # Test that numeric values were properly rounded
+        # Pick a random number to chose a line in the test file
+        ran_num = random.randint(0, 17)
         for column in cm.file.columns:
             annot_type = column[1]
             if annot_type == "numeric":
