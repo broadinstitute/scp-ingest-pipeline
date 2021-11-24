@@ -760,7 +760,7 @@ class TestValidateMetadata(unittest.TestCase):
 
         self.assertEqual(
             list(metadata.issues["error"]["type"].keys())[0],
-            'percent_mt: supplied value 07.juil is not numeric value',
+            'percent_mt: supplied value 07.juil is not numeric',
             "expected error message not generated",
         )
         self.teardown_metadata(metadata)
