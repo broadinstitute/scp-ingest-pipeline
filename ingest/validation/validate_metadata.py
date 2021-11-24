@@ -915,16 +915,18 @@ def process_metadata_row(metadata, convention, line):
     row_info = dict(itertools.zip_longest(metadata_names, line))
     processed_row = {}
     for k, v in row_info.items():
-        # for metadata not in convention, no need to process
+        # for metadata not in convention, check numeric metadata for valid values
         if k not in convention["properties"].keys():
             type_index = metadata.headers.index(k)
             k_type = metadata.annot_types[type_index]
             if k_type == "numeric":
                 k_numeric = type(v) == int or type(v) == float
                 if not k_numeric:
+                    # pandas coercion will stringify numbers
                     try:
                         float(v)
                         msg = f"{k}: one or more values are not numeric"
+                    # only true non-numerics should be reported in detail
                     except ValueError:
                         msg = f"{k}: supplied value {v} is not numeric"
                     metadata.store_validation_issue(
