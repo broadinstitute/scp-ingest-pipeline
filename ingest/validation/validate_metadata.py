@@ -917,6 +917,16 @@ def process_metadata_row(metadata, convention, line):
     for k, v in row_info.items():
         # for metadata not in convention, no need to process
         if k not in convention["properties"].keys():
+            type_index = metadata.headers.index(k)
+            k_type = metadata.annot_types[type_index]
+            if k_type == "numeric":
+                k_numeric = type(v) == int or type(v) == float
+                if not k_numeric:
+                    msg = f"{k}: supplied value {v} is not numeric value"
+                    metadata.store_validation_issue(
+                        "error", "type", msg, {row_info["CellID"]}
+                    )
+                    dev_logger.error(msg)
             continue
         # for optional metadata, do not pass empty cells (nan)
         if k not in convention["required"]:
