@@ -922,7 +922,11 @@ def process_metadata_row(metadata, convention, line):
             if k_type == "numeric":
                 k_numeric = type(v) == int or type(v) == float
                 if not k_numeric:
-                    msg = f"{k}: supplied value {v} is not numeric"
+                    try:
+                        float(v)
+                        msg = f"{k}: one or more values are not numeric"
+                    except ValueError:
+                        msg = f"{k}: supplied value {v} is not numeric"
                     metadata.store_validation_issue(
                         "error", "type", msg, {row_info["CellID"]}
                     )
