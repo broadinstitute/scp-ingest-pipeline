@@ -1,0 +1,3 @@
+NAME	condition	nCount_RNA	nFeature_RNA	percent_mt	S_Score	G2M_Score	Phase	old_ident	RNA_snn_res_0_7	Clusters	biosample_id	donor_id	species	species__ontology_label	disease	disease__ontology_label	organ	organ__ontology_label	library_preparation_protocol	library_preparation_protocol__ontology_label	sex
+TYPE	group	numeric	numeric	numeric	numeric	numeric	group	group	group	group	group	group	group	group	group	group	group	group	group	group	group
+CACACAATCTCTGACC	Control	10000	3448	07.juil	1.09239926739927	-1.55220378749791	S	XR001_with_second_tdtomato	0	RPCs-3	Retinal	Mice	NCBITaxon_10090	Mus musculus	PATO_0000461	normal	UBERON_0000966	retina	EFO_0009899	10x 3' v2	mixed

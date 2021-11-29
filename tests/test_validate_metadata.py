@@ -742,6 +742,29 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.teardown_metadata(metadata)
 
+    def test_validate_nonconventional_numeric_content(self):
+        """Nonconventional numeric metadata values should all validate as numeric
+        """
+
+        args = (
+            "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
+            "../tests/data/annotation/metadata/convention/invalid_nonconventional_numeric_v2.2.0.txt"
+        )
+        metadata, convention = self.setup_metadata(args)
+        validate_input_metadata(metadata, convention)
+
+        self.assertTrue(
+            report_issues(metadata),
+            "Numeric metadata with non-numeric value should fail validation",
+        )
+
+        self.assertEqual(
+            list(metadata.issues["error"]["type"].keys())[0],
+            'percent_mt: supplied value 07.juil is not numeric',
+            "expected error message not generated",
+        )
+        self.teardown_metadata(metadata)
+
 
 if __name__ == "__main__":
     unittest.main()
