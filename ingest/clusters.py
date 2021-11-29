@@ -85,7 +85,7 @@ class Clusters(Annotations):
     def require_X_Y_not_nan(self):
         """
         X Y and Z are expected to be fully populated in cluster files
-        Fail coordinate data columns that have nan values
+        Fail coordinate data columns that have NaN values
         """
         is_valid = True
         for annot_name in self.headers:
