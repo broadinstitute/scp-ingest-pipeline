@@ -89,3 +89,28 @@ class TestCellMetadata(unittest.TestCase):
         assert isinstance(
             cluster.file["NA_f_n_s__num"]["numeric"][3], float
         ), "empty cell -> NaN that remains float (not coerced)"
+
+    def test_inconsistent_delimiter_false(self):
+        """Ensure that mis-parse creating NaN for coordinate values is rejected.
+        Inconsistent delimiter can cause the entire row
+        to be ingested as the cell name value, any coordinate columns
+        are then interpreted as having all NaN values (technically numeric)
+        """
+        cluster = Clusters(
+            "../tests/data/cluster_bad_space_delimited.txt",
+            "dec0dedfeed1111111111111",
+            "addedfeed000000000000000",
+            "testCluster",
+        )
+        self.assertFalse(cluster.require_X_Y_not_nan())
+
+    def test_missing_coordinate_column_values_false(self):
+        """Ensures coordinate values for X Y Z are all populated
+        """
+        cluster = Clusters(
+            "../tests/data/cluster_bad_missing_coordinate_values.txt",
+            "dec0dedfeed1111111111111",
+            "addedfeed000000000000000",
+            "testCluster",
+        )
+        self.assertFalse(cluster.require_X_Y_not_nan())
