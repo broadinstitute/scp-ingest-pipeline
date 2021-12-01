@@ -91,18 +91,26 @@ class TestValidateMetadata(unittest.TestCase):
         )
         collect_jsonschema_errors(metadata, convention)
         validate_collected_ontology_data(metadata, convention)
-        report_issues(metadata)
+        # reference errors tests for:
+        # incorrectly delimited value in numeric column
+        self.assertIn(
+            "disease__time_since_onset: '12,2' in '12,2' does not match expected 'number' type",
+            metadata.issues["error"]["type"].keys(),
+            "comma-delimited values for array metadata should fail",
+        )
+        # incorrectly delimited value in boolean column
+        self.assertIn(
+            "disease__treated: 'True,False' in 'True,False' does not match expected 'boolean' type",
+            metadata.issues["error"]["type"].keys(),
+            "comma-delimited values for array metadata should fail",
+        )
+        # partial correctly delimited value in numeric column should still fail
+        self.assertIn(
+            "disease__time_since_onset: '3,1' in '36|3,1' does not match expected 'number' type",
+            metadata.issues["error"]["type"].keys(),
+            "incorrectly delimited values for array metadata should fail",
+        )
 
-        reference_file = open(
-            "mock_data/annotation/metadata/convention/has_commas_in_arrays.json"
-        )
-        reference_issues = json.load(reference_file)
-        reference_file.close()
-        self.assertEqual(
-            metadata.issues,
-            reference_issues,
-            "Metadata validation issues do not match reference issues",
-        )
         self.teardown_metadata(metadata)
 
     def test_convention_content(self):
@@ -492,19 +500,36 @@ class TestValidateMetadata(unittest.TestCase):
         )
         validate_collected_ontology_data(metadata, convention)
         # reference errors tests for:
-        #   missing required property 'sex'
-        #   missing dependency for non-required property 'ethinicity'
-        #   missing value for non-required property 'is_living'
-        #   value provided not a number for 'organism_age'
-        reference_file = open(
-            "mock_data/annotation/metadata/convention/issues_metadata_v2.0.0.json"
+        #   duplicate CellIDs are not permitted
+        self.assertIn(
+            "Duplicate CellID(s) in metadata file",
+            metadata.issues["error"]["format"].keys(),
+            "Duplicate CellID(s) in metadata file should result in error",
         )
-        reference_issues = json.load(reference_file)
-        reference_file.close()
-        self.assertEqual(
-            metadata.issues,
-            reference_issues,
-            "Metadata validation issues do not match reference issues",
+
+        #   missing required property 'sex'
+        self.assertIn(
+            "'sex' is a required property",
+            metadata.issues["error"]["convention"].keys(),
+            "absence of required metadata should result in error",
+        )
+        #  ontology ID required if ontology_label provided even for non-required metadata
+        self.assertIn(
+            "'ethnicity' is a dependency of 'ethnicity__ontology_label'",
+            metadata.issues["error"]["convention"].keys(),
+            "ontology_label without ontology ID data results in error, even for non-required metadata",
+        )
+        #   expect time unit if organism age is provided
+        self.assertIn(
+            "'organism_age' is a dependency of 'organism_age__unit'",
+            metadata.issues["error"]["convention"].keys(),
+            "absence of units for age metadata should result in error",
+        )
+        #   value provided not a number for 'organism_age'
+        self.assertIn(
+            "organism_age: \"foo\" does not match expected type",
+            metadata.issues["error"]["type"].keys(),
+            "ontology_label without ontology ID data results in error, even for non-required metadata",
         )
         self.teardown_metadata(metadata)
 
@@ -609,26 +634,26 @@ class TestValidateMetadata(unittest.TestCase):
         """Array-based metadata should conform to convention requirements
         """
 
-        def set_up_test(test_file_name, ref_file_name):
+        def set_up_test(test_file_name):
             test_file_path = "data/annotation/metadata/convention/" + test_file_name
-            ref_file_path = "mock_data/annotation/metadata/convention/" + ref_file_name
             args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
             metadata, convention = self.setup_metadata(args + test_file_path)
             validate_input_metadata(metadata, convention)
 
-            reference_file = open(ref_file_path)
-            reference_issues = json.load(reference_file)
-            reference_file.close()
-            self.assertEqual(
-                reference_issues,
-                metadata.issues,
-                "Metadata validation issues do not match reference issues",
-            )
             return metadata
 
-        # valid array data emits one warning message for disease__time_since_onset__unit
+        # metadata validation stores warning messages which are available thru CLI
+        # but not currently included in error email - too noisy
         # because no ontology label supplied in metadata file for the unit ontology
-        metadata = set_up_test("valid_array_v2.1.2.txt", "issues_warn_v2.1.2.json")
+        metadata = set_up_test("valid_array_v2.1.2.txt")
+        self.assertIn(
+            'disease__time_since_onset__unit: missing ontology label "UO_0000035" - using "month" per EBI OLS lookup',
+            metadata.issues["warn"]["ontology"].keys(),
+        )
+        self.assertIn(
+            'organ_region: missing ontology label "MBA_000000714" - using "Orbital area" per Mouse Brain Atlas ontology',
+            metadata.issues["warn"]["ontology"].keys(),
+        )
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
@@ -638,30 +663,123 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
         # Negative test cases
-
+        metadata = set_up_test("invalid_array_v2.1.2.txt")
+        self.assertTrue(
+            metadata.validate_format(), "Valid metadata headers should not elicit error"
+        )
         # reference errors tests for:
         # conflict between convention type and input metadata type annotation
         #     group instead of numeric: organism_age
+        self.assertIn(
+            'organism_age: \"group\" annotation in metadata file conflicts with metadata convention. Convention expects \"numeric\" values.',
+            metadata.issues["error"]["type"].keys(),
+            "metadata validation should fail if metadata type does not match convention-designated type",
+        )
         #     numeric instead of group: biosample_type
+        self.assertIn(
+            'biosample_type: \"numeric\" annotation in metadata file conflicts with metadata convention. Convention expects \"group\" values.',
+            metadata.issues["error"]["type"].keys(),
+            "metadata validation should fail if metadata type does not match convention-designated type",
+        )
         # invalid array-based metadata type: disease__time_since_onset
+        self.assertIn(
+            "disease__time_since_onset: 'three' in '36|three|1' does not match expected 'number' type",
+            metadata.issues["error"]["type"].keys(),
+            "metadata validation should fail if metadata type does not match convention-designated type",
+        )
+        self.assertIn(
+            "disease__time_since_onset: 'zero' in 'zero' does not match expected 'number' type",
+            metadata.issues["error"]["type"].keys(),
+            "metadata validation should fail if metadata type does not match convention-designated type",
+        )
         # invalid boolean value: disease__treated
+        self.assertIn(
+            "disease__treated: 'T' in 'T|F' does not match expected 'boolean' type",
+            metadata.issues["error"]["type"].keys(),
+            "metadata validation should fail if metadata type does not match convention-designated type",
+        )
+        self.assertIn(
+            "disease__treated: 'F' in 'F' does not match expected 'boolean' type",
+            metadata.issues["error"]["type"].keys(),
+            "metadata validation should fail if metadata type does not match convention-designated type",
+        )
         # non-uniform unit values: organism_age__unit
-        # missing ontology ID or label for non-required metadata: ethnicity
+        self.assertIn(
+            "disease__time_since_onset__unit: values for each unit metadata required to be uniform",
+            metadata.issues["error"]["convention"].keys(),
+            "Ontology_label values for units should be uniform",
+        )
+        # missing ontology ID or label for required metadata: organ
+        self.assertIn(
+            "organ: '' does not match '^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'",
+            metadata.issues["error"]["convention"].keys(),
+            "Missing required metadata should fail validation",
+        )
+        # missing ontology ID with existing label invalid even for non-required metadata: ethnicity
+        self.assertIn(
+            "'ethnicity' is a dependency of 'ethnicity__ontology_label'",
+            metadata.issues["error"]["convention"].keys(),
+            "missing ontology ID with existing label invalid even for non-required metadata",
+        )
         # invalid header content: donor info (only alphanumeric or underscore allowed)
-        metadata = set_up_test("invalid_array_v2.1.2.txt", "issues_array_v2.1.2.json")
-        self.assertTrue(
-            metadata.validate_format(), "Valid metadata headers should not elicit error"
+        self.assertIn(
+            "donor info: only alphanumeric characters and underscore allowed in metadata name",
+            metadata.issues["error"]["metadata_name"].keys(),
+            "metadata names must follow header rules (only alphanumeric or underscore allowed)",
         )
         self.teardown_metadata(metadata)
 
         # Arrays have NA values
-        set_up_test("has_na_in_array.tsv", "has_na_in_array.json")
-
-        # Arrays have commas instead of pipes
-        set_up_test("has_commas_in_arrays.csv", "has_commas_in_arrays.json")
+        metadata = set_up_test("has_na_in_array.tsv")
+        self.assertIn(
+            "disease__time_since_onset: 'None' in 'None' does not match expected 'number' type",
+            metadata.issues["error"]["type"].keys(),
+            "Non-numeric 'None' provided instead of numeric array should fail",
+        )
+        self.assertIn(
+            "disease__treated: 'N/A' in 'True|N/A|False' does not match expected 'boolean' type",
+            metadata.issues["error"]["type"].keys(),
+            "Non-boolean 'N/A' provided in boolean array should fail",
+        )
+        self.assertIn(
+            "disease__treated: 'None' in 'FALSE|None' does not match expected 'boolean' type",
+            metadata.issues["error"]["type"].keys(),
+            "Non-boolean 'None' provided in boolean array should fail",
+        )
+        self.teardown_metadata(metadata)
 
         # File has NA values in required fields
-        set_up_test("has_na_in_required_fields.csv", "has_na_in_required_fields.json")
+        metadata = set_up_test("has_na_in_required_fields.csv")
+        # missing ontology ID or label for required metadata
+        self.assertIn(
+            "organ: required column \"organ\" missing data",
+            metadata.issues["error"]["ontology"].keys(),
+            "Missing required metadata should fail validation",
+        )
+        self.assertIn(
+            "species: required column \"species__ontology_label\" missing data",
+            metadata.issues["error"]["ontology"].keys(),
+            "Missing required metadata should fail validation",
+        )
+        # NA value in required field (ontology)
+        self.assertIn(
+            "organ: '' does not match '^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'",
+            metadata.issues["error"]["convention"].keys(),
+            "Providing NaN for required metadata should fail validation",
+        )
+        # NA value in required field (enum)
+        self.assertIn(
+            "sex: 'Nan' is not one of ['male', 'female', 'mixed', 'unknown']",
+            metadata.issues["error"]["convention"].keys(),
+            "Providing NaN for required metadata should fail validation",
+        )
+        # NA value in non-required ontologyID field where ontology label provided
+        self.assertIn(
+            "'ethnicity' is a dependency of 'ethnicity__ontology_label'",
+            metadata.issues["error"]["convention"].keys(),
+            "Providing NaN for non-required ontologyID field where ontology label provided should fail validation",
+        )
+        self.teardown_metadata(metadata)
 
     def test_bigquery_json_content(self):
         """generated newline delimited JSON for BigQuery upload should match expected output
@@ -708,18 +826,24 @@ class TestValidateMetadata(unittest.TestCase):
         validate_collected_ontology_data(metadata, convention)
         # reference errors tests for:
         #   missing organ_region when organ_region__ontology_label provided
-        #   Invalid identifier MBA_999999999
-        #   mismatch of organ_region__ontology_label value with label value in MBA
-        #   mismatch of organ_region__ontology_label value with label from MBA_id lookup
-        reference_file = open(
-            "mock_data/annotation/metadata/convention/issues_mba_v2.1.2.json"
+        self.assertIn(
+            "'organ_region' is a dependency of 'organ_region__ontology_label'",
+            metadata.issues["error"]["convention"].keys(),
         )
-        reference_issues = json.load(reference_file)
-        reference_file.close()
-        self.assertEqual(
-            metadata.issues,
-            reference_issues,
-            "Metadata validation issues do not match reference issues",
+        #   Invalid identifier MBA_999999999
+        self.assertIn(
+            "organ_region: No match found in Allen Mouse Brain Atlas for provided ontology ID: MBA_999999999",
+            metadata.issues["error"]["ontology"].keys(),
+        )
+        #   mismatch of organ_region__ontology_label value with label value in MBA
+        self.assertIn(
+            'organ_region: input ontology_label \"Crus 1, urkinje layer\" does not match Allen Mouse Brain Atlas lookup \"Crus 1, Purkinje layer\" for ontology id \"MBA_000010676\"',
+            metadata.issues["error"]["ontology"].keys(),
+        )
+        #   mismatch of organ_region__ontology_label value with label from MBA_id lookup
+        self.assertIn(
+            'organ_region: input ontology_label \"Paraflocculus, granular layer\" does not match Allen Mouse Brain Atlas lookup \"Copula pyramidis, molecular layer\" for ontology id \"MBA_000010686\"',
+            metadata.issues["error"]["ontology"].keys(),
         )
         self.teardown_metadata(metadata)
 
