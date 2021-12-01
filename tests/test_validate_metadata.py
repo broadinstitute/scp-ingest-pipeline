@@ -557,26 +557,52 @@ class TestValidateMetadata(unittest.TestCase):
         )
         validate_input_metadata(metadata, convention)
         # reference errors tests for:
-        #   empty cell for cell_type entry (convention and ontology errors)
-        #   empty cell for entry of geographical_region and its label
-        #       (convention and ontology errors)
+        #   empty cell for cell_type entry that
+        #   has cell_type__ontology_label value (convention error)
+        self.assertIn(
+            "'cell_type' is a dependency of 'cell_type__ontology_label'",
+            metadata.issues["error"]["convention"].keys(),
+        )
         #   improper syntax (lack of _ or :) for EFO0008919
         #       (convention and ontology errors)
+        self.assertIn(
+            "library_preparation_protocol: 'EFO0008919' does not match '^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+'",
+            metadata.issues["error"]["convention"].keys(),
+        )
+        self.assertIn(
+            'library_preparation_protocol: Could not parse provided ontology id, "EFO0008919".',
+            metadata.issues["error"]["ontology"].keys(),
+        )
         #   invalid ontology shortname CELL for cell_type
+        self.assertIn(
+            "cell_type: No match found in EBI OLS for provided ontology ID: CELL_0000066",
+            metadata.issues["error"]["ontology"].keys(),
+        )
         #   invalid ontology label 'homo sapien' for species__ontology_label
         #     with species ontologyID of 'NCBITaxon_9606'
-        #   invalid ontologyID of 'NCBITaxon_9606' for geographical_region
-        #   invalid ontologyID UBERON_1000331 for organ__ontology_label
-        reference_file = open(
-            "mock_data/annotation/metadata/convention/issues_ontology_v2.0.0.json"
+        self.assertIn(
+            'species: input ontology_label "homo sapien" does not match EBI OLS lookup "Homo sapiens" for ontology id "NCBITaxon_9606"',
+            metadata.issues["error"]["ontology"].keys(),
         )
-        reference_issues = json.load(reference_file)
-        self.assertEqual(
-            metadata.issues,
-            reference_issues,
-            "Ontology validation issues do not match reference issues",
+        #   invalid ontologyID 'NCBITaxon_9606' for geographical_region
+        self.assertIn(
+            "geographical_region: No match found in EBI OLS for provided ontology ID: NCBITaxon_9606",
+            metadata.issues["error"]["ontology"].keys(),
         )
-        reference_file.close()
+        #   invalid ontologyID 'UBERON_1000331' for organ__ontology_label
+        self.assertIn(
+            "organ: No match found in EBI OLS for provided ontology ID: UBERON_1001913",
+            metadata.issues["error"]["ontology"].keys(),
+        )
+        #   improper ontology IDs 'NCIT_C-43862' and 'NC-IT_C126538' for race__ontology_label
+        self.assertIn(
+            "race: No match found in EBI OLS for provided ontology ID: NCIT_C-43862",
+            metadata.issues["error"]["ontology"].keys(),
+        )
+        self.assertIn(
+            "race: No match found in EBI OLS for provided ontology ID: NC-IT_C126538",
+            metadata.issues["error"]["ontology"].keys(),
+        )
         self.teardown_metadata(metadata)
 
     def test_content(self):

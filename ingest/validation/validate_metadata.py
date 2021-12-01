@@ -856,7 +856,7 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         try:
             if "|" not in value:
                 msg = (
-                    f"There is only one array value, for {metadatum}: {value}. "
+                    f"Only one value detected for {metadatum}, which can accept an array of values. "
                     "If multiple values are expected, use a pipe ('|') to separate values."
                 )
                 metadata.store_validation_issue(
@@ -1291,7 +1291,7 @@ def identify_duplicates(list):
     return dups
 
 
-def assess_ontology_ids(ids):
+def assess_ontology_ids(ids, property_name, metadata):
     """
     Check ordered collection of ontology IDs for increasing numeric values
     """
@@ -1304,7 +1304,7 @@ def assess_ontology_ids(ids):
             binned_ids[ontology_shortname].append(term_id)
         except (ValueError, TypeError):
             msg = f'{property_name}: Could not parse provided ontology id, "{id}"'
-            raise ValueError(msg)
+            metadata.store_validation_issue("error", "ontology", msg)
     for ontology in binned_ids.keys():
         id_numerics = []
         incrementation_count = 0
@@ -1335,7 +1335,7 @@ def detect_excel_drag(metadata, convention):
             property_labels_blanks_removed = [i for i in property_labels if i]
             unique_labels = set(property_labels_blanks_removed)
 
-            if assess_ontology_ids(property_ids):
+            if assess_ontology_ids(property_ids, property_name, metadata):
                 msg = f"{property_name}: incrementing ontology ID values suggest cut and paste issue - exiting validation, ontology content not validated against ontology server. Please confirm ontology IDs are correct and resubmit. "
                 excel_drag = True
                 # check for likely ontology label if multiple ontology IDs ascribed to same ontology label
