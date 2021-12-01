@@ -9,7 +9,7 @@ Must have python 3.6 or higher.
 """
 import collections
 import ntpath
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import copy
@@ -58,7 +58,7 @@ class CellMetadata(Annotations):
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
-        self.ontology_label = dict()
+        self.ordered_ontology = defaultdict(lambda: OrderedDict())
         self.cells = []
         self.numeric_array_columns = {}
         self.kwargs = kwargs

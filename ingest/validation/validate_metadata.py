@@ -220,12 +220,13 @@ class OntologyRetriever:
             ontology_shortname, term_id = re.split("[_:]", term)
         except (ValueError, TypeError):
             msg = f'{property_name}: Could not parse provided ontology id, "{term}".'
-            if attribute_type == "array":
-                if "|" not in term:
-                    msg += (
-                        f" There is only one array value, for ontology id, '{term}.' "
-                        "If multiple values are expected, use a pipe ('|') to separate values."
-                    )
+            # check in is_array_metadata should be sufficient, commenting out for removal after testing
+            # if attribute_type == "array":
+            #     if "|" not in term:
+            #         msg += (
+            #             f" There is only one array value, for ontology id, '{term}.' "
+            #             "If multiple values are expected, use a pipe ('|') to separate values."
+            #         )
 
             raise ValueError(msg)
         # check if we have already retrieved this ontology reference
@@ -515,6 +516,12 @@ def insert_array_ontology_label_row_data(
     if not row[ontology_label]:
         array_label_for_bq = []
         for id in row[property_name]:
+            # track original labels, including blanks, in the ordered ontology structure
+            metadata.ordered_ontology.setdefault(property_name, {id: ''})
+            if id in metadata.ontology[property_name]:
+                metadata.ordered_ontology[property_name][id] = ""
+            else:
+                metadata.ordered_ontology[property_name].setdefault(id, '')
             label_lookup = ""
             try:
                 label_and_synonyms = retriever.retrieve_ontology_term_label_and_synonyms(
@@ -545,7 +552,17 @@ def insert_array_ontology_label_row_data(
                 )
             array_label_for_bq.append(label_lookup)
         row[ontology_label] = array_label_for_bq
-
+    else:
+        for i, id in enumerate(row[property_name]):
+            metadata.ordered_ontology.setdefault(
+                property_name, {id: row[ontology_label][i]}
+            )
+            if id in metadata.ontology[property_name]:
+                metadata.ordered_ontology[property_name][id] = row[ontology_label][i]
+            else:
+                metadata.ordered_ontology[property_name].setdefault(
+                    id, row[ontology_label][i]
+                )
     for id, label in zip(row[property_name], row[ontology_label]):
         metadata.ontology[property_name][(id, label)].append(cell_id)
     return row
@@ -558,6 +575,12 @@ def insert_ontology_label_row_data(
     cell_id = row["CellID"]
 
     if not row[ontology_label]:
+        # track original labels, including blanks, in the ordered ontology structure
+        metadata.ordered_ontology.setdefault(property_name, {id: ''})
+        if id in metadata.ontology[property_name]:
+            metadata.ordered_ontology[property_name][id] = ''
+        else:
+            metadata.ordered_ontology[property_name].setdefault(id, '')
         # for optional columns, try to fill it in
         property_type = convention["properties"][property_name]["type"]
         try:
@@ -580,6 +603,12 @@ def insert_ontology_label_row_data(
             print(e)
             error_msg = f"Optional column {ontology_label} empty and could not be resolved from {property_name} column value {row[property_name]}"
             metadata.store_validation_issue("warn", "ontology", error_msg, [cell_id])
+    else:
+        metadata.ordered_ontology.setdefault(property_name, {id: row[ontology_label]})
+        if id in metadata.ontology[property_name]:
+            metadata.ordered_ontology[property_name][id] = row[ontology_label]
+        else:
+            metadata.ordered_ontology[property_name].setdefault(id, row[ontology_label])
 
     metadata.ontology[property_name][(row[property_name], row[ontology_label])].append(
         cell_id
@@ -1247,13 +1276,95 @@ def review_metadata_names(metadata):
             metadata.store_validation_issue("error", "metadata_name", error_msg)
 
 
+def identify_duplicates(list):
+    """ Given a list with duplicates, ie. length of list longer than
+    length of set(list), return list of unique duplicated elements
+    """
+    uniques = []
+    dups = []
+    for element in list:
+        if element not in uniques:
+            uniques.append(element)
+        else:
+            if element not in dups:
+                dups.append(element)
+    return dups
+
+
+def assess_ontology_ids(ids):
+    """
+    Check ordered collection of ontology IDs for increasing numeric values
+    """
+    evidence_of_excel_drag = False
+    evidence_of_excel_drag_threshold = 25
+    binned_ids = defaultdict(list)
+    for id in ids:
+        try:
+            ontology_shortname, term_id = re.split("[_:]", id)
+            binned_ids[ontology_shortname].append(term_id)
+        except (ValueError, TypeError):
+            msg = f'{property_name}: Could not parse provided ontology id, "{id}"'
+            raise ValueError(msg)
+    for ontology in binned_ids.keys():
+        id_numerics = []
+        incrementation_count = 0
+        for term in binned_ids[ontology]:
+            term_numeric = re.search('(\d)*$', term)
+            id_numerics.append(int(term_numeric.group()))
+        for x, y in zip(id_numerics, id_numerics[1:]):
+            if y - x == 1:
+                incrementation_count += 1
+            elif y - x != 1:
+                incrementation_count = 0
+            if incrementation_count >= evidence_of_excel_drag_threshold:
+                evidence_of_excel_drag = True
+                break
+    return evidence_of_excel_drag
+
+
+def detect_excel_drag(metadata, convention):
+    """ Check if ontology IDs submitted have characteristic excel drag properties
+    """
+    excel_drag = False
+    for property_name in metadata.ontology.keys():
+        if len(metadata.ordered_ontology[property_name].keys()) == 1:
+            continue
+        else:
+            property_ids = metadata.ordered_ontology[property_name].keys()
+            property_labels = metadata.ordered_ontology[property_name].values()
+            property_labels_blanks_removed = [i for i in property_labels if i]
+            unique_labels = set(property_labels_blanks_removed)
+
+            if assess_ontology_ids(property_ids):
+                msg = f"{property_name}: incrementing ontology ID values suggest cut and paste issue - exiting validation, ontology content not validated against ontology server. Please confirm ontology IDs are correct and resubmit. "
+                excel_drag = True
+                # check for likely ontology label if multiple ontology IDs ascribed to same ontology label
+                if len(property_labels) > len(unique_labels):
+                    duplicate_labels = identify_duplicates(
+                        property_labels_blanks_removed
+                    )
+                    if duplicate_labels:
+                        msg += f"Check for mismatches between ontology ID and provided ontology label(s) {duplicate_labels}"
+                msg += "\n"
+                metadata.store_validation_issue("error", "ontology", msg)
+                dev_logger.exception(msg)
+    return excel_drag
+
+
 def validate_input_metadata(metadata, convention, bq_json=None):
     """Wrapper function to run validation functions
     """
+    dev_logger.info("Checking metadata content against convention rules")
     collect_jsonschema_errors(metadata, convention, bq_json)
     review_metadata_names(metadata)
-    validate_collected_ontology_data(metadata, convention)
-    confirm_uniform_units(metadata, convention)
+    dev_logger.info('Checking for "Excel drag" events')
+    if not detect_excel_drag(metadata, convention):
+        # "short-circut" ontology validation if "Excel drag" detected
+        # avoids a bloat of calls to EBI OLS, return error faster and avoid
+        # long-compute-time issue (if false positives are possible, bypass will be needed)
+        dev_logger.info('Validating ontology content against EBI OLS')
+        validate_collected_ontology_data(metadata, convention)
+        confirm_uniform_units(metadata, convention)
 
 
 def push_metadata_to_bq(metadata, ndjson, dataset, table):
