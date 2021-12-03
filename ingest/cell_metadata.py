@@ -58,7 +58,8 @@ class CellMetadata(Annotations):
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
-        self.ordered_ontology = defaultdict(lambda: OrderedDict())
+        self.ordered_ontology = defaultdict(list)
+        self.ordered_labels = defaultdict(list)
         self.cells = []
         self.numeric_array_columns = {}
         self.kwargs = kwargs

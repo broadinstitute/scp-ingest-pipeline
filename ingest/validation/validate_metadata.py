@@ -517,11 +517,8 @@ def insert_array_ontology_label_row_data(
         array_label_for_bq = []
         for id in row[property_name]:
             # track original labels, including blanks, in the ordered ontology structure
-            metadata.ordered_ontology.setdefault(property_name, {id: ''})
-            if id in metadata.ontology[property_name]:
-                metadata.ordered_ontology[property_name][id] = ""
-            else:
-                metadata.ordered_ontology[property_name].setdefault(id, '')
+            metadata.ordered_ontology[property_name].append(id)
+            metadata.ordered_labels[property_name].append('')
             label_lookup = ""
             try:
                 label_and_synonyms = retriever.retrieve_ontology_term_label_and_synonyms(
@@ -554,15 +551,8 @@ def insert_array_ontology_label_row_data(
         row[ontology_label] = array_label_for_bq
     else:
         for i, id in enumerate(row[property_name]):
-            metadata.ordered_ontology.setdefault(
-                property_name, {id: row[ontology_label][i]}
-            )
-            if id in metadata.ontology[property_name]:
-                metadata.ordered_ontology[property_name][id] = row[ontology_label][i]
-            else:
-                metadata.ordered_ontology[property_name].setdefault(
-                    id, row[ontology_label][i]
-                )
+            metadata.ordered_ontology[property_name].append(id)
+            metadata.ordered_labels[property_name].append(row[ontology_label][i])
     for id, label in zip(row[property_name], row[ontology_label]):
         metadata.ontology[property_name][(id, label)].append(cell_id)
     return row
@@ -576,11 +566,8 @@ def insert_ontology_label_row_data(
 
     if not row[ontology_label]:
         # track original labels, including blanks, in the ordered ontology structure
-        metadata.ordered_ontology.setdefault(property_name, {id: ''})
-        if id in metadata.ontology[property_name]:
-            metadata.ordered_ontology[property_name][id] = ''
-        else:
-            metadata.ordered_ontology[property_name].setdefault(id, '')
+        metadata.ordered_ontology[property_name].append(id)
+        metadata.ordered_labels[property_name].append('')
         # for optional columns, try to fill it in
         property_type = convention["properties"][property_name]["type"]
         try:
@@ -604,11 +591,8 @@ def insert_ontology_label_row_data(
             error_msg = f"Optional column {ontology_label} empty and could not be resolved from {property_name} column value {row[property_name]}"
             metadata.store_validation_issue("warn", "ontology", error_msg, [cell_id])
     else:
-        metadata.ordered_ontology.setdefault(property_name, {id: row[ontology_label]})
-        if id in metadata.ontology[property_name]:
-            metadata.ordered_ontology[property_name][id] = row[ontology_label]
-        else:
-            metadata.ordered_ontology[property_name].setdefault(id, row[ontology_label])
+        metadata.ordered_ontology[property_name].append(id)
+        metadata.ordered_labels[property_name].append(row[ontology_label])
 
     metadata.ontology[property_name][(row[property_name], row[ontology_label])].append(
         cell_id
@@ -1311,6 +1295,7 @@ def assess_ontology_ids(ids, property_name, metadata):
         for term in binned_ids[ontology]:
             term_numeric = re.search('(\d)*$', term)
             id_numerics.append(int(term_numeric.group()))
+        print(f'{property_name} {id_numerics}')
         for x, y in zip(id_numerics, id_numerics[1:]):
             if y - x == 1:
                 incrementation_count += 1
@@ -1319,6 +1304,7 @@ def assess_ontology_ids(ids, property_name, metadata):
             if incrementation_count >= evidence_of_excel_drag_threshold:
                 evidence_of_excel_drag = True
                 break
+        print(f'{property_name} {incrementation_count} {evidence_of_excel_drag}')
     return evidence_of_excel_drag
 
 
@@ -1327,19 +1313,23 @@ def detect_excel_drag(metadata, convention):
     """
     excel_drag = False
     for property_name in metadata.ontology.keys():
-        if len(metadata.ordered_ontology[property_name].keys()) == 1:
+        if len(set(metadata.ordered_ontology[property_name])) == 1:
             continue
         else:
-            property_ids = metadata.ordered_ontology[property_name].keys()
-            property_labels = metadata.ordered_ontology[property_name].values()
+            property_ids = metadata.ordered_ontology[property_name]
+            property_labels = metadata.ordered_labels[property_name]
             property_labels_blanks_removed = [i for i in property_labels if i]
             unique_labels = set(property_labels_blanks_removed)
+            # likely ontology label mis-assignment if multiple ontology IDs ascribed to same ontology label
+            label_multiply_assigned = len(property_labels) > len(unique_labels)
 
-            if assess_ontology_ids(property_ids, property_name, metadata):
+            if (
+                assess_ontology_ids(property_ids, property_name, metadata)
+                or label_multiply_assigned
+            ):
                 msg = f"{property_name}: incrementing ontology ID values suggest cut and paste issue - exiting validation, ontology content not validated against ontology server. Please confirm ontology IDs are correct and resubmit. "
                 excel_drag = True
-                # check for likely ontology label if multiple ontology IDs ascribed to same ontology label
-                if len(property_labels) > len(unique_labels):
+                if label_multiply_assigned:
                     duplicate_labels = identify_duplicates(
                         property_labels_blanks_removed
                     )
