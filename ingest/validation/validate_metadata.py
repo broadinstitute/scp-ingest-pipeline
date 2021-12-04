@@ -345,7 +345,7 @@ def parse_organ_region_ontology_id(term):
     except (TypeError, ValueError):
         # when term value is empty string -> TypeError, convert this to a value error
         raise ValueError(
-            f'organ_region: Could not parse provided ontology id, "{term}"'
+            f'organ_region: Could not parse provided ontology id, "{term}".'
         )
 
 
@@ -513,12 +513,13 @@ def insert_array_ontology_label_row_data(
         error_msg = f"{property_name}: mismatched # of {property_name} and {ontology_label} values"
         metadata.store_validation_issue("error", "ontology", error_msg, [cell_id])
         return row
+
     if not row[ontology_label]:
         array_label_for_bq = []
+        # track original labels, including blanks, in the ordered ontology structure
+        metadata.ordered_ontology[property_name].extend(row[property_name])
+        metadata.ordered_labels[property_name].extend('')
         for id in row[property_name]:
-            # track original labels, including blanks, in the ordered ontology structure
-            metadata.ordered_ontology[property_name].append(id)
-            metadata.ordered_labels[property_name].append('')
             label_lookup = ""
             try:
                 label_and_synonyms = retriever.retrieve_ontology_term_label_and_synonyms(
@@ -550,9 +551,8 @@ def insert_array_ontology_label_row_data(
             array_label_for_bq.append(label_lookup)
         row[ontology_label] = array_label_for_bq
     else:
-        for i, id in enumerate(row[property_name]):
-            metadata.ordered_ontology[property_name].append(id)
-            metadata.ordered_labels[property_name].append(row[ontology_label][i])
+        metadata.ordered_ontology[property_name].extend(row[property_name])
+        metadata.ordered_labels[property_name].extend(row[ontology_label])
     for id, label in zip(row[property_name], row[ontology_label]):
         metadata.ontology[property_name][(id, label)].append(cell_id)
     return row
@@ -1287,7 +1287,7 @@ def assess_ontology_ids(ids, property_name, metadata):
             ontology_shortname, term_id = re.split("[_:]", id)
             binned_ids[ontology_shortname].append(term_id)
         except (ValueError, TypeError):
-            msg = f'{property_name}: Could not parse provided ontology id, "{id}"'
+            msg = f'{property_name}: Could not parse provided ontology id, "{id}".'
             metadata.store_validation_issue("error", "ontology", msg)
     for ontology in binned_ids.keys():
         id_numerics = []
@@ -1317,16 +1317,14 @@ def detect_excel_drag(metadata, convention):
             continue
         else:
             property_ids = metadata.ordered_ontology[property_name]
+            unique_ids = set(property_ids)
             property_labels = metadata.ordered_labels[property_name]
             property_labels_blanks_removed = [i for i in property_labels if i]
             unique_labels = set(property_labels_blanks_removed)
             # likely ontology label mis-assignment if multiple ontology IDs ascribed to same ontology label
-            label_multiply_assigned = len(property_labels) > len(unique_labels)
+            label_multiply_assigned = len(unique_ids) > len(unique_labels)
 
-            if (
-                assess_ontology_ids(property_ids, property_name, metadata)
-                or label_multiply_assigned
-            ):
+            if assess_ontology_ids(property_ids, property_name, metadata):
                 msg = f"{property_name}: incrementing ontology ID values suggest cut and paste issue - exiting validation, ontology content not validated against ontology server. Please confirm ontology IDs are correct and resubmit. "
                 excel_drag = True
                 if label_multiply_assigned:
