@@ -1288,14 +1288,13 @@ def assess_ontology_ids(ids, property_name, metadata):
             binned_ids[ontology_shortname].append(term_id)
         except (ValueError, TypeError):
             msg = f'{property_name}: Could not parse provided ontology id, "{id}".'
-            metadata.store_validation_issue("error", "ontology", msg)
+            raise ValueError(msg)
     for ontology in binned_ids.keys():
         id_numerics = []
         incrementation_count = 0
         for term in binned_ids[ontology]:
             term_numeric = re.search('(\d)*$', term)
             id_numerics.append(int(term_numeric.group()))
-        print(f'{property_name} {id_numerics}')
         for x, y in zip(id_numerics, id_numerics[1:]):
             if y - x == 1:
                 incrementation_count += 1
@@ -1304,7 +1303,6 @@ def assess_ontology_ids(ids, property_name, metadata):
             if incrementation_count >= evidence_of_excel_drag_threshold:
                 evidence_of_excel_drag = True
                 break
-        print(f'{property_name} {incrementation_count} {evidence_of_excel_drag}')
     return evidence_of_excel_drag
 
 
