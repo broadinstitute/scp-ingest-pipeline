@@ -1265,6 +1265,7 @@ def identify_multiply_assigned(list):
     for label in ontology_tracker:
         if len(ontology_tracker[label].keys()) > 1:
             multiply_assigned.append(label)
+    multiply_assigned.sort()
     return multiply_assigned
 
 
@@ -1323,15 +1324,14 @@ def detect_excel_drag(metadata, convention):
             label_multiply_assigned = len(unique_ids) > len(unique_labels)
             try:
                 if assess_ontology_ids(property_ids, property_name, metadata):
-                    msg = f"{property_name}: incrementing ontology ID values suggest cut and paste issue - exiting validation, ontology content not validated against ontology server. Please confirm ontology IDs are correct and resubmit. "
+                    msg = f"{property_name}: incrementing ontology ID values suggest cut and paste issue - exiting validation, ontology content not validated against ontology server.\nPlease confirm ontology IDs are correct and resubmit.\n"
                     excel_drag = True
                     if label_multiply_assigned:
-                        duplicate_labels = identify_multiply_assigned(
+                        multiply_assigned = identify_multiply_assigned(
                             set(zip(property_ids, property_labels))
                         )
-                        if duplicate_labels:
-                            msg += f"Check for mismatches between ontology ID and provided ontology label(s) {duplicate_labels}"
-                    msg += "\n"
+                        if multiply_assigned:
+                            msg += f"Check for mismatches between ontology ID and provided ontology label(s) {multiply_assigned}\n"
                     metadata.store_validation_issue("error", "ontology", msg)
                     dev_logger.exception(msg)
             except ValueError as valueError:
