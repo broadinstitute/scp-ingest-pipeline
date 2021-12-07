@@ -829,21 +829,25 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertIn(
             "'organ_region' is a dependency of 'organ_region__ontology_label'",
             metadata.issues["error"]["convention"].keys(),
+            "missing organ_region when organ_region__ontology_label provided should cause error",
         )
         #   Invalid identifier MBA_999999999
         self.assertIn(
             "organ_region: No match found in Allen Mouse Brain Atlas for provided ontology ID: MBA_999999999",
             metadata.issues["error"]["ontology"].keys(),
+            "Invalid identifier MBA_999999999 should cause error",
         )
         #   mismatch of organ_region__ontology_label value with label value in MBA
         self.assertIn(
             'organ_region: input ontology_label \"Crus 1, urkinje layer\" does not match Allen Mouse Brain Atlas lookup \"Crus 1, Purkinje layer\" for ontology id \"MBA_000010676\"',
             metadata.issues["error"]["ontology"].keys(),
+            "mismatch of organ_region__ontology_label value with label value in MBA should error",
         )
         #   mismatch of organ_region__ontology_label value with label from MBA_id lookup
         self.assertIn(
             'organ_region: input ontology_label \"Paraflocculus, granular layer\" does not match Allen Mouse Brain Atlas lookup \"Copula pyramidis, molecular layer\" for ontology id \"MBA_000010686\"',
             metadata.issues["error"]["ontology"].keys(),
+            "mismatch of organ_region__ontology_label value with label from MBA_id lookup should error",
         )
         self.teardown_metadata(metadata)
 
@@ -913,6 +917,85 @@ class TestValidateMetadata(unittest.TestCase):
             'percent_mt: supplied value 07.juil is not numeric',
             "expected error message not generated",
         )
+        self.teardown_metadata(metadata)
+
+    def test_excel_drag_check(self):
+        """Evidence of an "Excel drag" event should generate errors
+           Successful detection avoids EBI OLS queries when input data is faulty
+        """
+
+        args = (
+            "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
+            "../tests/data/annotation/metadata/convention/invalid_excel_drag.txt"
+        )
+        # Note: this test metadata file does not have array-based metadata
+        # The file has optional ontology metadata lacking ontology labels.
+        # Lack of labels triggers EBI OLS queries to "fill in" missing data.
+        # This test will be slow due to those queries
+        metadata, convention = self.setup_metadata(args)
+        validate_input_metadata(metadata, convention)
+
+        # The threshold for "excel drag" is currently >25 incrementing ontologyIDs.
+        # The following two cases in the test file are not (yet) expected to fail:
+        # - ethnicity has 25 consecutive incrementing ontologyIDs (all labeled "European")
+        # - geographical_region has 25 consecutive incrementing ontologyIDs (unlabeled)
+        # Note: all 25 of the geographical_region incrementing IDs are valid ontologyIDs
+
+        ethnicity_error = False
+        geographical_region_error = False
+        for error in metadata.issues["error"]["ontology"].keys():
+            if "ethnicity" in error:
+                ethnicity_error = True
+            if "geographical_region_error" in error:
+                geographical_region_error = True
+        self.assertFalse(
+            ethnicity_error,
+            "25 consecutive incrementing ontologyIDs should not trigger error",
+        )
+        self.assertFalse(
+            geographical_region_error,
+            "25 consecutive incrementing ontologyIDs should not trigger error",
+        )
+
+        # Metadata 'race' has multiple ontologyIDs paired with the same label,
+        # note: all incrementing ontologyIDs for race are valid IDS AND the
+        # input data has no ontology_label for race
+        # For most SCP-required ontologies, a casual search
+        # did not find runs of >25 actual, valid ontologyIDs
+        # It seems reasonable to mark 25 consecutive, adjacent ontologyIDs
+        # in cell-based data as error (ie. highly unlikely by chance)
+        self.assertIn(
+            "race: incrementing ontology ID values suggest cut and paste issue - "
+            "exiting validation, ontology content not validated against ontology server. "
+            "Please confirm ontology IDs are correct and resubmit. \n",
+            metadata.issues["error"]["ontology"].keys(),
+            "Run of >25 incrementing ontology labels should fail validation",
+        )
+
+        # Metadata 'disease' also has multiple ontologyIDs paired with the same label
+        # It advises to only check mismatches with labels that are truly multiply assigned:
+        # ['disease or disorder', 'absent']
+        self.assertIn(
+            "disease: incrementing ontology ID values suggest cut and paste issue - "
+            "exiting validation, ontology content not validated against ontology server. "
+            "Please confirm ontology IDs are correct and resubmit. "
+            "Check for mismatches between ontology ID and provided ontology label(s) "
+            "['absent', 'disease or disorder']\n",
+            metadata.issues["error"]["ontology"].keys(),
+            "ontology label multiply paired with IDs should error",
+        )
+
+        # Metadata 'species' has multiple ontologyIDs paired with the same label,
+        # this triggers the additional statement to check for mismatches
+        species_error = False
+        for error in metadata.issues["error"]["ontology"].keys():
+            if "species" in error:
+                species_error = True
+        self.assertTrue(
+            species_error,
+            "ontology label multiply paired with IDs should error (depends on EBI OLS availability)",
+        )
+
         self.teardown_metadata(metadata)
 
 

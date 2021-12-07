@@ -220,14 +220,6 @@ class OntologyRetriever:
             ontology_shortname, term_id = re.split("[_:]", term)
         except (ValueError, TypeError):
             msg = f'{property_name}: Could not parse provided ontology id, "{term}".'
-            # check in is_array_metadata should be sufficient, commenting out for removal after testing
-            # if attribute_type == "array":
-            #     if "|" not in term:
-            #         msg += (
-            #             f" There is only one array value, for ontology id, '{term}.' "
-            #             "If multiple values are expected, use a pipe ('|') to separate values."
-            #         )
-
             raise ValueError(msg)
         # check if we have already retrieved this ontology reference
         if ontology_shortname not in self.cached_ontologies:
@@ -840,7 +832,8 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         try:
             if "|" not in value:
                 msg = (
-                    f"Only one value detected for {metadatum}, which can accept an array of values. "
+                    f"{metadatum}: accepts an array of values.\n"
+                    "Lines detected with single values instead of arrays.\n"
                     "If multiple values are expected, use a pipe ('|') to separate values."
                 )
                 metadata.store_validation_issue(
@@ -1260,19 +1253,19 @@ def review_metadata_names(metadata):
             metadata.store_validation_issue("error", "metadata_name", error_msg)
 
 
-def identify_duplicates(list):
-    """ Given a list with duplicates, ie. length of list longer than
-    length of set(list), return list of unique duplicated elements
+def identify_multiply_assigned(list):
+    """ Given a list of ontologyIDs and their purported labels,
+        return list of unique multiply-assigned labels
     """
-    uniques = []
-    dups = []
+    ontology_tracker = defaultdict(lambda: defaultdict(int))
+    multiply_assigned = []
     for element in list:
-        if element not in uniques:
-            uniques.append(element)
-        else:
-            if element not in dups:
-                dups.append(element)
-    return dups
+        id, label = element
+        ontology_tracker[label][id] += 1
+    for label in ontology_tracker:
+        if len(ontology_tracker[label].keys()) > 1:
+            multiply_assigned.append(label)
+    return multiply_assigned
 
 
 def assess_ontology_ids(ids, property_name, metadata):
@@ -1287,8 +1280,9 @@ def assess_ontology_ids(ids, property_name, metadata):
             ontology_shortname, term_id = re.split("[_:]", id)
             binned_ids[ontology_shortname].append(term_id)
         except (ValueError, TypeError):
-            msg = f'{property_name}: Could not parse provided ontology id, "{id}".'
-            raise ValueError(msg)
+            # invalid ontology id will already be flagged as convention error
+            # no need to also mark as ontology error as part of excel drag detection
+            pass
     for ontology in binned_ids.keys():
         id_numerics = []
         incrementation_count = 0
@@ -1308,6 +1302,12 @@ def assess_ontology_ids(ids, property_name, metadata):
 
 def detect_excel_drag(metadata, convention):
     """ Check if ontology IDs submitted have characteristic excel drag properties
+        Todo1: "excel drag" detection of array-based ontologyID data
+        is lacking (need to track pipe-delimited string)
+        Todo2: need to bypass EBI OLS queries to "fill in"
+        missing ontology labels for optional metadata)
+        Hint: try working with raw metadata.file data, would
+        allow this check to be moved before collect_jsonschema_errors
     """
     excel_drag = False
     for property_name in metadata.ontology.keys():
@@ -1321,19 +1321,22 @@ def detect_excel_drag(metadata, convention):
             unique_labels = set(property_labels_blanks_removed)
             # likely ontology label mis-assignment if multiple ontology IDs ascribed to same ontology label
             label_multiply_assigned = len(unique_ids) > len(unique_labels)
+            try:
+                if assess_ontology_ids(property_ids, property_name, metadata):
+                    msg = f"{property_name}: incrementing ontology ID values suggest cut and paste issue - exiting validation, ontology content not validated against ontology server. Please confirm ontology IDs are correct and resubmit. "
+                    excel_drag = True
+                    if label_multiply_assigned:
+                        duplicate_labels = identify_multiply_assigned(
+                            set(zip(property_ids, property_labels))
+                        )
+                        if duplicate_labels:
+                            msg += f"Check for mismatches between ontology ID and provided ontology label(s) {duplicate_labels}"
+                    msg += "\n"
+                    metadata.store_validation_issue("error", "ontology", msg)
+                    dev_logger.exception(msg)
+            except ValueError as valueError:
+                metadata.store_validation_issue("error", "ontology", valueError.args[0])
 
-            if assess_ontology_ids(property_ids, property_name, metadata):
-                msg = f"{property_name}: incrementing ontology ID values suggest cut and paste issue - exiting validation, ontology content not validated against ontology server. Please confirm ontology IDs are correct and resubmit. "
-                excel_drag = True
-                if label_multiply_assigned:
-                    duplicate_labels = identify_duplicates(
-                        property_labels_blanks_removed
-                    )
-                    if duplicate_labels:
-                        msg += f"Check for mismatches between ontology ID and provided ontology label(s) {duplicate_labels}"
-                msg += "\n"
-                metadata.store_validation_issue("error", "ontology", msg)
-                dev_logger.exception(msg)
     return excel_drag
 
 
