@@ -337,7 +337,7 @@ def parse_organ_region_ontology_id(term):
     except (TypeError, ValueError):
         # when term value is empty string -> TypeError, convert this to a value error
         raise ValueError(
-            f'organ_region: Could not parse provided ontology id, "{term}".'
+            f'organ_region: Could not parse provided ontology ID, "{term}".'
         )
 
 
@@ -1254,7 +1254,7 @@ def review_metadata_names(metadata):
 
 
 def identify_multiply_assigned(list):
-    """ Given a list of ontologyIDs and their purported labels,
+    """Given a list of ontology IDs and their purported labels,
         return list of unique multiply-assigned labels
     """
     ontology_tracker = defaultdict(lambda: defaultdict(int))
@@ -1286,7 +1286,7 @@ def assess_ontology_ids(ids, property_name, metadata):
             binned_ids[ontology_shortname].append(term_id)
         except (ValueError, TypeError):
             # invalid ontology id will already be flagged as convention error
-            # no need to also mark as ontology error as part of excel drag detection
+            # no need to also mark as ontology error as part of Excel drag detection
             pass
     for ontology in binned_ids.keys():
         id_numerics = []
@@ -1310,8 +1310,8 @@ def assess_ontology_ids(ids, property_name, metadata):
 
 
 def detect_excel_drag(metadata, convention):
-    """ Check if ontology IDs submitted have characteristic excel drag properties
-        Todo1: "excel drag" detection of array-based ontologyID data
+    """ Check if ontology IDs submitted have characteristic Excel drag properties
+        Todo1: "Excel drag" detection of array-based ontologyID data
         is lacking (need to track pipe-delimited string)
         Todo2: need to bypass EBI OLS queries to "fill in"
         missing ontology labels for optional metadata)
@@ -1332,7 +1332,12 @@ def detect_excel_drag(metadata, convention):
             label_multiply_assigned = len(unique_ids) > len(unique_labels)
             try:
                 if assess_ontology_ids(property_ids, property_name, metadata):
-                    msg = f"{property_name}: Long stretch of contiguously incrementing ontology ID values suggest cut and paste issue - exiting validation, ontology content not validated against ontology server.\nPlease confirm ontology IDs are correct and resubmit.\n"
+                    msg = (
+                        f"{property_name}: Long stretch of contiguously incrementing "
+                        + "ontology ID values suggest cut and paste issue - exiting validation, "
+                        + "ontology content not validated against ontology server.\n"
+                        "Please confirm ontology IDs are correct and resubmit.\n"
+                    )
                     excel_drag = True
                     if label_multiply_assigned:
                         multiply_assigned = identify_multiply_assigned(
