@@ -220,13 +220,6 @@ class OntologyRetriever:
             ontology_shortname, term_id = re.split("[_:]", term)
         except (ValueError, TypeError):
             msg = f'{property_name}: Could not parse provided ontology id, "{term}".'
-            if attribute_type == "array":
-                if "|" not in term:
-                    msg += (
-                        f" There is only one array value, for ontology id, '{term}.' "
-                        "If multiple values are expected, use a pipe ('|') to separate values."
-                    )
-
             raise ValueError(msg)
         # check if we have already retrieved this ontology reference
         if ontology_shortname not in self.cached_ontologies:
@@ -344,7 +337,7 @@ def parse_organ_region_ontology_id(term):
     except (TypeError, ValueError):
         # when term value is empty string -> TypeError, convert this to a value error
         raise ValueError(
-            f'organ_region: Could not parse provided ontology id, "{term}"'
+            f'organ_region: Could not parse provided ontology ID, "{term}".'
         )
 
 
@@ -512,8 +505,12 @@ def insert_array_ontology_label_row_data(
         error_msg = f"{property_name}: mismatched # of {property_name} and {ontology_label} values"
         metadata.store_validation_issue("error", "ontology", error_msg, [cell_id])
         return row
+
     if not row[ontology_label]:
         array_label_for_bq = []
+        # track original labels, including blanks, in the ordered ontology structure
+        metadata.ordered_ontology[property_name].extend(row[property_name])
+        metadata.ordered_labels[property_name].extend('')
         for id in row[property_name]:
             label_lookup = ""
             try:
@@ -545,7 +542,9 @@ def insert_array_ontology_label_row_data(
                 )
             array_label_for_bq.append(label_lookup)
         row[ontology_label] = array_label_for_bq
-
+    else:
+        metadata.ordered_ontology[property_name].extend(row[property_name])
+        metadata.ordered_labels[property_name].extend(row[ontology_label])
     for id, label in zip(row[property_name], row[ontology_label]):
         metadata.ontology[property_name][(id, label)].append(cell_id)
     return row
@@ -558,6 +557,9 @@ def insert_ontology_label_row_data(
     cell_id = row["CellID"]
 
     if not row[ontology_label]:
+        # track original labels, including blanks, in the ordered ontology structure
+        metadata.ordered_ontology[property_name].append(id)
+        metadata.ordered_labels[property_name].append('')
         # for optional columns, try to fill it in
         property_type = convention["properties"][property_name]["type"]
         try:
@@ -580,6 +582,9 @@ def insert_ontology_label_row_data(
             print(e)
             error_msg = f"Optional column {ontology_label} empty and could not be resolved from {property_name} column value {row[property_name]}"
             metadata.store_validation_issue("warn", "ontology", error_msg, [cell_id])
+    else:
+        metadata.ordered_ontology[property_name].append(id)
+        metadata.ordered_labels[property_name].append(row[ontology_label])
 
     metadata.ontology[property_name][(row[property_name], row[ontology_label])].append(
         cell_id
@@ -827,7 +832,8 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         try:
             if "|" not in value:
                 msg = (
-                    f"There is only one array value, for {metadatum}: {value}. "
+                    f"{metadatum}: accepts an array of values.\n"
+                    "Lines detected with single values instead of arrays.\n"
                     "If multiple values are expected, use a pipe ('|') to separate values."
                 )
                 metadata.store_validation_issue(
@@ -1247,13 +1253,120 @@ def review_metadata_names(metadata):
             metadata.store_validation_issue("error", "metadata_name", error_msg)
 
 
+def identify_multiply_assigned(list):
+    """Given a list of ontology IDs and their purported labels,
+        return list of unique multiply-assigned labels
+    """
+    ontology_tracker = defaultdict(lambda: defaultdict(int))
+    multiply_assigned = []
+    for element in list:
+        id, label = element
+        ontology_tracker[label][id] += 1
+    for label in ontology_tracker:
+        if len(ontology_tracker[label].keys()) > 1:
+            multiply_assigned.append(label)
+    multiply_assigned.sort()
+    return multiply_assigned
+
+
+def assess_ontology_ids(ids, property_name, metadata):
+    """
+    Check ordered collection of ontology IDs for increasing numeric values
+    """
+    evidence_of_excel_drag = False
+    evidence_of_excel_drag_threshold = 25
+    binned_ids = defaultdict(list)
+    for id in ids:
+        # The binning avoids any spurrious numeric contiguity
+        # between IDs that actually have different shortnames
+        # because the detection threshold is fairly generous,
+        # the binning is probably unneeded
+        try:
+            ontology_shortname, term_id = re.split("[_:]", id)
+            binned_ids[ontology_shortname].append(term_id)
+        except (ValueError, TypeError):
+            # invalid ontology id will already be flagged as convention error
+            # no need to also mark as ontology error as part of Excel drag detection
+            pass
+    for ontology in binned_ids.keys():
+        id_numerics = []
+        incrementation_count = 0
+        for term in binned_ids[ontology]:
+            # Regex extracts away the numeric part of the term
+            # from the constant, text portion of the ontology ID
+            # some term ids have a text component on the term side
+            # so a regex is needed instead of a simple split
+            term_numeric = re.search('(\d)*$', term)
+            id_numerics.append(int(term_numeric.group()))
+        for x, y in zip(id_numerics, id_numerics[1:]):
+            if y - x == 1:
+                incrementation_count += 1
+            elif y - x != 1:
+                incrementation_count = 0
+            if incrementation_count >= evidence_of_excel_drag_threshold:
+                evidence_of_excel_drag = True
+                break
+    return evidence_of_excel_drag
+
+
+def detect_excel_drag(metadata, convention):
+    """ Check if ontology IDs submitted have characteristic Excel drag properties
+        Todo1: "Excel drag" detection of array-based ontologyID data
+        is lacking (need to track pipe-delimited string)
+        Todo2: need to bypass EBI OLS queries to "fill in"
+        missing ontology labels for optional metadata)
+        Hint: try working with raw metadata.file data, would
+        allow this check to be moved before collect_jsonschema_errors
+    """
+    excel_drag = False
+    for property_name in metadata.ontology.keys():
+        if len(set(metadata.ordered_ontology[property_name])) == 1:
+            continue
+        else:
+            property_ids = metadata.ordered_ontology[property_name]
+            unique_ids = set(property_ids)
+            property_labels = metadata.ordered_labels[property_name]
+            property_labels_blanks_removed = [i for i in property_labels if i]
+            unique_labels = set(property_labels_blanks_removed)
+            # likely ontology label mis-assignment if multiple ontology IDs ascribed to same ontology label
+            label_multiply_assigned = len(unique_ids) > len(unique_labels)
+            try:
+                if assess_ontology_ids(property_ids, property_name, metadata):
+                    msg = (
+                        f"{property_name}: Long stretch of contiguously incrementing "
+                        + "ontology ID values suggest cut and paste issue - exiting validation, "
+                        + "ontology content not validated against ontology server.\n"
+                        "Please confirm ontology IDs are correct and resubmit.\n"
+                    )
+                    excel_drag = True
+                    if label_multiply_assigned:
+                        multiply_assigned = identify_multiply_assigned(
+                            set(zip(property_ids, property_labels))
+                        )
+                        if multiply_assigned:
+                            msg += f"Check for mismatches between ontology ID and provided ontology label(s) {multiply_assigned}\n"
+                    metadata.store_validation_issue("error", "ontology", msg)
+                    dev_logger.exception(msg)
+            except ValueError as valueError:
+                metadata.store_validation_issue("error", "ontology", valueError.args[0])
+
+    return excel_drag
+
+
 def validate_input_metadata(metadata, convention, bq_json=None):
     """Wrapper function to run validation functions
     """
+    dev_logger.info("Checking metadata content against convention rules")
     collect_jsonschema_errors(metadata, convention, bq_json)
     review_metadata_names(metadata)
-    validate_collected_ontology_data(metadata, convention)
-    confirm_uniform_units(metadata, convention)
+    dev_logger.info('Checking for "Excel drag" events')
+    if not detect_excel_drag(metadata, convention):
+        # "short-circut" ontology validation if "Excel drag" detected
+        # avoids a bloat of calls to EBI OLS, return error faster and avoid
+        # long-compute-time issue (if false positives are possible, bypass will be needed)
+        dev_logger.info('Validating ontology content against EBI OLS')
+        validate_collected_ontology_data(metadata, convention)
+        confirm_uniform_units(metadata, convention)
 
 
 def push_metadata_to_bq(metadata, ndjson, dataset, table):
