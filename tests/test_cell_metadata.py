@@ -84,7 +84,7 @@ class TestCellMetadata(unittest.TestCase):
             cm.file["NA_f_n_s__num"]["numeric"][3], float
         ), "empty cell -> NaN that remains float (not coerced)"
 
-    def test_transfrom(self):
+    def test_transform(self):
 
         # Numeric columns that have array convention data are stored as a group in Mongo
         cm = CellMetadata(

@@ -9,12 +9,11 @@ Must have python 3.6 or higher.
 """
 import collections
 import ntpath
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import copy
 import json
-import logging
 
 from bson.objectid import ObjectId
 from mypy_extensions import TypedDict
@@ -28,18 +27,10 @@ try:
         validate_input_metadata,
         write_metadata_to_bq,
     )
-    from monitor import setup_logger
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .annotations import Annotations
     from .ingest_files import DataArray, IngestFiles
-    from ..monitor import setup_logger
-
-dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
-
-user_logger = setup_logger(
-    __name__ + ".user_logger", "user_log.txt", level=logging.ERROR
-)
 
 
 class CellMetadata(Annotations):
@@ -67,7 +58,8 @@ class CellMetadata(Annotations):
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
-        self.ontology_label = dict()
+        self.ordered_ontology = defaultdict(list)
+        self.ordered_labels = defaultdict(list)
         self.cells = []
         self.numeric_array_columns = {}
         self.kwargs = kwargs
@@ -151,7 +143,11 @@ class CellMetadata(Annotations):
                 else "group"
             )
 
-            group = True if annot_type == "group" else False
+            group = (
+                True
+                if (annot_type == "group" or stored_mongo_annot_type == "group")
+                else False
+            )
             # should not store annotations with >200 unique values for viz
             # annot_header is the column of data, which includes name and type
             # large is any annotation with more than 200 + 2 unique values
