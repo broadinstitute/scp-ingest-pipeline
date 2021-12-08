@@ -965,7 +965,7 @@ class TestValidateMetadata(unittest.TestCase):
         # It seems reasonable to mark 25 consecutive, adjacent ontologyIDs
         # in cell-based data as error (ie. highly unlikely by chance)
         self.assertIn(
-            "race: incrementing ontology ID values suggest cut and paste issue - "
+            "race: Long stretch of contiguously incrementing ontology ID values suggest cut and paste issue - "
             "exiting validation, ontology content not validated against ontology server.\n"
             "Please confirm ontology IDs are correct and resubmit.\n",
             metadata.issues["error"]["ontology"].keys(),
@@ -976,7 +976,7 @@ class TestValidateMetadata(unittest.TestCase):
         # It advises to only check mismatches with labels that are truly multiply assigned:
         # ['disease or disorder', 'absent']
         self.assertIn(
-            "disease: incrementing ontology ID values suggest cut and paste issue - "
+            "disease: Long stretch of contiguously incrementing ontology ID values suggest cut and paste issue - "
             "exiting validation, ontology content not validated against ontology server.\n"
             "Please confirm ontology IDs are correct and resubmit.\n"
             "Check for mismatches between ontology ID and provided ontology label(s) "

@@ -1277,6 +1277,10 @@ def assess_ontology_ids(ids, property_name, metadata):
     evidence_of_excel_drag_threshold = 25
     binned_ids = defaultdict(list)
     for id in ids:
+        # The binning avoids any spurrious numeric contiguity
+        # between IDs that actually have different shortnames
+        # because the detection threshold is fairly generous,
+        # the binning is probably unneeded
         try:
             ontology_shortname, term_id = re.split("[_:]", id)
             binned_ids[ontology_shortname].append(term_id)
@@ -1288,6 +1292,10 @@ def assess_ontology_ids(ids, property_name, metadata):
         id_numerics = []
         incrementation_count = 0
         for term in binned_ids[ontology]:
+            # Regex extracts away the numeric part of the term
+            # from the constant, text portion of the ontology ID
+            # some term ids have a text component on the term side
+            # so a regex is needed instead of a simple split
             term_numeric = re.search('(\d)*$', term)
             id_numerics.append(int(term_numeric.group()))
         for x, y in zip(id_numerics, id_numerics[1:]):
@@ -1324,7 +1332,7 @@ def detect_excel_drag(metadata, convention):
             label_multiply_assigned = len(unique_ids) > len(unique_labels)
             try:
                 if assess_ontology_ids(property_ids, property_name, metadata):
-                    msg = f"{property_name}: incrementing ontology ID values suggest cut and paste issue - exiting validation, ontology content not validated against ontology server.\nPlease confirm ontology IDs are correct and resubmit.\n"
+                    msg = f"{property_name}: Long stretch of contiguously incrementing ontology ID values suggest cut and paste issue - exiting validation, ontology content not validated against ontology server.\nPlease confirm ontology IDs are correct and resubmit.\n"
                     excel_drag = True
                     if label_multiply_assigned:
                         multiply_assigned = identify_multiply_assigned(
