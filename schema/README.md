@@ -7,9 +7,9 @@
 
 # To update an existing metadata convention
 
-* Create a new snapshot directory under schema/&lt;project&gt;_convention/snapshot using semantic versioning conventions  
+* Create a new snapshot directory under schema/&lt;project&gt;_convention/snapshot using semantic versioning conventions
 
-* Make desired metadata convention updates to a copy of &lt;project&gt;_convention_schema.tsv file in the snapshot directory  
+* Make desired metadata convention updates to a copy of &lt;project&gt;_convention_schema.tsv file in the snapshot directory
 
 * copy scp_bq_inputs.json from previous snapshot directory, update with new SCP-internal terms if appropriate
 
@@ -17,9 +17,12 @@
   ```
   python serialize_convention.py <project> <version>
   ```
-  
-* Copy the new convention JSON and TSV files to the * &lt;project&gt;_convention directory  
-  
+
+* Copy the new convention JSON and TSV files to the * &lt;project&gt;_convention directory
+
+* Update the corresponding files, if appropriate, in single_cell_portal_core/lib/assets/metadata_schemas
+
+* If required columns have changed, update REQUIRED_CONVENTION_COLUMNS in single_cell_portal_core/app/javascript/lib/validation/single_cell_portal_core/validate-file-content.js
 
 Notes:
 * Tests in test_validate_metadata.py use current metadata convention (except for invalid metadata convention test)
