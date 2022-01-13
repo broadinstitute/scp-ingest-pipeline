@@ -46,6 +46,7 @@ class MetricProperties:
             "fileName": study_file.file_name,
             "fileType": study_file.file_type,
             "fileSize": study_file.file_size,
+            "logger": "ingest-pipeline"
             "appId": "single-cell-portal",
         }
 
