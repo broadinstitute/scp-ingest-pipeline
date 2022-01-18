@@ -1,3 +1,5 @@
+import os
+
 # File is responsible for defining globals and initializing them
 try:
 
@@ -58,6 +60,20 @@ class MetricProperties:
             self.__properties = {**self.__properties, **props}
 
 
+def bypass_mongo_input_validation():
+    """Check if developer has set environment variable to bypass requirement for valid mongo IDs
+        BYPASS_MONGO_INPUT_VALIDATION='yes'
+    """
+    if os.environ.get("BYPASS_MONGO_INPUT_VALIDATION") is not None:
+        skip = os.environ["BYPASS_MONGO_INPUT_VALIDATION"]
+        if skip == "yes":
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
 class Study:
     """Provides attributes for a given study
     """
@@ -75,18 +91,21 @@ class Study:
             study_id = ObjectId(study_id)
         except Exception:
             raise ValueError("Must pass in valid object ID for study ID")
-        study = list(
-            MONGO_CONNECTION._client["study_accessions"].find(
-                {"study_id": study_id}, {"_id": 0}
-            )
-        )
-        if not study:
-            raise ValueError(
-                "Study ID is not registered with a study. Please provide a valid study ID"
-            )
+        if bypass_mongo_input_validation():
+            self.accession = "SCPdev"
         else:
-            self.__study = study.pop()
-            self.accession = self.__study["accession"]
+            study = list(
+                MONGO_CONNECTION._client["study_accessions"].find(
+                    {"study_id": study_id}, {"_id": 0}
+                )
+            )
+            if not study:
+                raise ValueError(
+                    "Study ID is not registered with a study. Please provide a valid study ID"
+                )
+            else:
+                self.__study = study.pop()
+                self.accession = self.__study["accession"]
 
 
 class StudyFile:
@@ -105,14 +124,19 @@ class StudyFile:
             study_file_id = ObjectId(study_file_id)
         except Exception:
             raise ValueError("Must pass in valid object ID for study file ID")
-        query = MONGO_CONNECTION._client["study_files"].find({"_id": study_file_id})
-        query_results = list(query)
-        if not query_results:
-            raise ValueError(
-                "Study file ID is not registered with a study. Please provide a valid study file ID."
-            )
+        if bypass_mongo_input_validation():
+            self.file_type = "input_validation_bypassed"
+            self.file_size = 1
+            self.file_name = study_file_id
         else:
-            self.__study_file = query_results.pop()
-            self.file_type = self.study_file["file_type"]
-            self.file_size = self.study_file["upload_file_size"]
-            self.file_name = self.study_file["name"]
+            query = MONGO_CONNECTION._client["study_files"].find({"_id": study_file_id})
+            query_results = list(query)
+            if not query_results:
+                raise ValueError(
+                    "Study file ID is not registered with a study. Please provide a valid study file ID."
+                )
+            else:
+                self.__study_file = query_results.pop()
+                self.file_type = self.study_file["file_type"]
+                self.file_size = self.study_file["upload_file_size"]
+                self.file_name = self.study_file["name"]
