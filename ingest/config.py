@@ -91,6 +91,9 @@ class Study:
             study_id = ObjectId(study_id)
         except Exception:
             raise ValueError("Must pass in valid object ID for study ID")
+        # ToDo: complete bypass of Mongo in developer mode
+        # until then, the bson check above is necessary
+        # set dummy accession if running in developer mode
         if bypass_mongo_input_validation():
             self.accession = "SCPdev"
         else:
@@ -124,10 +127,14 @@ class StudyFile:
             study_file_id = ObjectId(study_file_id)
         except Exception:
             raise ValueError("Must pass in valid object ID for study file ID")
+        # ToDo: complete bypass of Mongo in developer mode
+        # until then, the bson check above is necessary
+        # set dummy values if running in developer mode
         if bypass_mongo_input_validation():
             self.file_type = "input_validation_bypassed"
             self.file_size = 1
-            self.file_name = study_file_id
+            self.file_name = str(study_file_id)
+            self.trigger = 'upload'
         else:
             query = MONGO_CONNECTION._client["study_files"].find({"_id": study_file_id})
             query_results = list(query)
@@ -140,3 +147,7 @@ class StudyFile:
                 self.file_type = self.study_file["file_type"]
                 self.file_size = self.study_file["upload_file_size"]
                 self.file_name = self.study_file["name"]
+                if self.study_file.get("remote_location") is not None:
+                    self.trigger = 'sync'
+                else:
+                    self.trigger = 'upload'

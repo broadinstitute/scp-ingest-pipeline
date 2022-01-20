@@ -34,16 +34,19 @@ pytest --cov=../ingest/
 import unittest
 from unittest.mock import patch
 from test_dense import mock_load_r_files
+import os
 
 from pymongo.errors import AutoReconnect
 from test_expression_files import mock_expression_load
 from mock_gcp import mock_storage_client, mock_storage_blob
 
+import config
 from ingest_pipeline import (
     create_parser,
     validate_arguments,
     IngestPipeline,
     exit_pipeline,
+    prepare_for_exit,
     run_ingest,
 )
 from expression_files.expression_files import GeneExpression
@@ -68,6 +71,14 @@ def mock_load(self, *args, **kwargs):
 # Mock method that writes to database
 IngestPipeline.load = mock_load
 GeneExpression.load = mock_expression_load
+
+# Mixpanel logging needs config object instantiated
+# tests should bypass mongo check for input BSON values
+os.environ["BYPASS_MONGO_INPUT_VALIDATION"] = "yes"
+# Initialize global variables]
+config.init("5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337")
+# restore environment variable to unset state
+del os.environ['BYPASS_MONGO_INPUT_VALIDATION']
 
 
 class IngestTestCase(unittest.TestCase):
@@ -207,7 +218,10 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+            exit_status = prepare_for_exit(
+                ingest, status, status_cell_metadata, arguments
+            )
+            exit_pipeline(exit_status)
         self.assertEqual(cm.exception.code, 1)
 
     def test_empty_mtx_file(self):
@@ -242,7 +256,10 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+            exit_status = prepare_for_exit(
+                ingest, status, status_cell_metadata, arguments
+            )
+            exit_pipeline(exit_status)
         self.assertEqual(cm.exception.code, 1)
 
     @patch(
@@ -507,12 +524,16 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+            exit_status = prepare_for_exit(
+                ingest, status, status_cell_metadata, arguments
+            )
+            exit_pipeline(exit_status)
         self.assertEqual(cm.exception.code, 1)
 
     def test_bad_metadata_file(self):
         """Ingest Pipeline should not succeed for misformatted metadata file
         """
+
         args = [
             "--study-id",
             "5d276a50421aa9117c982845",
@@ -526,9 +547,11 @@ class IngestTestCase(unittest.TestCase):
             "--ingest-cell-metadata",
         ]
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
-
         with self.assertRaises(SystemExit) as cm:
-            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+            exit_status = prepare_for_exit(
+                ingest, status, status_cell_metadata, arguments
+            )
+            exit_pipeline(exit_status)
         self.assertEqual(cm.exception.code, 1)
 
     def test_bad_metadata_file_contains_coordinates(self):
@@ -550,7 +573,10 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+            exit_status = prepare_for_exit(
+                ingest, status, status_cell_metadata, arguments
+            )
+            exit_pipeline(exit_status)
         self.assertEqual(cm.exception.code, 1)
 
     def test_good_cluster_file(self):
@@ -596,7 +622,10 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+            exit_status = prepare_for_exit(
+                ingest, status, status_cell_metadata, arguments
+            )
+            exit_pipeline(exit_status)
         self.assertEqual(cm.exception.code, 1)
 
     def test_bad_cluster_missing_coordinate_file(self):
@@ -617,7 +646,10 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+            exit_status = prepare_for_exit(
+                ingest, status, status_cell_metadata, arguments
+            )
+            exit_pipeline(exit_status)
         self.assertEqual(cm.exception.code, 1)
 
     @patch("ingest_pipeline.IngestPipeline.load_subsample", return_value=0)
@@ -662,7 +694,10 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
         with self.assertRaises(SystemExit) as cm, self.assertRaises(ValueError):
-            exit_pipeline(ingest, status, status_cell_metadata, arguments)
+            exit_status = prepare_for_exit(
+                ingest, status, status_cell_metadata, arguments
+            )
+            exit_pipeline(exit_status)
         self.assertEqual(cm.exception.code, 1)
 
 

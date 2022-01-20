@@ -45,6 +45,8 @@ class Annotations(IngestFiles):
             self.study_file_id = ObjectId(study_file_id)
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        # collect error info for Mixpanel reporting
+        self.props = {"errorTypes": [], "errors": [], "warnTypes": [], "warnings": []}
         csv_file, self.file_handle = self.open_file(self.file_path)
         # Remove white spaces, quotes (only lowercase annot_types)
         self.headers = [header.strip().strip('"') for header in next(csv_file)]
@@ -201,17 +203,26 @@ class Annotations(IngestFiles):
         )[0]
         self.file = Annotations.convert_header_to_multi_index(df, column_names)
 
-    def store_validation_issue(self, type, category, msg, associated_info=None):
+    def store_validation_issue(
+        self, type, category, msg, issue_name=None, associated_info=None
+    ):
         """Stores validation issues in proper arrangement
             :param type: type of issue (error or warn)
         :param category: issue category (format, jsonschema, ontology)
         :param msg: issue message
         :param value: list of IDs associated with the issue
         """
+
         if associated_info:
             self.issues[type][category][msg].extend(associated_info)
         else:
             self.issues[type][category][msg] = None
+        if type == "error" and issue_name:
+            self.props["errorTypes"].append(issue_name)
+            self.props["errors"].append(msg)
+        elif type == "warn" and issue_name:
+            self.props["warnTypes"].append(issue_name)
+            self.props["warnings"].append(msg)
 
     def validate_header_keyword(self):
         """Check header row starts with NAME (case-insensitive).
@@ -227,7 +238,9 @@ class Annotations(IngestFiles):
                 self.store_validation_issue("warn", "format", msg)
         else:
             msg = "Malformed file header row, missing NAME keyword. (Case Sensitive)"
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue(
+                "error", "format", msg, issue_name="format:cap:name"
+            )
         return valid
 
     def validate_unique_header(self):
@@ -295,7 +308,9 @@ class Annotations(IngestFiles):
                     invalid_types.append(t)
         if invalid_types:
             msg = 'TYPE row annotations should be "group" or "numeric"'
-            self.store_validation_issue("error", "format", msg, invalid_types)
+            self.store_validation_issue(
+                "error", "format", msg, associated_info=invalid_types
+            )
         else:
             valid = True
         return valid

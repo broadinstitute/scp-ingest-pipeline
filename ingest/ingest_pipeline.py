@@ -39,7 +39,8 @@ import os
 import re
 import sys
 from contextlib import nullcontext
-from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+from typing import Dict, Generator, List, Tuple, Union
+from wsgiref.simple_server import WSGIRequestHandler  # noqa: F401
 
 
 from bson.objectid import ObjectId
@@ -130,6 +131,7 @@ class IngestPipeline:
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
+        self.props = {}
         if "GOOGLE_CLOUD_PROJECT" in os.environ:
             # instantiate trace exporter
             exporter = StackdriverExporter(
@@ -345,6 +347,9 @@ class IngestPipeline:
             return status if status is not None else 1
         else:
             report_issues(self.cell_metadata)
+            self.cell_metadata.props = set_mixpanel_nums(self.cell_metadata.props)
+            metrics_dump = config.get_metric_properties().get_properties()
+            metrics_dump.update(self.cell_metadata.props)
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
 
@@ -417,6 +422,18 @@ class IngestPipeline:
         return 0
 
 
+def set_mixpanel_nums(props):
+    """
+    """
+    for prop in ["errorTypes", "errors", "warnTypes", "warnings"]:
+        num_prop = "num" + prop.capitalize()
+        if props.get(prop):
+            props[num_prop] = len(props[prop])
+        else:
+            props[num_prop] = 0
+    return props
+
+
 def run_ingest(ingest, arguments, parsed_args):
     """Runs Ingest Pipeline as indicated by CLI or importing (test) module
     """
@@ -447,12 +464,13 @@ def run_ingest(ingest, arguments, parsed_args):
     return status, status_cell_metadata
 
 
-def exit_pipeline(ingest, status, status_cell_metadata, arguments):
+def prepare_for_exit(ingest, status, status_cell_metadata, arguments):
     """Logs any errors, then exits Ingest Pipeline with standard OS code
     """
     if len(status) > 0:
         if all(i < 1 for i in status):
-            sys.exit(os.EX_OK)
+            ingest.props["status"] = "success"
+            return 0
         else:
             # delocalize errors file
             for argument in list(arguments.keys()):
@@ -487,8 +505,21 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     # will have "unexpected exit status 65 was not ignored"
                     # EX_DATAERR (65) The input data was incorrect in some way.
                     # note that failure to load to MongoDB also triggers this error
-                    sys.exit(os.EX_DATAERR)
-            sys.exit(1)
+                    ingest.props["status"] = "failure"
+                    return 65
+            ingest.props["status"] = "failure"
+            return 1
+
+
+def exit_pipeline(exit_status):
+    """Exit Ingest Pipeline with standard OS code
+    """
+    if exit_status == 0:
+        sys.exit(os.EX_OK)
+    elif exit_status == 65:
+        sys.exit(os.EX_DATAERR)
+    else:
+        sys.exit(1)
 
 
 def main() -> None:
@@ -511,11 +542,22 @@ def main() -> None:
     )
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
+    exit_status = prepare_for_exit(ingest, status, status_cell_metadata, arguments)
+    # ToDo Add ingest status (success|failure) to Mixpanel
+    metrics_dump = config.get_metric_properties().get_properties()
+    metrics_dump.update(ingest.props)
+
     # Log Mixpanel events
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     MetricsService.log("file-validation", config.get_metric_properties())
+
+    # If in developer mode, area to print metrics info for troubleshooting
+    if config.bypass_mongo_input_validation():
+        for key in metrics_dump.keys():
+            print(f'{key}: {metrics_dump[key]}')
+
     # Exit pipeline
-    exit_pipeline(ingest, status, status_cell_metadata, arguments)
+    exit_pipeline(exit_status)
 
 
 if __name__ == "__main__":
