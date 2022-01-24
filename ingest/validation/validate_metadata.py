@@ -418,7 +418,9 @@ def validate_schema(json, metadata):
         return valid_schema
     except jsonschema.SchemaError:
         error_msg = "Invalid metadata convention file, cannot validate metadata."
-        metadata.store_validation_issue("error", "convention", error_msg)
+        metadata.store_validation_issue(
+            "error", "convention", error_msg, issue_name="convention:invalid_schema"
+        )
         return None
 
 
@@ -493,7 +495,11 @@ def validate_cells_unique(metadata):
         dups = list_duplicates(metadata.cells)
         error_msg = "Duplicate CellID(s) in metadata file"
         metadata.store_validation_issue(
-            "error", "format", error_msg, associated_info=dups
+            "error",
+            "format",
+            error_msg,
+            associated_info=dups,
+            issue_name="duplicate:cells-within-file",
         )
     return valid
 
@@ -506,7 +512,11 @@ def insert_array_ontology_label_row_data(
     if len(row[property_name]) != len(row[ontology_label]) and row[ontology_label]:
         error_msg = f"{property_name}: mismatched # of {property_name} and {ontology_label} values"
         metadata.store_validation_issue(
-            "error", "ontology", error_msg, associated_info=[cell_id]
+            "error",
+            "ontology",
+            error_msg,
+            associated_info=[cell_id],
+            issue_name="content:metadata:ontology-array-length-mismatch",
         )
         return row
 
@@ -542,7 +552,11 @@ def insert_array_ontology_label_row_data(
                     f"may cause inaccurate error reporting for {property_name}"
                 )
                 metadata.store_validation_issue(
-                    "error", "ontology", error_msg, associated_info=[cell_id]
+                    "error",
+                    "ontology",
+                    error_msg,
+                    associated_info=[cell_id],
+                    issue_name="content:metadata:ontology-label-lookup",
                 )
             array_label_for_bq.append(label_lookup)
         row[ontology_label] = array_label_for_bq
@@ -654,8 +668,13 @@ def collect_cell_for_ontology(
             )
         # for required columns, just log the error and continue
         metadata.store_validation_issue(
-            "error", "ontology", missing_column_message, associated_info=[cell_id]
+            "error",
+            "ontology",
+            missing_column_message,
+            associated_info=[cell_id],
+            issue_name="content:metadata:missing-required-values",
         )
+
         # metadata.ontology[property_name][(updated_row[property_name], None)].append(cell_id)
     else:
         if array:
@@ -727,7 +746,12 @@ def compare_type_annots_to_convention(metadata, convention):
                     f'{metadatum}: "{annot}" annotation in metadata file conflicts with metadata convention. '
                     f'Convention expects "{expected}" values.'
                 )
-                metadata.store_validation_issue("error", "type", error_msg)
+                metadata.store_validation_issue(
+                    "error",
+                    "type",
+                    error_msg,
+                    issue_name="content:metadata:value-type-mismatch",
+                )
         except TypeError:
             for k, v in annot_equivalents.items():
                 if convention_type in v:
@@ -743,13 +767,17 @@ def compare_type_annots_to_convention(metadata, convention):
                     f"{metadatum}: missing TYPE annotation in metadata file. "
                     f'Convention expects "{expected}" annotation.'
                 )
-                metadata.store_validation_issue("error", "format", error_msg)
+                metadata.store_validation_issue(
+                    "error", "format", error_msg, issue_name="format:cap:type"
+                )
             else:
                 error_msg = (
                     f'{metadatum}: invalid "{annot}" annotation in metadata file. '
                     f'Convention expects "{expected}" annotation.'
                 )
-                metadata.store_validation_issue("error", "type", error_msg)
+                metadata.store_validation_issue(
+                    "error", "type", error_msg, issue_name="format:cap:type"
+                )
 
 
 def cast_boolean_type(value):
@@ -871,7 +899,11 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
                 f"expected '{lookup_metadata_type(convention, metadatum)}' type"
             )
             metadata.store_validation_issue(
-                "error", "type", error_msg, associated_info=[id_for_error_detail]
+                "error",
+                "type",
+                error_msg,
+                associated_info=[id_for_error_detail],
+                issue_name="content:metadata:value-type-mismatch",
             )
         # This exception should only trigger if a single-value boolean array
         # metadata is being cast - the value needs to be passed as an array,
@@ -903,7 +935,11 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
         except ValueError:
             error_msg = f'{metadatum}: "{value}" does not match expected type'
             metadata.store_validation_issue(
-                "error", "type", error_msg, associated_info=[id_for_error_detail]
+                "error",
+                "type",
+                error_msg,
+                associated_info=[id_for_error_detail],
+                issue_name="content:metadata:value-type-mismatch",
             )
         # particular metadatum is not in convention, metadata does not need
         # to be added to new_row for validation, return empty dictionary
@@ -948,7 +984,11 @@ def process_metadata_row(metadata, convention, line):
                     except ValueError:
                         msg = f"{k}: supplied value {v} is not numeric"
                     metadata.store_validation_issue(
-                        "error", "type", msg, associated_info=row_info["CellID"]
+                        "error",
+                        "type",
+                        msg,
+                        associated_info=row_info["CellID"],
+                        issue_name="content:invalid-type:not-numeric",
                     )
                     dev_logger.error(msg)
             continue
@@ -962,7 +1002,11 @@ def process_metadata_row(metadata, convention, line):
                     if value_is_nan(element) or is_empty_string(element):
                         msg = f"{k}: NA, NaN, and None are not accepted values for arrays or required fields"
                         metadata.store_validation_issue(
-                            "error", "ontology", msg, associated_info=row_info["CellID"]
+                            "error",
+                            "ontology",
+                            msg,
+                            associated_info=row_info["CellID"],
+                            issue_name="content:metadata:missing-required-values",
                         )
                         dev_logger.error(msg)
 
@@ -1161,6 +1205,7 @@ def validate_collected_ontology_data(metadata, convention):
                             associated_info=metadata.ontology[property_name][
                                 (ontology_id, ontology_label)
                             ],
+                            issue_name="content:metadata:missing-required-values",
                         )
                     else:
                         error_msg = (
@@ -1174,6 +1219,7 @@ def validate_collected_ontology_data(metadata, convention):
                             associated_info=metadata.ontology[property_name][
                                 (ontology_id, ontology_label)
                             ],
+                            issue_name="content:metadata:label-not-match-id",
                         )
             except ValueError as valueError:
                 metadata.store_validation_issue(
@@ -1183,11 +1229,17 @@ def validate_collected_ontology_data(metadata, convention):
                     associated_info=metadata.ontology[property_name][
                         (ontology_id, ontology_label)
                     ],
+                    issue_name="content:metadata:ontology-label-lookup",
                 )
             except requests.exceptions.RequestException as err:
                 error_msg = f"External service outage connecting to {ontology_urls} when querying {ontology_id}:{ontology_label}: {err}"
                 dev_logger.exception(error_msg)
-                metadata.store_validation_issue("error", "ontology", error_msg),
+                metadata.store_validation_issue(
+                    "error",
+                    "ontology",
+                    error_msg,
+                    issue_name="external_server:request-exception",
+                ),
                 # immediately return as validation cannot continue
                 return
 
@@ -1207,7 +1259,12 @@ def confirm_uniform_units(metadata, convention):
                 error_msg = (
                     f"{name}: values for each unit metadata required to be uniform"
                 )
-                metadata.store_validation_issue("error", "convention", error_msg)
+                metadata.store_validation_issue(
+                    "error",
+                    "convention",
+                    error_msg,
+                    issue_name="content:metadata:uniform-units",
+                )
 
 
 def serialize_bq(bq_dict, filename="bq.json"):
@@ -1260,7 +1317,12 @@ def review_metadata_names(metadata):
                 f"{name}: only alphanumeric characters and underscore "
                 f"allowed in metadata name"
             )
-            metadata.store_validation_issue("error", "metadata_name", error_msg)
+            metadata.store_validation_issue(
+                "error",
+                "metadata_name",
+                error_msg,
+                issue_name="format:cap:only-alphanumeric-underscore",
+            )
 
 
 def identify_multiply_assigned(list):
@@ -1355,11 +1417,19 @@ def detect_excel_drag(metadata, convention):
                         )
                         if multiply_assigned:
                             msg += f"Check for mismatches between ontology ID and provided ontology label(s) {multiply_assigned}\n"
-                    metadata.store_validation_issue("error", "ontology", msg)
+                    metadata.store_validation_issue(
+                        "error",
+                        "ontology",
+                        msg,
+                        issue_name="content:metadata:mismatched-id-label",
+                    )
                     dev_logger.exception(msg)
             except ValueError as valueError:
                 metadata.store_validation_issue(
-                    "error", "ontology", associated_info=valueError.args[0]
+                    "error",
+                    "ontology",
+                    associated_info=valueError.args[0],
+                    issue_name="content:metadata:ontology-label-lookup",
                 )
 
     return excel_drag

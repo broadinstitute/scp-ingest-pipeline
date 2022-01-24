@@ -218,11 +218,15 @@ class Annotations(IngestFiles):
         else:
             self.issues[type][category][msg] = None
         if type == "error" and issue_name:
-            self.props["errorTypes"].append(issue_name)
-            self.props["errors"].append(msg)
+            if issue_name not in self.props["errorTypes"]:
+                self.props["errorTypes"].append(issue_name)
+            if msg not in self.props["errors"]:
+                self.props["errors"].append(msg)
         elif type == "warn" and issue_name:
-            self.props["warnTypes"].append(issue_name)
-            self.props["warnings"].append(msg)
+            if issue_name not in self.props["warnTypes"]:
+                self.props["warnTypes"].append(issue_name)
+            if msg not in self.props["warnings"]:
+                self.props["warnings"].append(msg)
 
     def validate_header_keyword(self):
         """Check header row starts with NAME (case-insensitive).
@@ -259,12 +263,16 @@ class Annotations(IngestFiles):
                     duplicate_headers.add(x)
             msg = f"Duplicated header names are not allowed: {duplicate_headers}"
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue(
+                "error", "format", msg, issue_name="format:cap:unique"
+            )
             valid = False
         if any("Unnamed" in s for s in list(unique_headers)):
             msg = "Headers cannot contain empty values"
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue(
+                "error", "format", msg, issue_name="format:cap:no-empty"
+            )
             valid = False
         return valid
 
@@ -280,7 +288,9 @@ class Annotations(IngestFiles):
                 self.store_validation_issue("warn", "format", msg)
         else:
             msg = "Malformed TYPE row, missing TYPE. (Case Sensitive)"
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue(
+                "error", "format", msg, issue_name="format:cap:type"
+            )
         return valid
 
     def validate_type_annotations(self):
@@ -309,7 +319,11 @@ class Annotations(IngestFiles):
         if invalid_types:
             msg = 'TYPE row annotations should be "group" or "numeric"'
             self.store_validation_issue(
-                "error", "format", msg, associated_info=invalid_types
+                "error",
+                "format",
+                msg,
+                associated_info=invalid_types,
+                issue_name="format:cap:group-or-numeric",
             )
         else:
             valid = True
@@ -335,7 +349,9 @@ class Annotations(IngestFiles):
                 f"Header mismatch: {len_annot_type} TYPE declarations "
                 f"for {len_headers} column headers"
             )
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue(
+                "error", "format", msg, issue_name="format:cap:count"
+            )
         else:
             valid = True
         return valid
@@ -364,5 +380,11 @@ class Annotations(IngestFiles):
             if annot_type == "numeric" and column_dtype == "object":
                 valid = False
                 msg = f"Numeric annotation, {annot_name}, contains non-numeric data (or unidentified NA values)"
-                self.store_validation_issue("error", "format", msg)
+                self.store_validation_issue(
+                    "error",
+                    "format",
+                    msg,
+                    issue_name="content:invalid-type:not-numeric",
+                )
         return valid
+

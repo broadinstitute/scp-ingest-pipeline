@@ -327,6 +327,7 @@ class IngestPipeline:
                     )
                     pass
                 else:
+                    report_cell_metadata_props(self.cell_metadata)
                     return 1
 
             for metadata_model in self.cell_metadata.execute_ingest():
@@ -347,9 +348,7 @@ class IngestPipeline:
             return status if status is not None else 1
         else:
             report_issues(self.cell_metadata)
-            self.cell_metadata.props = set_mixpanel_nums(self.cell_metadata.props)
-            metrics_dump = config.get_metric_properties().get_properties()
-            metrics_dump.update(self.cell_metadata.props)
+            report_cell_metadata_props(self.cell_metadata)
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
 
@@ -420,6 +419,15 @@ class IngestPipeline:
                 log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
                 return 1
         return 0
+
+
+def report_cell_metadata_props(cell_metadata):
+    """Push validation issues from cell_metadata object to
+        metric_properties for Mixpanel logging
+    """
+    cell_metadata.props = set_mixpanel_nums(cell_metadata.props)
+    metrics_dump = config.get_metric_properties().get_properties()
+    metrics_dump.update(cell_metadata.props)
 
 
 def set_mixpanel_nums(props):

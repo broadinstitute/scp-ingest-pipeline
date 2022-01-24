@@ -110,7 +110,9 @@ class CellMetadata(Annotations):
             return True
         else:
             msg = "Header names can not be coordinate values x, y, or z (case insensitive)"
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue(
+                "error", "format", msg, issue_name="format:cap:metadata-no-coordinates"
+            )
             return False
 
     def conforms_to_metadata_convention(self):

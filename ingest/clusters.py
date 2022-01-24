@@ -93,7 +93,12 @@ class Clusters(Annotations):
                 if self.file[annot_name].isna().any().bool():
                     is_valid = False
                     msg = f"Missing coordinate values in {annot_name} column"
-                    self.store_validation_issue("error", "format", msg)
+                    self.store_validation_issue(
+                        "error",
+                        "format",
+                        msg,
+                        issue_name="content:cluster:missing-coordinates-values",
+                    )
         return is_valid
 
     def is_valid_format(self):
@@ -112,7 +117,9 @@ class Clusters(Annotations):
                 msg = (
                     "Header must have coordinate values 'x' and 'y' (case insensitive)"
                 )
-                self.store_validation_issue("error", "format", msg)
+                self.store_validation_issue(
+                    "error", "format", msg, issue_name="format:cap:cluster-coordinates"
+                )
                 return False
         return True
 
