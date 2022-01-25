@@ -74,11 +74,11 @@ GeneExpression.load = mock_expression_load
 
 # Mixpanel logging needs config object instantiated
 # tests should bypass mongo check for input BSON values
-os.environ["BYPASS_MONGO_INPUT_VALIDATION"] = "yes"
+os.environ["BYPASS_MONGO_WRITES"] = "yes"
 # Initialize global variables]
 config.init("5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337")
 # restore environment variable to unset state
-del os.environ['BYPASS_MONGO_INPUT_VALIDATION']
+del os.environ['BYPASS_MONGO_WRITES']
 
 
 class IngestTestCase(unittest.TestCase):
