@@ -16,9 +16,8 @@ Set up access to your developer MongoDB instance
 leverage Vault to securely set up the following environment variable(s):
     MONGODB_PASSWORD
     DATABASE_HOST
-Bypass MongoDB check for ingest file info in MongoDB
-(wishlist - modify ingest to bypass using remote Mongo instance in developer mode)
-    export BYPASS_MONGO_INPUT_VALIDATION='yes'
+Bypass MongoDB check for ingest file info in MongoDB and bypass writing results to MongoDB
+    export BYPASS_MONGO_WRITES='yes'
 (optional) To have validation events report to Mixpanel, set:
     export BARD_HOST_URL="https://terra-bard-dev.appspot.com"
 
@@ -198,7 +197,13 @@ class IngestPipeline:
         )
 
     def insert_many(self, collection_name, documents):
-        self.db[collection_name].insert_many(documents)
+        if not config.bypass_mongo_writes():
+            self.db[collection_name].insert_many(documents)
+
+    def insert_one(self, collection_name, model):
+        if not config.bypass_mongo_writes():
+            linear_id = self.db[collection_name].insert_one(model).inserted_id
+            return linear_id
 
     # @profile
     def load(
@@ -220,7 +225,7 @@ class IngestPipeline:
             ):
                 linear_id = ObjectId(self.study_id)
             else:
-                linear_id = self.db[collection_name].insert_one(model).inserted_id
+                linear_id = self.insert_one(collection_name, model)
             for data_array_model in set_data_array_fn(
                 linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
@@ -341,7 +346,7 @@ class IngestPipeline:
                     )
                     pass
                 else:
-                    report_cell_metadata_props(self.cell_metadata)
+                    push_mixpanel_props(self.cell_metadata.props)
                     return 1
 
             for metadata_model in self.cell_metadata.execute_ingest():
@@ -362,7 +367,7 @@ class IngestPipeline:
             return status if status is not None else 1
         else:
             report_issues(self.cell_metadata)
-            report_cell_metadata_props(self.cell_metadata)
+            push_mixpanel_props(self.cell_metadata.props)
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
 
@@ -381,6 +386,7 @@ class IngestPipeline:
         # Incorrect file format
         else:
             report_issues(self.cluster)
+            push_mixpanel_props(self.cluster.props)
             IngestPipeline.user_logger.error("Cluster file format invalid")
             return 1
         return status
@@ -430,18 +436,19 @@ class IngestPipeline:
                         "Cluster file has cell names that are not present in cell metadata file."
                     )
             except Exception as e:
+                # ToDo ingest.props["errorType"] = "subsample:"
                 log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
                 return 1
         return 0
 
 
-def report_cell_metadata_props(cell_metadata):
-    """Push validation issues from cell_metadata object to
+def push_mixpanel_props(props):
+    """Push validation issues from props data structure to
         metric_properties for Mixpanel logging
     """
-    cell_metadata.props = set_mixpanel_nums(cell_metadata.props)
+    props = set_mixpanel_nums(props)
     metrics_dump = config.get_metric_properties().get_properties()
-    metrics_dump.update(cell_metadata.props)
+    metrics_dump.update(props)
 
 
 def set_mixpanel_nums(props):
@@ -565,16 +572,16 @@ def main() -> None:
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
     exit_status = prepare_for_exit(ingest, status, status_cell_metadata, arguments)
-    # ToDo Add ingest status (success|failure) to Mixpanel
-    metrics_dump = config.get_metric_properties().get_properties()
-    metrics_dump.update(ingest.props)
+    # Add ingest status (success|failure) to Mixpanel
+    push_mixpanel_props(ingest.props)
 
     # Log Mixpanel events
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     MetricsService.log("file-validation", config.get_metric_properties())
 
     # If in developer mode, area to print metrics info for troubleshooting
-    if config.bypass_mongo_input_validation():
+    if config.bypass_mongo_writes():
+        metrics_dump = config.get_metric_properties().get_properties()
         for key in metrics_dump.keys():
             print(f'{key}: {metrics_dump[key]}')
 

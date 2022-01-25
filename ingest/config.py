@@ -2,7 +2,6 @@ import os
 
 # File is responsible for defining globals and initializing them
 try:
-
     from mongo_connection import MongoConnection
 except ImportError:
     from .mongo_connection import MongoConnection
@@ -60,12 +59,12 @@ class MetricProperties:
             self.__properties = {**self.__properties, **props}
 
 
-def bypass_mongo_input_validation():
-    """Check if developer has set environment variable to bypass requirement for valid mongo IDs
-        BYPASS_MONGO_INPUT_VALIDATION='yes'
+def bypass_mongo_writes():
+    """Check if developer has set environment variable to bypass writing data to MongoDB
+        BYPASS_MONGO_WRITES='yes'
     """
-    if os.environ.get("BYPASS_MONGO_INPUT_VALIDATION") is not None:
-        skip = os.environ["BYPASS_MONGO_INPUT_VALIDATION"]
+    if os.environ.get("BYPASS_MONGO_WRITES") is not None:
+        skip = os.environ["BYPASS_MONGO_WRITES"]
         if skip == "yes":
             return True
         else:
@@ -87,16 +86,17 @@ class Study:
 
     @study.setter
     def study(self, study_id: str):
+        # Annotation Object expects a proper BSON ID
+        # even when the input validation is bypassed here
         try:
             study_id = ObjectId(study_id)
         except Exception:
             raise ValueError("Must pass in valid object ID for study ID")
-        # ToDo: complete bypass of Mongo in developer mode
-        # until then, the bson check above is necessary
         # set dummy accession if running in developer mode
-        if bypass_mongo_input_validation():
+        if bypass_mongo_writes():
             self.accession = "SCPdev"
         else:
+
             study = list(
                 MONGO_CONNECTION._client["study_accessions"].find(
                     {"study_id": study_id}, {"_id": 0}
@@ -127,10 +127,8 @@ class StudyFile:
             study_file_id = ObjectId(study_file_id)
         except Exception:
             raise ValueError("Must pass in valid object ID for study file ID")
-        # ToDo: complete bypass of Mongo in developer mode
-        # until then, the bson check above is necessary
-        # set dummy values if running in developer mode
-        if bypass_mongo_input_validation():
+        if bypass_mongo_writes():
+            # set dummy values if running in developer mode
             self.file_type = "input_validation_bypassed"
             self.file_size = 1
             self.file_name = str(study_file_id)
