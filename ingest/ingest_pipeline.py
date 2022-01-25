@@ -8,6 +8,20 @@ a remote MongoDB instance.
 PREREQUISITES
 See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
 
+DEVELOPER SETUP
+To run ingest_pipeline on the command line, set the following environment variable(s):
+Set up access to your developer MongoDB instance
+    export MONGODB_USERNAME='single_cell'
+    export DATABASE_NAME='single_cell_portal_development'
+leverage Vault to securely set up the following environment variable(s):
+    MONGODB_PASSWORD
+    DATABASE_HOST
+Bypass MongoDB check for ingest file info in MongoDB
+(wishlist - modify ingest to bypass using remote Mongo instance in developer mode)
+    export BYPASS_MONGO_INPUT_VALIDATION='yes'
+(optional) To have validation events report to Mixpanel, set:
+    export BARD_HOST_URL="https://terra-bard-dev.appspot.com"
+
 EXAMPLES
 # Takes expression file and stores it into MongoDB
 
