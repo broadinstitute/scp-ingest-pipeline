@@ -47,6 +47,7 @@ class MetricProperties:
             "fileName": study_file.file_name,
             "fileType": study_file.file_type,
             "fileSize": study_file.file_size,
+            "trigger": study_file.trigger,
             "logger": "ingest-pipeline",
             "appId": "single-cell-portal",
         }
@@ -132,7 +133,7 @@ class StudyFile:
             self.file_type = "input_validation_bypassed"
             self.file_size = 1
             self.file_name = str(study_file_id)
-            self.trigger = 'upload'
+            self.trigger = 'dev_mode'
         else:
             query = MONGO_CONNECTION._client["study_files"].find({"_id": study_file_id})
             query_results = list(query)

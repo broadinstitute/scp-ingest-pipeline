@@ -579,7 +579,7 @@ def main() -> None:
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     MetricsService.log("file-validation", config.get_metric_properties())
 
-    # If in developer mode, area to print metrics info for troubleshooting
+    # If in developer mode, print metrics properties
     if config.bypass_mongo_writes():
         metrics_dump = config.get_metric_properties().get_properties()
         for key in metrics_dump.keys():
