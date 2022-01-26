@@ -1061,8 +1061,14 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
                 line = next(rows)
             except StopIteration:
                 break
-        # if js_errors:
-        metadata.issues["error"]["convention"] = js_errors
+        if js_errors:
+            metadata.store_validation_issue(
+                "error",
+                "convention",
+                "One or more errors from jsonschema validation of metadata content against Alexandria Convention detected",
+                issue_name="content:schema-error",
+            )
+            metadata.issues["error"]["convention"] = js_errors
         validate_cells_unique(metadata)
     else:
         return False
