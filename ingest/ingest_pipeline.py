@@ -458,8 +458,6 @@ def set_mixpanel_nums(props):
         num_prop = "num" + prop.capitalize()
         if props.get(prop):
             props[num_prop] = len(props[prop])
-        else:
-            props[num_prop] = 0
     return props
 
 
