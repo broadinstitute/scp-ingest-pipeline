@@ -46,7 +46,12 @@ class Annotations(IngestFiles):
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         # collect error info for Mixpanel reporting
-        self.props = {"errorTypes": [], "errors": [], "warnTypes": [], "warnings": []}
+        self.props = {
+            "errorTypes": [],
+            "errors": [],
+            "warningTypes": [],
+            "warnings": [],
+        }
         csv_file, self.file_handle = self.open_file(self.file_path)
         # Remove white spaces, quotes (only lowercase annot_types)
         self.headers = [header.strip().strip('"') for header in next(csv_file)]
@@ -223,8 +228,8 @@ class Annotations(IngestFiles):
             if msg not in self.props["errors"]:
                 self.props["errors"].append(msg)
         elif type == "warn" and issue_name:
-            if issue_name not in self.props["warnTypes"]:
-                self.props["warnTypes"].append(issue_name)
+            if issue_name not in self.props["warningTypes"]:
+                self.props["warningTypes"].append(issue_name)
             if msg not in self.props["warnings"]:
                 self.props["warnings"].append(msg)
 
