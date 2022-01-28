@@ -94,10 +94,7 @@ class Clusters(Annotations):
                     is_valid = False
                     msg = f"Missing coordinate values in {annot_name} column"
                     self.store_validation_issue(
-                        "error",
-                        "format",
-                        msg,
-                        issue_name="content:cluster:missing-coordinates-values",
+                        "error", msg, "content:cluster:missing-coordinates-values"
                     )
         return is_valid
 
@@ -118,7 +115,7 @@ class Clusters(Annotations):
                     "Header must have coordinate values 'x' and 'y' (case insensitive)"
                 )
                 self.store_validation_issue(
-                    "error", "format", msg, issue_name="format:cap:cluster-coordinates"
+                    "error", msg, "format:cap:cluster-coordinates"
                 )
                 return False
         return True
