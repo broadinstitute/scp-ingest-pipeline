@@ -8,7 +8,7 @@ a remote MongoDB instance.
 PREREQUISITES
 See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
 
-DEVELOPER SETUP (see also ../scripts/setup_mongo_dev)
+DEVELOPER SETUP (see also ../scripts/setup_mongo_dev.sh)
 To run ingest_pipeline on the command line, set the following environment variable(s):
 Set up access to your developer MongoDB instance
     export MONGODB_USERNAME='single_cell'

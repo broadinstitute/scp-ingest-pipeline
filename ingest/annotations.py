@@ -212,7 +212,7 @@ class Annotations(IngestFiles):
         self, type, category, msg, issue_name=None, associated_info=None
     ):
         """Stores validation issues in proper arrangement
-            :param type: type of issue (error or warn)
+            :param type: type of issue (error or warning)
         :param category: issue category (format, jsonschema, ontology)
         :param msg: issue message
         :param value: list of IDs associated with the issue

@@ -499,7 +499,7 @@ def validate_cells_unique(metadata):
             "format",
             error_msg,
             associated_info=dups,
-            issue_name="duplicate:cells-within-file",
+            issue_name="content:duplicate:cells-within-file",
         )
     return valid
 
@@ -516,7 +516,7 @@ def insert_array_ontology_label_row_data(
             "ontology",
             error_msg,
             associated_info=[cell_id],
-            issue_name="content:metadata:ontology-array-length-mismatch",
+            issue_name="ontology:array-length-mismatch",
         )
         return row
 
@@ -556,7 +556,7 @@ def insert_array_ontology_label_row_data(
                     "ontology",
                     error_msg,
                     associated_info=[cell_id],
-                    issue_name="content:metadata:ontology-label-lookup",
+                    issue_name="ontology:label-lookup-error",
                 )
             array_label_for_bq.append(label_lookup)
         row[ontology_label] = array_label_for_bq
@@ -672,7 +672,7 @@ def collect_cell_for_ontology(
             "ontology",
             missing_column_message,
             associated_info=[cell_id],
-            issue_name="content:metadata:missing-required-values",
+            issue_name="content:missing-required-values",
         )
 
         # metadata.ontology[property_name][(updated_row[property_name], None)].append(cell_id)
@@ -750,7 +750,7 @@ def compare_type_annots_to_convention(metadata, convention):
                     "error",
                     "type",
                     error_msg,
-                    issue_name="content:metadata:value-type-mismatch",
+                    issue_name="content:invalid-type:value-type-mismatch",
                 )
         except TypeError:
             for k, v in annot_equivalents.items():
@@ -903,7 +903,7 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
                 "type",
                 error_msg,
                 associated_info=[id_for_error_detail],
-                issue_name="content:metadata:value-type-mismatch",
+                issue_name="content:invalid-type:value-type-mismatch",
             )
         # This exception should only trigger if a single-value boolean array
         # metadata is being cast - the value needs to be passed as an array,
@@ -939,7 +939,7 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
                 "type",
                 error_msg,
                 associated_info=[id_for_error_detail],
-                issue_name="content:metadata:value-type-mismatch",
+                issue_name="content:invalid-type:value-type-mismatch",
             )
         # particular metadatum is not in convention, metadata does not need
         # to be added to new_row for validation, return empty dictionary
@@ -1006,7 +1006,7 @@ def process_metadata_row(metadata, convention, line):
                             "ontology",
                             msg,
                             associated_info=row_info["CellID"],
-                            issue_name="content:metadata:missing-required-values",
+                            issue_name="content:missing-required-values",
                         )
                         dev_logger.error(msg)
 
@@ -1211,7 +1211,7 @@ def validate_collected_ontology_data(metadata, convention):
                             associated_info=metadata.ontology[property_name][
                                 (ontology_id, ontology_label)
                             ],
-                            issue_name="content:metadata:missing-required-values",
+                            issue_name="content:missing-required-values",
                         )
                     else:
                         error_msg = (
@@ -1225,7 +1225,7 @@ def validate_collected_ontology_data(metadata, convention):
                             associated_info=metadata.ontology[property_name][
                                 (ontology_id, ontology_label)
                             ],
-                            issue_name="content:metadata:label-not-match-id",
+                            issue_name="ontology:label-not-match-id",
                         )
             except ValueError as valueError:
                 metadata.store_validation_issue(
@@ -1235,7 +1235,7 @@ def validate_collected_ontology_data(metadata, convention):
                     associated_info=metadata.ontology[property_name][
                         (ontology_id, ontology_label)
                     ],
-                    issue_name="content:metadata:ontology-label-lookup",
+                    issue_name="ontology:label-lookup-error",
                 )
             except requests.exceptions.RequestException as err:
                 error_msg = f"External service outage connecting to {ontology_urls} when querying {ontology_id}:{ontology_label}: {err}"
@@ -1266,10 +1266,7 @@ def confirm_uniform_units(metadata, convention):
                     f"{name}: values for each unit metadata required to be uniform"
                 )
                 metadata.store_validation_issue(
-                    "error",
-                    "convention",
-                    error_msg,
-                    issue_name="content:metadata:uniform-units",
+                    "error", "convention", error_msg, issue_name="content:uniform-units"
                 )
 
 
@@ -1427,7 +1424,7 @@ def detect_excel_drag(metadata, convention):
                         "error",
                         "ontology",
                         msg,
-                        issue_name="content:metadata:mismatched-id-label",
+                        issue_name="ontology:multiply-assigned-label",
                     )
                     dev_logger.exception(msg)
             except ValueError as valueError:
@@ -1435,7 +1432,7 @@ def detect_excel_drag(metadata, convention):
                     "error",
                     "ontology",
                     associated_info=valueError.args[0],
-                    issue_name="content:metadata:ontology-label-lookup",
+                    issue_name="ontology:label-lookup-error",
                 )
 
     return excel_drag
