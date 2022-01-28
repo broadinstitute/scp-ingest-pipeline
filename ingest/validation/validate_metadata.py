@@ -419,7 +419,7 @@ def validate_schema(json, metadata):
     except jsonschema.SchemaError:
         error_msg = "Invalid metadata convention file, cannot validate metadata."
         metadata.store_validation_issue(
-            "error", error_msg, "runtime:invalid_convention", issue_type="runtime",
+            "error", error_msg, "runtime:invalid_convention", issue_type="runtime"
         )
         return None
 
@@ -540,7 +540,10 @@ def insert_array_ontology_label_row_data(
                     f'"{id}" - using "{label_lookup}" per {reference_ontology}'
                 )
                 metadata.store_validation_issue(
-                    "warn", error_msg, "ontology:missing-label-lookup", associated_info=[cell_id]
+                    "warn",
+                    error_msg,
+                    "ontology:missing-label-lookup",
+                    associated_info=[cell_id],
                 )
             except BaseException as e:
                 print(e)
@@ -593,13 +596,19 @@ def insert_ontology_label_row_data(
                 f'"{id}" - using "{label}" per {reference_ontology}'
             )
             metadata.store_validation_issue(
-                "warn", error_msg, "ontology:missing-label-lookup", associated_info=[cell_id]
+                "warn",
+                error_msg,
+                "ontology:missing-label-lookup",
+                associated_info=[cell_id],
             )
         except BaseException as e:
             print(e)
             error_msg = f"Optional column {ontology_label} empty and could not be resolved from {property_name} column value {row[property_name]}"
             metadata.store_validation_issue(
-                "warn", error_msg, "ontology:label-lookup-error", associated_info=[cell_id]
+                "warn",
+                error_msg,
+                "ontology:label-lookup-error",
+                associated_info=[cell_id],
             )
     else:
         metadata.ordered_ontology[property_name].append(id)
@@ -743,9 +752,7 @@ def compare_type_annots_to_convention(metadata, convention):
                     f'Convention expects "{expected}" values.'
                 )
                 metadata.store_validation_issue(
-                    "error",
-                    error_msg,
-                    "content:invalid-type:value-type-mismatch",
+                    "error", error_msg, "content:invalid-type:value-type-mismatch"
                 )
         except TypeError:
             for k, v in annot_equivalents.items():
@@ -762,17 +769,13 @@ def compare_type_annots_to_convention(metadata, convention):
                     f"{metadatum}: missing TYPE annotation in metadata file. "
                     f'Convention expects "{expected}" annotation.'
                 )
-                metadata.store_validation_issue(
-                    "error", error_msg, "format:cap:type"
-                )
+                metadata.store_validation_issue("error", error_msg, "format:cap:type")
             else:
                 error_msg = (
                     f'{metadatum}: invalid "{annot}" annotation in metadata file. '
                     f'Convention expects "{expected}" annotation.'
                 )
-                metadata.store_validation_issue(
-                    "error", error_msg, "format:cap:type"
-                )
+                metadata.store_validation_issue("error", error_msg, "format:cap:type")
 
 
 def cast_boolean_type(value):
@@ -868,7 +871,10 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
                     "If multiple values are expected, use a pipe ('|') to separate values."
                 )
                 metadata.store_validation_issue(
-                    "warn", msg, "content:array-no-pipes", associated_info=[id_for_error_detail]
+                    "warn",
+                    msg,
+                    "content:array-no-pipes",
+                    associated_info=[id_for_error_detail],
                 )
 
             # splitting on pipe character for array data, valid for Sarah's
@@ -1228,10 +1234,7 @@ def validate_collected_ontology_data(metadata, convention):
                 error_msg = f"External service outage connecting to {ontology_urls} when querying {ontology_id}:{ontology_label}: {err}"
                 dev_logger.exception(error_msg)
                 metadata.store_validation_issue(
-                    "error",
-                    error_msg,
-                    "runtime:server-error"
-                    issue_type="runtime",
+                    "error", error_msg, "runtime:server-error", issue_type="runtime"
                 ),
                 # immediately return as validation cannot continue
                 return
@@ -1308,9 +1311,7 @@ def review_metadata_names(metadata):
                 f"allowed in metadata name"
             )
             metadata.store_validation_issue(
-                "error",
-                error_msg,
-                "format:cap:only-alphanumeric-underscore",
+                "error", error_msg, "format:cap:only-alphanumeric-underscore"
             )
 
 
@@ -1407,16 +1408,12 @@ def detect_excel_drag(metadata, convention):
                         if multiply_assigned:
                             msg += f"Check for mismatches between ontology ID and provided ontology label(s) {multiply_assigned}\n"
                     metadata.store_validation_issue(
-                        "error",
-                        msg,
-                        "ontology:multiply-assigned-label",
+                        "error", msg, "ontology:multiply-assigned-label"
                     )
                     dev_logger.exception(msg)
             except ValueError as valueError:
                 metadata.store_validation_issue(
-                    "error",
-                    associated_info=valueError.args[0],
-                    "ontology:label-lookup-error",
+                    "error", valueError.args[0], "ontology:label-lookup-error"
                 )
 
     return excel_drag

@@ -454,7 +454,7 @@ def push_mixpanel_props(props):
 def set_mixpanel_nums(props):
     """
     """
-    for prop in ["errorTypes", "errors", "warnTypes", "warnings"]:
+    for prop in ["errorTypes", "errors", "warningTypes", "warnings"]:
         num_prop = "num" + prop.capitalize()
         if props.get(prop):
             props[num_prop] = len(props[prop])
