@@ -344,10 +344,11 @@ class IngestPipeline:
                     IngestPipeline.dev_logger.info(
                         "Cell metadata file conforms to metadata convention"
                     )
-                    pass
                 else:
                     push_mixpanel_props(self.cell_metadata.props)
+                    self.report_validation("failure")
                     return 1
+            self.report_validation("success")
 
             for metadata_model in self.cell_metadata.execute_ingest():
                 IngestPipeline.dev_logger.info(
@@ -368,6 +369,7 @@ class IngestPipeline:
         else:
             report_issues(self.cell_metadata)
             push_mixpanel_props(self.cell_metadata.props)
+            self.report_validation("failure")
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
 
@@ -375,6 +377,7 @@ class IngestPipeline:
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate():
+            self.report_validation("success")
             annotation_model = self.cluster.transform()
             status = self.load(
                 self.cluster.COLLECTION_NAME,
@@ -387,6 +390,7 @@ class IngestPipeline:
         else:
             report_issues(self.cluster)
             push_mixpanel_props(self.cluster.props)
+            self.report_validation("failure")
             IngestPipeline.user_logger.error("Cluster file format invalid")
             return 1
         return status
@@ -440,6 +444,11 @@ class IngestPipeline:
                 log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
                 return 1
         return 0
+
+    def report_validation(self, status):
+        self.props["status"] = status
+        push_mixpanel_props(self.props)
+        MetricsService.log("file-validation", config.get_metric_properties())
 
 
 def push_mixpanel_props(props):
@@ -496,7 +505,6 @@ def prepare_for_exit(ingest, status, status_cell_metadata, arguments):
     """
     if len(status) > 0:
         if all(i < 1 for i in status):
-            ingest.props["status"] = "success"
             return 0
         else:
             # delocalize errors file
@@ -532,9 +540,7 @@ def prepare_for_exit(ingest, status, status_cell_metadata, arguments):
                     # will have "unexpected exit status 65 was not ignored"
                     # EX_DATAERR (65) The input data was incorrect in some way.
                     # note that failure to load to MongoDB also triggers this error
-                    ingest.props["status"] = "failure"
                     return 65
-            ingest.props["status"] = "failure"
             return 1
 
 
@@ -570,12 +576,8 @@ def main() -> None:
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
     exit_status = prepare_for_exit(ingest, status, status_cell_metadata, arguments)
-    # Add ingest status (success|failure) to Mixpanel
-    push_mixpanel_props(ingest.props)
 
-    # Log Mixpanel events
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
-    MetricsService.log("file-validation", config.get_metric_properties())
 
     # If in developer mode, print metrics properties
     if config.bypass_mongo_writes():
