@@ -95,19 +95,19 @@ class TestValidateMetadata(unittest.TestCase):
         # incorrectly delimited value in numeric column
         self.assertIn(
             "disease__time_since_onset: '12,2' in '12,2' does not match expected 'number' type",
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "comma-delimited values for array metadata should fail",
         )
         # incorrectly delimited value in boolean column
         self.assertIn(
             "disease__treated: 'True,False' in 'True,False' does not match expected 'boolean' type",
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "comma-delimited values for array metadata should fail",
         )
         # partial correctly delimited value in numeric column should still fail
         self.assertIn(
             "disease__time_since_onset: '3,1' in '36|3,1' does not match expected 'number' type",
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "incorrectly delimited values for array metadata should fail",
         )
 
@@ -153,7 +153,7 @@ class TestValidateMetadata(unittest.TestCase):
             "Row should not be altered if label for required ontology is missing",
         )
         self.assertEqual(
-            metadata.issues["error"]["ontology"],
+            metadata.issues["error"]["content"],
             {
                 'disease: required column "disease__ontology_label" missing data': [
                     "test1"
@@ -178,7 +178,7 @@ class TestValidateMetadata(unittest.TestCase):
             "Row should have column ontology_label added with value of empty array",
         )
         self.assertEqual(
-            metadata.issues["error"]["ontology"],
+            metadata.issues["error"]["content"],
             {
                 'disease: required column "disease__ontology_label" missing data': [
                     "test1"
@@ -207,7 +207,7 @@ class TestValidateMetadata(unittest.TestCase):
             "nan should be converted to empty array",
         )
         self.assertEqual(
-            metadata.issues["error"]["ontology"],
+            metadata.issues["error"]["content"],
             {
                 'disease: required column "disease__ontology_label" missing data': [
                     "test1"
@@ -232,7 +232,7 @@ class TestValidateMetadata(unittest.TestCase):
             "Row should not be altered if label for required ontology is missing",
         )
         self.assertEqual(
-            metadata.issues["error"]["ontology"],
+            metadata.issues["error"]["content"],
             {'organ: required column "organ__ontology_label" missing data': ["test1"]},
             "unexpected error reporting",
         )
@@ -249,7 +249,7 @@ class TestValidateMetadata(unittest.TestCase):
             "Row should have column ontology_label added with value of empty string",
         )
         self.assertEqual(
-            metadata.issues["error"]["ontology"],
+            metadata.issues["error"]["content"],
             {'organ: required column "organ__ontology_label" missing data': ["test1"]},
             "unexpected error reporting",
         )
@@ -270,7 +270,7 @@ class TestValidateMetadata(unittest.TestCase):
             "nan should be converted to empty string",
         )
         self.assertEqual(
-            metadata.issues["error"]["ontology"],
+            metadata.issues["error"]["content"],
             {'organ: required column "organ__ontology_label" missing data': ["test1"]},
             "unexpected error reporting",
         )
@@ -503,7 +503,7 @@ class TestValidateMetadata(unittest.TestCase):
         #   duplicate CellIDs are not permitted
         self.assertIn(
             "Duplicate CellID(s) in metadata file",
-            metadata.issues["error"]["format"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "Duplicate CellID(s) in metadata file should result in error",
         )
 
@@ -528,7 +528,7 @@ class TestValidateMetadata(unittest.TestCase):
         #   value provided not a number for 'organism_age'
         self.assertIn(
             "organism_age: \"foo\" does not match expected type",
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "ontology_label without ontology ID data results in error, even for non-required metadata",
         )
         self.teardown_metadata(metadata)
@@ -672,41 +672,41 @@ class TestValidateMetadata(unittest.TestCase):
         #     group instead of numeric: organism_age
         self.assertIn(
             'organism_age: \"group\" annotation in metadata file conflicts with metadata convention. Convention expects \"numeric\" values.',
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "metadata validation should fail if metadata type does not match convention-designated type",
         )
         #     numeric instead of group: biosample_type
         self.assertIn(
             'biosample_type: \"numeric\" annotation in metadata file conflicts with metadata convention. Convention expects \"group\" values.',
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "metadata validation should fail if metadata type does not match convention-designated type",
         )
         # invalid array-based metadata type: disease__time_since_onset
         self.assertIn(
             "disease__time_since_onset: 'three' in '36|three|1' does not match expected 'number' type",
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "metadata validation should fail if metadata type does not match convention-designated type",
         )
         self.assertIn(
             "disease__time_since_onset: 'zero' in 'zero' does not match expected 'number' type",
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "metadata validation should fail if metadata type does not match convention-designated type",
         )
         # invalid boolean value: disease__treated
         self.assertIn(
             "disease__treated: 'T' in 'T|F' does not match expected 'boolean' type",
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "metadata validation should fail if metadata type does not match convention-designated type",
         )
         self.assertIn(
             "disease__treated: 'F' in 'F' does not match expected 'boolean' type",
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "metadata validation should fail if metadata type does not match convention-designated type",
         )
         # non-uniform unit values: organism_age__unit
         self.assertIn(
             "disease__time_since_onset__unit: values for each unit metadata required to be uniform",
-            metadata.issues["error"]["convention"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "Ontology_label values for units should be uniform",
         )
         # missing ontology ID or label for required metadata: organ
@@ -724,7 +724,7 @@ class TestValidateMetadata(unittest.TestCase):
         # invalid header content: donor info (only alphanumeric or underscore allowed)
         self.assertIn(
             "donor info: only alphanumeric characters and underscore allowed in metadata name",
-            metadata.issues["error"]["metadata_name"].keys(),
+            metadata.issues["error"]["format"].keys(),
             "metadata names must follow header rules (only alphanumeric or underscore allowed)",
         )
         self.teardown_metadata(metadata)
@@ -733,17 +733,17 @@ class TestValidateMetadata(unittest.TestCase):
         metadata = set_up_test("has_na_in_array.tsv")
         self.assertIn(
             "disease__time_since_onset: 'None' in 'None' does not match expected 'number' type",
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "Non-numeric 'None' provided instead of numeric array should fail",
         )
         self.assertIn(
             "disease__treated: 'N/A' in 'True|N/A|False' does not match expected 'boolean' type",
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "Non-boolean 'N/A' provided in boolean array should fail",
         )
         self.assertIn(
             "disease__treated: 'None' in 'FALSE|None' does not match expected 'boolean' type",
-            metadata.issues["error"]["type"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "Non-boolean 'None' provided in boolean array should fail",
         )
         self.teardown_metadata(metadata)
@@ -753,12 +753,12 @@ class TestValidateMetadata(unittest.TestCase):
         # missing ontology ID or label for required metadata
         self.assertIn(
             "organ: required column \"organ\" missing data",
-            metadata.issues["error"]["ontology"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "Missing required metadata should fail validation",
         )
         self.assertIn(
             "species: required column \"species__ontology_label\" missing data",
-            metadata.issues["error"]["ontology"].keys(),
+            metadata.issues["error"]["content"].keys(),
             "Missing required metadata should fail validation",
         )
         # NA value in required field (ontology)
@@ -913,7 +913,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
 
         self.assertEqual(
-            list(metadata.issues["error"]["type"].keys())[0],
+            list(metadata.issues["error"]["content"].keys())[0],
             'percent_mt: supplied value 07.juil is not numeric',
             "expected error message not generated",
         )
