@@ -1234,7 +1234,10 @@ def validate_collected_ontology_data(metadata, convention):
                 error_msg = f"External service outage connecting to {ontology_urls} when querying {ontology_id}:{ontology_label}: {err}"
                 dev_logger.exception(error_msg)
                 metadata.store_validation_issue(
-                    "error", error_msg, "runtime:server-error", issue_type="runtime"
+                    "error",
+                    error_msg,
+                    "runtime:request-exception",
+                    issue_type="runtime",
                 ),
                 # immediately return as validation cannot continue
                 return
