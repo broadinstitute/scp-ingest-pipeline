@@ -46,7 +46,6 @@ from ingest_pipeline import (
     validate_arguments,
     IngestPipeline,
     exit_pipeline,
-    prepare_for_exit,
     run_ingest,
 )
 from expression_files.expression_files import GeneExpression
@@ -218,10 +217,7 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_status = prepare_for_exit(
-                ingest, status, status_cell_metadata, arguments
-            )
-            exit_pipeline(exit_status)
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
     def test_empty_mtx_file(self):
@@ -256,10 +252,7 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_status = prepare_for_exit(
-                ingest, status, status_cell_metadata, arguments
-            )
-            exit_pipeline(exit_status)
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
     @patch(
@@ -524,10 +517,7 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_status = prepare_for_exit(
-                ingest, status, status_cell_metadata, arguments
-            )
-            exit_pipeline(exit_status)
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
     def test_bad_metadata_file(self):
@@ -548,10 +538,7 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
         with self.assertRaises(SystemExit) as cm:
-            exit_status = prepare_for_exit(
-                ingest, status, status_cell_metadata, arguments
-            )
-            exit_pipeline(exit_status)
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
     def test_bad_metadata_file_contains_coordinates(self):
@@ -573,10 +560,7 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_status = prepare_for_exit(
-                ingest, status, status_cell_metadata, arguments
-            )
-            exit_pipeline(exit_status)
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
     def test_good_cluster_file(self):
@@ -622,10 +606,7 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_status = prepare_for_exit(
-                ingest, status, status_cell_metadata, arguments
-            )
-            exit_pipeline(exit_status)
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
     def test_bad_cluster_missing_coordinate_file(self):
@@ -646,10 +627,7 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 
         with self.assertRaises(SystemExit) as cm:
-            exit_status = prepare_for_exit(
-                ingest, status, status_cell_metadata, arguments
-            )
-            exit_pipeline(exit_status)
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
     @patch("ingest_pipeline.IngestPipeline.load_subsample", return_value=0)
@@ -694,10 +672,7 @@ class IngestTestCase(unittest.TestCase):
         ]
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
         with self.assertRaises(SystemExit) as cm, self.assertRaises(ValueError):
-            exit_status = prepare_for_exit(
-                ingest, status, status_cell_metadata, arguments
-            )
-            exit_pipeline(exit_status)
+            exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
 

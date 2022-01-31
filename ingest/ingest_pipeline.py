@@ -500,12 +500,12 @@ def run_ingest(ingest, arguments, parsed_args):
     return status, status_cell_metadata
 
 
-def prepare_for_exit(ingest, status, status_cell_metadata, arguments):
+def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """Logs any errors, then exits Ingest Pipeline with standard OS code
     """
     if len(status) > 0:
         if all(i < 1 for i in status):
-            return 0
+            sys.exit(os.EX_OK)
         else:
             # delocalize errors file
             for argument in list(arguments.keys()):
@@ -540,19 +540,8 @@ def prepare_for_exit(ingest, status, status_cell_metadata, arguments):
                     # will have "unexpected exit status 65 was not ignored"
                     # EX_DATAERR (65) The input data was incorrect in some way.
                     # note that failure to load to MongoDB also triggers this error
-                    return 65
-            return 1
-
-
-def exit_pipeline(exit_status):
-    """Exit Ingest Pipeline with standard OS code
-    """
-    if exit_status == 0:
-        sys.exit(os.EX_OK)
-    elif exit_status == 65:
-        sys.exit(os.EX_DATAERR)
-    else:
-        sys.exit(1)
+                    sys.exit(os.EX_DATAERR)
+            sys.exit(1)
 
 
 def main() -> None:
@@ -575,18 +564,16 @@ def main() -> None:
     )
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
-    exit_status = prepare_for_exit(ingest, status, status_cell_metadata, arguments)
-
-    MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
-
     # If in developer mode, print metrics properties
     if config.bypass_mongo_writes():
         metrics_dump = config.get_metric_properties().get_properties()
         for key in metrics_dump.keys():
             print(f'{key}: {metrics_dump[key]}')
 
+    # Log Mixpanel events
+    MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     # Exit pipeline
-    exit_pipeline(exit_status)
+    exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 
 if __name__ == "__main__":
