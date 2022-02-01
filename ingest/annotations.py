@@ -225,9 +225,9 @@ class Annotations(IngestFiles):
         else:
             try:
                 category = issue_name.split(":")[0]
-        except (ValueError, TypeError):
-            msg = f'Expected parse on ":" to derive category from {issue_name}'
-            raise ValueError(msg)
+            except (ValueError, TypeError):
+                msg = f'Expected parse on ":" to derive category from {issue_name}'
+                raise ValueError(msg)
 
         if associated_info:
             self.issues[type][category][msg].extend(associated_info)
@@ -254,7 +254,6 @@ class Annotations(IngestFiles):
         else:
             msg = f'Unexpected lack of issue_name, {issue_name}, for Mixpanel logging'
             raise ValueError(msg)
-
 
     def validate_header_keyword(self):
         """Check header row starts with NAME (case-insensitive).
