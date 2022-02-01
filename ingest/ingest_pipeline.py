@@ -345,7 +345,7 @@ class IngestPipeline:
                         "Cell metadata file conforms to metadata convention"
                     )
                 else:
-                    push_mixpanel_props(self.cell_metadata.props)
+                    update_mixpanel_props(self.cell_metadata.props)
                     self.report_validation("failure")
                     return 1
             self.report_validation("success")
@@ -368,7 +368,7 @@ class IngestPipeline:
             return status if status is not None else 1
         else:
             report_issues(self.cell_metadata)
-            push_mixpanel_props(self.cell_metadata.props)
+            update_mixpanel_props(self.cell_metadata.props)
             self.report_validation("failure")
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
@@ -389,7 +389,7 @@ class IngestPipeline:
         # Incorrect file format
         else:
             report_issues(self.cluster)
-            push_mixpanel_props(self.cluster.props)
+            update_mixpanel_props(self.cluster.props)
             self.report_validation("failure")
             IngestPipeline.user_logger.error("Cluster file format invalid")
             return 1
@@ -447,12 +447,12 @@ class IngestPipeline:
 
     def report_validation(self, status):
         self.props["status"] = status
-        push_mixpanel_props(self.props)
+        update_mixpanel_props(self.props)
         MetricsService.log("file-validation", config.get_metric_properties())
 
 
-def push_mixpanel_props(props):
-    """Push validation issues from props data structure to
+def update_mixpanel_props(props):
+    """Update validation issues from props data structure to
         metric_properties for Mixpanel logging
     """
     props = set_mixpanel_nums(props)
@@ -461,7 +461,7 @@ def push_mixpanel_props(props):
 
 
 def set_mixpanel_nums(props):
-    """
+    """Derive count for each type of Mixpanel property
     """
     for prop in ["errorTypes", "errors", "warningTypes", "warnings"]:
         num_prop = "num" + prop.capitalize()
