@@ -1,6 +1,7 @@
+import os
+
 # File is responsible for defining globals and initializing them
 try:
-
     from mongo_connection import MongoConnection
 except ImportError:
     from .mongo_connection import MongoConnection
@@ -46,6 +47,8 @@ class MetricProperties:
             "fileName": study_file.file_name,
             "fileType": study_file.file_type,
             "fileSize": study_file.file_size,
+            "trigger": study_file.trigger,
+            "logger": "ingest-pipeline",
             "appId": "single-cell-portal",
         }
 
@@ -55,6 +58,20 @@ class MetricProperties:
     def update(self, props):
         if props:
             self.__properties = {**self.__properties, **props}
+
+
+def bypass_mongo_writes():
+    """Check if developer has set environment variable to bypass writing data to MongoDB
+        BYPASS_MONGO_WRITES='yes'
+    """
+    if os.environ.get("BYPASS_MONGO_WRITES") is not None:
+        skip = os.environ["BYPASS_MONGO_WRITES"]
+        if skip == "yes":
+            return True
+        else:
+            return False
+    else:
+        return False
 
 
 class Study:
@@ -70,22 +87,29 @@ class Study:
 
     @study.setter
     def study(self, study_id: str):
+        # Annotation Object expects a proper BSON ID
+        # even when the input validation is bypassed here
         try:
             study_id = ObjectId(study_id)
         except Exception:
             raise ValueError("Must pass in valid object ID for study ID")
-        study = list(
-            MONGO_CONNECTION._client["study_accessions"].find(
-                {"study_id": study_id}, {"_id": 0}
-            )
-        )
-        if not study:
-            raise ValueError(
-                "Study ID is not registered with a study. Please provide a valid study ID"
-            )
+        # set dummy accession if running in developer mode
+        if bypass_mongo_writes():
+            self.accession = "SCPdev"
         else:
-            self.__study = study.pop()
-            self.accession = self.__study["accession"]
+
+            study = list(
+                MONGO_CONNECTION._client["study_accessions"].find(
+                    {"study_id": study_id}, {"_id": 0}
+                )
+            )
+            if not study:
+                raise ValueError(
+                    "Study ID is not registered with a study. Please provide a valid study ID"
+                )
+            else:
+                self.__study = study.pop()
+                self.accession = self.__study["accession"]
 
 
 class StudyFile:
@@ -104,14 +128,25 @@ class StudyFile:
             study_file_id = ObjectId(study_file_id)
         except Exception:
             raise ValueError("Must pass in valid object ID for study file ID")
-        query = MONGO_CONNECTION._client["study_files"].find({"_id": study_file_id})
-        query_results = list(query)
-        if not query_results:
-            raise ValueError(
-                "Study file ID is not registered with a study. Please provide a valid study file ID."
-            )
+        if bypass_mongo_writes():
+            # set dummy values if running in developer mode
+            self.file_type = "input_validation_bypassed"
+            self.file_size = 1
+            self.file_name = str(study_file_id)
+            self.trigger = 'dev_mode'
         else:
-            self.__study_file = query_results.pop()
-            self.file_type = self.study_file["file_type"]
-            self.file_size = self.study_file["upload_file_size"]
-            self.file_name = self.study_file["name"]
+            query = MONGO_CONNECTION._client["study_files"].find({"_id": study_file_id})
+            query_results = list(query)
+            if not query_results:
+                raise ValueError(
+                    "Study file ID is not registered with a study. Please provide a valid study file ID."
+                )
+            else:
+                self.__study_file = query_results.pop()
+                self.file_type = self.study_file["file_type"]
+                self.file_size = self.study_file["upload_file_size"]
+                self.file_name = self.study_file["name"]
+                if self.study_file.get("remote_location") is not None:
+                    self.trigger = 'sync'
+                else:
+                    self.trigger = 'upload'

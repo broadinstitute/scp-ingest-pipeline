@@ -8,6 +8,19 @@ a remote MongoDB instance.
 PREREQUISITES
 See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
 
+DEVELOPER SETUP (see also ../scripts/setup_mongo_dev.sh)
+To run ingest_pipeline on the command line, set the following environment variable(s):
+Set up access to your developer MongoDB instance
+    export MONGODB_USERNAME='single_cell'
+    export DATABASE_NAME='single_cell_portal_development'
+leverage Vault to securely set up the following environment variable(s):
+    MONGODB_PASSWORD
+    DATABASE_HOST
+Bypass MongoDB check for ingest file info in MongoDB and bypass writing results to MongoDB
+    export BYPASS_MONGO_WRITES='yes'
+(optional) To have validation events report to Mixpanel, set:
+    export BARD_HOST_URL="https://terra-bard-dev.appspot.com"
+
 EXAMPLES
 # Takes expression file and stores it into MongoDB
 
@@ -39,7 +52,8 @@ import os
 import re
 import sys
 from contextlib import nullcontext
-from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+from typing import Dict, Generator, List, Tuple, Union
+from wsgiref.simple_server import WSGIRequestHandler  # noqa: F401
 
 
 from bson.objectid import ObjectId
@@ -130,6 +144,7 @@ class IngestPipeline:
         self.cluster_file = cluster_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
+        self.props = {}
         if "GOOGLE_CLOUD_PROJECT" in os.environ:
             # instantiate trace exporter
             exporter = StackdriverExporter(
@@ -182,7 +197,13 @@ class IngestPipeline:
         )
 
     def insert_many(self, collection_name, documents):
-        self.db[collection_name].insert_many(documents)
+        if not config.bypass_mongo_writes():
+            self.db[collection_name].insert_many(documents)
+
+    def insert_one(self, collection_name, model):
+        if not config.bypass_mongo_writes():
+            linear_id = self.db[collection_name].insert_one(model).inserted_id
+            return linear_id
 
     # @profile
     def load(
@@ -204,7 +225,7 @@ class IngestPipeline:
             ):
                 linear_id = ObjectId(self.study_id)
             else:
-                linear_id = self.db[collection_name].insert_one(model).inserted_id
+                linear_id = self.insert_one(collection_name, model)
             for data_array_model in set_data_array_fn(
                 linear_id, *set_data_array_fn_args, **set_data_array_fn_kwargs
             ):
@@ -323,9 +344,11 @@ class IngestPipeline:
                     IngestPipeline.dev_logger.info(
                         "Cell metadata file conforms to metadata convention"
                     )
-                    pass
                 else:
+                    push_mixpanel_props(self.cell_metadata.props)
+                    self.report_validation("failure")
                     return 1
+            self.report_validation("success")
 
             for metadata_model in self.cell_metadata.execute_ingest():
                 IngestPipeline.dev_logger.info(
@@ -345,6 +368,8 @@ class IngestPipeline:
             return status if status is not None else 1
         else:
             report_issues(self.cell_metadata)
+            push_mixpanel_props(self.cell_metadata.props)
+            self.report_validation("failure")
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
 
@@ -352,6 +377,7 @@ class IngestPipeline:
     def ingest_cluster(self):
         """Ingests cluster files."""
         if self.cluster.validate():
+            self.report_validation("success")
             annotation_model = self.cluster.transform()
             status = self.load(
                 self.cluster.COLLECTION_NAME,
@@ -363,6 +389,8 @@ class IngestPipeline:
         # Incorrect file format
         else:
             report_issues(self.cluster)
+            push_mixpanel_props(self.cluster.props)
+            self.report_validation("failure")
             IngestPipeline.user_logger.error("Cluster file format invalid")
             return 1
         return status
@@ -412,9 +440,34 @@ class IngestPipeline:
                         "Cluster file has cell names that are not present in cell metadata file."
                     )
             except Exception as e:
+                # ToDo ingest.props["errorType"] = "subsample:"
                 log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
                 return 1
         return 0
+
+    def report_validation(self, status):
+        self.props["status"] = status
+        push_mixpanel_props(self.props)
+        MetricsService.log("file-validation", config.get_metric_properties())
+
+
+def push_mixpanel_props(props):
+    """Push validation issues from props data structure to
+        metric_properties for Mixpanel logging
+    """
+    props = set_mixpanel_nums(props)
+    metrics_dump = config.get_metric_properties().get_properties()
+    metrics_dump.update(props)
+
+
+def set_mixpanel_nums(props):
+    """
+    """
+    for prop in ["errorTypes", "errors", "warningTypes", "warnings"]:
+        num_prop = "num" + prop.capitalize()
+        if props.get(prop):
+            props[num_prop] = len(props[prop])
+    return props
 
 
 def run_ingest(ingest, arguments, parsed_args):
@@ -511,6 +564,12 @@ def main() -> None:
     )
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
+    # If in developer mode, print metrics properties
+    if config.bypass_mongo_writes():
+        metrics_dump = config.get_metric_properties().get_properties()
+        for key in metrics_dump.keys():
+            print(f'{key}: {metrics_dump[key]}')
+
     # Log Mixpanel events
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     # Exit pipeline
