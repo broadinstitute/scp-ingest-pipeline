@@ -1221,10 +1221,10 @@ def validate_collected_ontology_data(metadata, convention):
                                 (ontology_id, ontology_label)
                             ],
                         )
-            except ValueError as valueError:
+            except ValueError as value_error:
                 metadata.store_validation_issue(
                     "error",
-                    valueError.args[0],
+                    value_error.args[0],
                     "ontology:label-lookup-error",
                     associated_info=metadata.ontology[property_name][
                         (ontology_id, ontology_label)
@@ -1414,9 +1414,9 @@ def detect_excel_drag(metadata, convention):
                         "error", msg, "ontology:multiply-assigned-label"
                     )
                     dev_logger.exception(msg)
-            except ValueError as valueError:
+            except ValueError as value_error:
                 metadata.store_validation_issue(
-                    "error", valueError.args[0], "ontology:label-lookup-error"
+                    "error", value_error.args[0], "ontology:label-lookup-error"
                 )
 
     return excel_drag
