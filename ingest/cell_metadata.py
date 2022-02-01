@@ -55,8 +55,6 @@ class CellMetadata(Annotations):
             self, file_path, self.ALLOWED_FILE_TYPES, study_id, study_file_id
         )
         self.cell_names = []
-        # lambda below initializes new key with nested dictionary as value and avoids KeyError
-        self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.ordered_ontology = defaultdict(list)
         self.ordered_labels = defaultdict(list)
@@ -112,7 +110,9 @@ class CellMetadata(Annotations):
             return True
         else:
             msg = "Header names can not be coordinate values x, y, or z (case insensitive)"
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue(
+                "error", msg, "format:cap:metadata-no-coordinates"
+            )
             return False
 
     def conforms_to_metadata_convention(self):

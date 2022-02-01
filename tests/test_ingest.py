@@ -34,11 +34,13 @@ pytest --cov=../ingest/
 import unittest
 from unittest.mock import patch
 from test_dense import mock_load_r_files
+import os
 
 from pymongo.errors import AutoReconnect
 from test_expression_files import mock_expression_load
 from mock_gcp import mock_storage_client, mock_storage_blob
 
+import config
 from ingest_pipeline import (
     create_parser,
     validate_arguments,
@@ -68,6 +70,14 @@ def mock_load(self, *args, **kwargs):
 # Mock method that writes to database
 IngestPipeline.load = mock_load
 GeneExpression.load = mock_expression_load
+
+# Mixpanel logging needs config object instantiated
+# tests should bypass mongo check for input BSON values
+os.environ["BYPASS_MONGO_WRITES"] = "yes"
+# Initialize global variables]
+config.init("5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337")
+# restore environment variable to unset state
+del os.environ['BYPASS_MONGO_WRITES']
 
 
 class IngestTestCase(unittest.TestCase):
@@ -513,6 +523,7 @@ class IngestTestCase(unittest.TestCase):
     def test_bad_metadata_file(self):
         """Ingest Pipeline should not succeed for misformatted metadata file
         """
+
         args = [
             "--study-id",
             "5d276a50421aa9117c982845",
@@ -526,7 +537,6 @@ class IngestTestCase(unittest.TestCase):
             "--ingest-cell-metadata",
         ]
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
-
         with self.assertRaises(SystemExit) as cm:
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)

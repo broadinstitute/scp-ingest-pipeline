@@ -45,6 +45,13 @@ class Annotations(IngestFiles):
             self.study_file_id = ObjectId(study_file_id)
         # lambda below initializes new key with nested dictionary as value and avoids KeyError
         self.issues = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        # collect error info for Mixpanel reporting
+        self.props = {
+            "errorTypes": [],
+            "errors": [],
+            "warningTypes": [],
+            "warnings": [],
+        }
         csv_file, self.file_handle = self.open_file(self.file_path)
         # Remove white spaces, quotes (only lowercase annot_types)
         self.headers = [header.strip().strip('"') for header in next(csv_file)]
@@ -201,17 +208,43 @@ class Annotations(IngestFiles):
         )[0]
         self.file = Annotations.convert_header_to_multi_index(df, column_names)
 
-    def store_validation_issue(self, type, category, msg, associated_info=None):
+    def store_validation_issue(
+        self, type, msg, issue_name, issue_type=None, associated_info=None
+    ):
         """Stores validation issues in proper arrangement
-            :param type: type of issue (error or warn)
+        :param type: type of issue (error or warning)
         :param category: issue category (format, jsonschema, ontology)
+            derive from issue_name (aligns with CSFV errorType names)
+            unless a special issue_type is supplied
         :param msg: issue message
         :param value: list of IDs associated with the issue
         """
+        # derive category from errorType name (aligned with CSFV names)
+        if issue_type:
+            category = issue_type
+        else:
+            category = issue_name.split(":")[0]
+
         if associated_info:
             self.issues[type][category][msg].extend(associated_info)
         else:
             self.issues[type][category][msg] = None
+
+        if category == "runtime":
+            # do not log runtime errors as file-validation failure errorType
+            pass
+        else:
+            # propagate detected warnings and errors to Mixpanel
+            if type == "error" and issue_name:
+                if issue_name not in self.props["errorTypes"]:
+                    self.props["errorTypes"].append(issue_name)
+                if msg not in self.props["errors"]:
+                    self.props["errors"].append(msg)
+            elif type == "warn" and issue_name:
+                if issue_name not in self.props["warningTypes"]:
+                    self.props["warningTypes"].append(issue_name)
+                if msg not in self.props["warnings"]:
+                    self.props["warnings"].append(msg)
 
     def validate_header_keyword(self):
         """Check header row starts with NAME (case-insensitive).
@@ -224,10 +257,10 @@ class Annotations(IngestFiles):
             valid = True
             if self.headers[0] != "NAME":
                 msg = f'File keyword "NAME" provided as {self.headers[0]}'
-                self.store_validation_issue("warn", "format", msg)
+                self.store_validation_issue("warn", msg, "format:cap:name")
         else:
             msg = "Malformed file header row, missing NAME keyword. (Case Sensitive)"
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue("error", msg, "format:cap:name")
         return valid
 
     def validate_unique_header(self):
@@ -246,12 +279,12 @@ class Annotations(IngestFiles):
                     duplicate_headers.add(x)
             msg = f"Duplicated header names are not allowed: {duplicate_headers}"
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue("error", msg, "format:cap:unique")
             valid = False
         if any("Unnamed" in s for s in list(unique_headers)):
             msg = "Headers cannot contain empty values"
             log_exception(Annotations.dev_logger, Annotations.user_logger, msg)
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue("error", msg, "format:cap:no-empty")
             valid = False
         return valid
 
@@ -264,10 +297,10 @@ class Annotations(IngestFiles):
             valid = True
             if self.annot_types[0] != "TYPE":
                 msg = f'File keyword "TYPE" provided as {self.annot_types[0]}'
-                self.store_validation_issue("warn", "format", msg)
+                self.store_validation_issue("warn", msg, "format:cap:type")
         else:
             msg = "Malformed TYPE row, missing TYPE. (Case Sensitive)"
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue("error", msg, "format:cap:type")
         return valid
 
     def validate_type_annotations(self):
@@ -295,7 +328,12 @@ class Annotations(IngestFiles):
                     invalid_types.append(t)
         if invalid_types:
             msg = 'TYPE row annotations should be "group" or "numeric"'
-            self.store_validation_issue("error", "format", msg, invalid_types)
+            self.store_validation_issue(
+                "error",
+                msg,
+                "format:cap:group-or-numeric",
+                associated_info=invalid_types,
+            )
         else:
             valid = True
         return valid
@@ -320,7 +358,7 @@ class Annotations(IngestFiles):
                 f"Header mismatch: {len_annot_type} TYPE declarations "
                 f"for {len_headers} column headers"
             )
-            self.store_validation_issue("error", "format", msg)
+            self.store_validation_issue("error", msg, "format:cap:count")
         else:
             valid = True
         return valid
@@ -349,5 +387,8 @@ class Annotations(IngestFiles):
             if annot_type == "numeric" and column_dtype == "object":
                 valid = False
                 msg = f"Numeric annotation, {annot_name}, contains non-numeric data (or unidentified NA values)"
-                self.store_validation_issue("error", "format", msg)
+                self.store_validation_issue(
+                    "error", msg, "content:invalid-type:not-numeric"
+                )
         return valid
+
