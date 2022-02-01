@@ -419,7 +419,7 @@ def validate_schema(json, metadata):
     except jsonschema.SchemaError:
         error_msg = "Invalid metadata convention file, cannot validate metadata."
         metadata.store_validation_issue(
-            "error", error_msg, "runtime:invalid_convention", issue_type="runtime"
+            "error", error_msg, "runtime:invalid-convention", issue_type="runtime"
         )
         return None
 
@@ -752,7 +752,7 @@ def compare_type_annots_to_convention(metadata, convention):
                     f'Convention expects "{expected}" values.'
                 )
                 metadata.store_validation_issue(
-                    "error", error_msg, "content:invalid-type:value-type-mismatch"
+                    "error", error_msg, "content:type:value-type-mismatch"
                 )
         except TypeError:
             for k, v in annot_equivalents.items():
@@ -902,7 +902,7 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
             metadata.store_validation_issue(
                 "error",
                 error_msg,
-                "content:invalid-type:value-type-mismatch",
+                "content:type:value-type-mismatch",
                 associated_info=[id_for_error_detail],
             )
         # This exception should only trigger if a single-value boolean array
@@ -937,7 +937,7 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
             metadata.store_validation_issue(
                 "error",
                 error_msg,
-                "content:invalid-type:value-type-mismatch",
+                "content:type:value-type-mismatch",
                 associated_info=[id_for_error_detail],
             )
         # particular metadatum is not in convention, metadata does not need
@@ -985,7 +985,7 @@ def process_metadata_row(metadata, convention, line):
                     metadata.store_validation_issue(
                         "error",
                         msg,
-                        "content:invalid-type:not-numeric",
+                        "content:type:not-numeric",
                         associated_info=row_info["CellID"],
                     )
                     dev_logger.error(msg)

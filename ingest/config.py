@@ -92,7 +92,7 @@ class Study:
         try:
             study_id = ObjectId(study_id)
         except Exception:
-            raise ValueError("Must pass in valid object ID for study ID")
+            raise ValueError("Must pass in valid object ID for study ID.")
         # set dummy accession if running in developer mode
         if bypass_mongo_writes():
             self.accession = "SCPdev"
@@ -105,7 +105,7 @@ class Study:
             )
             if not study:
                 raise ValueError(
-                    "Study ID is not registered with a study. Please provide a valid study ID"
+                    "Study ID is not registered with a study. Please provide a valid study ID."
                 )
             else:
                 self.__study = study.pop()
@@ -127,13 +127,13 @@ class StudyFile:
         try:
             study_file_id = ObjectId(study_file_id)
         except Exception:
-            raise ValueError("Must pass in valid object ID for study file ID")
+            raise ValueError("Must pass in valid object ID for study file ID.")
         if bypass_mongo_writes():
             # set dummy values if running in developer mode
             self.file_type = "input_validation_bypassed"
             self.file_size = 1
             self.file_name = str(study_file_id)
-            self.trigger = 'dev_mode'
+            self.trigger = 'dev-mode'
         else:
             query = MONGO_CONNECTION._client["study_files"].find({"_id": study_file_id})
             query_results = list(query)
