@@ -1240,7 +1240,7 @@ def validate_collected_ontology_data(metadata, convention):
                     issue_type="runtime",
                 ),
                 # immediately return as validation cannot continue
-                return
+                return None
 
     return
 
