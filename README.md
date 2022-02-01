@@ -40,6 +40,7 @@ brew install tabix
 ```
 
 Now get secrets from Vault to set environment variables needed to write to the database:
+(see also scripts/setup_mongo_dev.sh)
 
 ```
 export BROAD_USER="<username in your email address>"
@@ -59,6 +60,20 @@ vault read secret/kdux/scp/development/$BROAD_USER/mongo/hostname
 
 export DATABASE_HOST="<ip from Vault (omit brackets)>"
 ```
+For testing/development using ingest_pipeline.py on the command line, annotation file input validation and MongoDB writes can be bypassed if you set:
+(Note: this bypass does not currently apply to expression matrix ingest).
+```
+export BYPASS_MONGO_WRITES='yes'
+```
+
+
+If you are developing updates for MixPanel logging, set the Bard Host URL:
+
+```
+
+export BARD_HOST_URL="https://terra-bard-dev.appspot.com"
+```
+Be sure to `unset BARD_HOST_URL` when your updates are done, so development ingest events are not always sent to Mixpanel.
 
 If you are developing updates for Sentry logging, then set the DSN:
 
