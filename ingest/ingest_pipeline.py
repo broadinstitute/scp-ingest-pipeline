@@ -311,8 +311,10 @@ class IngestPipeline:
                 )
             self.expression_ingestor.execute_ingest()
         except Exception as e:
+            self.report_validation("failure")
             log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
             return 1
+        self.report_validation("success")
         return 0
 
     # More work needs to be done to fully remove ingest from IngestPipeline
@@ -334,7 +336,7 @@ class IngestPipeline:
                         "Cell metadata file conforms to metadata convention"
                     )
                 else:
-                    update_mixpanel_props(self.cell_metadata.props)
+                    config.get_metric_properties().update(self.cell_metadata.props)
                     self.report_validation("failure")
                     return 1
             self.report_validation("success")
@@ -357,7 +359,7 @@ class IngestPipeline:
             return status if status is not None else 1
         else:
             report_issues(self.cell_metadata)
-            update_mixpanel_props(self.cell_metadata.props)
+            config.get_metric_properties().update(self.cell_metadata.props)
             self.report_validation("failure")
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
@@ -378,7 +380,7 @@ class IngestPipeline:
         # Incorrect file format
         else:
             report_issues(self.cluster)
-            update_mixpanel_props(self.cluster.props)
+            config.get_metric_properties().update(self.cluster.props)
             self.report_validation("failure")
             IngestPipeline.user_logger.error("Cluster file format invalid")
             return 1
@@ -436,27 +438,8 @@ class IngestPipeline:
 
     def report_validation(self, status):
         self.props["status"] = status
-        update_mixpanel_props(self.props)
+        config.get_metric_properties().update(self.props)
         MetricsService.log("file-validation", config.get_metric_properties())
-
-
-def update_mixpanel_props(props):
-    """Update validation issues from props data structure to
-        metric_properties for Mixpanel logging
-    """
-    props = set_mixpanel_nums(props)
-    metrics_dump = config.get_metric_properties().get_properties()
-    metrics_dump.update(props)
-
-
-def set_mixpanel_nums(props):
-    """Derive count for each type of Mixpanel property
-    """
-    for prop in ["errorTypes", "errors", "warningTypes", "warnings"]:
-        num_prop = "num" + prop.capitalize()
-        if props.get(prop):
-            props[num_prop] = len(props[prop])
-    return props
 
 
 def run_ingest(ingest, arguments, parsed_args):
@@ -553,11 +536,10 @@ def main() -> None:
     )
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
-    # If in developer mode, print metrics properties
-    if config.bypass_mongo_writes():
-        metrics_dump = config.get_metric_properties().get_properties()
-        for key in metrics_dump.keys():
-            print(f'{key}: {metrics_dump[key]}')
+    # Print metrics properties
+    metrics_dump = config.get_metric_properties().get_properties()
+    for key in metrics_dump.keys():
+        print(f'{key}: {metrics_dump[key]}')
 
     # Log Mixpanel events
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())

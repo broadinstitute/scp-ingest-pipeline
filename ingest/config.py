@@ -58,6 +58,15 @@ class MetricProperties:
     def update(self, props):
         if props:
             self.__properties = {**self.__properties, **props}
+        self.set_mixpanel_nums()
+
+    def set_mixpanel_nums(self):
+        """Derive count for each type of Mixpanel property
+        """
+        for prop in ["errorTypes", "errors", "warningTypes", "warnings"]:
+            num_prop = "num" + prop.capitalize()
+            if self.__properties.get(prop):
+                self.__properties[num_prop] = len(self.__properties[prop])
 
 
 def bypass_mongo_writes():
