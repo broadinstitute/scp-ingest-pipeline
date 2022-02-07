@@ -893,10 +893,9 @@ def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metada
                 "content:type:value-type-mismatch",
                 associated_info=[id_for_error_detail],
             )
-        # This exception should only trigger if a single-value boolean array
+        # This exception should only trigger if a single-value array
         # metadata is being cast - the value needs to be passed as an array,
-        # it is already boolean via Pandas' inference processes
-        except AttributeError:
+        except (AttributeError, TypeError):
             try:
                 if "ontology" in convention["properties"][metadatum]:
                     value = regularize_ontology_id(value)
