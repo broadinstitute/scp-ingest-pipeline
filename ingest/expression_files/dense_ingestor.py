@@ -16,12 +16,14 @@ sys.path.append("..")
 try:
     from expression_files import GeneExpression
     from ingest_files import IngestFiles
+    import config
 
 except ImportError:
     # Used when importing as external package, e.g. imports in
     # single_cell_portal code
     from .expression_files import GeneExpression
     from ..ingest_files import IngestFiles
+    from .. import config
 
 
 class DenseIngestor(GeneExpression, IngestFiles):
@@ -168,11 +170,15 @@ class DenseIngestor(GeneExpression, IngestFiles):
         associated_cells = []
         valid_expression_scores = []
         if len(scores) != len(cells):
-            raise ValueError(
+            msg = (
                 "Number of cell and expression values must be the same. "
                 f"Found row with {len(scores)} expression values."
                 f"Header contains {len(cells)} cells"
             )
+            GeneExpression.log_for_mixpanel(
+                "error", "format:mismatch-column-number", msg
+            )
+            raise ValueError(msg)
         for idx, expression_score in enumerate(scores):
             try:
                 if (
@@ -188,8 +194,16 @@ class DenseIngestor(GeneExpression, IngestFiles):
                         valid_expression_scores.append(expression_score)
                         associated_cells.append(cells[idx])
             except ValueError as err:
-                raise ValueError(f"Expected numeric expression score - {err}")
+                msg = f"Expected numeric expression score - {err}"
+                GeneExpression.log_for_mixpanel(
+                    "error", "content:type:not-numeric", msg
+                )
+                raise ValueError(msg)
             except Exception:
+                msg = "Score '{expression_score}' is not valid"
+                GeneExpression.log_for_mixpanel(
+                    "error", "content:type:not-numeric", msg
+                )
                 raise ValueError("Score '{expression_score}' is not valid")
         return valid_expression_scores, associated_cells
 
@@ -197,6 +211,10 @@ class DenseIngestor(GeneExpression, IngestFiles):
     def check_unique_header(header: List):
         """Confirms header has no duplicate values"""
         if len(set(header)) != len(header):
+            msg = "Duplicate header values are not allowed"
+            GeneExpression.log_for_mixpanel(
+                "error", "content:duplicate:cells-within-file", msg
+            )
             raise ValueError("Duplicate header values are not allowed")
         return True
 
@@ -205,9 +223,13 @@ class DenseIngestor(GeneExpression, IngestFiles):
         """Validates there are no empty header values"""
         for value in header:
             if value == "" or value.isspace():
-                raise ValueError("Header values cannot be blank")
+                msg = "Header values cannot be blank"
+                GeneExpression.log_for_mixpanel("error", "format:cap:no-empty", msg)
+                raise ValueError(msg)
             if value.lower() == "nan":
-                raise ValueError(f"{value} is not allowed as a header value")
+                msg = f"{value} is not allowed as a header value"
+                GeneExpression.log_for_mixpanel("error", "format:cap:no-empty", msg)
+                raise ValueError(msg)
 
         return True
 
@@ -224,7 +246,9 @@ class DenseIngestor(GeneExpression, IngestFiles):
             return True
         if DenseIngestor.is_r_formatted_file(header, row)[0]:
             return True
-        raise ValueError("Required 'GENE' header is not present")
+        msg = "Required 'GENE' header is not present"
+        GeneExpression.log_for_mixpanel("error", "format:cap:missing-gene-column", msg)
+        raise ValueError(msg)
 
     def transform(self):
         """Transforms dense matrix into gene data model."""
@@ -256,6 +280,10 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 exp_scores = DenseIngestor.process_row(valid_expression_scores)
                 gene = row[0]
                 if gene in self.gene_names:
+                    msg = f"Duplicate gene: {gene}"
+                    GeneExpression.log_for_mixpanel(
+                        "error", "content:duplicate:values-within-file", msg
+                    )
                     raise ValueError(f"Duplicate gene: {gene}")
                 self.gene_names[gene] = True
 

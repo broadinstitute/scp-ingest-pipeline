@@ -68,6 +68,24 @@ class MetricProperties:
             if self.__properties.get(prop):
                 self.__properties[num_prop] = len(self.__properties[prop])
 
+    def append_issue(self, props):
+        """Add error/warning properties to MetricsProperties
+            without clobbering
+        """
+        if props:
+            updated_props = {}
+            for prop in ["errorTypes", "errors", "warningTypes", "warnings"]:
+                if prop in self.__properties:
+                    updated_props.setdefault(prop, []).extend(self.__properties[prop])
+                if prop in props:
+                    updated_props.setdefault(prop, []).extend(props[prop])
+            for key in updated_props.keys():
+                if key in ["errorTypes", "warningTypes"]:
+                    self.__properties[key] = set(updated_props[key])
+                else:
+                    self.__properties[key] = updated_props[key]
+            self.set_mixpanel_nums()
+
 
 def bypass_mongo_writes():
     """Check if developer has set environment variable to bypass writing data to MongoDB

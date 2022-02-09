@@ -25,6 +25,7 @@ try:
     from ingest_files import IngestFiles
     from monitoring.mixpanel_log import custom_metric
     import config
+
 except ImportError:
     # Used when importing as external package, e.g. imports in
     # single_cell_portal code
@@ -72,10 +73,16 @@ class MTXIngestor(GeneExpression, IngestFiles):
         try:
             MTXIngestor.check_duplicates(genes, "gene")
         except ValueError as v:
+            GeneExpression.log_for_mixpanel(
+                "error", "content:duplicate:values-within-file", str(v)
+            )
             error_messages.append(str(v))
         try:
             MTXIngestor.check_duplicates(barcodes, "barcode")
         except ValueError as v:
+            GeneExpression.log_for_mixpanel(
+                "error", "content:duplicate:cells-within-file", str(v)
+            )
             error_messages.append(str(v))
         try:
             GeneExpression.check_unique_cells(barcodes, *query_params)
@@ -156,6 +163,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
                 f"Expected {expected_barcodes} cells and {expected_genes} genes. "
                 f"Got {actual_barcodes} cells and {actual_genes} genes."
             )
+            GeneExpression.log_for_mixpanel(
+                "error", "format:cap:mtx-dimension-mismatch", msg
+            )
             raise ValueError(msg)
 
     @staticmethod
@@ -201,14 +211,20 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     # First line w/o '%' is mtx dimension. So skip this line (+1)
                     return count + 1
                 except ValueError:
-                    raise ValueError(
-                        "Only header, comment lines starting with '%', and numeric data allowed in MTX file."
+                    msg = "Only header, comment lines starting with '%', and numeric data allowed in MTX file."
+                    GeneExpression.log_for_mixpanel(
+                        "error", "content:type:not-numeric", msg
                     )
+                    raise ValueError(msg)
                 except IndexError:
-                    raise IndexError("MTX file cannot start with a space")
-        raise ValueError(
-            "MTX file did not contain expression data. Please check formatting and contents of file."
-        )
+                    msg = "MTX file cannot start with a space"
+                    GeneExpression.log_for_mixpanel(
+                        "error", "format:cap:leading-space", msg
+                    )
+                    raise IndexError(msg)
+        msg = "MTX file did not contain expression data. Please check formatting and contents of file."
+        GeneExpression.log_for_mixpanel("error", "content:no-expression-data", msg)
+        raise ValueError(msg)
 
     @staticmethod
     def get_mtx_dimensions(file_handler) -> List:
@@ -221,7 +237,9 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     return dimensions
                 except Exception as e:
                     raise e
-        raise ValueError("MTX file did not contain data")
+        msg = "MTX file did not contain data"
+        GeneExpression.log_for_mixpanel("error", "content:no-expression-data", msg)
+        raise ValueError(msg)
 
     @staticmethod
     def get_features(feature_row: str):
