@@ -174,7 +174,7 @@ class StudyFile:
                 self.file_type = self.study_file["file_type"]
                 self.file_size = self.study_file["upload_file_size"]
                 self.file_name = self.study_file["name"]
-                if self.study_file.get("remote_location") is not None:
-                    self.trigger = 'sync'
-                else:
+                if self.study_file.get("remote_location") == '':
                     self.trigger = 'upload'
+                else:
+                    self.trigger = 'sync'

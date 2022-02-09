@@ -19,35 +19,24 @@ def mock_post_event(props):
     update_user_id = True if MetricProperties.USER_ID in props else False
 
     props = json.loads(props)
+    expected_props = {
+        "properties": {
+            "studyAccession": "SCP123",
+            "fileName": "File_name.txt",
+            "fileType": "Expression matrix",
+            "fileSize": 400,
+            "trigger": "upload",
+            "logger": "ingest-pipeline",
+            "appId": "single-cell-portal",
+            "status": "success",
+        }
+    }
     if props["event"] == "file-validation":
-        expected_props = {
-            "event": "file-validation",
-            "properties": {
-                "studyAccession": "SCP123",
-                "fileName": "File_name.txt",
-                "fileType": "Expression matrix",
-                "fileSize": 400,
-                "trigger": "upload",
-                "logger": "ingest-pipeline",
-                "appId": "single-cell-portal",
-                "status": "success",
-            },
-        }
+        expected_props["event"] = "file-validation"
     else:
-        expected_props = {
-            "event": "ingest-pipeline:expression:ingest",
-            "properties": {
-                "studyAccession": "SCP123",
-                "fileName": "File_name.txt",
-                "fileType": "Expression matrix",
-                "fileSize": 400,
-                "trigger": "upload",
-                "logger": "ingest-pipeline",
-                "appId": "single-cell-portal",
-                "functionName": "ingest_expression",
-                "status": "success",
-            },
-        }
+        expected_props["event"] = "ingest-pipeline:expression:ingest"
+        expected_props["properties"]["functionName"] = "ingest_expression"
+    # delete perfTime as that value is variable and cannot be expected
     if props["properties"].get("perfTime"):
         del props["properties"]["perfTime"]
     if update_user_id:
