@@ -15,26 +15,45 @@ user_metrics_uuid = "123e4567-e89b-12d3-a456-426614174000"
 
 # Mocked function that replaces MetricsService.post_event
 def mock_post_event(props):
-    expected_props = {
-        "event": "ingest-pipeline:expression:ingest",
-        "properties": {
-            "studyAccession": "SCP123",
-            "fileName": "File_name.txt",
-            "fileType": "Expression matrix",
-            "fileSize": 400,
-            "trigger": "upload",
-            "logger": "ingest-pipeline",
-            "appId": "single-cell-portal",
-            "functionName": "ingest_expression",
-        },
-    }
+    # detect user uuid state before serializing props
+    update_user_id = True if MetricProperties.USER_ID in props else False
 
-    if MetricProperties.USER_ID in props:
+    props = json.loads(props)
+    if props["event"] == "file-validation":
+        expected_props = {
+            "event": "file-validation",
+            "properties": {
+                "studyAccession": "SCP123",
+                "fileName": "File_name.txt",
+                "fileType": "Expression matrix",
+                "fileSize": 400,
+                "trigger": "upload",
+                "logger": "ingest-pipeline",
+                "appId": "single-cell-portal",
+                "status": "success",
+            },
+        }
+    else:
+        expected_props = {
+            "event": "ingest-pipeline:expression:ingest",
+            "properties": {
+                "studyAccession": "SCP123",
+                "fileName": "File_name.txt",
+                "fileType": "Expression matrix",
+                "fileSize": 400,
+                "trigger": "upload",
+                "logger": "ingest-pipeline",
+                "appId": "single-cell-portal",
+                "functionName": "ingest_expression",
+                "status": "success",
+            },
+        }
+    if props["properties"].get("perfTime"):
+        del props["properties"]["perfTime"]
+    if update_user_id:
         expected_props["properties"]["distinct_id"] = MetricProperties.USER_ID
     else:
         expected_props["properties"]["distinct_id"] = user_metrics_uuid
-    props = json.loads(props)
-    del props["properties"]["perfTime"]
     assert props == expected_props
 
 
