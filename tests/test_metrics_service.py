@@ -25,7 +25,7 @@ def mock_post_event(props):
             "fileName": "File_name.txt",
             "fileType": "Expression matrix",
             "fileSize": 400,
-            "trigger": "upload",
+            "trigger": "not set",
             "logger": "ingest-pipeline",
             "appId": "single-cell-portal",
             "status": "success",
