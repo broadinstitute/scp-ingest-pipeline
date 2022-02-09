@@ -72,6 +72,7 @@ class MetricProperties:
         """Add error/warning properties to MetricsProperties
             without clobbering
         """
+
         if props:
             updated_props = {}
             for prop in ["errorTypes", "errors", "warningTypes", "warnings"]:
@@ -81,7 +82,7 @@ class MetricProperties:
                     updated_props.setdefault(prop, []).extend(props[prop])
             for key in updated_props.keys():
                 if key in ["errorTypes", "warningTypes"]:
-                    self.__properties[key] = set(updated_props[key])
+                    self.__properties[key] = list(set(updated_props[key]))
                 else:
                     self.__properties[key] = updated_props[key]
             self.set_mixpanel_nums()
