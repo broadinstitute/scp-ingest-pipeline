@@ -180,4 +180,4 @@ class StudyFile:
                     else:
                         self.trigger = "upload"
                 else:
-                    self.trigger = 'unknown'
+                    self.trigger = 'not set'
