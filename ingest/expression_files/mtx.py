@@ -211,7 +211,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     # First line w/o '%' is mtx dimension. So skip this line (+1)
                     return count + 1
                 except ValueError:
-                    msg = "Only header, comment lines starting with '%', and numeric data allowed in MTX file."
+                    msg = "Only header, comment lines starting with \"%\", and numeric data allowed in MTX file."
                     GeneExpression.log_for_mixpanel(
                         "error", "content:type:not-numeric", msg
                     )
@@ -237,7 +237,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     return dimensions
                 except Exception as e:
                     raise e
-        msg = "MTX file did not contain data"
+        msg = "MTX file did not contain expression data"
         GeneExpression.log_for_mixpanel("error", "content:no-expression-data", msg)
         raise ValueError(msg)
 

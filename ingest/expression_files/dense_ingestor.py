@@ -204,18 +204,21 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 GeneExpression.log_for_mixpanel(
                     "error", "content:type:not-numeric", msg
                 )
-                raise ValueError("Score '{expression_score}' is not valid")
+                raise ValueError("Invalid expression score \"{expression_score}\"")
         return valid_expression_scores, associated_cells
 
     @staticmethod
     def check_unique_header(header: List):
         """Confirms header has no duplicate values"""
         if len(set(header)) != len(header):
-            msg = "Duplicate header values are not allowed"
+            seen = set()
+            dupes = [x for x in header if x in seen or seen.add(x)]
+            msg = "Duplicate header values are not allowed. "
+            msg += f'Duplicates include: \"{", ".join(list(dupes)[:3])}\"'
             GeneExpression.log_for_mixpanel(
                 "error", "content:duplicate:cells-within-file", msg
             )
-            raise ValueError("Duplicate header values are not allowed")
+            raise ValueError(msg)
         return True
 
     @staticmethod
@@ -227,7 +230,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 GeneExpression.log_for_mixpanel("error", "format:cap:no-empty", msg)
                 raise ValueError(msg)
             if value.lower() == "nan":
-                msg = f"{value} is not allowed as a header value"
+                msg = f"\"{value}\" is not allowed as a header value"
                 GeneExpression.log_for_mixpanel("error", "format:cap:no-empty", msg)
                 raise ValueError(msg)
 
@@ -246,7 +249,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             return True
         if DenseIngestor.is_r_formatted_file(header, row)[0]:
             return True
-        msg = "Required 'GENE' header is not present"
+        msg = "Required \"GENE\" header is not present"
         GeneExpression.log_for_mixpanel("error", "format:cap:missing-gene-column", msg)
         raise ValueError(msg)
 

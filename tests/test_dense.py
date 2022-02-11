@@ -230,14 +230,16 @@ class TestDense(unittest.TestCase):
             DenseIngestor.check_valid(
                 ["GENE", "foo", "foo"], ["gene1", "0", "1"], query_params
             )
-        expected_msg = "Duplicate header values are not allowed"
+        expected_msg = (
+            "Duplicate header values are not allowed. Duplicates include: \"foo\""
+        )
         self.assertEqual(expected_msg, str(cm.exception))
 
         # Should concatenate the two value errors
         mock_check_unique_cells.return_value = True
         with self.assertRaises(ValueError) as cm:
             DenseIngestor.check_valid(["foo", "nan"], ["foo2", "foo3"], query_params)
-        expected_msg = "Required 'GENE' header is not present; nan is not allowed as a header value"
+        expected_msg = "Required \"GENE\" header is not present; \"nan\" is not allowed as a header value"
         self.assertEqual(expected_msg, str(cm.exception))
 
     @patch("expression_files.expression_files.GeneExpression.load")
