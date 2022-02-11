@@ -58,6 +58,7 @@ class CellMetadata(Annotations):
         self.ontology = defaultdict(lambda: defaultdict(list))
         self.ordered_ontology = defaultdict(list)
         self.ordered_labels = defaultdict(list)
+        self.synonym_updates = defaultdict(list)
         self.cells = []
         self.numeric_array_columns = {}
         self.kwargs = kwargs

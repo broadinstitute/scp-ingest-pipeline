@@ -1208,6 +1208,13 @@ def validate_collected_ontology_data(metadata, convention):
                                 (ontology_id, ontology_label)
                             ],
                         )
+                else:
+                    matched_label_for_id = label_and_synonyms.get("label")
+                    if ontology_label != matched_label_for_id:
+                        metadata.synonym_updates[ontology_label] = [
+                            matched_label_for_id,
+                            property_name,
+                        ]
             except ValueError as value_error:
                 metadata.store_validation_issue(
                     "error",
@@ -1415,6 +1422,8 @@ def validate_input_metadata(metadata, convention, bq_json=None):
         # long-compute-time issue (if false positives are possible, bypass will be needed)
         dev_logger.info('Validating ontology content against EBI OLS')
         validate_collected_ontology_data(metadata, convention)
+        for key in metadata.synonym_updates.keys():
+            print(f' {key}: {metadata.synonym_updates[key]}')
         confirm_uniform_units(metadata, convention)
 
 
