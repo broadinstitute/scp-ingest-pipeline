@@ -1211,10 +1211,9 @@ def validate_collected_ontology_data(metadata, convention):
                 else:
                     matched_label_for_id = label_and_synonyms.get("label")
                     if ontology_label != matched_label_for_id:
-                        metadata.synonym_updates[ontology_label] = [
-                            matched_label_for_id,
-                            property_name,
-                        ]
+                        metadata.synonym_updates[property_name][
+                            ontology_label
+                        ] = matched_label_for_id
             except ValueError as value_error:
                 metadata.store_validation_issue(
                     "error",
@@ -1423,7 +1422,9 @@ def validate_input_metadata(metadata, convention, bq_json=None):
         dev_logger.info('Validating ontology content against EBI OLS')
         validate_collected_ontology_data(metadata, convention)
         for key in metadata.synonym_updates.keys():
-            print(f' {key}: {metadata.synonym_updates[key]}')
+            print(f'{key}:')
+            for subkey in metadata.synonym_updates[key].keys():
+                print(f' {subkey}: {metadata.synonym_updates[key][subkey]}')
         confirm_uniform_units(metadata, convention)
 
 
