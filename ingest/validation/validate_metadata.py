@@ -1421,32 +1421,35 @@ def replace_single_value_array(df, metadata_name, synonym, label):
     Pandas doesn't operate well on lists which are potentially non-homogenous
     # https://stackoverflow.com/questions/53116286/how-to-assign-an-entire-list-to-each-row-of-a-pandas-dataframe
     """
-    m = [v == [synonym] for v in df[metadata_name]]
+    match = [v == [synonym] for v in df[metadata_name]]
     value = [label]
-    df.loc[m, metadata_name] = df.apply(lambda x: value, axis=1)
+    df.loc[match, metadata_name] = df.apply(lambda x: value, axis=1)
 
 
 def replace_synonym_in_multivalue_array(df, metadata_name, substitutions):
-    """ Synonym replacement (in-place) for multi-value array metadata
-        must identify all affected values, construct replacement values
+    """ Synonym replacement (in-place) for multi-value array ontology labels
+        must identify all affected arrays of labels, construct replacement arrays
         then replace old synonym-containing array with an updated array
     """
-    orig_values = list(df['disease__ontology_label'].transform(tuple).unique())
+    orig_values = list(df[metadata_name].transform(tuple).unique())
     matching_synonyms = {}
     for o in orig_values:
-        # if a synonym is an element of the multivalue array, track it
+        # if a synonym (s) is an element of the multivalue array (o), track it
         matching_synonyms[o] = [s for s in substitutions.keys() if s in o]
     for o in matching_synonyms.keys():
+        # if a multivalue array contains synonyms
         if matching_synonyms[o]:
+            # make a copy of the original multivalue array that will take on all substitutions
             replacement_value = list(o)
-            # make all synonym substitutions into the multivalue array
+            # make all synonym substitutions into the multivalue array of ontology labels
             for s in matching_synonyms[o]:
                 replacement_value = [
                     substitutions[s] if term == s else term
                     for term in replacement_value
                 ]
-            m = [v == list(o) for v in df[metadata_name]]
-            df.loc[m, metadata_name] = df.apply(lambda x: replacement_value, axis=1)
+            # select the rows in the dataframe with entries for multivalue array (o)
+            match = [v == list(o) for v in df[metadata_name]]
+            df.loc[match, metadata_name] = df.apply(lambda x: replacement_value, axis=1)
 
 
 def replace_synonyms(metadata):
@@ -1456,7 +1459,6 @@ def replace_synonyms(metadata):
     bq_filename = str(metadata.study_file_id) + ".json"
     df = pd.read_json(bq_filename, lines=True)
     for metadata_name in metadata.synonym_updates.keys():
-        print(df[metadata_name])
         # non-array metadata values are strings
         if isinstance(df[metadata_name][0], str):
             for synonym in metadata.synonym_updates[metadata_name].keys():
@@ -1475,13 +1477,11 @@ def replace_synonyms(metadata):
                     synonym,
                     metadata.synonym_updates[metadata_name][synonym],
                 )
-            print(df[metadata_name])
         # at least one non-single array-type metadata
         else:
             replace_synonym_in_multivalue_array(
                 df, metadata_name, metadata.synonym_updates[metadata_name]
             )
-            print(df[metadata_name])
     df.to_json(bq_filename, orient="records", lines=True)
 
 
@@ -1499,11 +1499,6 @@ def validate_input_metadata(metadata, convention, bq_json=None):
         dev_logger.info('Validating ontology content against EBI OLS')
         validate_collected_ontology_data(metadata, convention)
         if metadata.synonym_updates:
-            for key in metadata.synonym_updates.keys():
-                print(f'\"{key}\": \u007b')
-                for subkey in metadata.synonym_updates[key].keys():
-                    print(f' \"{subkey}\": \"{metadata.synonym_updates[key][subkey]}\"')
-                print("\u007d, ")
             replace_synonyms(metadata)
         confirm_uniform_units(metadata, convention)
 
