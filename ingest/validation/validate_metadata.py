@@ -37,6 +37,7 @@ import csv
 import copy
 import itertools
 import math
+import pandas as pd
 
 import colorama
 from colorama import Fore
@@ -1209,9 +1210,10 @@ def validate_collected_ontology_data(metadata, convention):
                             ],
                         )
                 else:
+                    property_header = property_name + "__ontology_label"
                     matched_label_for_id = label_and_synonyms.get("label")
                     if ontology_label != matched_label_for_id:
-                        metadata.synonym_updates[property_name][
+                        metadata.synonym_updates[property_header][
                             ontology_label
                         ] = matched_label_for_id
             except ValueError as value_error:
@@ -1408,6 +1410,81 @@ def detect_excel_drag(metadata, convention):
     return excel_drag
 
 
+def to_1D(series):
+    """ Pandas values which are list need unnesting
+    """
+    return [x for _list in series for x in _list]
+
+
+def replace_single_value_array(df, metadata_name, synonym, label):
+    """ Synonym replacement (in-place) for single-value array metadata
+    Pandas doesn't operate well on lists which are potentially non-homogenous
+    # https://stackoverflow.com/questions/53116286/how-to-assign-an-entire-list-to-each-row-of-a-pandas-dataframe
+    """
+    m = [v == [synonym] for v in df[metadata_name]]
+    value = [label]
+    df.loc[m, metadata_name] = df.apply(lambda x: value, axis=1)
+
+
+def replace_synonym_in_multivalue_array(df, metadata_name, substitutions):
+    """ Synonym replacement (in-place) for multi-value array metadata
+        must identify all affected values, construct replacement values
+        then replace old synonym-containing array with an updated array
+    """
+    orig_values = list(df['disease__ontology_label'].transform(tuple).unique())
+    matching_synonyms = {}
+    for o in orig_values:
+        # if a synonym is an element of the multivalue array, track it
+        matching_synonyms[o] = [s for s in substitutions.keys() if s in o]
+    for o in matching_synonyms.keys():
+        if matching_synonyms[o]:
+            replacement_value = list(o)
+            # make all synonym substitutions into the multivalue array
+            for s in matching_synonyms[o]:
+                replacement_value = [
+                    substitutions[s] if term == s else term
+                    for term in replacement_value
+                ]
+            m = [v == list(o) for v in df[metadata_name]]
+            df.loc[m, metadata_name] = df.apply(lambda x: replacement_value, axis=1)
+
+
+def replace_synonyms(metadata):
+    """
+    Update BigQuery data to store ontology labels and not synonyms
+    """
+    bq_filename = str(metadata.study_file_id) + ".json"
+    df = pd.read_json(bq_filename, lines=True)
+    for metadata_name in metadata.synonym_updates.keys():
+        print(df[metadata_name])
+        # non-array metadata values are strings
+        if isinstance(df[metadata_name][0], str):
+            for synonym in metadata.synonym_updates[metadata_name].keys():
+                df[metadata_name].replace(
+                    synonym,
+                    metadata.synonym_updates[metadata_name][synonym],
+                    inplace=True,
+                )
+        # Pandas can't hash mutable complex objects like lists
+        # need to find and replace by location (iloc)
+        elif len(df[metadata_name]) == len(to_1D(df[metadata_name])):
+            for synonym in metadata.synonym_updates[metadata_name].keys():
+                replace_single_value_array(
+                    df,
+                    metadata_name,
+                    synonym,
+                    metadata.synonym_updates[metadata_name][synonym],
+                )
+            print(df[metadata_name])
+        # at least one non-single array-type metadata
+        else:
+            replace_synonym_in_multivalue_array(
+                df, metadata_name, metadata.synonym_updates[metadata_name]
+            )
+            print(df[metadata_name])
+    df.to_json(bq_filename, orient="records", lines=True)
+
+
 def validate_input_metadata(metadata, convention, bq_json=None):
     """Wrapper function to run validation functions
     """
@@ -1421,10 +1498,13 @@ def validate_input_metadata(metadata, convention, bq_json=None):
         # long-compute-time issue (if false positives are possible, bypass will be needed)
         dev_logger.info('Validating ontology content against EBI OLS')
         validate_collected_ontology_data(metadata, convention)
-        for key in metadata.synonym_updates.keys():
-            print(f'{key}:')
-            for subkey in metadata.synonym_updates[key].keys():
-                print(f' {subkey}: {metadata.synonym_updates[key][subkey]}')
+        if metadata.synonym_updates:
+            for key in metadata.synonym_updates.keys():
+                print(f'\"{key}\": \u007b')
+                for subkey in metadata.synonym_updates[key].keys():
+                    print(f' \"{subkey}\": \"{metadata.synonym_updates[key][subkey]}\"')
+                print("\u007d, ")
+            replace_synonyms(metadata)
         confirm_uniform_units(metadata, convention)
 
 
