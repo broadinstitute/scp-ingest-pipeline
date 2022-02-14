@@ -890,7 +890,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
-        validate_input_metadata(metadata, convention)
+        validate_input_metadata(metadata, convention, bq_json=True)
         self.assertFalse(
             report_issues(metadata), "Valid ontology content should not elicit error"
         )
