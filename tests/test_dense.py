@@ -137,8 +137,8 @@ class TestDense(unittest.TestCase):
             DenseIngestor.filter_expression_scores(too_many_scores, cells)
         expected_msg = (
             "Number of cell and expression values must be the same. "
-            f"Found row with {len(too_many_scores)} expression values."
-            f"Header contains {len(cells)} cells"
+            f"Found row with {len(too_many_scores)} expression values. "
+            f"Header contains {len(cells)} cells."
         )
         self.assertEqual(expected_msg, str(error.exception))
 
@@ -231,7 +231,7 @@ class TestDense(unittest.TestCase):
                 ["GENE", "foo", "foo"], ["gene1", "0", "1"], query_params
             )
         expected_msg = (
-            "Duplicate header values are not allowed. Duplicates include: \"foo\""
+            'Duplicate header values are not allowed. Duplicates include: "foo"'
         )
         self.assertEqual(expected_msg, str(cm.exception))
 
@@ -239,7 +239,7 @@ class TestDense(unittest.TestCase):
         mock_check_unique_cells.return_value = True
         with self.assertRaises(ValueError) as cm:
             DenseIngestor.check_valid(["foo", "nan"], ["foo2", "foo3"], query_params)
-        expected_msg = "Required \"GENE\" header is not present; \"nan\" is not allowed as a header value"
+        expected_msg = 'Required "GENE" header is not present.; "nan" is not allowed as a header value.'
         self.assertEqual(expected_msg, str(cm.exception))
 
     @patch("expression_files.expression_files.GeneExpression.load")

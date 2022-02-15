@@ -142,7 +142,7 @@ class TestMTXIngestor(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             file_handler = open("data/mtx/no_data.mtx.txt")
             MTXIngestor.get_mtx_dimensions(file_handler)
-        self.assertEqual("MTX file did not contain expression data", str(cm.exception))
+        self.assertEqual("MTX file did not contain expression data.", str(cm.exception))
 
     def test_check_duplicates(self):
 
@@ -175,7 +175,7 @@ class TestMTXIngestor(unittest.TestCase):
 
         expected_dup_msg = (
             "Duplicate values are not allowed. "
-            "There are 1 duplicates in the barcode file"
+            "There are 1 duplicates in the barcode file."
         )
         self.assertEqual(expected_dup_msg, str(cm.exception))
 

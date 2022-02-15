@@ -184,7 +184,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             msg = (
                 "Duplicate values are not allowed. "
                 f"There are {amount_of_duplicates} duplicates "
-                f"in the {file_type} file"
+                f"in the {file_type} file."
             )
             raise ValueError(msg)
         return True
@@ -211,13 +211,13 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     # First line w/o '%' is mtx dimension. So skip this line (+1)
                     return count + 1
                 except ValueError:
-                    msg = "Only header, comment lines starting with \"%\", and numeric data allowed in MTX file."
+                    msg = 'Only header, comment lines starting with "%", and numeric data allowed in MTX file.'
                     GeneExpression.log_for_mixpanel(
                         "error", "content:type:not-numeric", msg
                     )
                     raise ValueError(msg)
                 except IndexError:
-                    msg = "MTX file cannot start with a space"
+                    msg = "MTX file cannot start with a space."
                     GeneExpression.log_for_mixpanel(
                         "error", "format:cap:leading-space", msg
                     )
@@ -237,7 +237,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     return dimensions
                 except Exception as e:
                     raise e
-        msg = "MTX file did not contain expression data"
+        msg = "MTX file did not contain expression data."
         GeneExpression.log_for_mixpanel("error", "content:no-expression-data", msg)
         raise ValueError(msg)
 
@@ -371,7 +371,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                 current_idx = int(raw_gene_idx)
                 if current_idx != prev_idx:
                     if not current_idx > prev_idx:
-                        raise ValueError("MTX file must be sorted")
+                        raise ValueError("MTX file must be sorted.")
                     GeneExpression.dev_logger.debug(
                         f"Processing {self.genes[prev_idx - 1]}"
                     )

@@ -172,8 +172,8 @@ class DenseIngestor(GeneExpression, IngestFiles):
         if len(scores) != len(cells):
             msg = (
                 "Number of cell and expression values must be the same. "
-                f"Found row with {len(scores)} expression values."
-                f"Header contains {len(cells)} cells"
+                f"Found row with {len(scores)} expression values. "
+                f"Header contains {len(cells)} cells."
             )
             GeneExpression.log_for_mixpanel(
                 "error", "format:mismatch-column-number", msg
@@ -200,11 +200,11 @@ class DenseIngestor(GeneExpression, IngestFiles):
                 )
                 raise ValueError(msg)
             except Exception:
-                msg = "Score '{expression_score}' is not valid"
+                msg = "Score '{expression_score}' is not valid."
                 GeneExpression.log_for_mixpanel(
                     "error", "content:type:not-numeric", msg
                 )
-                raise ValueError("Invalid expression score \"{expression_score}\"")
+                raise ValueError('Invalid expression score "{expression_score}".')
         return valid_expression_scores, associated_cells
 
     @staticmethod
@@ -226,11 +226,11 @@ class DenseIngestor(GeneExpression, IngestFiles):
         """Validates there are no empty header values"""
         for value in header:
             if value == "" or value.isspace():
-                msg = "Header values cannot be blank"
+                msg = "Header values cannot be blank."
                 GeneExpression.log_for_mixpanel("error", "format:cap:no-empty", msg)
                 raise ValueError(msg)
             if value.lower() == "nan":
-                msg = f"\"{value}\" is not allowed as a header value"
+                msg = f'"{value}" is not allowed as a header value.'
                 GeneExpression.log_for_mixpanel("error", "format:cap:no-empty", msg)
                 raise ValueError(msg)
 
@@ -249,7 +249,7 @@ class DenseIngestor(GeneExpression, IngestFiles):
             return True
         if DenseIngestor.is_r_formatted_file(header, row)[0]:
             return True
-        msg = "Required \"GENE\" header is not present"
+        msg = 'Required "GENE" header is not present.'
         GeneExpression.log_for_mixpanel("error", "format:cap:missing-gene-column", msg)
         raise ValueError(msg)
 
