@@ -21,11 +21,13 @@ try:
     from ingest_files import DataArray
     from monitor import setup_logger
     from mongo_connection import MongoConnection, graceful_auto_reconnect
+    import config
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from ..ingest_files import DataArray
     from ..monitor import setup_logger
     from ..mongo_connection import MongoConnection, graceful_auto_reconnect
+    from .. import config
 
 
 class GeneExpression:
@@ -108,6 +110,16 @@ class GeneExpression:
             return False
 
     @staticmethod
+    def log_for_mixpanel(issue_type, issue_name, msg):
+        props = {}
+        if issue_type == "error":
+            props['errorTypes'] = [issue_name]
+            props['errors'] = [msg]
+        elif issue_type == "warn":
+            props['warningTypes'] = [issue_name]
+            props['warnings'] = [msg]
+        config.get_metric_properties().append_issue(props)
+
     def query_cells(study_id, client, query_kwargs):
         QUERY = {
             "$and": [
@@ -174,7 +186,9 @@ class GeneExpression:
         """
         # raise error if there are no cell names present
         if not cell_names:
-            raise ValueError("There were no cell names found in the header row of this matrix")
+            msg = "There were no cell names found in the header row of this matrix"
+            GeneExpression.log_for_mixpanel("error", "content:no-barcode-data", msg)
+            raise ValueError(msg)
 
         existing_cells = GeneExpression.get_cell_names_from_study_file_id(
             study_id, study_file_id, client
@@ -189,6 +203,9 @@ class GeneExpression:
 
                 # add the first 3 duplicates to the error message
                 error_string += f'Duplicates include {", ".join(list(dupes)[:3])}'
+                GeneExpression.log_for_mixpanel(
+                    "error", "content:duplicate:values-across-files", error_string
+                )
                 raise ValueError(error_string)
         return True
 
