@@ -223,7 +223,11 @@ class Annotations(IngestFiles):
         if issue_type:
             category = issue_type
         else:
-            category = issue_name.split(":")[0]
+            try:
+                category = issue_name.split(":")[0]
+            except (ValueError, TypeError):
+                msg = f'Expected parse on ":" to derive category from {issue_name}'
+                raise ValueError(msg)
 
         if associated_info:
             self.issues[type][category][msg].extend(associated_info)
@@ -231,20 +235,25 @@ class Annotations(IngestFiles):
             self.issues[type][category][msg] = None
 
         if category == "runtime":
-            # do not log runtime errors as file-validation failure errorType
+            # do not log runtime errors as file-validation failure errorType in Mixpanel
+            # runtime errors cause early exit of cell_metadata validation
+            # the error is reported to the user via report_issues()
             pass
-        else:
+        elif issue_name:
             # propagate detected warnings and errors to Mixpanel
-            if type == "error" and issue_name:
+            if type == "error":
                 if issue_name not in self.props["errorTypes"]:
                     self.props["errorTypes"].append(issue_name)
                 if msg not in self.props["errors"]:
                     self.props["errors"].append(msg)
-            elif type == "warn" and issue_name:
+            elif type == "warn":
                 if issue_name not in self.props["warningTypes"]:
                     self.props["warningTypes"].append(issue_name)
                 if msg not in self.props["warnings"]:
                     self.props["warnings"].append(msg)
+        else:
+            msg = f'Unexpected lack of issue_name, {issue_name}, for Mixpanel logging'
+            raise ValueError(msg)
 
     def validate_header_keyword(self):
         """Check header row starts with NAME (case-insensitive).

@@ -31,6 +31,11 @@ class MetricsService:
     @classmethod
     def log(cls, event_name, props={}):
         properties = {"event": event_name, "properties": props.get_properties()}
+        # to avoid loss of logging due to Bard overflow errors
+        # report numErrors and numWarnings but not actual messages
+        for prop in ["errors", "warnings"]:
+            if properties["properties"].get(prop):
+                del properties["properties"][prop]
 
         post_body = json.dumps(properties)
         MetricsService.post_event(post_body)
