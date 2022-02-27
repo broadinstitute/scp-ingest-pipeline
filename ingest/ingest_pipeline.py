@@ -186,11 +186,20 @@ class IngestPipeline:
             )
         except ValueError as v:
             # Caution: recording errorTypes in this manner can clobber other collected errors.
-            # ValueErrors during file connection should stop processing so
-            # this logging approach should not lose file validation information
-            config.get_metric_properties().update(
-                {"errorTypes": ["content:type:not-numeric"]}
-            )
+            # ValueErrors during file connection indicate file cannot be processed
+            # this logging approach should not lose collected file validation information
+            if str(v).startswith("could not convert"):
+                config.get_metric_properties().update(
+                    {"errorTypes": ["content:type:not-numeric"]}
+                )
+            elif str(v).startswith("Unable to parse"):
+                config.get_metric_properties().update(
+                    {"errorTypes": ["format:cap:unique"]}
+                )
+            else:
+                config.get_metric_properties().update(
+                    {"errorTypes": ["parse:unhandled"]}
+                )
             self.report_validation("failure")
             raise ValueError(v)
 
