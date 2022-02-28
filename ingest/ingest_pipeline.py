@@ -190,15 +190,15 @@ class IngestPipeline:
             # this logging approach should not lose collected file validation information
             if str(v).startswith("could not convert"):
                 config.get_metric_properties().update(
-                    {"errorTypes": ["content:type:not-numeric"], "numErrortypes": 1}
+                    {"errorTypes": ["content:type:not-numeric"]}
                 )
             elif str(v).startswith("Unable to parse"):
                 config.get_metric_properties().update(
-                    {"errorTypes": ["format:cap:unique"], "numErrortypes": 1}
+                    {"errorTypes": ["format:cap:unique"]}
                 )
             else:
                 config.get_metric_properties().update(
-                    {"errorTypes": ["parse:unhandled"], "numErrortypes": 1}
+                    {"errorTypes": ["parse:unhandled"]}
                 )
             self.report_validation("failure")
             raise ValueError(v)
@@ -449,10 +449,7 @@ class IngestPipeline:
                     # In subsampling, known failure modes are ValueErrors which stop processing so
                     # this logging approach should not lose file validation information
                     config.get_metric_properties().update(
-                        {
-                            "errorTypes": ["content:missing:values-across-files"],
-                            "numErrortypes": 1,
-                        }
+                        {"errorTypes": ["content:missing:values-across-files"]}
                     )
                     self.report_validation("failure")
                     raise ValueError(
