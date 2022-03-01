@@ -105,7 +105,10 @@ class Annotations(IngestFiles):
         self.annot_types[0] = self.annot_types[0].upper()
         if self.validate_unique_header():
             self.create_data_frame()
-            self.preprocess_numeric_annot(is_metadata_convention)
+            try:
+                self.preprocess_numeric_annot(is_metadata_convention)
+            except ValueError as v:
+                raise ValueError(v)
         else:
             msg = (
                 "Unable to parse file - Duplicate annotation header names are not allowed. \n"
@@ -119,7 +122,13 @@ class Annotations(IngestFiles):
         # Metadata convention can contain arrays that have numeric or string values.
         # Therefore dtypes for numeric annotations are skipped.
         if not is_metadata_convention:
-            self.file = Annotations.coerce_numeric_values(self.file, self.annot_types)
+            try:
+                self.file = Annotations.coerce_numeric_values(
+                    self.file, self.annot_types
+                )
+            except ValueError as v:
+                # self.store_validation_issue("error", v, "content:type:not-numeric")
+                raise ValueError(v)
 
     @staticmethod
     def convert_header_to_multi_index(df, header_names: List[Tuple]):

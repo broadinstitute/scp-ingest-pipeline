@@ -176,14 +176,32 @@ class IngestPipeline:
                 File object.
         """
         file_connections = {"cell_metadata": CellMetadata, "cluster": Clusters}
-
-        return file_connections.get(file_type)(
-            file_path,
-            self.study_id,
-            self.study_file_id,
-            tracer=self.tracer,
-            **self.kwargs,
-        )
+        try:
+            return file_connections.get(file_type)(
+                file_path,
+                self.study_id,
+                self.study_file_id,
+                tracer=self.tracer,
+                **self.kwargs,
+            )
+        except ValueError as v:
+            # Caution: recording errorTypes in this manner can clobber other collected errors.
+            # ValueErrors during file connection indicate file cannot be processed
+            # this logging approach should not lose collected file validation information
+            if str(v).startswith("could not convert"):
+                config.get_metric_properties().update(
+                    {"errorTypes": ["content:type:not-numeric"]}
+                )
+            elif str(v).startswith("Unable to parse"):
+                config.get_metric_properties().update(
+                    {"errorTypes": ["format:cap:unique"]}
+                )
+            else:
+                config.get_metric_properties().update(
+                    {"errorTypes": ["parse:unhandled"]}
+                )
+            self.report_validation("failure")
+            raise ValueError(v)
 
     def insert_many(self, collection_name, documents):
         if not config.bypass_mongo_writes():
@@ -427,6 +445,13 @@ class IngestPipeline:
                         if load_status != 0:
                             return load_status
                 else:
+                    # Caution: recording errorTypes in this manner can clobber other collected errors.
+                    # In subsampling, known failure modes are ValueErrors which stop processing so
+                    # this logging approach should not lose file validation information
+                    config.get_metric_properties().update(
+                        {"errorTypes": ["content:missing:values-across-files"]}
+                    )
+                    self.report_validation("failure")
                     raise ValueError(
                         "Cluster file has cell names that are not present in cell metadata file."
                     )
