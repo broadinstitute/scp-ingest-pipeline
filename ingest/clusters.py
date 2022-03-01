@@ -55,7 +55,10 @@ class Clusters(Annotations):
         for i, header in enumerate(self.headers):
             if header in ["X", "Y", "Z"]:
                 self.headers[i] = self.headers[i].lower()
-        self.preprocess()
+        try:
+            self.preprocess()
+        except ValueError as v:
+            raise ValueError(v)
         self.determine_coordinates_and_cell_names()
         self.source_file_type = "cluster"
         self.cluster_type = (

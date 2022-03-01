@@ -114,3 +114,14 @@ class TestCellMetadata(unittest.TestCase):
             "testCluster",
         )
         self.assertFalse(cluster.require_X_Y_not_nan())
+
+    def test_numeric_false(self):
+        """Ensures numeric annotations have numeric values
+        """
+        with self.assertRaises(ValueError):
+            cluster = Clusters(
+                "../tests/data/cluster_non-numeric.txt",
+                "dec0dedfeed1111111111111",
+                "addedfeed000000000000000",
+                "testCluster",
+            )

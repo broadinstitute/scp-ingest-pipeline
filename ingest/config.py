@@ -64,7 +64,7 @@ class MetricProperties:
         """Derive count for each type of Mixpanel property
         """
         for prop in ["errorTypes", "errors", "warningTypes", "warnings"]:
-            num_prop = "num" + prop.capitalize()
+            num_prop = "num" + prop[0].upper() + prop[1:]
             if self.__properties.get(prop):
                 self.__properties[num_prop] = len(self.__properties[prop])
 
