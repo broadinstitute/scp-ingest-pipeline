@@ -248,6 +248,71 @@ def create_parser():
         "--cell-metadata-file", help="Absolute or relative path to cell metadata file."
     )
 
+    # Differential expression subparsers
+    parser_differential_expression = subparsers.add_parser(
+        "differential_expression",
+        help="Indicates differential expression analysis processing",
+    )
+
+    parser_differential_expression.add_argument(
+        "--differential_expression",
+        required=True,
+        action="store_true",
+        help="Indicates that differential expression analysis should be invoked",
+    )
+
+    parser_differential_expression.add_argument(
+        "--annotation", required=True, help="Name of annotation for DE analysis"
+    )
+
+    parser_differential_expression.add_argument(
+        "--cluster-file",
+        required=True,
+        help="Absolute or relative path to cluster file.",
+    )
+
+    parser_differential_expression.add_argument(
+        "--cell-metadata-file",
+        required=True,
+        help="Absolute or relative path to cell metadata file.",
+    )
+
+    parser_differential_expression.add_argument(
+        "--study-accession",
+        required=True,
+        help="Single study accession associated with ingest files.",
+    )
+
+    parser_differential_expression.add_argument(
+        "--matrix-file-path",
+        required=True,
+        help="Absolute or relative path to "
+        "expression file. For 10x data this is "
+        "the .mtx file",
+    )
+
+    parser_differential_expression.add_argument(
+        "--matrix-file-type",
+        choices=EXPRESSION_FILE_TYPES,
+        type=str.lower,
+        required=True,
+        help=matrix_file_type_txt,
+    )
+
+    # Gene and Barcode arguments for MTX bundle
+    parser_differential_expression.add_argument(
+        "--barcode-file", help="Path to .barcodes.tsv files"
+    )
+    parser_differential_expression.add_argument(
+        "--gene-file", help="Path to .genes.tsv file"
+    )
+
+    # dummy variable to enable cluster object initialization
+    parser_differential_expression.add_argument(
+        "--name",
+        default="cluster",
+        help="dummy value for cluster object initialization",
+    )
     return parser
 
 

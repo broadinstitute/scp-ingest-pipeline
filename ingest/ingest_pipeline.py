@@ -75,6 +75,7 @@ try:
     from expression_files.mtx import MTXIngestor
     from expression_files.dense_ingestor import DenseIngestor
     from monitor import setup_logger, log_exception
+    from de import DifferentialExpression
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
@@ -94,6 +95,7 @@ except ImportError:
     from .expression_files.dense_ingestor import DenseIngestor
     from .expression_files.mtx import MTXIngestor
     from .cli_parser import create_parser, validate_arguments
+    from .de import DifferentialExpression
 
 
 class IngestPipeline:
@@ -111,18 +113,21 @@ class IngestPipeline:
         study_id: str,
         study_file_id: str,
         matrix_file: str = None,
+        matrix_file_path: str = None,
         matrix_file_type: str = None,
         cell_metadata_file: str = None,
         cluster_file: str = None,
         subsample=False,
         ingest_cell_metadata=False,
         ingest_cluster=False,
+        differential_expression=False,
         **kwargs,
     ):
         """Initializes variables in Ingest Pipeline"""
         self.study_id = study_id
         self.study_file_id = study_file_id
         self.matrix_file = matrix_file
+        self.matrix_file_path = matrix_file_path
         self.matrix_file_type = matrix_file_type
         if os.environ.get("DATABASE_HOST") is not None:
             # Needed to run tests in CircleCI.
@@ -143,11 +148,11 @@ class IngestPipeline:
 
         else:
             self.tracer = nullcontext()
-        if ingest_cell_metadata:
+        if ingest_cell_metadata or differential_expression:
             self.cell_metadata = self.initialize_file_connection(
                 "cell_metadata", cell_metadata_file
             )
-        if ingest_cluster:
+        if ingest_cluster or differential_expression:
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
         if subsample:
             self.cluster_file = cluster_file
@@ -461,6 +466,19 @@ class IngestPipeline:
                 return 1
         return 0
 
+    def calculate_de(self):
+        # self.cluster = self.initialize_file_connection("cluster", cluster_file)
+        # self.cell_metadata = self.initialize_file_connection(
+        #     "cell_metadata", cell_metadata_file
+        # )
+        de = DifferentialExpression(
+            cluster=self.cluster,
+            cell_metadata=self.cell_metadata,
+            matrix_file_path=self.matrix_file_path,
+            matrix_file_type=self.matrix_file_type,
+            **self.kwargs,
+        )
+
     def report_validation(self, status):
         self.props["status"] = status
         config.get_metric_properties().update(self.props)
@@ -493,6 +511,13 @@ def run_ingest(ingest, arguments, parsed_args):
             config.set_parent_event_name("ingest-pipeline:subsample:ingest")
             status_subsample = ingest.subsample()
             status.append(status_subsample)
+    elif "differential_expression" in arguments:
+        if arguments["differential_expression"]:
+            config.set_parent_event_name(
+                "ingest-pipeline:differential_expression:ingest"
+            )
+            status_de = ingest.calculate_de()
+            status.append(status_de)
 
     return status, status_cell_metadata
 
