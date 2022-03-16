@@ -1,3 +1,7 @@
+import numpy as np
+import pandas as pd
+import scanpy as sc
+
 try:
     from annotations import Annotations
     from clusters import Clusters
@@ -21,13 +25,13 @@ class DifferentialExpression:
         matrix_file_path,
         matrix_file_type,
         annotation,
-        **kwargs
+        **kwargs,
     ):
         self.cluster = cluster
         self.metadata = cell_metadata
-        self.matrix_file = IngestFiles(
-            matrix_file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
-        )
+        # self.matrix_file = IngestFiles(
+        #     matrix_file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
+        # )
         self.annotation = annotation
 
         if matrix_file_type == "mtx":
@@ -45,4 +49,69 @@ class DifferentialExpression:
                 c.strip().strip('"') for c in self.barcodes_file.readlines()
             ]
 
-        print("foo")
+        # ID cells in cluster
+        cluster_cell_values = self.cluster.file['NAME'].values.tolist()
+        cluster_cell_list = []
+        for value in cluster_cell_values:
+            cluster_cell_list.extend(value)
+
+        # subset metadata based on cells in cluster
+        raw_annots = pd.read_csv(
+            self.metadata.file_path,
+            sep='\t',
+            names=self.metadata.headers,
+            skiprows=2,
+            index_col=0,
+        )
+        cluster_annots = raw_annots[raw_annots.index.isin(cluster_cell_list)]
+
+        # dense matrix
+        data = sc.read(matrix_file_path)
+        adata = data.transpose()
+        adata.obs = cluster_annots
+
+        file_name = self.metadata.study_accession + "_raw_to_DE.h5ad"
+        adata.write_h5ad(file_name)
+
+        # coerce numeric-like group annotations
+        for annot, annot_type in zip(self.metadata.headers, self.metadata.annot_types):
+            if annot_type == "group" and adata.obs.dtypes[annot] not in [
+                "object",
+                "category",
+                "string",
+            ]:
+                print(f'{annot} of {adata.obs.dtypes[annot]} should be coerced')
+                adata.obs[annot] = pd.Categorical(adata.obs[annot])
+
+        adata.raw = adata
+        adata.write_h5ad(file_name)
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+        adata.write_h5ad(file_name)
+        rank_method = 'wilcoxon'
+        rank_key = "rank." + self.annotation + "." + rank_method
+        sc.tl.rank_genes_groups(
+            adata,
+            self.annotation,
+            key_added=rank_key,
+            use_raw=False,
+            method=rank_method,
+            pts=True,
+        )
+        adata.write_h5ad(file_name)
+        groups = np.unique(adata.obs[self.annotation]).tolist()
+        for group in groups:
+            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
+            print(rank)
+        rank_method = 't-test'
+        rank_key = "rank." + self.annotation + "." + rank_method
+        sc.tl.rank_genes_groups(
+            adata,
+            self.annotation,
+            key_added=rank_key,
+            use_raw=False,
+            method=rank_method,
+            pts=True,
+        )
+        adata.write_h5ad(file_name)
+        print("bar")
