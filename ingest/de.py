@@ -55,14 +55,21 @@ class DifferentialExpression:
         for value in cluster_cell_values:
             cluster_cell_list.extend(value)
 
-        # subset metadata based on cells in cluster
+        # coerce numeric-like group annotations ?and groups with missing values?
+        dtype_info = dict(zip(self.metadata.headers, self.metadata.annot_types))
+        dtypes = {}
+        for header, type_info in dtype_info.items():
+            if type_info == "group":
+                dtypes[header] = "string"
         raw_annots = pd.read_csv(
             self.metadata.file_path,
             sep='\t',
             names=self.metadata.headers,
             skiprows=2,
             index_col=0,
+            dtype=dtypes,
         )
+        # subset metadata based on cells in cluster
         cluster_annots = raw_annots[raw_annots.index.isin(cluster_cell_list)]
 
         # dense matrix
@@ -70,7 +77,9 @@ class DifferentialExpression:
         adata = data.transpose()
         adata.obs = cluster_annots
 
-        file_name = self.metadata.study_accession + "_raw_to_DE.h5ad"
+        # ideally include cluster file name in either filename or as directory
+        # have rails provide name as input?
+        file_name = f'/Volumes/jlc2T/active/SCP1677/DE/{self.metadata.study_accession}_raw_to_DE.h5ad'
         adata.write_h5ad(file_name)
 
         # coerce numeric-like group annotations
@@ -101,8 +110,11 @@ class DifferentialExpression:
         adata.write_h5ad(file_name)
         groups = np.unique(adata.obs[self.annotation]).tolist()
         for group in groups:
-            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
-            print(rank)
+            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=str(group))
+            out_file = f'/Volumes/jlc2T/active/SCP1677/DE/{self.annotation}-{str(group)}-{rank_method}.tsv'
+            # when ready, add compression='gzip'
+            rank.to_csv(out_file, sep='\t')
+
         rank_method = 't-test'
         rank_key = "rank." + self.annotation + "." + rank_method
         sc.tl.rank_genes_groups(
