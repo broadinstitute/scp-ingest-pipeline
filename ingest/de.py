@@ -61,42 +61,43 @@ class DifferentialExpression:
         for header, type_info in dtype_info.items():
             if type_info == "group":
                 dtypes[header] = "string"
-        raw_annots = pd.read_csv(
+
+        annot_redux = IngestFiles(self.metadata.file_path, self.ALLOWED_FILE_TYPES)
+        annot_file_type = annot_redux.get_file_type(self.metadata.file_path)[0]
+        annot_file_handle = annot_redux.open_file(self.metadata.file_path)[1]
+        raw_annots = annot_redux.open_pandas(
             self.metadata.file_path,
-            sep='\t',
+            annot_file_type,
+            open_file_object=annot_file_handle,
             names=self.metadata.headers,
             skiprows=2,
             index_col=0,
             dtype=dtypes,
         )
+
         # subset metadata based on cells in cluster
         cluster_annots = raw_annots[raw_annots.index.isin(cluster_cell_list)]
 
         # dense matrix
         data = sc.read(matrix_file_path)
         adata = data.transpose()
+
+        # subset matrix based on cells in cluster
+        matrix_subset_list = np.in1d(adata.obs_names, cluster_cell_list)
+        adata = adata[matrix_subset_list]
+
         adata.obs = cluster_annots
 
         # ideally include cluster file name in either filename or as directory
         # have rails provide name as input?
-        file_name = f'/Volumes/jlc2T/active/SCP1677/DE/{self.metadata.study_accession}_raw_to_DE.h5ad'
+        file_name = f'/Volumes/jlc2T/active/SCP1671/DE/{self.metadata.study_accession}_raw_to_DE.h5ad'
         adata.write_h5ad(file_name)
-
-        # coerce numeric-like group annotations
-        for annot, annot_type in zip(self.metadata.headers, self.metadata.annot_types):
-            if annot_type == "group" and adata.obs.dtypes[annot] not in [
-                "object",
-                "category",
-                "string",
-            ]:
-                print(f'{annot} of {adata.obs.dtypes[annot]} should be coerced')
-                adata.obs[annot] = pd.Categorical(adata.obs[annot])
 
         adata.raw = adata
         adata.write_h5ad(file_name)
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
-        adata.write_h5ad(file_name)
+        # adata.write_h5ad(file_name)
         rank_method = 'wilcoxon'
         rank_key = "rank." + self.annotation + "." + rank_method
         sc.tl.rank_genes_groups(
@@ -111,7 +112,7 @@ class DifferentialExpression:
         groups = np.unique(adata.obs[self.annotation]).tolist()
         for group in groups:
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=str(group))
-            out_file = f'/Volumes/jlc2T/active/SCP1677/DE/{self.annotation}-{str(group)}-{rank_method}.tsv'
+            out_file = f'/Volumes/jlc2T/active/SCP1671/DE/{self.annotation}-{str(group)}-{rank_method}.tsv'
             # when ready, add compression='gzip'
             rank.to_csv(out_file, sep='\t')
 
@@ -127,3 +128,5 @@ class DifferentialExpression:
         )
         adata.write_h5ad(file_name)
         print("bar")
+
+        return 0
