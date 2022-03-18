@@ -95,7 +95,7 @@ except ImportError:
     from .expression_files.dense_ingestor import DenseIngestor
     from .expression_files.mtx import MTXIngestor
     from .cli_parser import create_parser, validate_arguments
-    from .de import DifferentialExpression
+    from .de import DifferentialExpression, prepare_h5ad
 
 
 class IngestPipeline:
@@ -467,10 +467,7 @@ class IngestPipeline:
         return 0
 
     def calculate_de(self):
-        # self.cluster = self.initialize_file_connection("cluster", cluster_file)
-        # self.cell_metadata = self.initialize_file_connection(
-        #     "cell_metadata", cell_metadata_file
-        # )
+        """ Run differential expression analysis """
         de = DifferentialExpression(
             cluster=self.cluster,
             cell_metadata=self.cell_metadata,
@@ -478,6 +475,9 @@ class IngestPipeline:
             matrix_file_type=self.matrix_file_type,
             **self.kwargs,
         )
+        de.execute_de()
+        # ToDo: surface failed DE as ValueErrors
+        return 0
 
     def report_validation(self, status):
         self.props["status"] = status
