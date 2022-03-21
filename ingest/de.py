@@ -51,21 +51,21 @@ class DifferentialExpression:
             ]
 
     @staticmethod
-    def get_cluster_cells(cluster):
+    def get_cluster_cells(cluster_cells):
         """ ID cells in cluster file """
-        cluster_cell_values = cluster.file['NAME'].values.tolist()
+        cluster_cell_values = cluster_cells.tolist()
         cluster_cell_list = []
         for value in cluster_cell_values:
             cluster_cell_list.extend(value)
         return cluster_cell_list
 
     @staticmethod
-    def determine_dtypes(metadata):
+    def determine_dtypes(headers, annot_types):
         """ use SCP TYPE data to coerce data to proper dtypes:
                 numeric-like group annotations
                 missing values in group annotations (to avoid NaN)
         """
-        dtype_info = dict(zip(metadata.headers, metadata.annot_types))
+        dtype_info = dict(zip(headers, annot_types))
         dtypes = {}
         for header, type_info in dtype_info.items():
             if type_info == "group":
@@ -73,18 +73,18 @@ class DifferentialExpression:
         return dtypes
 
     @staticmethod
-    def load_raw_annots(metadata, dtypes):
+    def load_raw_annots(metadata_file_path, allowed_file_types, headers, dtypes):
         """ using SCP metadata header lines
             create properly coerced pandas dataframe of all study metadata
         """
-        annot_redux = IngestFiles(metadata.file_path, metadata.ALLOWED_FILE_TYPES)
-        annot_file_type = annot_redux.get_file_type(metadata.file_path)[0]
-        annot_file_handle = annot_redux.open_file(metadata.file_path)[1]
+        annot_redux = IngestFiles(metadata_file_path, allowed_file_types)
+        annot_file_type = annot_redux.get_file_type(metadata_file_path)[0]
+        annot_file_handle = annot_redux.open_file(metadata_file_path)[1]
         raw_annots = annot_redux.open_pandas(
-            metadata.file_path,
+            metadata_file_path,
             annot_file_type,
             open_file_object=annot_file_handle,
-            names=metadata.headers,
+            names=headers,
             skiprows=2,
             index_col=0,
             dtype=dtypes,
@@ -95,8 +95,12 @@ class DifferentialExpression:
     def prepare_annots(metadata, de_cells):
         """ subset metadata based on cells in cluster
         """
-        dtypes = DifferentialExpression.determine_dtypes(metadata)
-        raw_annots = DifferentialExpression.load_raw_annots(metadata, dtypes)
+        dtypes = DifferentialExpression.determine_dtypes(
+            metadata.headers, metadata.annot_types
+        )
+        raw_annots = DifferentialExpression.load_raw_annots(
+            metadata.file_path, metadata.ALLOWED_FILE_TYPES, metadata.headers, dtypes
+        )
         cluster_annots = raw_annots[raw_annots.index.isin(de_cells)]
         return cluster_annots
 
@@ -109,7 +113,7 @@ class DifferentialExpression:
     def prepare_h5ad(cluster, metadata, matrix_file_path, annotation):
         """
         """
-        de_cells = DifferentialExpression.get_cluster_cells(cluster)
+        de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
         de_annots = DifferentialExpression.prepare_annots(metadata, de_cells)
 
         # dense matrix
