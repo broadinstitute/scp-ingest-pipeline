@@ -262,7 +262,21 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
+        "--study-accession",
+        required=True,
+        help="Single study accession associated with provided DE input files.",
+    )
+
+    parser_differential_expression.add_argument(
         "--annotation", required=True, help="Name of annotation for DE analysis"
+    )
+
+    parser_differential_expression.add_argument(
+        "--method", default="wilcoxon", help="method for DE"
+    )
+
+    parser_differential_expression.add_argument(
+        "--name", required=True, help="study owner-specified cluster anem"
     )
 
     parser_differential_expression.add_argument(
@@ -275,12 +289,6 @@ def create_parser():
         "--cell-metadata-file",
         required=True,
         help="Absolute or relative path to cell metadata file.",
-    )
-
-    parser_differential_expression.add_argument(
-        "--study-accession",
-        required=True,
-        help="Single study accession associated with ingest files.",
     )
 
     parser_differential_expression.add_argument(
@@ -307,12 +315,6 @@ def create_parser():
         "--gene-file", help="Path to .genes.tsv file"
     )
 
-    # dummy variable to enable cluster object initialization
-    parser_differential_expression.add_argument(
-        "--name",
-        default="cluster",
-        help="dummy value for cluster object initialization",
-    )
     return parser
 
 

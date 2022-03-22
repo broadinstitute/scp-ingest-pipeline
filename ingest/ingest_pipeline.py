@@ -476,7 +476,7 @@ class IngestPipeline:
             **self.kwargs,
         )
         de.execute_de()
-        # ToDo: surface failed DE as ValueErrors
+        # ToDo: surface failed DE for analytics
         return 0
 
     def report_validation(self, status):

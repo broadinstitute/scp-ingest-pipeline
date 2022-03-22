@@ -1,18 +1,25 @@
+import logging
 import numpy as np
 import pandas as pd
 import scanpy as sc
 
 try:
+    from monitor import setup_logger, log_exception
     from annotations import Annotations
     from clusters import Clusters
     from cell_metadata import CellMetadata
     from ingest_files import IngestFiles
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
+    from .monitor import setup_logger, log_exception
     from .annotations import Annotations
     from .clusters import Clusters
     from .cell_metadata import CellMetadata
     from .ingest_files import IngestFiles
+
+de_logger = setup_logger(
+    __name__ + ".de_logger", "de_log.txt", level=logging.INFO, format="support_configs"
+)
 
 
 class DifferentialExpression:
@@ -32,23 +39,30 @@ class DifferentialExpression:
         self.annotation = annotation
         self.matrix_file_path = matrix_file_path
         self.matrix_file_type = matrix_file_type
+        self.kwargs = kwargs
+        self.accession = self.kwargs["study_accession"]
+        self.cluster_name = self.kwargs["name"]
+        self.method = self.kwargs["method"]
 
         if matrix_file_type == "mtx":
-            self.genes_path = kwargs.pop("gene_file")
-            genes_ingest_file = IngestFiles(genes_path, self.ALLOWED_FILE_TYPES)
+            self.genes_path = self.kwargs["gene_file"]
+            genes_ingest_file = IngestFiles(self.genes_path, self.ALLOWED_FILE_TYPES)
             self.genes_file = genes_ingest_file.resolve_path(self.genes_path)[0]
             self.genes: List[str] = [
                 g.strip().strip('"') for g in self.genes_file.readlines()
             ]
 
-            self.barcodes_path = kwargs.pop("barcode_file")
-            barcodes_ingest_file = IngestFiles(barcodes_path, self.ALLOWED_FILE_TYPES)
+            self.barcodes_path = self.kwargs["barcode_file"]
+            barcodes_ingest_file = IngestFiles(
+                self.barcodes_path, self.ALLOWED_FILE_TYPES
+            )
             self.barcodes_file = barcodes_ingest_file.resolve_path(self.barcodes_path)[
                 0
             ]
-            self.cells: List[str] = [
+            self.barcodes: List[str] = [
                 c.strip().strip('"') for c in self.barcodes_file.readlines()
             ]
+        de_logger.info(f"DifferentialExpression initialized")
 
     @staticmethod
     def get_cluster_cells(cluster_cells):
@@ -95,6 +109,7 @@ class DifferentialExpression:
     def prepare_annots(metadata, de_cells):
         """ subset metadata based on cells in cluster
         """
+        de_logger.info(f"subsetting metadata on cells in clustering")
         dtypes = DifferentialExpression.determine_dtypes(
             metadata.headers, metadata.annot_types
         )
@@ -105,65 +120,115 @@ class DifferentialExpression:
         return cluster_annots
 
     def execute_de(self):
-        self.prepare_h5ad(
-            self.cluster, self.metadata, self.matrix_file_path, self.annotation
-        )
+        if self.matrix_file_type == "mtx":
+            self.prepare_h5ad(
+                self.cluster,
+                self.metadata,
+                self.matrix_file_path,
+                self.matrix_file_type,
+                self.annotation,
+                self.accession,
+                self.genes,
+                self.barcodes,
+            )
+            de_logger.info(f"preparing DE on sparse matrix")
+        else:
+            self.prepare_h5ad(
+                self.cluster,
+                self.metadata,
+                self.matrix_file_path,
+                self.matrix_file_type,
+                self.annotation,
+                self.accession,
+                self.cluster_name,
+                self.method,
+            )
+            de_logger.info(f"preparing DE on dense matrix")
 
     @staticmethod
-    def prepare_h5ad(cluster, metadata, matrix_file_path, annotation):
+    def prepare_h5ad(
+        cluster,
+        metadata,
+        matrix_file_path,
+        matrix_file_type,
+        annotation,
+        study_accession,
+        cluster_name,
+        method,
+        genes=None,
+        barcodes=None,
+    ):
         """
         """
         de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
         de_annots = DifferentialExpression.prepare_annots(metadata, de_cells)
 
-        # dense matrix
-        data = sc.read(matrix_file_path)
-        adata = data.transpose()
+        if matrix_file_type == "dense":
+            # will need try/except
+            adata = sc.read(matrix_file_path)
+        else:
+            # MTX DE UNTESTED
+            # will want try/except here to catch failed data object composition
+            adata = sc.read_mtx(matrix_file_path)
+            # For AnnData, obs are cells and vars are genes
+            # BUT transpose needed for both dense and sparse
+            # so transpose step is after this data object composition step
+            # therefore the assignements below are the reverse of expected
+            adata.obs_names = genes
+            adata.var_names = barcodes
 
+        adata = adata.transpose()
+
+        # make a testable function
         # subset matrix based on cells in cluster
+        de_logger.info(f"subsetting matrix on cells in clustering")
         matrix_subset_list = np.in1d(adata.obs_names, de_cells)
         adata = adata[matrix_subset_list]
 
+        # will need try/except
         adata.obs = de_annots
 
-        # ideally include cluster file name in either filename or as directory
-        # have rails provide name as input?
-        file_name = f'/Volumes/jlc2T/active/SCP1677/DE/{metadata.study_accession}_raw_to_DE.h5ad'
-        adata.write_h5ad(file_name)
-
-        adata.raw = adata
-        adata.write_h5ad(file_name)
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
         # adata.write_h5ad(file_name)
-        rank_method = 'wilcoxon'
-        rank_key = "rank." + annotation + "." + rank_method
+        rank_key = "rank." + annotation + "." + method
+        de_logger.info(f"calculating DE")
         sc.tl.rank_genes_groups(
             adata,
             annotation,
             key_added=rank_key,
             use_raw=False,
-            method=rank_method,
+            method=method,
             pts=True,
         )
-        adata.write_h5ad(file_name)
+
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
+            de_logger.info(f"Writing DE output for {str(group)}")
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=str(group))
-            out_file = f'/Volumes/jlc2T/active/SCP1677/DE/{annotation}-{str(group)}-{rank_method}.tsv'
+
+            out_file = f'/Volumes/jlc2T/active/{study_accession}/DE/{cluster_name}-{annotation}-{str(group)}-{method}.tsv'
             # when ready, add compression='gzip'
             rank.to_csv(out_file, sep='\t')
 
-        rank_method = 't-test'
-        rank_key = "rank." + annotation + "." + rank_method
-        sc.tl.rank_genes_groups(
-            adata,
-            annotation,
-            key_added=rank_key,
-            use_raw=False,
-            method=rank_method,
-            pts=True,
-        )
+        # Provide h5ad of DE analysis as reference computable object
+        # ideally include cluster file name in either filename or as directory
+        # have rails provide name as input?
+        de_logger.info(f"Writing DE h5ad file")
+        file_name = f'/Volumes/jlc2T/active/{study_accession}/DE/{study_accession}_{cluster_name}_to_DE.h5ad'
         adata.write_h5ad(file_name)
+
+        # rank_method = 't-test'
+        # rank_key = "rank." + annotation + "." + rank_method
+        # sc.tl.rank_genes_groups(
+        #     adata,
+        #     annotation,
+        #     key_added=rank_key,
+        #     use_raw=False,
+        #     method=rank_method,
+        #     pts=True,
+        # )
+        # adata.write_h5ad(file_name)
+        de_logger.info(f"DE processing complete")
         print("bar")
 
