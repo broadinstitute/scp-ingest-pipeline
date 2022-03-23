@@ -17,13 +17,17 @@ except ImportError:
     from .cell_metadata import CellMetadata
     from .ingest_files import IngestFiles
 
-de_logger = setup_logger(
-    __name__ + ".de_logger", "de_log.txt", level=logging.INFO, format="support_configs"
-)
-
 
 class DifferentialExpression:
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
+
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
+    de_logger = setup_logger(
+        __name__ + ".de_logger",
+        "de_log.txt",
+        level=logging.INFO,
+        format="support_configs",
+    )
 
     def __init__(
         self,
@@ -41,7 +45,8 @@ class DifferentialExpression:
         self.matrix_file_type = matrix_file_type
         self.kwargs = kwargs
         self.accession = self.kwargs["study_accession"]
-        self.cluster_name = self.kwargs["name"]
+        # only used in output filename, removing spaces
+        self.cluster_name = self.kwargs["name"].replace(" ", "_")
         self.method = self.kwargs["method"]
 
         if matrix_file_type == "mtx":
@@ -62,7 +67,7 @@ class DifferentialExpression:
             self.barcodes: List[str] = [
                 c.strip().strip('"') for c in self.barcodes_file.readlines()
             ]
-        de_logger.info(f"DifferentialExpression initialized")
+        DifferentialExpression.de_logger.info(f"DifferentialExpression initialized")
 
     @staticmethod
     def get_cluster_cells(cluster_cells):
@@ -109,7 +114,9 @@ class DifferentialExpression:
     def prepare_annots(metadata, de_cells):
         """ subset metadata based on cells in cluster
         """
-        de_logger.info(f"subsetting metadata on cells in clustering")
+        DifferentialExpression.de_logger.info(
+            f"subsetting metadata on cells in clustering"
+        )
         dtypes = DifferentialExpression.determine_dtypes(
             metadata.headers, metadata.annot_types
         )
@@ -131,7 +138,7 @@ class DifferentialExpression:
                 self.genes,
                 self.barcodes,
             )
-            de_logger.info(f"preparing DE on sparse matrix")
+            DifferentialExpression.de_logger.info(f"preparing DE on sparse matrix")
         else:
             self.prepare_h5ad(
                 self.cluster,
@@ -143,7 +150,7 @@ class DifferentialExpression:
                 self.cluster_name,
                 self.method,
             )
-            de_logger.info(f"preparing DE on dense matrix")
+            DifferentialExpression.de_logger.info(f"preparing DE on dense matrix")
 
     @staticmethod
     def prepare_h5ad(
@@ -181,54 +188,55 @@ class DifferentialExpression:
 
         # make a testable function
         # subset matrix based on cells in cluster
-        de_logger.info(f"subsetting matrix on cells in clustering")
+        DifferentialExpression.de_logger.info(
+            f"subsetting matrix on cells in clustering"
+        )
         matrix_subset_list = np.in1d(adata.obs_names, de_cells)
         adata = adata[matrix_subset_list]
 
         # will need try/except
-        adata.obs = de_annots
+        # organize metadata to match cell order in matrix
+        matrix_cell_order = adata.obs_names.tolist()
+        adata.obs = de_annots.reindex(matrix_cell_order)
 
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
         # adata.write_h5ad(file_name)
         rank_key = "rank." + annotation + "." + method
-        de_logger.info(f"calculating DE")
-        sc.tl.rank_genes_groups(
-            adata,
-            annotation,
-            key_added=rank_key,
-            use_raw=False,
-            method=method,
-            pts=True,
-        )
+        DifferentialExpression.de_logger.info(f"calculating DE")
+        try:
+            sc.tl.rank_genes_groups(
+                adata,
+                annotation,
+                key_added=rank_key,
+                use_raw=False,
+                method=method,
+                pts=True,
+            )
+        except KeyError:
+            msg = f"Missing expected annotation in metadata: {annotation}, unable to calculate DE."
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+            )
+            raise KeyError(msg)
 
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
-            de_logger.info(f"Writing DE output for {str(group)}")
+            group_filename = group.replace(" ", "_")
+            DifferentialExpression.de_logger.info(f"Writing DE output for {str(group)}")
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=str(group))
 
-            out_file = f'/Volumes/jlc2T/active/{study_accession}/DE/{cluster_name}-{annotation}-{str(group)}-{method}.tsv'
-            # when ready, add compression='gzip'
-            rank.to_csv(out_file, sep='\t')
+            out_file = (
+                f'{cluster_name}--{annotation}--{str(group_filename)}--{method}.tsv'
+            )
+            # float format causes bad output (rows repeated)
+            rank.to_csv(out_file, sep='\t', float_format='%.4g', index=False)
+            # rank.to_csv(out_file, sep='\t', index=False)
 
         # Provide h5ad of DE analysis as reference computable object
-        # ideally include cluster file name in either filename or as directory
-        # have rails provide name as input?
-        de_logger.info(f"Writing DE h5ad file")
-        file_name = f'/Volumes/jlc2T/active/{study_accession}/DE/{study_accession}_{cluster_name}_to_DE.h5ad'
-        adata.write_h5ad(file_name)
-
-        # rank_method = 't-test'
-        # rank_key = "rank." + annotation + "." + rank_method
-        # sc.tl.rank_genes_groups(
-        #     adata,
-        #     annotation,
-        #     key_added=rank_key,
-        #     use_raw=False,
-        #     method=rank_method,
-        #     pts=True,
-        # )
+        # DifferentialExpression.de_logger.info(f"Writing DE h5ad file")
+        # file_name = f'{study_accession}_{cluster_name}_to_DE.h5ad'
         # adata.write_h5ad(file_name)
-        de_logger.info(f"DE processing complete")
-        print("bar")
+
+        DifferentialExpression.de_logger.info(f"DE processing complete")
 
