@@ -85,7 +85,8 @@ class Annotations(IngestFiles):
     @staticmethod
     def get_cell_names(df):
         cell_names_str: str = df[("NAME", "TYPE")].to_string(index=False)
-        cell_names: list = cell_names_str.strip().splitlines()
+        cell_names_list: list = cell_names_str.splitlines()
+        cell_names: list = [i.strip() for i in cell_names_list]
         return cell_names
 
     def merge_df(self, first_df, second_df):
