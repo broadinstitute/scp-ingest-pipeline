@@ -111,7 +111,7 @@ class DifferentialExpression:
         return raw_annots
 
     @staticmethod
-    def prepare_annots(metadata, de_cells):
+    def subset_annots(metadata, de_cells):
         """ subset metadata based on cells in cluster
         """
         DifferentialExpression.de_logger.info(
@@ -125,6 +125,24 @@ class DifferentialExpression:
         )
         cluster_annots = raw_annots[raw_annots.index.isin(de_cells)]
         return cluster_annots
+
+    @staticmethod
+    def order_annots(metadata, adata_cells):
+        """ order metadata based on cells order in matrix
+        """
+        matrix_cell_order = adata_cells.tolist()
+        return metadata.reindex(matrix_cell_order)
+
+    @staticmethod
+    def subset_adata(adata, de_cells):
+        """ subset adata object based on cells in cluster
+        """
+        DifferentialExpression.de_logger.info(
+            f"subsetting matrix on cells in clustering"
+        )
+        matrix_subset_list = np.in1d(adata.obs_names, de_cells)
+        adata = adata[matrix_subset_list]
+        return adata
 
     def execute_de(self):
         if self.matrix_file_type == "mtx":
@@ -168,7 +186,7 @@ class DifferentialExpression:
         """
         """
         de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
-        de_annots = DifferentialExpression.prepare_annots(metadata, de_cells)
+        de_annots = DifferentialExpression.subset_annots(metadata, de_cells)
 
         if matrix_file_type == "dense":
             # will need try/except
@@ -186,22 +204,13 @@ class DifferentialExpression:
 
         adata = adata.transpose()
 
-        # make a testable function
-        # subset matrix based on cells in cluster
-        DifferentialExpression.de_logger.info(
-            f"subsetting matrix on cells in clustering"
-        )
-        matrix_subset_list = np.in1d(adata.obs_names, de_cells)
-        adata = adata[matrix_subset_list]
+        adata = DifferentialExpression.subset_adata(adata, de_cells)
 
         # will need try/except
-        # organize metadata to match cell order in matrix
-        matrix_cell_order = adata.obs_names.tolist()
-        adata.obs = de_annots.reindex(matrix_cell_order)
+        adata.obs = DifferentialExpression.order_annots(de_annots, adata.obs_names)
 
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
-        # adata.write_h5ad(file_name)
         rank_key = "rank." + annotation + "." + method
         DifferentialExpression.de_logger.info(f"calculating DE")
         try:
@@ -229,9 +238,8 @@ class DifferentialExpression:
             out_file = (
                 f'{cluster_name}--{annotation}--{str(group_filename)}--{method}.tsv'
             )
-            # float format causes bad output (rows repeated)
+
             rank.to_csv(out_file, sep='\t', float_format='%.4g', index=False)
-            # rank.to_csv(out_file, sep='\t', index=False)
 
         # Provide h5ad of DE analysis as reference computable object
         # DifferentialExpression.de_logger.info(f"Writing DE h5ad file")
