@@ -255,7 +255,7 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
-        "--differential_expression",
+        "--differential-expression",
         required=True,
         action="store_true",
         help="Indicates that differential expression analysis should be invoked",

@@ -72,6 +72,8 @@ class DifferentialExpression:
     @staticmethod
     def get_cluster_cells(cluster_cells):
         """ ID cells in cluster file """
+        # cluster_cells.tolist() yields a list of lists that needs to be flattened
+        # using extend converts a single-value list to a plain value
         cluster_cell_values = cluster_cells.tolist()
         cluster_cell_list = []
         for value in cluster_cell_values:
@@ -156,9 +158,9 @@ class DifferentialExpression:
                 self.genes,
                 self.barcodes,
             )
-            DifferentialExpression.de_logger.info(f"preparing DE on sparse matrix")
+            DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
         else:
-            self.prepare_h5ad(
+            self.run_h5ad(
                 self.cluster,
                 self.metadata,
                 self.matrix_file_path,
@@ -168,10 +170,10 @@ class DifferentialExpression:
                 self.cluster_name,
                 self.method,
             )
-            DifferentialExpression.de_logger.info(f"preparing DE on dense matrix")
+            DifferentialExpression.de_logger.info("preparing DE on dense matrix")
 
     @staticmethod
-    def prepare_h5ad(
+    def run_h5ad(
         cluster,
         metadata,
         matrix_file_path,
@@ -183,16 +185,15 @@ class DifferentialExpression:
         genes=None,
         barcodes=None,
     ):
-        """
-        """
+
         de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
         de_annots = DifferentialExpression.subset_annots(metadata, de_cells)
 
         if matrix_file_type == "dense":
-            # will need try/except
+            # will need try/except (SCP-4205)
             adata = sc.read(matrix_file_path)
         else:
-            # MTX DE UNTESTED
+            # MTX DE UNTESTED (SCP-4203)
             # will want try/except here to catch failed data object composition
             adata = sc.read_mtx(matrix_file_path)
             # For AnnData, obs are cells and vars are genes
@@ -206,7 +207,7 @@ class DifferentialExpression:
 
         adata = DifferentialExpression.subset_adata(adata, de_cells)
 
-        # will need try/except
+        # will need try/except (SCP-4205)
         adata.obs = DifferentialExpression.order_annots(de_annots, adata.obs_names)
 
         sc.pp.normalize_total(adata, target_sum=1e4)
@@ -238,8 +239,9 @@ class DifferentialExpression:
             out_file = (
                 f'{cluster_name}--{annotation}--{str(group_filename)}--{method}.tsv'
             )
-
-            rank.to_csv(out_file, sep='\t', float_format='%.4g', index=False)
+            # Round numbers to 4 significant digits while respecting fixed point
+            # and scientific notation (note: trailing zeros are removed)
+            rank.to_csv(out_file, sep='\t', float_format='%.4g')
 
         # Provide h5ad of DE analysis as reference computable object
         # DifferentialExpression.de_logger.info(f"Writing DE h5ad file")

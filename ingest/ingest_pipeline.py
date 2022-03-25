@@ -95,7 +95,7 @@ except ImportError:
     from .expression_files.dense_ingestor import DenseIngestor
     from .expression_files.mtx import MTXIngestor
     from .cli_parser import create_parser, validate_arguments
-    from .de import DifferentialExpression, prepare_h5ad
+    from .de import DifferentialExpression
 
 
 class IngestPipeline:
@@ -476,7 +476,7 @@ class IngestPipeline:
             **self.kwargs,
         )
         de.execute_de()
-        # ToDo: surface failed DE for analytics
+        # ToDo: surface failed DE for analytics (SCP-4206)
         return 0
 
     def report_validation(self, status):
@@ -512,12 +512,9 @@ def run_ingest(ingest, arguments, parsed_args):
             status_subsample = ingest.subsample()
             status.append(status_subsample)
     elif "differential_expression" in arguments:
-        if arguments["differential_expression"]:
-            config.set_parent_event_name(
-                "ingest-pipeline:differential_expression:ingest"
-            )
-            status_de = ingest.calculate_de()
-            status.append(status_de)
+        config.set_parent_event_name("ingest-pipeline:differential-expression")
+        status_de = ingest.calculate_de()
+        status.append(status_de)
 
     return status, status_cell_metadata
 
