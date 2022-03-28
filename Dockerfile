@@ -22,7 +22,7 @@ RUN apt-get -y update && \
   apt -y install python3.7 && \
   apt -y install python3.7-dev
 
-RUN python3.7 -m pip install pip
+RUN python3.7 -m pip install --upgrade pip
 
 # Set cleaner defaults (`alias` fails)
 RUN ln -s /usr/bin/python3.7 /usr/bin/python && \
