@@ -48,8 +48,10 @@ class TestDifferentialExpression(unittest.TestCase):
         )
         de.execute_de()
 
+        # md5 checksum calculated using reference file in tests/data/differential_expression/reference
         expected_checksum = "e3cc75eb3226ec8a2198205bc3e4581e"
 
+        # running DifferentialExpression via pytest results in output files in the tests dir
         with open(
             "../tests/de_integration--cell_type__ontology_label--cholinergic_neuron--wilcoxon.tsv",
             "rb",
