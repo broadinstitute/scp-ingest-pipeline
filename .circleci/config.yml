@@ -37,7 +37,8 @@ jobs:
           command: |
             ls -l /home/circleci/scp-ingest-pipeline/venv/bin/python3
             ls -l /home/circleci/.pyenv/shims/python3
-            python3 -m venv venv
+            /home/circleci/.pyenv/shims/python3 --version
+            /home/circleci/.pyenv/shims/python3 -m venv venv
             echo "did venv"
             . venv/bin/activate
             echo "sourced venv"
