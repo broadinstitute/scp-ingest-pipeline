@@ -35,7 +35,11 @@ jobs:
       - run:
           name: Install Python dependencies
           command: |
-            /usr/local/bin/python3 -m venv venv
+            pyenv versions
+            pyenv install --list
+            which python
+            which python3
+            python3 -m venv venv
             . venv/bin/activate
             pip install --upgrade pip
             pip install -r requirements.txt
