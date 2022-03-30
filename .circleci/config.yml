@@ -37,7 +37,7 @@ jobs:
           command: |
             python --version
             pwd
-            ls
+            ls -l venv/bin
             python -m venv venv
             . venv/bin/activate
             pip install --upgrade pip
