@@ -10,7 +10,7 @@ orbs:
 jobs:
   build:
     docker:
-      - image: cimg/python:3.7.5
+      - image: circleci/python:3.7.5-stretch
 
     working_directory: ~/scp-ingest-pipeline
 
@@ -24,13 +24,10 @@ jobs:
             # fallback to using the latest cache if no exact match is found
             - v3-dependencies-
 
-      # unable to install tabix with base image cimg/python:3.7.5
-      # commenting out install because also no longer running test_genomes
-      # if restoring test_genomes, will need to resolve tabix install issue
-      # - run:
-      #     name: Install system dependencies for Genomes Pipeline
-      #     command: |
-      #       sudo apt-get install -y tabix
+      - run:
+          name: Install system dependencies for Genomes Pipeline
+          command: |
+            sudo apt-get install -y tabix
 
       - run:
           name: Install Python dependencies
@@ -50,7 +47,7 @@ jobs:
           command: |
             . venv/bin/activate
             cd tests
-            pytest -vv -k 'not test_genomes and not test_make_toy' --cov-report=xml --cov=../ingest/
+            pytest --cov-report=xml --cov=../ingest/
 
       - codecov/upload:
           file: tests/coverage.xml
