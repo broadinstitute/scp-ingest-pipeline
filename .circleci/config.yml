@@ -17,12 +17,12 @@ jobs:
     steps:
       - checkout
 
-      # Download and cache dependencies
-      # - restore_cache:
-      #     keys:
-      #       - v3-dependencies-{{ checksum "requirements.txt" }}
-      #       # fallback to using the latest cache if no exact match is found
-      #       - v3-dependencies-
+      Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v3-dependencies-{{ checksum "requirements.txt" }}
+            # fallback to using the latest cache if no exact match is found
+            - v3-dependencies-
 
       # unable to install tabix with base image cimg/python:3.7.5
       # commenting out install because also no longer running test_genomes
@@ -50,7 +50,7 @@ jobs:
           command: |
             . venv/bin/activate
             cd tests
-            pytest -k 'not test_genomes and not test_make_toy' --cov-report=xml --cov=../ingest/
+            pytest -vv -k 'not test_genomes and not test_make_toy' --cov-report=xml --cov=../ingest/
 
       - codecov/upload:
           file: tests/coverage.xml
