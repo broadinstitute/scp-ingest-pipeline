@@ -35,7 +35,9 @@ jobs:
       - run:
           name: Install Python dependencies
           command: |
-            which python
+            python --version
+            pwd
+            ls
             python -m venv venv
             . venv/bin/activate
             pip install --upgrade pip
