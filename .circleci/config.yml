@@ -35,10 +35,7 @@ jobs:
       - run:
           name: Install Python dependencies
           command: |
-            pyenv versions
-            pyenv install --list
-            which python
-            which python3
+            pyenv local 3.7.5
             python3 -m venv venv
             . venv/bin/activate
             pip install --upgrade pip
