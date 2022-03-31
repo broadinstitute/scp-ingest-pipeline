@@ -51,22 +51,8 @@ class DifferentialExpression:
 
         if matrix_file_type == "mtx":
             self.genes_path = self.kwargs["gene_file"]
-            genes_ingest_file = IngestFiles(self.genes_path, self.ALLOWED_FILE_TYPES)
-            self.genes_file = genes_ingest_file.resolve_path(self.genes_path)[0]
-            self.genes: List[str] = [
-                g.strip().strip('"') for g in self.genes_file.readlines()
-            ]
-
             self.barcodes_path = self.kwargs["barcode_file"]
-            barcodes_ingest_file = IngestFiles(
-                self.barcodes_path, self.ALLOWED_FILE_TYPES
-            )
-            self.barcodes_file = barcodes_ingest_file.resolve_path(self.barcodes_path)[
-                0
-            ]
-            self.barcodes: List[str] = [
-                c.strip().strip('"') for c in self.barcodes_file.readlines()
-            ]
+
         DifferentialExpression.de_logger.info(f"DifferentialExpression initialized")
 
     @staticmethod
@@ -148,15 +134,17 @@ class DifferentialExpression:
 
     def execute_de(self):
         if self.matrix_file_type == "mtx":
-            self.prepare_h5ad(
+            self.run_h5ad(
                 self.cluster,
                 self.metadata,
                 self.matrix_file_path,
                 self.matrix_file_type,
                 self.annotation,
                 self.accession,
-                self.genes,
-                self.barcodes,
+                self.cluster_name,
+                self.method,
+                self.genes_path,
+                self.barcodes_path,
             )
             DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
         elif self.matrix_file_type == "dense":
@@ -179,6 +167,48 @@ class DifferentialExpression:
             raise ValueError(msg)
 
     @staticmethod
+    def get_genes(genes_path):
+        """ Genes file can have one or two columns of gene information
+            If two columns present, check if there are duplicates in 2nd col
+            If no duplicates, use as var_names, else use 1st column
+        """
+        genes_df = pd.read_csv(genes_path, sep="\t", header=None)
+        if len(genes_df.columns) > 1:
+            if genes_df[1].count() == genes_df[1].nunique():
+                return genes_df[1].tolist()
+        elif genes_df[0].count() == genes_df[0].nunique():
+            return genes_df[0].tolist()
+        else:
+            msg = f"Features file contains duplicate identifiers"
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+            )
+            raise ValueError(msg)
+        return genes
+
+    @staticmethod
+    def get_barcodes(barcodes_path):
+        """ Extract barcodes from file for mtx reconstitution
+        """
+        barcodes_ingest_file = IngestFiles(barcodes_path, "text/tab-separated-values")
+        barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
+        barcodes = [c.strip().strip('"') for c in barcodes_file.readlines()]
+        return barcodes
+
+    @staticmethod
+    def adata_from_mtx(matrix_file_path, genes_path, barcodes_path):
+        """ reconstitute AnnData object from matrix, genes, barcodes files
+        """
+        adata = sc.read_mtx(matrix_file_path)
+        # For AnnData, obs are cells and vars are genes
+        # BUT transpose needed for both dense and sparse
+        # so transpose step is after this data object composition step
+        # therefore the assignements below are the reverse of expected
+        adata.var_names = DifferentialExpression.get_barcodes(barcodes_path)
+        adata.obs_names = DifferentialExpression.get_genes(genes_path)
+        return adata
+
+    @staticmethod
     def run_h5ad(
         cluster,
         metadata,
@@ -188,8 +218,8 @@ class DifferentialExpression:
         study_accession,
         cluster_name,
         method,
-        genes=None,
-        barcodes=None,
+        genes_path=None,
+        barcodes_path=None,
     ):
 
         de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
@@ -199,15 +229,11 @@ class DifferentialExpression:
             # will need try/except (SCP-4205)
             adata = sc.read(matrix_file_path)
         else:
-            # MTX DE UNTESTED (SCP-4203)
+            # MTX reconstitution UNTESTED (SCP-4203)
             # will want try/except here to catch failed data object composition
-            adata = sc.read_mtx(matrix_file_path)
-            # For AnnData, obs are cells and vars are genes
-            # BUT transpose needed for both dense and sparse
-            # so transpose step is after this data object composition step
-            # therefore the assignements below are the reverse of expected
-            adata.obs_names = genes
-            adata.var_names = barcodes
+            adata = DifferentialExpression.adata_from_mtx(
+                matrix_file_path, genes_path, barcodes_path
+            )
 
         adata = adata.transpose()
 
