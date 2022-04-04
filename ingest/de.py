@@ -83,14 +83,15 @@ class DifferentialExpression:
         return dtypes
 
     @staticmethod
-    def load_raw_annots(metadata_file_path, allowed_file_types, headers, dtypes):
-        """ using SCP metadata header lines
-            create properly coerced pandas dataframe of all study metadata
+    def process_annots(metadata_file_path, allowed_file_types, headers, dtypes):
+        """ using SCP metadata header lines create pandas dataframe where
+            numeric-seeming group annotations are properly set to dtype of str
+            and NaN in group columns are converted to "__Unspecified__"
         """
         annot_redux = IngestFiles(metadata_file_path, allowed_file_types)
         annot_file_type = annot_redux.get_file_type(metadata_file_path)[0]
         annot_file_handle = annot_redux.open_file(metadata_file_path)[1]
-        raw_annots = annot_redux.open_pandas(
+        annots = annot_redux.open_pandas(
             metadata_file_path,
             annot_file_type,
             open_file_object=annot_file_handle,
@@ -99,7 +100,13 @@ class DifferentialExpression:
             index_col=0,
             dtype=dtypes,
         )
-        return raw_annots
+        group_annots = [k for k, v in dtypes.items() if v == str]
+        # Where group metadata is missing values (eg. optional or nonconventional metadata)
+        # replace NaN with the string '__Unspecified__'
+        # intent is to reflect the '--Unspecified--' annotation label added to
+        # SCP plot legends in scatter plot visualizations for unannotated points
+        annots[group_annots] = annots[group_annots].fillna('__Unspecified__')
+        return annots
 
     @staticmethod
     def subset_annots(metadata, de_cells):
@@ -111,10 +118,10 @@ class DifferentialExpression:
         dtypes = DifferentialExpression.determine_dtypes(
             metadata.headers, metadata.annot_types
         )
-        raw_annots = DifferentialExpression.load_raw_annots(
+        orig_annots = DifferentialExpression.process_annots(
             metadata.file_path, metadata.ALLOWED_FILE_TYPES, metadata.headers, dtypes
         )
-        cluster_annots = raw_annots[raw_annots.index.isin(de_cells)]
+        cluster_annots = orig_annots[orig_annots.index.isin(de_cells)]
         return cluster_annots
 
     @staticmethod
