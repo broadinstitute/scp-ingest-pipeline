@@ -2,6 +2,7 @@ import logging
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import re
 
 try:
     from monitor import setup_logger, log_exception
@@ -45,8 +46,8 @@ class DifferentialExpression:
         self.matrix_file_type = matrix_file_type
         self.kwargs = kwargs
         self.accession = self.kwargs["study_accession"]
-        # only used in output filename, removing spaces
-        self.cluster_name = self.kwargs["name"].replace(" ", "_")
+        # only used in output filename, replacing non-alphanumeric with underscores
+        self.cluster_name = re.sub(r'\W+', '_', self.kwargs["name"])
         self.method = self.kwargs["method"]
 
         if matrix_file_type == "mtx":
@@ -76,7 +77,9 @@ class DifferentialExpression:
         dtypes = {}
         for header, type_info in dtype_info.items():
             if type_info == "group":
-                dtypes[header] = "string"
+                # using dtype str to avoid StringArray objects when "string" dtype used
+                # StringArray is a Experimental extension array, behavior is not yet set
+                dtypes[header] = str
         return dtypes
 
     @staticmethod
@@ -160,7 +163,7 @@ class DifferentialExpression:
             )
             DifferentialExpression.de_logger.info("preparing DE on dense matrix")
         else:
-            msg = f"Submitted matrix_file_type should be \"dense\" or \"mtx\" not {self.matrix_file_type}"
+            msg = f"Submitted matrix_file_type should be \"dense\" or \"mtx\" not \"{self.matrix_file_type}\""
             log_exception(
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
@@ -264,7 +267,7 @@ class DifferentialExpression:
 
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
-            group_filename = group.replace(" ", "_")
+            group_filename = re.sub(r'\W+', '_', group)
             DifferentialExpression.de_logger.info(f"Writing DE output for {str(group)}")
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=str(group))
 
