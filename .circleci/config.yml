@@ -47,7 +47,7 @@ jobs:
           command: |
             . venv/bin/activate
             cd tests
-            pytest --cov-report=xml --cov=../ingest/
+            pytest -k 'not test_genomes and not test_make_toy' --cov-report=xml --cov=../ingest/
 
       - codecov/upload:
           file: tests/coverage.xml

@@ -5,6 +5,8 @@
 import unittest
 import sys
 import hashlib
+import os
+import pandas as pd
 
 sys.path.append("../ingest")
 from cell_metadata import CellMetadata
@@ -12,11 +14,39 @@ from clusters import Clusters
 from de import DifferentialExpression
 
 
+def get_annotation_labels(metadata, annotation, de_cells):
+    """ extract annotation_labels for specified annotation
+        from metadata file filtered by cluster file cells
+    """
+    dtypes = DifferentialExpression.determine_dtypes(
+        metadata.headers, metadata.annot_types
+    )
+    de_annots = DifferentialExpression.subset_annots(metadata, de_cells)
+    unique_labels = de_annots[annotation].unique()
+    return unique_labels.tolist()
+
+
+def find_expected_files(labels, cluster_name, annotation, method):
+    """ Check that files were created for all expected annotation labels
+    """
+    found = 0
+    for label in labels:
+        sanitized_label = label.replace(" ", "_")
+        expected_file = (
+            f"{cluster_name}--{annotation}--{str(sanitized_label)}--{method}.tsv"
+        )
+        assert os.path.exists(expected_file)
+        found += 1
+    return found
+
+
 class TestDifferentialExpression(unittest.TestCase):
     def test_de_process(self):
         """ Run DE on small test case
             confirm expected output
         """
+        test_annotation = "cell_type__ontology_label"
+        test_method = "wilcoxon"
         cm = CellMetadata(
             "../tests/data/differential_expression/de_integration_unordered_metadata.tsv",
             "addedfeed000000000000000",
@@ -35,7 +65,7 @@ class TestDifferentialExpression(unittest.TestCase):
         de_kwargs = {
             "study_accession": cm.study_accession,
             "name": cluster.name,
-            "method": "wilcoxon",
+            "method": test_method,
         }
 
         de = DifferentialExpression(
@@ -43,19 +73,46 @@ class TestDifferentialExpression(unittest.TestCase):
             cm,
             "../tests/data/differential_expression/de_integration.tsv",
             "dense",
-            "cell_type__ontology_label",
+            test_annotation,
             **de_kwargs,
         )
         de.execute_de()
+        de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
+        labels = get_annotation_labels(cm, test_annotation, de_cells)
+        found_label_count = find_expected_files(
+            labels, cluster.name, test_annotation, test_method
+        )
+
+        self.assertEquals(
+            found_label_count,
+            5,
+            f"expected five annotation labels for {test_annotation}",
+        )
+
+        expected_file_path = (
+            "../tests/de_integration--cell_type__ontology_label"
+            "--cholinergic_neuron--wilcoxon.tsv"
+        )
+
+        content = pd.read_csv(expected_file_path, sep="\t", index_col=0)
+        # confirm expected gene in DE file at expected position
+        self.assertEqual(
+            content.iloc[3, 0],
+            "Vipr2",
+            "Did not find expected gene at fourth row in DE file",
+        )
+        # confirm calculated value has expected significant digits
+        self.assertEqual(
+            content.iloc[183, 2],
+            -4.834,
+            "Did not find expected logfoldchange value for Nsg2 in DE file",
+        )
 
         # md5 checksum calculated using reference file in tests/data/differential_expression/reference
         expected_checksum = "e3cc75eb3226ec8a2198205bc3e4581e"
 
         # running DifferentialExpression via pytest results in output files in the tests dir
-        with open(
-            "../tests/de_integration--cell_type__ontology_label--cholinergic_neuron--wilcoxon.tsv",
-            "rb",
-        ) as f:
+        with open(expected_file_path, "rb") as f:
             bytes = f.read()
             de_output_checksum = hashlib.md5(bytes).hexdigest()
         self.assertEqual(

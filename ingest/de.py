@@ -160,7 +160,7 @@ class DifferentialExpression:
             )
             DifferentialExpression.de_logger.info("preparing DE on dense matrix")
         else:
-            msg = f"Submitted matrix_file_type should be 'dense' or 'mtx' not {self.matrix_file_type}"
+            msg = f"Submitted matrix_file_type should be \"dense\" or \"mtx\" not {self.matrix_file_type}"
             log_exception(
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
