@@ -159,7 +159,7 @@ class DifferentialExpression:
                 self.barcodes,
             )
             DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
-        else:
+        elif self.matrix_file_type == "dense":
             self.run_h5ad(
                 self.cluster,
                 self.metadata,
@@ -171,6 +171,12 @@ class DifferentialExpression:
                 self.method,
             )
             DifferentialExpression.de_logger.info("preparing DE on dense matrix")
+        else:
+            msg = f"Submitted matrix_file_type should be \"dense\" or \"mtx\" not {self.matrix_file_type}"
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+            )
+            raise ValueError(msg)
 
     @staticmethod
     def run_h5ad(
