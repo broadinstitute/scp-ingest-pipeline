@@ -39,6 +39,9 @@ class DifferentialExpression:
         annotation,
         **kwargs,
     ):
+        DifferentialExpression.de_logger.info(
+            f"Initializing DifferentialExpression instance"
+        )
         self.cluster = cluster
         self.metadata = cell_metadata
         self.annotation = annotation
@@ -53,8 +56,6 @@ class DifferentialExpression:
         if matrix_file_type == "mtx":
             self.genes_path = self.kwargs["gene_file"]
             self.barcodes_path = self.kwargs["barcode_file"]
-
-        DifferentialExpression.de_logger.info(f"DifferentialExpression initialized")
 
     @staticmethod
     def get_cluster_cells(cluster_cells):
@@ -144,6 +145,7 @@ class DifferentialExpression:
 
     def execute_de(self):
         if self.matrix_file_type == "mtx":
+            DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
             self.run_h5ad(
                 self.cluster,
                 self.metadata,
@@ -156,8 +158,8 @@ class DifferentialExpression:
                 self.genes_path,
                 self.barcodes_path,
             )
-            DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
         elif self.matrix_file_type == "dense":
+            DifferentialExpression.de_logger.info("preparing DE on dense matrix")
             self.run_h5ad(
                 self.cluster,
                 self.metadata,
@@ -168,7 +170,6 @@ class DifferentialExpression:
                 self.cluster_name,
                 self.method,
             )
-            DifferentialExpression.de_logger.info("preparing DE on dense matrix")
         else:
             msg = f"Submitted matrix_file_type should be \"dense\" or \"mtx\" not \"{self.matrix_file_type}\""
             log_exception(
@@ -254,8 +255,8 @@ class DifferentialExpression:
 
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
-        rank_key = "rank." + annotation + "." + method
         DifferentialExpression.de_logger.info(f"calculating DE")
+        rank_key = "rank." + annotation + "." + method
         try:
             sc.tl.rank_genes_groups(
                 adata,
@@ -272,15 +273,14 @@ class DifferentialExpression:
             )
             raise KeyError(msg)
 
+        DifferentialExpression.de_logger.info(f"Gathering DE annotation labels")
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
             group_filename = re.sub(r'\W+', '_', group)
-            DifferentialExpression.de_logger.info(f"Writing DE output for {str(group)}")
-            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=str(group))
+            DifferentialExpression.de_logger.info(f"Writing DE output for {group}")
+            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
 
-            out_file = (
-                f'{cluster_name}--{annotation}--{str(group_filename)}--{method}.tsv'
-            )
+            out_file = f'{cluster_name}--{annotation}--{group_filename}--{method}.tsv'
             # Round numbers to 4 significant digits while respecting fixed point
             # and scientific notation (note: trailing zeros are removed)
             rank.to_csv(out_file, sep='\t', float_format='%.4g')
