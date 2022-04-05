@@ -41,6 +41,25 @@ def find_expected_files(labels, cluster_name, annotation, method):
 
 
 class TestDifferentialExpression(unittest.TestCase):
+    def test_process_missing_metadata(self):
+        cm = CellMetadata(
+            "../tests/data/differential_expression/de_integration_unordered_metadata.tsv",
+            "addedfeed000000000000000",
+            "dec0dedfeed0000000000000",
+            study_accession="SCPde",
+            tracer=None,
+        )
+        dtypes = DifferentialExpression.determine_dtypes(cm.headers, cm.annot_types)
+        annots = DifferentialExpression.process_annots(
+            cm.file_path, cm.ALLOWED_FILE_TYPES, cm.headers, dtypes
+        )
+        annot_labels = annots["cell_type__ontology_label"].unique().tolist()
+        self.assertIn(
+            "__Unspecified__",
+            annot_labels,
+            "Expected NaN conversion to \"__Unspecified__\"",
+        )
+
     def test_de_process_dense(self):
         """ Run DE on small test case with dense matrix inputs
             confirm expected output
