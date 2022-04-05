@@ -58,6 +58,36 @@ class DifferentialExpression:
             self.barcodes_path = self.kwargs["barcode_file"]
 
     @staticmethod
+    def assess_annotation(annotation, metadata):
+        """ Check that annotation for DE is not of TYPE numeric
+        """
+        dtype_info = dict(zip(metadata.headers, metadata.annot_types))
+        annotation_info = dtype_info.get(annotation, "not found")
+        if annotation_info == "numeric":
+            msg = (
+                f"DE analysis infeasible for numeric annotations like \"{annotation}\"."
+            )
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+            )
+            raise TypeError(msg)
+        elif annotation_info == "not found":
+            msg = f"Provided annotation, \"{annotation}\", not found in metadata file."
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+            )
+            raise KeyError(msg)
+        elif annotation_info == "group":
+            # DE annotations should be of TYPE group
+            return None
+        else:
+            msg = f"Error: \"{annotation}\" has unexpected type \"{annotation_info}\"."
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+            )
+            raise ValueError(msg)
+
+    @staticmethod
     def get_cluster_cells(cluster_cells):
         """ ID cells in cluster file """
         # cluster_cells.tolist() yields a list of lists that needs to be flattened
@@ -146,7 +176,7 @@ class DifferentialExpression:
     def execute_de(self):
         if self.matrix_file_type == "mtx":
             DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
-            self.run_h5ad(
+            self.run_scanpy_de(
                 self.cluster,
                 self.metadata,
                 self.matrix_file_path,
@@ -160,7 +190,7 @@ class DifferentialExpression:
             )
         elif self.matrix_file_type == "dense":
             DifferentialExpression.de_logger.info("preparing DE on dense matrix")
-            self.run_h5ad(
+            self.run_scanpy_de(
                 self.cluster,
                 self.metadata,
                 self.matrix_file_path,
@@ -220,7 +250,7 @@ class DifferentialExpression:
         return adata
 
     @staticmethod
-    def run_h5ad(
+    def run_scanpy_de(
         cluster,
         metadata,
         matrix_file_path,
@@ -232,7 +262,8 @@ class DifferentialExpression:
         genes_path=None,
         barcodes_path=None,
     ):
-
+        # does assess_annotation need try/except?
+        DifferentialExpression.assess_annotation(annotation, metadata)
         de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
         de_annots = DifferentialExpression.subset_annots(metadata, de_cells)
 

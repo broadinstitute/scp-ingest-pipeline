@@ -60,6 +60,31 @@ class TestDifferentialExpression(unittest.TestCase):
             "Expected NaN conversion to \"__Unspecified__\"",
         )
 
+    def test_assess_annotation(self):
+        test_annotation = "seurat_clusters"
+        cm = CellMetadata(
+            "../tests/data/differential_expression/de_integration_unordered_metadata.tsv",
+            "addedfeed000000000000000",
+            "dec0dedfeed0000000000000",
+            study_accession="SCPde",
+            tracer=None,
+        )
+        # alter metadata so seurat_clusters is TYPE numeric
+        cm.annot_types[21] = 'numeric'
+        self.assertRaises(
+            TypeError, DifferentialExpression.assess_annotation, test_annotation, cm
+        )
+        # alter metadata so seurat_clusters has bad TYPE designation
+        cm.annot_types[21] = 'foo'
+        self.assertRaises(
+            ValueError, DifferentialExpression.assess_annotation, test_annotation, cm
+        )
+        # remove seurat_clusters from metadata
+        cm.headers.pop(21)
+        self.assertRaises(
+            KeyError, DifferentialExpression.assess_annotation, test_annotation, cm
+        )
+
     def test_de_process_dense(self):
         """ Run DE on small test case with dense matrix inputs
             confirm expected output
