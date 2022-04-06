@@ -64,15 +64,15 @@ class DifferentialExpression:
         dtype_info = dict(zip(metadata.headers, metadata.annot_types))
         annotation_info = dtype_info.get(annotation, "not found")
         if annotation_info == "numeric":
-            msg = (
-                f"DE analysis infeasible for numeric annotations like \"{annotation}\"."
-            )
+            msg = f"DE analysis infeasible for numeric annotation \"{annotation}\"."
+            print(msg)
             log_exception(
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
             raise TypeError(msg)
         elif annotation_info == "not found":
-            msg = f"Provided annotation, \"{annotation}\", not found in metadata file."
+            msg = f"Provided annotation \"{annotation}\" not found in metadata file."
+            print(msg)
             log_exception(
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
@@ -82,6 +82,7 @@ class DifferentialExpression:
             return None
         else:
             msg = f"Error: \"{annotation}\" has unexpected type \"{annotation_info}\"."
+            print(msg)
             log_exception(
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
@@ -174,38 +175,44 @@ class DifferentialExpression:
         return adata
 
     def execute_de(self):
-        if self.matrix_file_type == "mtx":
-            DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
-            self.run_scanpy_de(
-                self.cluster,
-                self.metadata,
-                self.matrix_file_path,
-                self.matrix_file_type,
-                self.annotation,
-                self.accession,
-                self.cluster_name,
-                self.method,
-                self.genes_path,
-                self.barcodes_path,
-            )
-        elif self.matrix_file_type == "dense":
-            DifferentialExpression.de_logger.info("preparing DE on dense matrix")
-            self.run_scanpy_de(
-                self.cluster,
-                self.metadata,
-                self.matrix_file_path,
-                self.matrix_file_type,
-                self.annotation,
-                self.accession,
-                self.cluster_name,
-                self.method,
-            )
-        else:
-            msg = f"Submitted matrix_file_type should be \"dense\" or \"mtx\" not \"{self.matrix_file_type}\""
-            log_exception(
-                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
-            )
-            raise ValueError(msg)
+        try:
+            if self.matrix_file_type == "mtx":
+                DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
+                self.run_scanpy_de(
+                    self.cluster,
+                    self.metadata,
+                    self.matrix_file_path,
+                    self.matrix_file_type,
+                    self.annotation,
+                    self.accession,
+                    self.cluster_name,
+                    self.method,
+                    self.genes_path,
+                    self.barcodes_path,
+                )
+            elif self.matrix_file_type == "dense":
+                DifferentialExpression.de_logger.info("preparing DE on dense matrix")
+                self.run_scanpy_de(
+                    self.cluster,
+                    self.metadata,
+                    self.matrix_file_path,
+                    self.matrix_file_type,
+                    self.annotation,
+                    self.accession,
+                    self.cluster_name,
+                    self.method,
+                )
+            else:
+                msg = f"Submitted matrix_file_type should be \"dense\" or \"mtx\" not \"{self.matrix_file_type}\""
+                print(msg)
+                log_exception(
+                    DifferentialExpression.dev_logger,
+                    DifferentialExpression.de_logger,
+                    msg,
+                )
+                raise ValueError(msg)
+        except:
+            raise
 
     @staticmethod
     def get_genes(genes_path):
@@ -221,6 +228,7 @@ class DifferentialExpression:
             return genes_df[0].tolist()
         else:
             msg = f"Features file contains duplicate identifiers"
+            print(msg)
             log_exception(
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
@@ -262,8 +270,11 @@ class DifferentialExpression:
         genes_path=None,
         barcodes_path=None,
     ):
-        # does assess_annotation need try/except?
-        DifferentialExpression.assess_annotation(annotation, metadata)
+        try:
+            DifferentialExpression.assess_annotation(annotation, metadata)
+        except (TypeError, KeyError, ValueError) as e:
+            raise
+
         de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
         de_annots = DifferentialExpression.subset_annots(metadata, de_cells)
 
@@ -299,6 +310,7 @@ class DifferentialExpression:
             )
         except KeyError:
             msg = f"Missing expected annotation in metadata: {annotation}, unable to calculate DE."
+            print(msg)
             log_exception(
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
