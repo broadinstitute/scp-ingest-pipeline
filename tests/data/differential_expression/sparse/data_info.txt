@@ -1,4 +1,7 @@
-Data for sparsemini test case derived from SCP1711
+Data for sparsemini test case derived from production SCP1711
+https://singlecell.broadinstitute.org/single_cell/study/SCP1711
+Relevant data for integration test copied to staging SCP295
+https://singlecell-staging.broadinstitute.org/single_cell/study/SCP295
 
 SCP1711 has mtx for raw counts but not barcode or feature files uploaded
 dimensions of processed count mtx match raw count dims
@@ -7,7 +10,7 @@ produced results that identify published marker genes as DE genes - used as conf
 that feature and barcode files apply to both mtx files.
 
 To generate the sparsemini dataset, the raw mtx file was sorted by gene
-using SortSparseMatrix.py
+using sort_sparse_matrix.py (can be found in script directory)
 MTX truncated to only have data for 2 genes
 feature file edited to 2 genes
 MTX dimensions row edited to match truncated data

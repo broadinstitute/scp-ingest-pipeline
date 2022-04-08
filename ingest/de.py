@@ -40,7 +40,7 @@ class DifferentialExpression:
         **kwargs,
     ):
         DifferentialExpression.de_logger.info(
-            f"Initializing DifferentialExpression instance"
+            "Initializing DifferentialExpression instance"
         )
         self.cluster = cluster
         self.metadata = cell_metadata
@@ -145,7 +145,7 @@ class DifferentialExpression:
         """ subset metadata based on cells in cluster
         """
         DifferentialExpression.de_logger.info(
-            f"subsetting metadata on cells in clustering"
+            "subsetting metadata on cells in clustering"
         )
         dtypes = DifferentialExpression.determine_dtypes(
             metadata.headers, metadata.annot_types
@@ -168,7 +168,7 @@ class DifferentialExpression:
         """ subset adata object based on cells in cluster
         """
         DifferentialExpression.de_logger.info(
-            f"subsetting matrix on cells in clustering"
+            "subsetting matrix on cells in clustering"
         )
         matrix_subset_list = np.in1d(adata.obs_names, de_cells)
         adata = adata[matrix_subset_list]
@@ -227,7 +227,7 @@ class DifferentialExpression:
         elif genes_df[0].count() == genes_df[0].nunique():
             return genes_df[0].tolist()
         else:
-            msg = f"Features file contains duplicate identifiers"
+            msg = "Features file contains duplicate identifiers"
             print(msg)
             log_exception(
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
@@ -297,8 +297,8 @@ class DifferentialExpression:
 
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
-        DifferentialExpression.de_logger.info(f"calculating DE")
-        rank_key = "rank." + annotation + "." + method
+        DifferentialExpression.de_logger.info("calculating DE")
+        rank_key = f"rank.{annotation}.{method}"
         try:
             sc.tl.rank_genes_groups(
                 adata,
@@ -316,7 +316,7 @@ class DifferentialExpression:
             )
             raise KeyError(msg)
 
-        DifferentialExpression.de_logger.info(f"Gathering DE annotation labels")
+        DifferentialExpression.de_logger.info("Gathering DE annotation labels")
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
             group_filename = re.sub(r'\W+', '_', group)
@@ -329,9 +329,9 @@ class DifferentialExpression:
             rank.to_csv(out_file, sep='\t', float_format='%.4g')
 
         # Provide h5ad of DE analysis as reference computable object
-        # DifferentialExpression.de_logger.info(f"Writing DE h5ad file")
+        # DifferentialExpression.de_logger.info("Writing DE h5ad file")
         # file_name = f'{study_accession}_{cluster_name}_to_DE.h5ad'
         # adata.write_h5ad(file_name)
 
-        DifferentialExpression.de_logger.info(f"DE processing complete")
+        DifferentialExpression.de_logger.info("DE processing complete")
 
