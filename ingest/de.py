@@ -62,7 +62,7 @@ class DifferentialExpression:
         """ Check that annotation for DE is not of TYPE numeric
         """
         dtype_info = dict(zip(metadata.headers, metadata.annot_types))
-        annotation_info = dtype_info.get(annotation, "not found")
+        annotation_info = dtype_info.get(annotation, None)
         if annotation_info == "numeric":
             msg = f"DE analysis infeasible for numeric annotation \"{annotation}\"."
             print(msg)
@@ -70,7 +70,7 @@ class DifferentialExpression:
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
             raise TypeError(msg)
-        elif annotation_info == "not found":
+        elif annotation_info is None:
             msg = f"Provided annotation \"{annotation}\" not found in metadata file."
             print(msg)
             log_exception(
