@@ -1,5 +1,11 @@
 #! /usr/bin/env python
-"""Sort sparse expression matrix files by gene, barcode
+""" Sort sparse expression matrix files by gene, barcode
+
+    This helper script is not used in ingest pipeline.
+    Script was originally in single_cell_portal repo,
+    added to scp-ingest-pipeline repo as a reference file.
+    Script used to sort the matrix from SCP1711 so the data
+    could be truncated to generate sparsemini_matrix.mtx
 """
 
 import pandas as pd
@@ -9,9 +15,11 @@ import argparse
 import gzip
 import shutil
 
+
 def gunzip_shutil(source_filepath, dest_filepath, block_size=65536):
-    with gzip.open(source_filepath, 'rb') as s_file, \
-            open(dest_filepath, 'wb') as d_file:
+    with gzip.open(source_filepath, 'rb') as s_file, open(
+        dest_filepath, 'wb'
+    ) as d_file:
         shutil.copyfileobj(s_file, d_file, block_size)
 
 
@@ -23,7 +31,7 @@ def sort_sparse_matrix(matrix_file, sorted_matrix_file=None):
         Outputs-
         output_name- gene, barcode sorted sparse matrix file, name is either sorted_matrix_file if provided, or "gene_sorted-" + matrix_file
     """
-    if ('.mtx.gz' in matrix_file):
+    if '.mtx.gz' in matrix_file:
         unzipped_file = matrix_file.split('.gz')[0]
         print('Unzipping matrix file')
         gunzip_shutil(matrix_file, unzipped_file)
@@ -62,13 +70,23 @@ def __main__(argv):
     command line arguments
     """
     # create the argument parser
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     # add arguments
     parser.add_argument('matrix_file', help='Sparse Matrix file')
-    parser.add_argument('--sorted_matrix_file', '-o', help='Gene sorted sparse matrix file path', default=None)
+    parser.add_argument(
+        '--sorted_matrix_file',
+        '-o',
+        help='Gene sorted sparse matrix file path',
+        default=None,
+    )
     # call sort_sparse_matrix with parsed args
     args = parser.parse_args()
-    sort_sparse_matrix(matrix_file=args.matrix_file, sorted_matrix_file=args.sorted_matrix_file)
+    sort_sparse_matrix(
+        matrix_file=args.matrix_file, sorted_matrix_file=args.sorted_matrix_file
+    )
+
 
 # python default
 if __name__ == '__main__':
