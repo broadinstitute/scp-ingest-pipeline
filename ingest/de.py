@@ -2,6 +2,7 @@ import logging
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import re
 
 try:
     from monitor import setup_logger, log_exception
@@ -38,6 +39,9 @@ class DifferentialExpression:
         annotation,
         **kwargs,
     ):
+        DifferentialExpression.de_logger.info(
+            "Initializing DifferentialExpression instance"
+        )
         self.cluster = cluster
         self.metadata = cell_metadata
         self.annotation = annotation
@@ -45,29 +49,44 @@ class DifferentialExpression:
         self.matrix_file_type = matrix_file_type
         self.kwargs = kwargs
         self.accession = self.kwargs["study_accession"]
-        # only used in output filename, removing spaces
-        self.cluster_name = self.kwargs["name"].replace(" ", "_")
+        # only used in output filename, replacing non-alphanumeric with underscores
+        self.cluster_name = re.sub(r'\W+', '_', self.kwargs["name"])
         self.method = self.kwargs["method"]
 
         if matrix_file_type == "mtx":
             self.genes_path = self.kwargs["gene_file"]
-            genes_ingest_file = IngestFiles(self.genes_path, self.ALLOWED_FILE_TYPES)
-            self.genes_file = genes_ingest_file.resolve_path(self.genes_path)[0]
-            self.genes: List[str] = [
-                g.strip().strip('"') for g in self.genes_file.readlines()
-            ]
-
             self.barcodes_path = self.kwargs["barcode_file"]
-            barcodes_ingest_file = IngestFiles(
-                self.barcodes_path, self.ALLOWED_FILE_TYPES
+
+    @staticmethod
+    def assess_annotation(annotation, metadata):
+        """ Check that annotation for DE is not of TYPE numeric
+        """
+        dtype_info = dict(zip(metadata.headers, metadata.annot_types))
+        annotation_info = dtype_info.get(annotation, None)
+        if annotation_info == "numeric":
+            msg = f"DE analysis infeasible for numeric annotation \"{annotation}\"."
+            print(msg)
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
-            self.barcodes_file = barcodes_ingest_file.resolve_path(self.barcodes_path)[
-                0
-            ]
-            self.barcodes: List[str] = [
-                c.strip().strip('"') for c in self.barcodes_file.readlines()
-            ]
-        DifferentialExpression.de_logger.info(f"DifferentialExpression initialized")
+            raise TypeError(msg)
+        elif annotation_info is None:
+            msg = f"Provided annotation \"{annotation}\" not found in metadata file."
+            print(msg)
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+            )
+            raise KeyError(msg)
+        elif annotation_info == "group":
+            # DE annotations should be of TYPE group
+            return None
+        else:
+            msg = f"Error: \"{annotation}\" has unexpected type \"{annotation_info}\"."
+            print(msg)
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+            )
+            raise ValueError(msg)
 
     @staticmethod
     def get_cluster_cells(cluster_cells):
@@ -90,18 +109,21 @@ class DifferentialExpression:
         dtypes = {}
         for header, type_info in dtype_info.items():
             if type_info == "group":
-                dtypes[header] = "string"
+                # using dtype str to avoid StringArray objects when "string" dtype used
+                # StringArray is a Experimental extension array, behavior is not yet set
+                dtypes[header] = str
         return dtypes
 
     @staticmethod
-    def load_raw_annots(metadata_file_path, allowed_file_types, headers, dtypes):
-        """ using SCP metadata header lines
-            create properly coerced pandas dataframe of all study metadata
+    def process_annots(metadata_file_path, allowed_file_types, headers, dtypes):
+        """ using SCP metadata header lines create pandas dataframe where
+            numeric-seeming group annotations are properly set to dtype of str
+            and NaN in group columns are converted to "__Unspecified__"
         """
         annot_redux = IngestFiles(metadata_file_path, allowed_file_types)
         annot_file_type = annot_redux.get_file_type(metadata_file_path)[0]
         annot_file_handle = annot_redux.open_file(metadata_file_path)[1]
-        raw_annots = annot_redux.open_pandas(
+        annots = annot_redux.open_pandas(
             metadata_file_path,
             annot_file_type,
             open_file_object=annot_file_handle,
@@ -110,22 +132,28 @@ class DifferentialExpression:
             index_col=0,
             dtype=dtypes,
         )
-        return raw_annots
+        group_annots = [k for k, v in dtypes.items() if v == str]
+        # Where group metadata is missing values (eg. optional or nonconventional metadata)
+        # replace NaN with the string '__Unspecified__'
+        # intent is to reflect the '--Unspecified--' annotation label added to
+        # SCP plot legends in scatter plot visualizations for unannotated points
+        annots[group_annots] = annots[group_annots].fillna('__Unspecified__')
+        return annots
 
     @staticmethod
     def subset_annots(metadata, de_cells):
         """ subset metadata based on cells in cluster
         """
         DifferentialExpression.de_logger.info(
-            f"subsetting metadata on cells in clustering"
+            "subsetting metadata on cells in clustering"
         )
         dtypes = DifferentialExpression.determine_dtypes(
             metadata.headers, metadata.annot_types
         )
-        raw_annots = DifferentialExpression.load_raw_annots(
+        orig_annots = DifferentialExpression.process_annots(
             metadata.file_path, metadata.ALLOWED_FILE_TYPES, metadata.headers, dtypes
         )
-        cluster_annots = raw_annots[raw_annots.index.isin(de_cells)]
+        cluster_annots = orig_annots[orig_annots.index.isin(de_cells)]
         return cluster_annots
 
     @staticmethod
@@ -140,40 +168,97 @@ class DifferentialExpression:
         """ subset adata object based on cells in cluster
         """
         DifferentialExpression.de_logger.info(
-            f"subsetting matrix on cells in clustering"
+            "subsetting matrix on cells in clustering"
         )
         matrix_subset_list = np.in1d(adata.obs_names, de_cells)
         adata = adata[matrix_subset_list]
         return adata
 
     def execute_de(self):
-        if self.matrix_file_type == "mtx":
-            self.prepare_h5ad(
-                self.cluster,
-                self.metadata,
-                self.matrix_file_path,
-                self.matrix_file_type,
-                self.annotation,
-                self.accession,
-                self.genes,
-                self.barcodes,
-            )
-            DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
-        else:
-            self.run_h5ad(
-                self.cluster,
-                self.metadata,
-                self.matrix_file_path,
-                self.matrix_file_type,
-                self.annotation,
-                self.accession,
-                self.cluster_name,
-                self.method,
-            )
-            DifferentialExpression.de_logger.info("preparing DE on dense matrix")
+        try:
+            if self.matrix_file_type == "mtx":
+                DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
+                self.run_scanpy_de(
+                    self.cluster,
+                    self.metadata,
+                    self.matrix_file_path,
+                    self.matrix_file_type,
+                    self.annotation,
+                    self.accession,
+                    self.cluster_name,
+                    self.method,
+                    self.genes_path,
+                    self.barcodes_path,
+                )
+            elif self.matrix_file_type == "dense":
+                DifferentialExpression.de_logger.info("preparing DE on dense matrix")
+                self.run_scanpy_de(
+                    self.cluster,
+                    self.metadata,
+                    self.matrix_file_path,
+                    self.matrix_file_type,
+                    self.annotation,
+                    self.accession,
+                    self.cluster_name,
+                    self.method,
+                )
+            else:
+                msg = f"Submitted matrix_file_type should be \"dense\" or \"mtx\" not \"{self.matrix_file_type}\""
+                print(msg)
+                log_exception(
+                    DifferentialExpression.dev_logger,
+                    DifferentialExpression.de_logger,
+                    msg,
+                )
+                raise ValueError(msg)
+        except:
+            raise
 
     @staticmethod
-    def run_h5ad(
+    def get_genes(genes_path):
+        """ Genes file can have one or two columns of gene information
+            If two columns present, check if there are duplicates in 2nd col
+            If no duplicates, use as var_names, else use 1st column
+        """
+        genes_df = pd.read_csv(genes_path, sep="\t", header=None)
+        if len(genes_df.columns) > 1:
+            if genes_df[1].count() == genes_df[1].nunique():
+                return genes_df[1].tolist()
+        elif genes_df[0].count() == genes_df[0].nunique():
+            return genes_df[0].tolist()
+        else:
+            msg = "Features file contains duplicate identifiers"
+            print(msg)
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+            )
+            raise ValueError(msg)
+        return genes
+
+    @staticmethod
+    def get_barcodes(barcodes_path):
+        """ Extract barcodes from file for mtx reconstitution
+        """
+        barcodes_ingest_file = IngestFiles(barcodes_path, "text/tab-separated-values")
+        barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
+        barcodes = [c.strip().strip('"') for c in barcodes_file.readlines()]
+        return barcodes
+
+    @staticmethod
+    def adata_from_mtx(matrix_file_path, genes_path, barcodes_path):
+        """ reconstitute AnnData object from matrix, genes, barcodes files
+        """
+        adata = sc.read_mtx(matrix_file_path)
+        # For AnnData, obs are cells and vars are genes
+        # BUT transpose needed for both dense and sparse
+        # so transpose step is after this data object composition step
+        # therefore the assignements below are the reverse of expected
+        adata.var_names = DifferentialExpression.get_barcodes(barcodes_path)
+        adata.obs_names = DifferentialExpression.get_genes(genes_path)
+        return adata
+
+    @staticmethod
+    def run_scanpy_de(
         cluster,
         metadata,
         matrix_file_path,
@@ -182,9 +267,13 @@ class DifferentialExpression:
         study_accession,
         cluster_name,
         method,
-        genes=None,
-        barcodes=None,
+        genes_path=None,
+        barcodes_path=None,
     ):
+        try:
+            DifferentialExpression.assess_annotation(annotation, metadata)
+        except (TypeError, KeyError, ValueError) as e:
+            raise
 
         de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
         de_annots = DifferentialExpression.subset_annots(metadata, de_cells)
@@ -193,15 +282,11 @@ class DifferentialExpression:
             # will need try/except (SCP-4205)
             adata = sc.read(matrix_file_path)
         else:
-            # MTX DE UNTESTED (SCP-4203)
+            # MTX reconstitution UNTESTED (SCP-4203)
             # will want try/except here to catch failed data object composition
-            adata = sc.read_mtx(matrix_file_path)
-            # For AnnData, obs are cells and vars are genes
-            # BUT transpose needed for both dense and sparse
-            # so transpose step is after this data object composition step
-            # therefore the assignements below are the reverse of expected
-            adata.obs_names = genes
-            adata.var_names = barcodes
+            adata = DifferentialExpression.adata_from_mtx(
+                matrix_file_path, genes_path, barcodes_path
+            )
 
         adata = adata.transpose()
 
@@ -212,8 +297,8 @@ class DifferentialExpression:
 
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
-        rank_key = "rank." + annotation + "." + method
-        DifferentialExpression.de_logger.info(f"calculating DE")
+        DifferentialExpression.de_logger.info("calculating DE")
+        rank_key = f"rank.{annotation}.{method}"
         try:
             sc.tl.rank_genes_groups(
                 adata,
@@ -225,28 +310,28 @@ class DifferentialExpression:
             )
         except KeyError:
             msg = f"Missing expected annotation in metadata: {annotation}, unable to calculate DE."
+            print(msg)
             log_exception(
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
             raise KeyError(msg)
 
+        DifferentialExpression.de_logger.info("Gathering DE annotation labels")
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
-            group_filename = group.replace(" ", "_")
-            DifferentialExpression.de_logger.info(f"Writing DE output for {str(group)}")
-            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=str(group))
+            group_filename = re.sub(r'\W+', '_', group)
+            DifferentialExpression.de_logger.info(f"Writing DE output for {group}")
+            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
 
-            out_file = (
-                f'{cluster_name}--{annotation}--{str(group_filename)}--{method}.tsv'
-            )
+            out_file = f'{cluster_name}--{annotation}--{group_filename}--{method}.tsv'
             # Round numbers to 4 significant digits while respecting fixed point
             # and scientific notation (note: trailing zeros are removed)
             rank.to_csv(out_file, sep='\t', float_format='%.4g')
 
         # Provide h5ad of DE analysis as reference computable object
-        # DifferentialExpression.de_logger.info(f"Writing DE h5ad file")
+        # DifferentialExpression.de_logger.info("Writing DE h5ad file")
         # file_name = f'{study_accession}_{cluster_name}_to_DE.h5ad'
         # adata.write_h5ad(file_name)
 
-        DifferentialExpression.de_logger.info(f"DE processing complete")
+        DifferentialExpression.de_logger.info("DE processing complete")
 

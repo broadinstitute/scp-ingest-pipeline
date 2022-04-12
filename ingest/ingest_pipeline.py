@@ -468,14 +468,18 @@ class IngestPipeline:
 
     def calculate_de(self):
         """ Run differential expression analysis """
-        de = DifferentialExpression(
-            cluster=self.cluster,
-            cell_metadata=self.cell_metadata,
-            matrix_file_path=self.matrix_file_path,
-            matrix_file_type=self.matrix_file_type,
-            **self.kwargs,
-        )
-        de.execute_de()
+        try:
+            de = DifferentialExpression(
+                cluster=self.cluster,
+                cell_metadata=self.cell_metadata,
+                matrix_file_path=self.matrix_file_path,
+                matrix_file_type=self.matrix_file_type,
+                **self.kwargs,
+            )
+            de.execute_de()
+        except Exception as e:
+            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+            return 1
         # ToDo: surface failed DE for analytics (SCP-4206)
         return 0
 
