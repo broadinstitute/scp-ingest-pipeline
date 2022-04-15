@@ -141,7 +141,7 @@ source env/bin/activate
 
 See [`ingest_pipeline.py`](https://github.com/broadinstitute/scp-ingest-pipeline/blob/ew-tests-hook/ingest/ingest_pipeline.py) for usage examples.
 
-## Trouble shooting during set up
+## Troubleshooting during set up
 
 If you run into an error like: "... [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed ... " try:
 - Open terminal
