@@ -145,7 +145,7 @@ See [`ingest_pipeline.py`](https://github.com/broadinstitute/scp-ingest-pipeline
 
 If you run into an error like: "... [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed ... " try:
 - Open terminal
-- CD to where python is installed
+- `cd` to where python is installed
 - Run the certificates command with `/Applications/Python\ < Your Version of Python Here >/Install\ Certificates.command`
 
 If you run into an error like "ModuleNotFoundError: No module named 'google'" try:
