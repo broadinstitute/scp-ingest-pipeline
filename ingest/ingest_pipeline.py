@@ -255,41 +255,37 @@ class IngestPipeline:
     ):
         """Loads subsampled data into MongoDB"""
         documents = []
-        try:
-            for key_value in subsampled_data[0].items():
-                annot_name = subsampled_data[1][0]
-                annot_type = subsampled_data[1][1]
-                sample_size = subsampled_data[2]
-                query = {
-                    "study_id": ObjectId(self.study_id),
-                    "study_file_id": ObjectId(self.study_file_id),
-                }
-                # Query mongo for linear_id and 'name' of parent
-                # Then return 'name' and 'id' fields from query results
-                parent_data = self.db[parent_collection_name].find_one(
-                    query, {"name": 1}
-                )
-                for model in set_data_array_fn(
-                    (
-                        key_value[0],  # NAMES, x, y, or z
-                        # Cluster name provided from parent
-                        parent_data["name"],
-                        key_value[1],  # Subsampled data/values
-                        ObjectId(self.study_file_id),
-                        ObjectId(self.study_id),
-                        parent_data["_id"],
-                    ),
-                    {
-                        "subsample_annotation": f"{annot_name}--{annot_type}--{scope}",
-                        "subsample_threshold": sample_size,
-                    },
-                ):
-                    documents.append(model)
-            self.db["data_arrays"].insert_many(documents)
+        for key_value in subsampled_data[0].items():
+            annot_name = subsampled_data[1][0]
+            annot_type = subsampled_data[1][1]
+            sample_size = subsampled_data[2]
+            query = {
+                "study_id": ObjectId(self.study_id),
+                "study_file_id": ObjectId(self.study_file_id),
+            }
+            # Query mongo for linear_id and 'name' of parent
+            # Then return 'name' and 'id' fields from query results
+            parent_data = self.db[parent_collection_name].find_one(
+                query, {"name": 1}
+            )
+            for model in set_data_array_fn(
+                (
+                    key_value[0],  # NAMES, x, y, or z
+                    # Cluster name provided from parent
+                    parent_data["name"],
+                    key_value[1],  # Subsampled data/values
+                    ObjectId(self.study_file_id),
+                    ObjectId(self.study_id),
+                    parent_data["_id"],
+                ),
+                {
+                    "subsample_annotation": f"{annot_name}--{annot_type}--{scope}",
+                    "subsample_threshold": sample_size,
+                },
+            ):
+                documents.append(model)
+        self.db["data_arrays"].insert_many(documents)
 
-        except Exception as e:
-            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
-            return 1
         return 0
 
     def upload_metadata_to_bq(self):
@@ -425,61 +421,52 @@ class IngestPipeline:
                 return load_status
 
         if self.cell_metadata_file is not None:
-            try:
-                subsample.prepare_cell_metadata()
-                # Get cell names from cluster and metadata files
-                # strip of whitespace that pandas might add
-                cluster_cell_names = map(
-                    lambda s: s.strip(), SubSample.get_cell_names(subsample.file)
-                )
-                metadata_cell_names = map(
-                    lambda s: s.strip(),
-                    SubSample.get_cell_names(subsample.cell_metadata.file),
-                )
-                # Check that cell names in cluster file exist in cell metadata file
-                if SubSample.has_cells_in_metadata_file(
-                    metadata_cell_names, cluster_cell_names
-                ):
-                    for data in subsample.subsample("study"):
-                        load_status = self.load_subsample(
-                            Clusters.COLLECTION_NAME,
-                            data,
-                            subsample.set_data_array,
-                            "study",
-                        )
-                        if load_status != 0:
-                            return load_status
-                else:
-                    # Caution: recording errorTypes in this manner can clobber other collected errors.
-                    # In subsampling, known failure modes are ValueErrors which stop processing so
-                    # this logging approach should not lose file validation information
-                    config.get_metric_properties().update(
-                        {"errorTypes": ["content:missing:values-across-files"]}
+            subsample.prepare_cell_metadata()
+            # Get cell names from cluster and metadata files
+            # strip of whitespace that pandas might add
+            cluster_cell_names = map(
+                lambda s: s.strip(), SubSample.get_cell_names(subsample.file)
+            )
+            metadata_cell_names = map(
+                lambda s: s.strip(),
+                SubSample.get_cell_names(subsample.cell_metadata.file),
+            )
+            # Check that cell names in cluster file exist in cell metadata file
+            if SubSample.has_cells_in_metadata_file(
+                metadata_cell_names, cluster_cell_names
+            ):
+                for data in subsample.subsample("study"):
+                    load_status = self.load_subsample(
+                        Clusters.COLLECTION_NAME,
+                        data,
+                        subsample.set_data_array,
+                        "study",
                     )
-                    self.report_validation("failure")
-                    raise ValueError(
-                        "Cluster file has cell names that are not present in cell metadata file."
-                    )
-            except Exception as e:
-                # ToDo ingest.props["errorType"] = "subsample:"
-                log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
-                return 1
+                    if load_status != 0:
+                        return load_status
+            else:
+                # Caution: recording errorTypes in this manner can clobber other collected errors.
+                # In subsampling, known failure modes are ValueErrors which stop processing so
+                # this logging approach should not lose file validation information
+                config.get_metric_properties().update(
+                    {"errorTypes": ["content:missing:values-across-files"]}
+                )
+                self.report_validation("failure")
+                raise ValueError(
+                    "Cluster file has cell names that are not present in cell metadata file."
+                )
         return 0
 
     def calculate_de(self):
         """ Run differential expression analysis """
-        try:
-            de = DifferentialExpression(
-                cluster=self.cluster,
-                cell_metadata=self.cell_metadata,
-                matrix_file_path=self.matrix_file_path,
-                matrix_file_type=self.matrix_file_type,
-                **self.kwargs,
-            )
-            de.execute_de()
-        except Exception as e:
-            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
-            return 1
+        de = DifferentialExpression(
+            cluster=self.cluster,
+            cell_metadata=self.cell_metadata,
+            matrix_file_path=self.matrix_file_path,
+            matrix_file_type=self.matrix_file_type,
+            **self.kwargs,
+        )
+        de.execute_de()
         # ToDo: surface failed DE for analytics (SCP-4206)
         return 0
 
@@ -576,21 +563,27 @@ def main() -> None:
     Returns:
         None
     """
-    parsed_args = create_parser().parse_args()
-    validate_arguments(parsed_args)
-    arguments = vars(parsed_args)
-    # Initialize global variables for current ingest job
-    config.init(
-        arguments["study_id"],
-        arguments["study_file_id"],
-        arguments["user_metrics_uuid"],
-    )
-    ingest = IngestPipeline(**arguments)
-    status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
-    # Print metrics properties
-    metrics_dump = config.get_metric_properties().get_properties()
-    for key in metrics_dump.keys():
-        print(f'{key}: {metrics_dump[key]}')
+    status = 0
+    try:
+        parsed_args = create_parser().parse_args()
+        validate_arguments(parsed_args)
+        arguments = vars(parsed_args)
+        # Initialize global variables for current ingest job
+        config.init(
+            arguments["study_id"],
+            arguments["study_file_id"],
+            arguments["user_metrics_uuid"],
+        )
+        ingest = IngestPipeline(**arguments)
+        status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
+        # Print metrics properties
+        metrics_dump = config.get_metric_properties().get_properties()
+        for key in metrics_dump.keys():
+            print(f'{key}: {metrics_dump[key]}')
+    except Exception as e:
+        # ToDo ingest.props["errorType"] = "subsample:"
+        log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+        status = 1
 
     # Log Mixpanel events
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
