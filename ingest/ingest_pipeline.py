@@ -600,6 +600,7 @@ def main() -> None:
             print(f'{key}: {metrics_dump[key]}')
 
     except Exception as e:
+        config.set_parent_event_name("ingest-pipeline:unhandled-exception:ingest")
         log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
         status = 1
 
