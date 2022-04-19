@@ -222,18 +222,22 @@ class DifferentialExpression:
         """
         genes_df = pd.read_csv(genes_path, sep="\t", header=None)
         if len(genes_df.columns) > 1:
-            if genes_df[1].count() == genes_df[1].nunique():
-                return genes_df[1].tolist()
-        elif genes_df[0].count() == genes_df[0].nunique():
-            return genes_df[0].tolist()
+            # unclear if falling back to gene_id is useful (SCP-4283)
+            # holding off on the fallback strategy for now
+            # if genes_df[1].count() == genes_df[1].nunique():
+            return genes_df[1].tolist()
+        # if genes_df[0].count() == genes_df[0].nunique():
         else:
-            msg = "Features file contains duplicate identifiers"
-            print(msg)
-            log_exception(
-                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
-            )
-            raise ValueError(msg)
-        return genes
+            return genes_df[0].tolist()
+            # unclear if rejecting DE due to duplicate genes desirable (SCP-4283)
+            # hold off on raising error until decision is reached
+        #     msg = "Features file contains duplicate identifiers"
+        #     print(msg)
+        #     log_exception(
+        #         DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+        #     )
+        #     raise ValueError(msg)
+        # return genes
 
     @staticmethod
     def get_barcodes(barcodes_path):
