@@ -576,17 +576,22 @@ def main() -> None:
     Returns:
         None
     """
+    parsed_args = create_parser().parse_args()
+    validate_arguments(parsed_args)
+    arguments = vars(parsed_args)
     status = 0
+    status_cell_metadata = 0
+    ingest = None
+
+    # Initialize global variables for current ingest job
+    config.init(
+        arguments["study_id"],
+        arguments["study_file_id"],
+        arguments["user_metrics_uuid"],
+    )
+
     try:
-        parsed_args = create_parser().parse_args()
-        validate_arguments(parsed_args)
-        arguments = vars(parsed_args)
-        # Initialize global variables for current ingest job
-        config.init(
-            arguments["study_id"],
-            arguments["study_file_id"],
-            arguments["user_metrics_uuid"],
-        )
+
         ingest = IngestPipeline(**arguments)
         status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
         # Print metrics properties
@@ -594,11 +599,13 @@ def main() -> None:
         for key in metrics_dump.keys():
             print(f'{key}: {metrics_dump[key]}')
 
-        # Log Mixpanel events
-        MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     except Exception as e:
+        config.set_parent_event_name("ingest-pipeline:unhandled-exception:ingest")
         log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
         status = 1
+
+    # Log Mixpanel events
+    MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     # Exit pipeline
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
