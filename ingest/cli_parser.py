@@ -286,7 +286,7 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
-        "--name", required=True, help="study owner-specified cluster name"
+        "--cluster-name", required=True, help="study owner-specified cluster name"
     )
 
     parser_differential_expression.add_argument(

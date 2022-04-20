@@ -580,7 +580,11 @@ def main() -> None:
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
     if "differential_expression" in arguments:
+        # DE may use metadata or cluster file for annots BUT
+        # IngestPipeline initialization will need a "cell_metadata_file"
         arguments["cell_metadata_file"] = arguments["annot_metadata_file"]
+        # IngestPipeline initialiation expects "name" and not "cluster_name"
+        arguments["name"] = arguments["cluster_name"]
     # Initialize global variables for current ingest job
     config.init(
         arguments["study_id"],
