@@ -317,13 +317,15 @@ class DifferentialExpression:
             raise KeyError(msg)
 
         DifferentialExpression.de_logger.info("Gathering DE annotation labels")
-        groups = np.unique(adata.obs[annotation]).tolist()
-        for group in groups:
-            group_filename = re.sub(r'\W+', '_', group)
-            DifferentialExpression.de_logger.info(f"Writing DE output for {group}")
-            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
+        annots = np.unique(adata.obs[annotation]).tolist()
+        for annot in annots:
+            annot_label = re.sub(r'\W+', '_', annot)
+            DifferentialExpression.de_logger.info(
+                f"Writing DE output for {annot_label}"
+            )
+            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=annot)
 
-            out_file = f'{cluster_name}--{annotation}--{group_filename}--{method}.tsv'
+            out_file = f'{cluster_name}--{annotation}--{annot_label}--{method}.tsv'
             # Round numbers to 4 significant digits while respecting fixed point
             # and scientific notation (note: trailing zeros are removed)
             rank.to_csv(out_file, sep='\t', float_format='%.4g')
