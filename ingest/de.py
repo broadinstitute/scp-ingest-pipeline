@@ -175,6 +175,7 @@ class DifferentialExpression:
         return adata
 
     def execute_de(self):
+        print(f'dev_info: Starting DE for {self.accession}')
         try:
             if self.matrix_file_type == "mtx":
                 DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
@@ -222,18 +223,17 @@ class DifferentialExpression:
         """
         genes_df = pd.read_csv(genes_path, sep="\t", header=None)
         if len(genes_df.columns) > 1:
+            # unclear if falling back to gene_id is useful (SCP-4283)
+            # print so we're aware of dups during dev testing
             if genes_df[1].count() == genes_df[1].nunique():
-                return genes_df[1].tolist()
-        elif genes_df[0].count() == genes_df[0].nunique():
-            return genes_df[0].tolist()
+                msg = "dev_info: Features file contains duplicate identifiers (col 2)"
+                print(msg)
+            return genes_df[1].tolist()
         else:
-            msg = "Features file contains duplicate identifiers"
-            print(msg)
-            log_exception(
-                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
-            )
-            raise ValueError(msg)
-        return genes
+            if genes_df[0].count() == genes_df[0].nunique():
+                msg = "dev_info: Features file contains duplicate identifiers (col 1)"
+                print(msg)
+            return genes_df[0].tolist()
 
     @staticmethod
     def get_barcodes(barcodes_path):
