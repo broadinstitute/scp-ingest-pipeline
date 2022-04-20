@@ -79,8 +79,8 @@ def validate_arguments(parsed_args):
         and parsed_args.annotation_type != "group"
     ):
         raise ValueError(
-            f"Differential expression analysis restricted to group-type annotaions,"
-            " cannot run on data of type {parsed_args.annotation_type}."
+            "Differential expression analysis restricted to group-type annotations,"
+            f" cannot run on data of type \"{parsed_args.annotation_type}\"."
         )
 
 
