@@ -579,6 +579,8 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
+    if "differential_expression" in arguments:
+        arguments["cell_metadata_file"] = arguments["annot_metadata_file"]
     # Initialize global variables for current ingest job
     config.init(
         arguments["study_id"],

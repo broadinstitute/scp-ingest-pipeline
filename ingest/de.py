@@ -36,7 +36,7 @@ class DifferentialExpression:
         cell_metadata,
         matrix_file_path,
         matrix_file_type,
-        annotation,
+        annotation_name,
         **kwargs,
     ):
         DifferentialExpression.de_logger.info(
@@ -44,7 +44,7 @@ class DifferentialExpression:
         )
         self.cluster = cluster
         self.metadata = cell_metadata
-        self.annotation = annotation
+        self.annotation = annotation_name
         self.matrix_file_path = matrix_file_path
         self.matrix_file_type = matrix_file_type
         self.kwargs = kwargs
