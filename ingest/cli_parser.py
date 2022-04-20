@@ -74,6 +74,14 @@ def validate_arguments(parsed_args):
             raise ValueError(
                 f" Invalid argument: unable to connect to a BigQuery table called {parsed_args.bq_table}."
             )
+    if (
+        "differential_expression" in parsed_args
+        and parsed_args.annotation_type != "group"
+    ):
+        raise ValueError(
+            f"Differential expression analysis restricted to group-type annotaions,"
+            " cannot run on data of type {parsed_args.annotation_type}."
+        )
 
 
 def create_parser():
