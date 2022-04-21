@@ -49,6 +49,7 @@ class DifferentialExpression:
         self.matrix_file_type = matrix_file_type
         self.kwargs = kwargs
         self.accession = self.kwargs["study_accession"]
+        self.annot_scope = self.kwargs["annotation_scope"]
         # only used in output filename, replacing non-alphanumeric with underscores
         self.cluster_name = re.sub(r'\W+', '_', self.kwargs["name"])
         self.method = self.kwargs["method"]
@@ -185,6 +186,7 @@ class DifferentialExpression:
                     self.matrix_file_path,
                     self.matrix_file_type,
                     self.annotation,
+                    self.annot_scope,
                     self.accession,
                     self.cluster_name,
                     self.method,
@@ -199,6 +201,7 @@ class DifferentialExpression:
                     self.matrix_file_path,
                     self.matrix_file_type,
                     self.annotation,
+                    self.annot_scope,
                     self.accession,
                     self.cluster_name,
                     self.method,
@@ -264,6 +267,7 @@ class DifferentialExpression:
         matrix_file_path,
         matrix_file_type,
         annotation,
+        annot_scope,
         study_accession,
         cluster_name,
         method,
@@ -320,12 +324,13 @@ class DifferentialExpression:
         annots = np.unique(adata.obs[annotation]).tolist()
         for annot in annots:
             annot_label = re.sub(r'\W+', '_', annot)
+            clean_annotation = re.sub(r'\W+', '_', annotation)
             DifferentialExpression.de_logger.info(
                 f"Writing DE output for {annot_label}"
             )
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=annot)
 
-            out_file = f'{cluster_name}--{annotation}--{annot_label}--{method}.tsv'
+            out_file = f'{cluster_name}--{clean_annotation}--{annot_label}--{annot_scope}--{method}.tsv'
             # Round numbers to 4 significant digits while respecting fixed point
             # and scientific notation (note: trailing zeros are removed)
             rank.to_csv(out_file, sep='\t', float_format='%.4g')

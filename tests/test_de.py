@@ -6,6 +6,7 @@ import unittest
 import sys
 import hashlib
 import os
+import glob
 import pandas as pd
 
 sys.path.append("../ingest")
@@ -26,15 +27,13 @@ def get_annotation_labels(metadata, annotation, de_cells):
     return unique_labels.tolist()
 
 
-def find_expected_files(labels, cluster_name, annotation, method):
+def find_expected_files(labels, cluster_name, annotation, scope, method):
     """ Check that files were created for all expected annotation labels
     """
     found = 0
     for label in labels:
         sanitized_label = label.replace(" ", "_")
-        expected_file = (
-            f"{cluster_name}--{annotation}--{str(sanitized_label)}--{method}.tsv"
-        )
+        expected_file = f"{cluster_name}--{annotation}--{str(sanitized_label)}--{scope}--{method}.tsv"
         assert os.path.exists(expected_file)
         found += 1
     return found
@@ -90,6 +89,7 @@ class TestDifferentialExpression(unittest.TestCase):
             confirm expected output
         """
         test_annotation = "cell_type__ontology_label"
+        test_scope = "study"
         test_method = "wilcoxon"
         cm = CellMetadata(
             "../tests/data/differential_expression/de_integration_unordered_metadata.tsv",
@@ -109,6 +109,7 @@ class TestDifferentialExpression(unittest.TestCase):
         de_kwargs = {
             "study_accession": cm.study_accession,
             "name": cluster.name,
+            "annotation_scope": test_scope,
             "method": test_method,
         }
 
@@ -124,7 +125,7 @@ class TestDifferentialExpression(unittest.TestCase):
         de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
         labels = get_annotation_labels(cm, test_annotation, de_cells)
         found_label_count = find_expected_files(
-            labels, cluster.name, test_annotation, test_method
+            labels, cluster.name, test_annotation, test_scope, test_method
         )
 
         self.assertEqual(
@@ -135,7 +136,7 @@ class TestDifferentialExpression(unittest.TestCase):
 
         expected_file_path = (
             "../tests/de_integration--cell_type__ontology_label"
-            "--cholinergic_neuron--wilcoxon.tsv"
+            "--cholinergic_neuron--study--wilcoxon.tsv"
         )
 
         content = pd.read_csv(expected_file_path, sep="\t", index_col=0)
@@ -165,11 +166,22 @@ class TestDifferentialExpression(unittest.TestCase):
             "generated output file should match expected checksum",
         )
 
+        # clean up DE outputs
+        output_wildcard_match = f"../tests/de_integration--{test_annotation}*.tsv"
+        files = glob.glob(output_wildcard_match)
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
+
     def test_de_process_sparse(self):
         """ Run DE on small test case with sparse matrix inputs
                 confirm expected output
             """
         test_annotation = "cell_type__ontology_label"
+        test_scope = "study"
         test_method = "wilcoxon"
         cm = CellMetadata(
             "../tests/data/differential_expression/sparse/sparsemini_metadata.txt",
@@ -189,6 +201,7 @@ class TestDifferentialExpression(unittest.TestCase):
         de_kwargs = {
             "study_accession": cm.study_accession,
             "name": cluster.name,
+            "annotation_scope": test_scope,
             "method": test_method,
             "gene_file": "../tests/data/differential_expression/sparse/sparsemini_features.tsv",
             "barcode_file": "../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv",
@@ -208,7 +221,7 @@ class TestDifferentialExpression(unittest.TestCase):
         # In find_expected_files, checks all files with expected names were created
         # yields the number of files expected for an external check for file count
         found_label_count = find_expected_files(
-            labels, cluster.name, test_annotation, test_method
+            labels, cluster.name, test_annotation, test_scope, test_method
         )
 
         self.assertEqual(
@@ -219,7 +232,7 @@ class TestDifferentialExpression(unittest.TestCase):
 
         expected_file_path = (
             "../tests/de_sparse_integration--cell_type__ontology_label"
-            "--endothelial_cell--wilcoxon.tsv"
+            "--endothelial_cell--study--wilcoxon.tsv"
         )
 
         content = pd.read_csv(expected_file_path, sep="\t", index_col=0)
@@ -249,3 +262,14 @@ class TestDifferentialExpression(unittest.TestCase):
             "generated output file should match expected checksum",
         )
 
+        # clean up DE outputs
+        output_wildcard_match = (
+            f"../tests/de_sparse_integration--{test_annotation}*.tsv"
+        )
+        files = glob.glob(output_wildcard_match)
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
