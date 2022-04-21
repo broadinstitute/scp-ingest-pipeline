@@ -319,6 +319,13 @@ class DifferentialExpression:
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
             raise KeyError(msg)
+        # ToDo - detection and handling of annotations with only one sample (SCP-4282)
+        except ValueError as e:
+            print(e)
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, e
+            )
+            raise KeyError(e)
 
         DifferentialExpression.de_logger.info("Gathering DE annotation labels")
         annots = np.unique(adata.obs[annotation]).tolist()
