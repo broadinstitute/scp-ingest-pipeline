@@ -33,7 +33,9 @@ def find_expected_files(labels, cluster_name, annotation, scope, method):
     found = 0
     for label in labels:
         sanitized_label = label.replace(" ", "_")
-        expected_file = f"{cluster_name}--{annotation}--{str(sanitized_label)}--{scope}--{method}.tsv"
+        expected_file = (
+            f"{cluster_name}--{annotation}--{sanitized_label}--{scope}--{method}.tsv"
+        )
         assert os.path.exists(expected_file)
         found += 1
     return found

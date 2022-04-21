@@ -284,9 +284,7 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
-        "--annotation-scope",
-        required=True,
-        help="Scope of annotation file for DE analysis",
+        "--annotation-scope", required=True, help="Scope of annotation for DE analysis"
     )
 
     parser_differential_expression.add_argument(
@@ -304,7 +302,7 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
-        "--annot-metadata-file",
+        "--annotation-file",
         required=True,
         help="Absolute or relative path to cell metadata or cluster file of annotations.",
     )

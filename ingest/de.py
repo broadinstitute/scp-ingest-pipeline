@@ -1,3 +1,4 @@
+from email.headerregistry import Group
 import logging
 import numpy as np
 import pandas as pd
@@ -328,16 +329,14 @@ class DifferentialExpression:
             raise KeyError(e)
 
         DifferentialExpression.de_logger.info("Gathering DE annotation labels")
-        annots = np.unique(adata.obs[annotation]).tolist()
-        for annot in annots:
-            annot_label = re.sub(r'\W+', '_', annot)
+        groups = np.unique(adata.obs[annotation]).tolist()
+        for group in groups:
+            clean_group = re.sub(r'\W+', '_', group)
             clean_annotation = re.sub(r'\W+', '_', annotation)
-            DifferentialExpression.de_logger.info(
-                f"Writing DE output for {annot_label}"
-            )
-            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=annot)
+            DifferentialExpression.de_logger.info(f"Writing DE output for {group}")
+            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
 
-            out_file = f'{cluster_name}--{clean_annotation}--{annot_label}--{annot_scope}--{method}.tsv'
+            out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
             # Round numbers to 4 significant digits while respecting fixed point
             # and scientific notation (note: trailing zeros are removed)
             rank.to_csv(out_file, sep='\t', float_format='%.4g')
