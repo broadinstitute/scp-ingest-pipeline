@@ -74,6 +74,14 @@ def validate_arguments(parsed_args):
             raise ValueError(
                 f" Invalid argument: unable to connect to a BigQuery table called {parsed_args.bq_table}."
             )
+    if (
+        "differential_expression" in parsed_args
+        and parsed_args.annotation_type != "group"
+    ):
+        raise ValueError(
+            "Differential expression analysis restricted to group-type annotations,"
+            f" cannot run on data of type \"{parsed_args.annotation_type}\"."
+        )
 
 
 def create_parser():
@@ -268,7 +276,15 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
-        "--annotation", required=True, help="Name of annotation for DE analysis"
+        "--annotation-name", required=True, help="Name of annotation for DE analysis"
+    )
+
+    parser_differential_expression.add_argument(
+        "--annotation-type", required=True, help="Type of annotation for DE analysis"
+    )
+
+    parser_differential_expression.add_argument(
+        "--annotation-scope", required=True, help="Scope of annotation for DE analysis"
     )
 
     parser_differential_expression.add_argument(
@@ -276,7 +292,7 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
-        "--name", required=True, help="study owner-specified cluster anem"
+        "--cluster-name", required=True, help="study owner-specified cluster name"
     )
 
     parser_differential_expression.add_argument(
@@ -286,9 +302,9 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
-        "--cell-metadata-file",
+        "--annotation-file",
         required=True,
-        help="Absolute or relative path to cell metadata file.",
+        help="Absolute or relative path to cell metadata or cluster file of annotations.",
     )
 
     parser_differential_expression.add_argument(

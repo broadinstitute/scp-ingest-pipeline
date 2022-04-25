@@ -1,3 +1,4 @@
+from email.headerregistry import Group
 import logging
 import numpy as np
 import pandas as pd
@@ -36,7 +37,7 @@ class DifferentialExpression:
         cell_metadata,
         matrix_file_path,
         matrix_file_type,
-        annotation,
+        annotation_name,
         **kwargs,
     ):
         DifferentialExpression.de_logger.info(
@@ -44,11 +45,12 @@ class DifferentialExpression:
         )
         self.cluster = cluster
         self.metadata = cell_metadata
-        self.annotation = annotation
+        self.annotation = annotation_name
         self.matrix_file_path = matrix_file_path
         self.matrix_file_type = matrix_file_type
         self.kwargs = kwargs
         self.accession = self.kwargs["study_accession"]
+        self.annot_scope = self.kwargs["annotation_scope"]
         # only used in output filename, replacing non-alphanumeric with underscores
         self.cluster_name = re.sub(r'\W+', '_', self.kwargs["name"])
         self.method = self.kwargs["method"]
@@ -175,6 +177,7 @@ class DifferentialExpression:
         return adata
 
     def execute_de(self):
+        print(f'dev_info: Starting DE for {self.accession}')
         try:
             if self.matrix_file_type == "mtx":
                 DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
@@ -184,6 +187,7 @@ class DifferentialExpression:
                     self.matrix_file_path,
                     self.matrix_file_type,
                     self.annotation,
+                    self.annot_scope,
                     self.accession,
                     self.cluster_name,
                     self.method,
@@ -198,6 +202,7 @@ class DifferentialExpression:
                     self.matrix_file_path,
                     self.matrix_file_type,
                     self.annotation,
+                    self.annot_scope,
                     self.accession,
                     self.cluster_name,
                     self.method,
@@ -222,18 +227,17 @@ class DifferentialExpression:
         """
         genes_df = pd.read_csv(genes_path, sep="\t", header=None)
         if len(genes_df.columns) > 1:
+            # unclear if falling back to gene_id is useful (SCP-4283)
+            # print so we're aware of dups during dev testing
             if genes_df[1].count() == genes_df[1].nunique():
-                return genes_df[1].tolist()
-        elif genes_df[0].count() == genes_df[0].nunique():
-            return genes_df[0].tolist()
+                msg = "dev_info: Features file contains duplicate identifiers (col 2)"
+                print(msg)
+            return genes_df[1].tolist()
         else:
-            msg = "Features file contains duplicate identifiers"
-            print(msg)
-            log_exception(
-                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
-            )
-            raise ValueError(msg)
-        return genes
+            if genes_df[0].count() == genes_df[0].nunique():
+                msg = "dev_info: Features file contains duplicate identifiers (col 1)"
+                print(msg)
+            return genes_df[0].tolist()
 
     @staticmethod
     def get_barcodes(barcodes_path):
@@ -264,6 +268,7 @@ class DifferentialExpression:
         matrix_file_path,
         matrix_file_type,
         annotation,
+        annot_scope,
         study_accession,
         cluster_name,
         method,
@@ -315,15 +320,23 @@ class DifferentialExpression:
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
             raise KeyError(msg)
+        # ToDo - detection and handling of annotations with only one sample (SCP-4282)
+        except ValueError as e:
+            print(e)
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, e
+            )
+            raise KeyError(e)
 
         DifferentialExpression.de_logger.info("Gathering DE annotation labels")
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
-            group_filename = re.sub(r'\W+', '_', group)
+            clean_group = re.sub(r'\W+', '_', group)
+            clean_annotation = re.sub(r'\W+', '_', annotation)
             DifferentialExpression.de_logger.info(f"Writing DE output for {group}")
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
 
-            out_file = f'{cluster_name}--{annotation}--{group_filename}--{method}.tsv'
+            out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
             # Round numbers to 4 significant digits while respecting fixed point
             # and scientific notation (note: trailing zeros are removed)
             rank.to_csv(out_file, sep='\t', float_format='%.4g')
