@@ -262,6 +262,17 @@ class DifferentialExpression:
         return adata
 
     @staticmethod
+    def remove_single_sample_data(adata, annotation):
+        """ identify and remove cells that would constitute an annotation label
+            that has data with only a single sample
+        """
+        counts = adata.obs[annotation].value_counts(dropna=False)
+        for label, count in counts.iteritems():
+            if count == 1:
+                adata = adata[adata.obs[annotation] != label]
+        return adata
+
+    @staticmethod
     def run_scanpy_de(
         cluster,
         metadata,
@@ -299,6 +310,8 @@ class DifferentialExpression:
 
         # will need try/except (SCP-4205)
         adata.obs = DifferentialExpression.order_annots(de_annots, adata.obs_names)
+
+        adata = DifferentialExpression.remove_single_sample_data(adata, annotation)
 
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
