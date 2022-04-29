@@ -124,9 +124,11 @@ class DifferentialExpression:
         """
         annot_redux = IngestFiles(metadata_file_path, allowed_file_types)
         annot_file_type = annot_redux.get_file_type(metadata_file_path)[0]
-        annot_file_handle = annot_redux.open_file(metadata_file_path)[1]
+        annot_file_handle, local_file_path = IngestFiles.resolve_path(
+            annot_redux, metadata_file_path
+        )
         annots = annot_redux.open_pandas(
-            metadata_file_path,
+            local_file_path,
             annot_file_type,
             open_file_object=annot_file_handle,
             names=headers,
@@ -285,7 +287,9 @@ class DifferentialExpression:
 
         if matrix_file_type == "dense":
             # will need try/except (SCP-4205)
-            adata = sc.read(matrix_file_path)
+            matrix_object = IngestFiles(matrix_file_path, None)
+            local_file_path = matrix_object.resolve_path(matrix_file_path)[1]
+            adata = sc.read(local_file_path)
         else:
             # MTX reconstitution UNTESTED (SCP-4203)
             # will want try/except here to catch failed data object composition
