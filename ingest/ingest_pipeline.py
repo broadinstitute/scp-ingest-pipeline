@@ -523,6 +523,22 @@ def run_ingest(ingest, arguments, parsed_args):
     return status, status_cell_metadata
 
 
+def get_delocalization_info(arguments):
+    """ extract info on study file for delocalization decision-making
+    """
+    for argument in list(arguments.keys()):
+        captured_argument = re.match("(\w*file)$", argument)
+        if captured_argument is not None:
+            study_file_id = arguments["study_file_id"]
+            matched_argument = captured_argument.groups()[0]
+            file_path = arguments[matched_argument]
+
+            # Need 1 argument that has a path to identify google bucket
+            # Break after first argument
+            break
+    return file_path, study_file_id
+
+
 def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """Logs any errors, then exits Ingest Pipeline with standard OS code
     """
@@ -530,33 +546,24 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
         if all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:
-            # delocalize errors file
-            for argument in list(arguments.keys()):
-                captured_argument = re.match("(\w*file)$", argument)
-                if captured_argument is not None:
-                    study_file_id = arguments["study_file_id"]
-                    matched_argument = captured_argument.groups()[0]
-                    file_path = arguments[matched_argument]
-                    if IngestFiles.is_remote_file(file_path):
-                        # Delocalize support log
-                        IngestFiles.delocalize_file(
-                            study_file_id,
-                            arguments["study_id"],
-                            file_path,
-                            "log.txt",
-                            f"parse_logs/{study_file_id}/log.txt",
-                        )
-                        # Delocalize user log
-                        IngestFiles.delocalize_file(
-                            study_file_id,
-                            arguments["study_id"],
-                            file_path,
-                            "user_log.txt",
-                            f"parse_logs/{study_file_id}/user_log.txt",
-                        )
-                    # Need 1 argument that has a path to identify google bucket
-                    # Break after first argument
-                    break
+            file_path, study_file_id = get_delocalization_info(arguments)
+            if IngestFiles.is_remote_file(file_path):
+                # Delocalize support log
+                IngestFiles.delocalize_file(
+                    study_file_id,
+                    arguments["study_id"],
+                    file_path,
+                    "log.txt",
+                    f"parse_logs/{study_file_id}/log.txt",
+                )
+                # Delocalize user log
+                IngestFiles.delocalize_file(
+                    study_file_id,
+                    arguments["study_id"],
+                    file_path,
+                    "user_log.txt",
+                    f"parse_logs/{study_file_id}/user_log.txt",
+                )
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
                     # PAPI jobs failing metadata validation against convention report
