@@ -229,12 +229,16 @@ class DifferentialExpression:
             # unclear if falling back to gene_id is useful (SCP-4283)
             # print so we're aware of dups during dev testing
             if genes_df[1].count() != genes_df[1].nunique():
-                msg = "dev_info: Features file contains duplicate identifiers (col 2)"
+                msg = (
+                    "dev_info: Features file contains duplicate identifiers in column 2"
+                )
                 print(msg)
             return genes_df[1].tolist()
         else:
             if genes_df[0].count() != genes_df[0].nunique():
-                msg = "dev_info: Features file contains duplicate identifiers (col 1)"
+                msg = (
+                    "dev_info: Features file contains duplicate identifiers in column 1"
+                )
                 print(msg)
             return genes_df[0].tolist()
 

@@ -121,7 +121,7 @@ class TestDifferentialExpression(unittest.TestCase):
         self.assertEqual(
             removed,
             ["Mm_AMB_N107"],
-            f"expected removal of cell [\'Mm_AMB_N107\'], not {removed}",
+            f"expected removal of cell [\'Mm_AMB_N107\'], not \"{removed}\"",
         )
 
     def test_de_process_dense(self):
