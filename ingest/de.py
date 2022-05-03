@@ -227,7 +227,10 @@ class DifferentialExpression:
             If two columns present, check if there are duplicates in 2nd col
             If no duplicates, use as var_names, else use 1st column
         """
-        genes_df = pd.read_csv(genes_path, sep="\t", header=None)
+        genes_object = IngestFiles(genes_path, None)
+        local_genes_path = genes_object.resolve_path(genes_path)[1]
+
+        genes_df = pd.read_csv(local_genes_path, sep="\t", header=None)
         if len(genes_df.columns) > 1:
             # unclear if falling back to gene_id is useful (SCP-4283)
             # print so we're aware of dups during dev testing
@@ -254,13 +257,18 @@ class DifferentialExpression:
     def adata_from_mtx(matrix_file_path, genes_path, barcodes_path):
         """ reconstitute AnnData object from matrix, genes, barcodes files
         """
-        adata = sc.read_mtx(matrix_file_path)
+        # process smaller files before reading larger matrix file
+        barcodes = DifferentialExpression.get_barcodes(barcodes_path)
+        features = DifferentialExpression.get_genes(genes_path)
+        matrix_object = IngestFiles(matrix_file_path, None)
+        local_file_path = matrix_object.resolve_path(matrix_file_path)[1]
+        adata = sc.read_mtx(local_file_path)
         # For AnnData, obs are cells and vars are genes
         # BUT transpose needed for both dense and sparse
         # so transpose step is after this data object composition step
         # therefore the assignements below are the reverse of expected
-        adata.var_names = DifferentialExpression.get_barcodes(barcodes_path)
-        adata.obs_names = DifferentialExpression.get_genes(genes_path)
+        adata.var_names = barcodes
+        adata.obs_names = features
         return adata
 
     @staticmethod
