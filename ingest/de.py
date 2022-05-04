@@ -362,21 +362,22 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info("DE processing complete")
 
     @staticmethod
-    def delocalize_de_files(file_path, study_file_id, arguments):
+    def string_for_output_match(arguments):
+        cleaned_cluster_name = re.sub(r'\W+', '_', arguments["cluster_name"])
+        cleaned_annotation_name = re.sub(r'\W+', '_', arguments["annotation_name"])
+        files_to_match = f"{cleaned_cluster_name}--{cleaned_annotation_name}*.tsv"
+        return files_to_match
+
+    @staticmethod
+    def delocalize_de_files(file_path, study_file_id, files_to_match):
         """ Copy DE output files to study bucket
         """
-        if IngestFiles.is_remote_file(file_path):
-            cleaned_cluster_name = re.sub(r'\W+', '_', arguments["cluster_name"])
-            cleaned_annotation_name = re.sub(r'\W+', '_', arguments["annotation_name"])
-            output_wildcard_match = (
-                f"{cleaned_cluster_name}--{cleaned_annotation_name}*.tsv"
-            )
-            files = glob.glob(output_wildcard_match)
 
+        files = glob.glob(files_to_match)
         for file in files:
             IngestFiles.delocalize_file(
                 study_file_id,
-                arguments["study_id"],
+                None,
                 file_path,
                 file,
                 f"_scp_internal/differential-expression/{file}",

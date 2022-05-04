@@ -34,6 +34,13 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 
 # Ingest mtx files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --matrix-file ../tests/data/mtx/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
+
+# Differential Expression analysis (dense matrix)
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_integration.tsv --matrix-file-type dense --annotation-file ../tests/data/differential_expression/de_integration_unordered_metadata.tsv --cluster-file ../tests/data/differential_expression/de_integration_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
+
+# Differential Expression analysis (sparse matrix)
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --matrix-file-type mtx --cell-metadata-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --cluster-name de_sparse_integration --study-accession SCPsparsemini --differential-expression
+
 """
 import json
 import logging
@@ -549,9 +556,13 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
         if "differential_expression" in arguments and all(i < 1 for i in status):
             file_path, study_file_id = get_delocalization_info(arguments)
             # append status?
-            DifferentialExpression.delocalize_de_files(
-                file_path, study_file_id, arguments
-            )
+            if IngestFiles.is_remote_file(file_path):
+                files_to_match = DifferentialExpression.string_for_output_match(
+                    arguments
+                )
+                DifferentialExpression.delocalize_de_files(
+                    file_path, study_file_id, files_to_match
+                )
         # all non-DE ingest jobs can exit on success
         elif all(i < 1 for i in status):
             sys.exit(os.EX_OK)
