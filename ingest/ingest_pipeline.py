@@ -41,7 +41,6 @@ import os
 import re
 import sys
 import re
-import glob
 from contextlib import nullcontext
 from typing import Dict, Generator, List, Tuple, Union
 from wsgiref.simple_server import WSGIRequestHandler  # noqa: F401
@@ -549,25 +548,11 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
         # for successful DE jobs, need to delocalize results
         if "differential_expression" in arguments and all(i < 1 for i in status):
             file_path, study_file_id = get_delocalization_info(arguments)
-            if IngestFiles.is_remote_file(file_path):
-                cleaned_cluster_name = re.sub(r'\W+', '_', arguments["cluster_name"])
-                cleaned_annotation_name = re.sub(
-                    r'\W+', '_', arguments["annotation_name"]
-                )
-                output_wildcard_match = (
-                    f"{cleaned_cluster_name}--{cleaned_annotation_name}*.tsv"
-                )
-                files = glob.glob(output_wildcard_match)
-
-                for file in files:
-                    IngestFiles.delocalize_file(
-                        study_file_id,
-                        arguments["study_id"],
-                        file_path,
-                        file,
-                        f"_scp_internal/de/{file}",
-                    )
-        # all other types of DE jobs can exit on success
+            # append status?
+            DifferentialExpression.delocalize_de_files(
+                file_path, study_file_id, arguments
+            )
+        # all non-DE ingest jobs can exit on success
         elif all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:

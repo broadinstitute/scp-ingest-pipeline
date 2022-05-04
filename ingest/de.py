@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import re
+import glob
 
 try:
     from monitor import setup_logger, log_exception
@@ -360,3 +361,23 @@ class DifferentialExpression:
 
         DifferentialExpression.de_logger.info("DE processing complete")
 
+    @staticmethod
+    def delocalize_de_files(file_path, study_file_id, arguments):
+        """ Copy DE output files to study bucket
+        """
+        if IngestFiles.is_remote_file(file_path):
+            cleaned_cluster_name = re.sub(r'\W+', '_', arguments["cluster_name"])
+            cleaned_annotation_name = re.sub(r'\W+', '_', arguments["annotation_name"])
+            output_wildcard_match = (
+                f"{cleaned_cluster_name}--{cleaned_annotation_name}*.tsv"
+            )
+            files = glob.glob(output_wildcard_match)
+
+        for file in files:
+            IngestFiles.delocalize_file(
+                study_file_id,
+                arguments["study_id"],
+                file_path,
+                file,
+                f"_scp_internal/de/{file}",
+            )
