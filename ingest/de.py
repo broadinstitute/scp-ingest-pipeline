@@ -379,5 +379,5 @@ class DifferentialExpression:
                 arguments["study_id"],
                 file_path,
                 file,
-                f"_scp_internal/de/{file}",
+                f"_scp_internal/differential-expression/{file}",
             )
