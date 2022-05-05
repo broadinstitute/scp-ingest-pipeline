@@ -8,11 +8,13 @@ import hashlib
 import os
 import glob
 import pandas as pd
+from unittest.mock import patch
 
 sys.path.append("../ingest")
 from cell_metadata import CellMetadata
 from clusters import Clusters
 from de import DifferentialExpression
+from ingest_files import IngestFiles
 
 
 def get_annotation_labels(metadata, annotation, de_cells):
@@ -263,6 +265,26 @@ class TestDifferentialExpression(unittest.TestCase):
             expected_checksum,
             "generated output file should match expected checksum",
         )
+
+        arguments = {"cluster_name": cluster.name, "annotation_name": test_annotation}
+        generated_output_match = DifferentialExpression.string_for_output_match(
+            arguments
+        )
+        self.assertEqual(
+            generated_output_match,
+            "de_sparse_integration--cell_type__ontology_label*.tsv",
+        )
+
+        with patch('ingest_files.IngestFiles.delocalize_file'):
+            DifferentialExpression.delocalize_de_files(
+                'gs://fake_bucket', None, generated_output_match
+            )
+
+            self.assertEqual(
+                IngestFiles.delocalize_file.call_count,
+                7,
+                "expected 7 calls to delocalize output files",
+            )
 
         # clean up DE outputs
         output_wildcard_match = (
