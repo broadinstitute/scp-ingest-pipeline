@@ -9,6 +9,7 @@ import os
 import glob
 import pandas as pd
 from unittest.mock import patch
+import scanpy as sc
 
 sys.path.append("../ingest")
 from cell_metadata import CellMetadata
@@ -86,6 +87,43 @@ class TestDifferentialExpression(unittest.TestCase):
         cm.headers.pop(21)
         self.assertRaises(
             KeyError, DifferentialExpression.assess_annotation, test_annotation, cm
+        )
+
+    def test_de_remove_single_sample(self):
+        """ Test single sample removal
+        """
+        test_annotation = "seurat_clusters"
+        cm = CellMetadata(
+            "../tests/data/differential_expression/de_singlesample_metadata.tsv",
+            "addedfeed000000000000000",
+            "dec0dedfeed0000000000000",
+            study_accession="SCPde",
+            tracer=None,
+        )
+        adata = sc.read("../tests/data/differential_expression/de_integration.tsv")
+        adata = adata.transpose()
+        dtypes = DifferentialExpression.determine_dtypes(cm.headers, cm.annot_types)
+        annots = DifferentialExpression.process_annots(
+            cm.file_path, cm.ALLOWED_FILE_TYPES, cm.headers, dtypes
+        )
+        adata.obs = DifferentialExpression.order_annots(annots, adata.obs_names)
+        orig_obs = adata.n_obs
+        adata2 = DifferentialExpression.remove_single_sample_data(
+            adata, test_annotation
+        )
+        new_obs = adata2.n_obs
+        number_removed = orig_obs - new_obs
+        self.assertEqual(
+            number_removed,
+            1,
+            f"expected removal of single sample, found {number_removed}",
+        )
+
+        removed = list(set(adata.obs_names) - set(adata2.obs_names))
+        self.assertEqual(
+            removed,
+            ["Mm_AMB_N107"],
+            f"expected removal of cell [\'Mm_AMB_N107\'], not \"{removed}\"",
         )
 
     def test_de_process_dense(self):

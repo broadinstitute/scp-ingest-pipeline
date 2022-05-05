@@ -1,4 +1,3 @@
-from email.headerregistry import Group
 import logging
 import numpy as np
 import pandas as pd
@@ -235,13 +234,17 @@ class DifferentialExpression:
         if len(genes_df.columns) > 1:
             # unclear if falling back to gene_id is useful (SCP-4283)
             # print so we're aware of dups during dev testing
-            if genes_df[1].count() == genes_df[1].nunique():
-                msg = "dev_info: Features file contains duplicate identifiers (col 2)"
+            if genes_df[1].count() != genes_df[1].nunique():
+                msg = (
+                    "dev_info: Features file contains duplicate identifiers in column 2"
+                )
                 print(msg)
             return genes_df[1].tolist()
         else:
-            if genes_df[0].count() == genes_df[0].nunique():
-                msg = "dev_info: Features file contains duplicate identifiers (col 1)"
+            if genes_df[0].count() != genes_df[0].nunique():
+                msg = (
+                    "dev_info: Features file contains duplicate identifiers in column 1"
+                )
                 print(msg)
             return genes_df[0].tolist()
 
@@ -270,6 +273,17 @@ class DifferentialExpression:
         # therefore the assignements below are the reverse of expected
         adata.var_names = barcodes
         adata.obs_names = features
+        return adata
+
+    @staticmethod
+    def remove_single_sample_data(adata, annotation):
+        """ identify and remove cells that would constitute an annotation label
+            that has data with only a single sample
+        """
+        counts = adata.obs[annotation].value_counts(dropna=False)
+        for label, count in counts.iteritems():
+            if count == 1:
+                adata = adata[adata.obs[annotation] != label]
         return adata
 
     @staticmethod
@@ -312,6 +326,8 @@ class DifferentialExpression:
 
         # will need try/except (SCP-4205)
         adata.obs = DifferentialExpression.order_annots(de_annots, adata.obs_names)
+
+        adata = DifferentialExpression.remove_single_sample_data(adata, annotation)
 
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
