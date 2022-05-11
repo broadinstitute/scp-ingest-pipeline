@@ -47,7 +47,7 @@ def find_expected_files(labels, cluster_name, annotation, scope, method):
 class TestDifferentialExpression(unittest.TestCase):
     def test_process_missing_metadata(self):
         cm = CellMetadata(
-            "../tests/data/differential_expression/de_integration_unordered_metadata.tsv",
+            "../tests/data/differential_expression/de_dense_metadata.tsv",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
             study_accession="SCPde",
@@ -67,7 +67,7 @@ class TestDifferentialExpression(unittest.TestCase):
     def test_assess_annotation(self):
         test_annotation = "seurat_clusters"
         cm = CellMetadata(
-            "../tests/data/differential_expression/de_integration_unordered_metadata.tsv",
+            "../tests/data/differential_expression/de_dense_metadata.tsv",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
             study_accession="SCPde",
@@ -100,7 +100,7 @@ class TestDifferentialExpression(unittest.TestCase):
             study_accession="SCPde",
             tracer=None,
         )
-        adata = sc.read("../tests/data/differential_expression/de_integration.tsv")
+        adata = sc.read("../tests/data/differential_expression/de_dense_matrix.tsv")
         adata = adata.transpose()
         dtypes = DifferentialExpression.determine_dtypes(cm.headers, cm.annot_types)
         annots = DifferentialExpression.process_annots(
@@ -134,7 +134,7 @@ class TestDifferentialExpression(unittest.TestCase):
         test_scope = "study"
         test_method = "wilcoxon"
         cm = CellMetadata(
-            "../tests/data/differential_expression/de_integration_unordered_metadata.tsv",
+            "../tests/data/differential_expression/de_dense_metadata.tsv",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
             study_accession="SCPde",
@@ -142,7 +142,7 @@ class TestDifferentialExpression(unittest.TestCase):
         )
 
         cluster = Clusters(
-            "../tests/data/differential_expression/de_integration_cluster.tsv",
+            "../tests/data/differential_expression/de_dense_cluster.tsv",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
             "de_integration",
@@ -158,7 +158,7 @@ class TestDifferentialExpression(unittest.TestCase):
         de = DifferentialExpression(
             cluster,
             cm,
-            "../tests/data/differential_expression/de_integration.tsv",
+            "../tests/data/differential_expression/de_dense_matrix.tsv",
             "dense",
             test_annotation,
             **de_kwargs,

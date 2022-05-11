@@ -569,13 +569,15 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
         else:
             file_path, study_file_id = get_delocalization_info(arguments)
             if IngestFiles.is_remote_file(file_path):
+                if "differential_expression" in arguments:
+                    log_path = (
+                        f"parse_logs/differential_expression/{study_file_id}/log.txt"
+                    )
+                else:
+                    log_path = f"parse_logs/{study_file_id}/log.txt"
                 # Delocalize support log
                 IngestFiles.delocalize_file(
-                    study_file_id,
-                    arguments["study_id"],
-                    file_path,
-                    "log.txt",
-                    f"parse_logs/{study_file_id}/log.txt",
+                    study_file_id, arguments["study_id"], file_path, "log.txt", log_path
                 )
                 # Delocalize user log
                 IngestFiles.delocalize_file(
@@ -583,7 +585,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     arguments["study_id"],
                     file_path,
                     "user_log.txt",
-                    f"parse_logs/{study_file_id}/user_log.txt",
+                    log_path,
                 )
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:

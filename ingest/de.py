@@ -396,5 +396,5 @@ class DifferentialExpression:
                 None,
                 file_path,
                 file,
-                f"_scp_internal/differential-expression/{file}",
+                f"_scp_internal/differential_expression/{file}",
             )
