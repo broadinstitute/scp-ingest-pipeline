@@ -11,6 +11,8 @@ import os
 import re
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
+import warnings
+
 
 import pandas as pd  # NOqa: F821
 from google.cloud import storage
@@ -73,6 +75,10 @@ class IngestFiles:
     # General logger for class
     # Logger provides more details
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
+    # Filter out warnings about using end user credentials when running ingest_pipeline as dev
+    warnings.filterwarnings(
+        "ignore", "Your application has authenticated using end user credentials"
+    )
 
     def __init__(self, file_path, allowed_file_types):
         self.file_path = file_path
