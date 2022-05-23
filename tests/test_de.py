@@ -8,11 +8,14 @@ import hashlib
 import os
 import glob
 import pandas as pd
+from unittest.mock import patch
+import scanpy as sc
 
 sys.path.append("../ingest")
 from cell_metadata import CellMetadata
 from clusters import Clusters
 from de import DifferentialExpression
+from ingest_files import IngestFiles
 
 
 def get_annotation_labels(metadata, annotation, de_cells):
@@ -44,7 +47,7 @@ def find_expected_files(labels, cluster_name, annotation, scope, method):
 class TestDifferentialExpression(unittest.TestCase):
     def test_process_missing_metadata(self):
         cm = CellMetadata(
-            "../tests/data/differential_expression/de_integration_unordered_metadata.tsv",
+            "../tests/data/differential_expression/de_dense_metadata.tsv",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
             study_accession="SCPde",
@@ -64,7 +67,7 @@ class TestDifferentialExpression(unittest.TestCase):
     def test_assess_annotation(self):
         test_annotation = "seurat_clusters"
         cm = CellMetadata(
-            "../tests/data/differential_expression/de_integration_unordered_metadata.tsv",
+            "../tests/data/differential_expression/de_dense_metadata.tsv",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
             study_accession="SCPde",
@@ -86,6 +89,43 @@ class TestDifferentialExpression(unittest.TestCase):
             KeyError, DifferentialExpression.assess_annotation, test_annotation, cm
         )
 
+    def test_de_remove_single_sample(self):
+        """ Test single sample removal
+        """
+        test_annotation = "seurat_clusters"
+        cm = CellMetadata(
+            "../tests/data/differential_expression/de_singlesample_metadata.tsv",
+            "addedfeed000000000000000",
+            "dec0dedfeed0000000000000",
+            study_accession="SCPde",
+            tracer=None,
+        )
+        adata = sc.read("../tests/data/differential_expression/de_dense_matrix.tsv")
+        adata = adata.transpose()
+        dtypes = DifferentialExpression.determine_dtypes(cm.headers, cm.annot_types)
+        annots = DifferentialExpression.process_annots(
+            cm.file_path, cm.ALLOWED_FILE_TYPES, cm.headers, dtypes
+        )
+        adata.obs = DifferentialExpression.order_annots(annots, adata.obs_names)
+        orig_obs = adata.n_obs
+        adata2 = DifferentialExpression.remove_single_sample_data(
+            adata, test_annotation
+        )
+        new_obs = adata2.n_obs
+        number_removed = orig_obs - new_obs
+        self.assertEqual(
+            number_removed,
+            1,
+            f"expected removal of single sample, found {number_removed}",
+        )
+
+        removed = list(set(adata.obs_names) - set(adata2.obs_names))
+        self.assertEqual(
+            removed,
+            ["Mm_AMB_N107"],
+            f"expected removal of cell [\'Mm_AMB_N107\'], not \"{removed}\"",
+        )
+
     def test_de_process_dense(self):
         """ Run DE on small test case with dense matrix inputs
             confirm expected output
@@ -94,7 +134,7 @@ class TestDifferentialExpression(unittest.TestCase):
         test_scope = "study"
         test_method = "wilcoxon"
         cm = CellMetadata(
-            "../tests/data/differential_expression/de_integration_unordered_metadata.tsv",
+            "../tests/data/differential_expression/de_dense_metadata.tsv",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
             study_accession="SCPde",
@@ -102,7 +142,7 @@ class TestDifferentialExpression(unittest.TestCase):
         )
 
         cluster = Clusters(
-            "../tests/data/differential_expression/de_integration_cluster.tsv",
+            "../tests/data/differential_expression/de_dense_cluster.tsv",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
             "de_integration",
@@ -118,7 +158,7 @@ class TestDifferentialExpression(unittest.TestCase):
         de = DifferentialExpression(
             cluster,
             cm,
-            "../tests/data/differential_expression/de_integration.tsv",
+            "../tests/data/differential_expression/de_dense_matrix.tsv",
             "dense",
             test_annotation,
             **de_kwargs,
@@ -263,6 +303,26 @@ class TestDifferentialExpression(unittest.TestCase):
             expected_checksum,
             "generated output file should match expected checksum",
         )
+
+        arguments = {"cluster_name": cluster.name, "annotation_name": test_annotation}
+        generated_output_match = DifferentialExpression.string_for_output_match(
+            arguments
+        )
+        self.assertEqual(
+            generated_output_match,
+            "de_sparse_integration--cell_type__ontology_label*.tsv",
+        )
+
+        with patch('ingest_files.IngestFiles.delocalize_file'):
+            DifferentialExpression.delocalize_de_files(
+                'gs://fake_bucket', None, generated_output_match
+            )
+
+            self.assertEqual(
+                IngestFiles.delocalize_file.call_count,
+                7,
+                "expected 7 calls to delocalize output files",
+            )
 
         # clean up DE outputs
         output_wildcard_match = (

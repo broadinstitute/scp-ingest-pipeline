@@ -1,9 +1,9 @@
-from email.headerregistry import Group
 import logging
 import numpy as np
 import pandas as pd
 import scanpy as sc
 import re
+import glob
 
 try:
     from monitor import setup_logger, log_exception
@@ -124,9 +124,11 @@ class DifferentialExpression:
         """
         annot_redux = IngestFiles(metadata_file_path, allowed_file_types)
         annot_file_type = annot_redux.get_file_type(metadata_file_path)[0]
-        annot_file_handle = annot_redux.open_file(metadata_file_path)[1]
+        annot_file_handle, local_file_path = IngestFiles.resolve_path(
+            annot_redux, metadata_file_path
+        )
         annots = annot_redux.open_pandas(
-            metadata_file_path,
+            local_file_path,
             annot_file_type,
             open_file_object=annot_file_handle,
             names=headers,
@@ -225,17 +227,24 @@ class DifferentialExpression:
             If two columns present, check if there are duplicates in 2nd col
             If no duplicates, use as var_names, else use 1st column
         """
-        genes_df = pd.read_csv(genes_path, sep="\t", header=None)
+        genes_object = IngestFiles(genes_path, None)
+        local_genes_path = genes_object.resolve_path(genes_path)[1]
+
+        genes_df = pd.read_csv(local_genes_path, sep="\t", header=None)
         if len(genes_df.columns) > 1:
             # unclear if falling back to gene_id is useful (SCP-4283)
             # print so we're aware of dups during dev testing
-            if genes_df[1].count() == genes_df[1].nunique():
-                msg = "dev_info: Features file contains duplicate identifiers (col 2)"
+            if genes_df[1].count() != genes_df[1].nunique():
+                msg = (
+                    "dev_info: Features file contains duplicate identifiers in column 2"
+                )
                 print(msg)
             return genes_df[1].tolist()
         else:
-            if genes_df[0].count() == genes_df[0].nunique():
-                msg = "dev_info: Features file contains duplicate identifiers (col 1)"
+            if genes_df[0].count() != genes_df[0].nunique():
+                msg = (
+                    "dev_info: Features file contains duplicate identifiers in column 1"
+                )
                 print(msg)
             return genes_df[0].tolist()
 
@@ -252,13 +261,29 @@ class DifferentialExpression:
     def adata_from_mtx(matrix_file_path, genes_path, barcodes_path):
         """ reconstitute AnnData object from matrix, genes, barcodes files
         """
-        adata = sc.read_mtx(matrix_file_path)
+        # process smaller files before reading larger matrix file
+        barcodes = DifferentialExpression.get_barcodes(barcodes_path)
+        features = DifferentialExpression.get_genes(genes_path)
+        matrix_object = IngestFiles(matrix_file_path, None)
+        local_file_path = matrix_object.resolve_path(matrix_file_path)[1]
+        adata = sc.read_mtx(local_file_path)
         # For AnnData, obs are cells and vars are genes
         # BUT transpose needed for both dense and sparse
         # so transpose step is after this data object composition step
         # therefore the assignements below are the reverse of expected
-        adata.var_names = DifferentialExpression.get_barcodes(barcodes_path)
-        adata.obs_names = DifferentialExpression.get_genes(genes_path)
+        adata.var_names = barcodes
+        adata.obs_names = features
+        return adata
+
+    @staticmethod
+    def remove_single_sample_data(adata, annotation):
+        """ identify and remove cells that would constitute an annotation label
+            that has data with only a single sample
+        """
+        counts = adata.obs[annotation].value_counts(dropna=False)
+        for label, count in counts.iteritems():
+            if count == 1:
+                adata = adata[adata.obs[annotation] != label]
         return adata
 
     @staticmethod
@@ -285,7 +310,9 @@ class DifferentialExpression:
 
         if matrix_file_type == "dense":
             # will need try/except (SCP-4205)
-            adata = sc.read(matrix_file_path)
+            matrix_object = IngestFiles(matrix_file_path, None)
+            local_file_path = matrix_object.resolve_path(matrix_file_path)[1]
+            adata = sc.read(local_file_path)
         else:
             # MTX reconstitution UNTESTED (SCP-4203)
             # will want try/except here to catch failed data object composition
@@ -299,6 +326,8 @@ class DifferentialExpression:
 
         # will need try/except (SCP-4205)
         adata.obs = DifferentialExpression.order_annots(de_annots, adata.obs_names)
+
+        adata = DifferentialExpression.remove_single_sample_data(adata, annotation)
 
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
@@ -348,3 +377,24 @@ class DifferentialExpression:
 
         DifferentialExpression.de_logger.info("DE processing complete")
 
+    @staticmethod
+    def string_for_output_match(arguments):
+        cleaned_cluster_name = re.sub(r'\W+', '_', arguments["cluster_name"])
+        cleaned_annotation_name = re.sub(r'\W+', '_', arguments["annotation_name"])
+        files_to_match = f"{cleaned_cluster_name}--{cleaned_annotation_name}*.tsv"
+        return files_to_match
+
+    @staticmethod
+    def delocalize_de_files(file_path, study_file_id, files_to_match):
+        """ Copy DE output files to study bucket
+        """
+
+        files = glob.glob(files_to_match)
+        for file in files:
+            IngestFiles.delocalize_file(
+                study_file_id,
+                None,
+                file_path,
+                file,
+                f"_scp_internal/differential_expression/{file}",
+            )
