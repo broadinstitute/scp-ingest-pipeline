@@ -237,7 +237,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "../tests/data/differential_expression/sparse/sparsemini_cluster.txt",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
-            "de_sparse_integration",
+            "de_sparse_dup_gene",
         )
 
         de_kwargs = {
@@ -245,7 +245,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "name": cluster.name,
             "annotation_scope": test_scope,
             "method": test_method,
-            "gene_file": "../tests/data/differential_expression/sparse/sparsemini_features.tsv",
+            "gene_file": "../tests/data/differential_expression/sparse/sparsemini_dup_gene_name.tsv.gz",
             "barcode_file": "../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv",
         }
 
@@ -273,7 +273,7 @@ class TestDifferentialExpression(unittest.TestCase):
         )
 
         expected_file_path = (
-            "../tests/de_sparse_integration--cell_type__ontology_label"
+            "../tests/de_sparse_dup_gene--cell_type__ontology_label"
             "--endothelial_cell--study--wilcoxon.tsv"
         )
 
@@ -281,8 +281,8 @@ class TestDifferentialExpression(unittest.TestCase):
         # confirm expected gene in DE file at expected position
         self.assertEqual(
             content.iloc[1, 0],
-            "Mrpl15",
-            "Did not find expected gene, Mrpl15, at second row in DE file",
+            "Sox17",
+            "Did not find expected gene, Sox17, at second row in DE file",
         )
         # confirm calculated value has expected significant digits
         self.assertEqual(
@@ -292,7 +292,7 @@ class TestDifferentialExpression(unittest.TestCase):
         )
 
         # md5 checksum calculated using reference file in tests/data/differential_expression/sparse/reference
-        expected_checksum = "07b6c6565430a17f4f048e7b4f53ddac"
+        expected_checksum = "ca0c7dcc4048614f22d6bc7dec18a2c0"
 
         # running DifferentialExpression via pytest results in output files in the tests dir
         with open(expected_file_path, "rb") as f:
@@ -309,8 +309,7 @@ class TestDifferentialExpression(unittest.TestCase):
             arguments
         )
         self.assertEqual(
-            generated_output_match,
-            "de_sparse_integration--cell_type__ontology_label*.tsv",
+            generated_output_match, "de_sparse_dup_gene--cell_type__ontology_label*.tsv"
         )
 
         with patch('ingest_files.IngestFiles.delocalize_file'):
@@ -325,9 +324,7 @@ class TestDifferentialExpression(unittest.TestCase):
             )
 
         # clean up DE outputs
-        output_wildcard_match = (
-            f"../tests/de_sparse_integration--{test_annotation}*.tsv"
-        )
+        output_wildcard_match = f"../tests/de_sparse_dup_gene--{test_annotation}*.tsv"
         files = glob.glob(output_wildcard_match)
 
         for file in files:
