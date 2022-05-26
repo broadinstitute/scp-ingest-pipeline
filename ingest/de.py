@@ -224,8 +224,9 @@ class DifferentialExpression:
     @staticmethod
     def get_genes(genes_path):
         """ Genes file can have one or two columns of gene information
-            If two columns present, check if there are duplicates in 2nd col
-            If no duplicates, use as var_names, else use join columns
+            Preferentially use gene names from second column.
+            If duplicate gene names, check that 1st plus 2nd column provides uniqueness
+            If unique when joined, join columns with pipe (|) for use as DE input
         """
         genes_object = IngestFiles(genes_path, None)
         local_genes_path = genes_object.resolve_path(genes_path)[1]
@@ -302,7 +303,7 @@ class DifferentialExpression:
     def delimiter_in_gene_name(rank):
         """ Check if pipe delimiter occurs in "names" column
         """
-        return rank['names'].str.contains('|').any
+        return rank['names'].str.contains('|', regex=False).any()
 
     @staticmethod
     def extract_gene_id_for_out_file(rank):

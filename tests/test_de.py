@@ -110,6 +110,24 @@ class TestDifferentialExpression(unittest.TestCase):
         dup_genes = DifferentialExpression.get_genes(dup_genes_path)
         self.assertIn("|", dup_genes[0], f"no delimiter expected in {dup_genes[0]}")
 
+    def test_delimiter_in_gene_name(self):
+        delimited_data = {"names": ["Tns1", "Gfra1"], "scores": ["10.5", "10.34"]}
+        delimited_df = pd.DataFrame(delimited_data)
+        self.assertFalse(
+            DifferentialExpression.delimiter_in_gene_name(delimited_df),
+            "no pipe delimiter should be detected in the input",
+        )
+
+        undelimited_data = {
+            "names": ["ENSMUST00000027035|Sox17", "ENSMUST00000195555|Sox17"],
+            "scores": ["41.459137", "-5.058518"],
+        }
+        undelimited_df = pd.DataFrame(undelimited_data)
+        self.assertTrue(
+            DifferentialExpression.delimiter_in_gene_name(undelimited_df),
+            "expected pipe delimiter undetected",
+        )
+
     def test_de_remove_single_sample(self):
         """ Test single sample removal
         """
