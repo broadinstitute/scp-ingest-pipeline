@@ -89,6 +89,45 @@ class TestDifferentialExpression(unittest.TestCase):
             KeyError, DifferentialExpression.assess_annotation, test_annotation, cm
         )
 
+    def test_detect_duplicate_gene_names(self):
+        """Genes file can have one or two columns of gene information
+            If two columns present, use the second column containing gene names
+            unless there are duplicate gene names in the second column
+            If duplicates, check that 1st plus 2nd column provides uniqueness
+            If unique when joined, join columns with pipe (|) for use as DE input
+        """
+        no_dup_genes_path = (
+            "../tests/data/differential_expression/sparse/sparsemini_features.tsv"
+        )
+        no_dup_genes = DifferentialExpression.get_genes(no_dup_genes_path)
+        self.assertNotIn(
+            "|", no_dup_genes[0], f"no delimiter expected in {no_dup_genes[0]}"
+        )
+
+        dup_genes_path = (
+            "../tests/data/differential_expression/sparse/sparsemini_dup_gene_name.tsv"
+        )
+        dup_genes = DifferentialExpression.get_genes(dup_genes_path)
+        self.assertIn("|", dup_genes[0], f"no delimiter expected in {dup_genes[0]}")
+
+    def test_delimiter_in_gene_name(self):
+        delimited_data = {"names": ["Tns1", "Gfra1"], "scores": ["10.5", "10.34"]}
+        delimited_df = pd.DataFrame(delimited_data)
+        self.assertFalse(
+            DifferentialExpression.delimiter_in_gene_name(delimited_df),
+            "no pipe delimiter should be detected in the input",
+        )
+
+        undelimited_data = {
+            "names": ["ENSMUST00000027035|Sox17", "ENSMUST00000195555|Sox17"],
+            "scores": ["41.459137", "-5.058518"],
+        }
+        undelimited_df = pd.DataFrame(undelimited_data)
+        self.assertTrue(
+            DifferentialExpression.delimiter_in_gene_name(undelimited_df),
+            "expected pipe delimiter undetected",
+        )
+
     def test_de_remove_single_sample(self):
         """ Test single sample removal
         """
@@ -237,7 +276,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "../tests/data/differential_expression/sparse/sparsemini_cluster.txt",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
-            "de_sparse_integration",
+            "de_sparse_dup_gene",
         )
 
         de_kwargs = {
@@ -245,7 +284,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "name": cluster.name,
             "annotation_scope": test_scope,
             "method": test_method,
-            "gene_file": "../tests/data/differential_expression/sparse/sparsemini_features.tsv",
+            "gene_file": "../tests/data/differential_expression/sparse/sparsemini_dup_gene_name.tsv",
             "barcode_file": "../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv",
         }
 
@@ -273,7 +312,7 @@ class TestDifferentialExpression(unittest.TestCase):
         )
 
         expected_file_path = (
-            "../tests/de_sparse_integration--cell_type__ontology_label"
+            "../tests/de_sparse_dup_gene--cell_type__ontology_label"
             "--endothelial_cell--study--wilcoxon.tsv"
         )
 
@@ -281,18 +320,21 @@ class TestDifferentialExpression(unittest.TestCase):
         # confirm expected gene in DE file at expected position
         self.assertEqual(
             content.iloc[1, 0],
-            "Mrpl15",
-            "Did not find expected gene, Mrpl15, at second row in DE file",
+            "Sox17",
+            "Did not find expected gene, Sox17, at second row in DE file.",
         )
         # confirm calculated value has expected significant digits
         self.assertEqual(
             content.iloc[0, 2],
             11.63,
-            "Did not find expected logfoldchange value for Sox17 in DE file",
+            "Did not find expected logfoldchange value for Sox17 in DE file.",
         )
+        # confirm duplicate gene input generates expected gene_id info in output
+        self.assertIn('gene_id', content.columns, "Expected gene_id output not found.")
 
         # md5 checksum calculated using reference file in tests/data/differential_expression/sparse/reference
-        expected_checksum = "07b6c6565430a17f4f048e7b4f53ddac"
+        # file updated 2022-05-25 to include output for duplicate gene handling
+        expected_checksum = "ca0c7dcc4048614f22d6bc7dec18a2c0"
 
         # running DifferentialExpression via pytest results in output files in the tests dir
         with open(expected_file_path, "rb") as f:
@@ -301,7 +343,7 @@ class TestDifferentialExpression(unittest.TestCase):
         self.assertEqual(
             de_output_checksum,
             expected_checksum,
-            "generated output file should match expected checksum",
+            "Generated output file should match expected checksum.",
         )
 
         arguments = {"cluster_name": cluster.name, "annotation_name": test_annotation}
@@ -309,8 +351,7 @@ class TestDifferentialExpression(unittest.TestCase):
             arguments
         )
         self.assertEqual(
-            generated_output_match,
-            "de_sparse_integration--cell_type__ontology_label*.tsv",
+            generated_output_match, "de_sparse_dup_gene--cell_type__ontology_label*.tsv"
         )
 
         with patch('ingest_files.IngestFiles.delocalize_file'):
@@ -325,9 +366,7 @@ class TestDifferentialExpression(unittest.TestCase):
             )
 
         # clean up DE outputs
-        output_wildcard_match = (
-            f"../tests/de_sparse_integration--{test_annotation}*.tsv"
-        )
+        output_wildcard_match = f"../tests/de_sparse_dup_gene--{test_annotation}*.tsv"
         files = glob.glob(output_wildcard_match)
 
         for file in files:

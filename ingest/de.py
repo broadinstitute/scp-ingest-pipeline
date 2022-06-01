@@ -224,28 +224,41 @@ class DifferentialExpression:
     @staticmethod
     def get_genes(genes_path):
         """ Genes file can have one or two columns of gene information
-            If two columns present, check if there are duplicates in 2nd col
-            If no duplicates, use as var_names, else use 1st column
+            Preferentially use gene names from second column.
+            If duplicate gene names, check that 1st plus 2nd column provides uniqueness
+            If unique when joined, join columns with pipe (|) for use as DE input
         """
         genes_object = IngestFiles(genes_path, None)
         local_genes_path = genes_object.resolve_path(genes_path)[1]
 
         genes_df = pd.read_csv(local_genes_path, sep="\t", header=None)
         if len(genes_df.columns) > 1:
-            # unclear if falling back to gene_id is useful (SCP-4283)
+            # if genes are not unique, try combining with gene_id (SCP-4283)
             # print so we're aware of dups during dev testing
             if genes_df[1].count() != genes_df[1].nunique():
-                msg = (
+                warning = (
                     "dev_info: Features file contains duplicate identifiers in column 2"
                 )
-                print(msg)
-            return genes_df[1].tolist()
+                print(warning)
+                genes_df['new_id'] = genes_df[[0, 1]].agg('|'.join, axis=1)
+                if genes_df['new_id'].count() != genes_df['new_id'].nunique():
+                    msg = "Duplicates in features file even after joining gene_id and gene_name"
+                    log_exception(
+                        DifferentialExpression.dev_logger,
+                        DifferentialExpression.de_logger,
+                        msg,
+                    )
+                    raise ValueError(msg)
+                else:
+                    return genes_df['new_id'].tolist()
+            else:
+                return genes_df[1].tolist()
         else:
             if genes_df[0].count() != genes_df[0].nunique():
-                msg = (
+                warning = (
                     "dev_info: Features file contains duplicate identifiers in column 1"
                 )
-                print(msg)
+                print(warning)
             return genes_df[0].tolist()
 
     @staticmethod
@@ -285,6 +298,20 @@ class DifferentialExpression:
             if count == 1:
                 adata = adata[adata.obs[annotation] != label]
         return adata
+
+    @staticmethod
+    def delimiter_in_gene_name(rank):
+        """ Check if pipe delimiter occurs in "names" column
+        """
+        return rank['names'].str.contains('|', regex=False).any()
+
+    @staticmethod
+    def extract_gene_id_for_out_file(rank):
+        """ Separate out gene name from gene ID
+        """
+        rank['gene_id'] = rank['names'].str.split('|').str[0]
+        rank['names'] = rank['names'].str.split('|').str[1]
+        return rank
 
     @staticmethod
     def run_scanpy_de(
@@ -364,6 +391,8 @@ class DifferentialExpression:
             clean_annotation = re.sub(r'\W+', '_', annotation)
             DifferentialExpression.de_logger.info(f"Writing DE output for {group}")
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
+            if DifferentialExpression.delimiter_in_gene_name(rank):
+                DifferentialExpression.extract_gene_id_for_out_file(rank)
 
             out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
             # Round numbers to 4 significant digits while respecting fixed point
