@@ -216,9 +216,16 @@ class TestDifferentialExpression(unittest.TestCase):
             f"expected five annotation labels for {test_annotation}",
         )
 
-        expected_file_path = (
-            "../tests/de_integration--cell_type__ontology_label"
+        expected_file = (
+            "de_integration--cell_type__ontology_label"
             "--cholinergic_neuron--study--wilcoxon.tsv"
+        )
+
+        expected_file_path = f"../tests/{expected_file}"
+
+        # confirm expected results filename was generated in found result files
+        self.assertIn(
+            expected_file, found_labels, "Expected filename not in found files list"
         )
 
         content = pd.read_csv(expected_file_path, sep="\t", index_col=0)
@@ -313,9 +320,16 @@ class TestDifferentialExpression(unittest.TestCase):
             f"expected seven annotation labels for {test_annotation}",
         )
 
-        expected_file_path = (
-            "../tests/de_sparse_dup_gene--cell_type__ontology_label"
+        expected_file = (
+            "de_sparse_dup_gene--cell_type__ontology_label"
             "--endothelial_cell--study--wilcoxon.tsv"
+        )
+
+        expected_file_path = f"../tests/{expected_file}"
+
+        # confirm expected results filename was generated in found result files
+        self.assertIn(
+            expected_file, found_labels, "Expected filename not in found files list"
         )
 
         content = pd.read_csv(expected_file_path, sep="\t", index_col=0)
