@@ -10,6 +10,7 @@ import glob
 import pandas as pd
 from unittest.mock import patch
 import scanpy as sc
+import re
 
 sys.path.append("../ingest")
 from cell_metadata import CellMetadata
@@ -35,7 +36,8 @@ def find_expected_files(labels, cluster_name, annotation, scope, method):
     """
     found = []
     for label in labels:
-        sanitized_label = label.replace(" ", "_")
+        # line below will conflict with bugfix in SCP-4459
+        sanitized_label = re.sub(r'\W+', '_', label)
         expected_file = (
             f"{cluster_name}--{annotation}--{sanitized_label}--{scope}--{method}.tsv"
         )
@@ -377,8 +379,51 @@ class TestDifferentialExpression(unittest.TestCase):
             )
 
         # clean up DE outputs
-        output_wildcard_match = f"../tests/de_sparse_dup_gene--{test_annotation}*.tsv"
-        files = glob.glob(output_wildcard_match)
+        files = glob.glob(expected_output_match)
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
+
+    def test_de_process_na(self):
+        """ Run DE on small test case with na-type values in matrix
+            confirm expected output filenames
+        """
+        test_annotation = "cell_type__ontology_label"
+        test_config = {
+            "test_annotation": test_annotation,
+            "test_scope": "study",
+            "test_method": "wilcoxon",
+            "annot_path": "../tests/data/differential_expression/de_dense_metadata_na.txt",
+            "study_accession": "SCPna",
+            "cluster_path": "../tests/data/differential_expression/de_dense_cluster.tsv",
+            "cluster_name": "de_na",
+            "matrix_file": "../tests/data/differential_expression/de_dense_matrix.tsv",
+            "matrix_type": "dense",
+        }
+
+        found_labels = run_de(**test_config)
+        found_label_count = len(found_labels)
+
+        self.assertEqual(
+            found_label_count,
+            9,
+            f"expected nine annotation labels for {test_annotation}",
+        )
+
+        expected_file = "de_na--cell_type__ontology_label--N_A--study--wilcoxon.tsv"
+
+        # confirm expected results filename was generated in found result files
+        self.assertIn(
+            expected_file, found_labels, "Expected filename not in found files list"
+        )
+
+        expected_output_match = "de_na--cell_type__ontology_label*.tsv"
+
+        # clean up DE outputs
+        files = glob.glob(expected_output_match)
 
         for file in files:
             try:
