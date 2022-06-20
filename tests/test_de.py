@@ -33,14 +33,14 @@ def get_annotation_labels(metadata, annotation, de_cells):
 def find_expected_files(labels, cluster_name, annotation, scope, method):
     """ Check that files were created for all expected annotation labels
     """
-    found = 0
+    found = []
     for label in labels:
         sanitized_label = label.replace(" ", "_")
         expected_file = (
             f"{cluster_name}--{annotation}--{sanitized_label}--{scope}--{method}.tsv"
         )
         assert os.path.exists(expected_file)
-        found += 1
+        found.append(expected_file)
     return found
 
 
@@ -205,9 +205,10 @@ class TestDifferentialExpression(unittest.TestCase):
         de.execute_de()
         de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
         labels = get_annotation_labels(cm, test_annotation, de_cells)
-        found_label_count = find_expected_files(
+        found_labels = find_expected_files(
             labels, cluster.name, test_annotation, test_scope, test_method
         )
+        found_label_count = len(found_labels)
 
         self.assertEqual(
             found_label_count,
@@ -301,9 +302,10 @@ class TestDifferentialExpression(unittest.TestCase):
         labels = get_annotation_labels(cm, test_annotation, de_cells)
         # In find_expected_files, checks all files with expected names were created
         # yields the number of files expected for an external check for file count
-        found_label_count = find_expected_files(
+        found_labels = find_expected_files(
             labels, cluster.name, test_annotation, test_scope, test_method
         )
+        found_label_count = len(found_labels)
 
         self.assertEqual(
             found_label_count,
