@@ -183,6 +183,22 @@ class TestDifferentialExpression(unittest.TestCase):
             "expected pipe delimiter undetected",
         )
 
+    def test_filename_sanitation(self):
+        """ Bugfix (SCP-4459) so sanitization does not collapse adjacent non-alphanumeric characters to
+            single underscores, see also SCP-4455 for manual fix
+        """
+        arguments = {
+            "cluster_name": "UMAP, pre-QC all cells (complexity greater than or equal to 1000)",
+            "annotation_name": "cell..type",
+        }
+        files_to_match = DifferentialExpression.string_for_output_match(arguments)
+        print(files_to_match)
+        self.assertEqual(
+            files_to_match,
+            "UMAP__pre_QC_all_cells__complexity_greater_than_or_equal_to_1000_--cell__type*.tsv",
+            "unexpected result from sanitation function",
+        )
+
     def test_de_remove_single_sample(self):
         """ Test single sample removal
         """
