@@ -135,6 +135,8 @@ class DifferentialExpression:
             skiprows=2,
             index_col=0,
             dtype=dtypes,
+            keep_default_na=False,
+            na_values=[""],
         )
         group_annots = [k for k, v in dtypes.items() if v == str]
         # Where group metadata is missing values (eg. optional or nonconventional metadata)
