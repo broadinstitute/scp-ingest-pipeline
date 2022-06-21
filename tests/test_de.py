@@ -10,6 +10,7 @@ import glob
 import pandas as pd
 from unittest.mock import patch
 import scanpy as sc
+import re
 
 sys.path.append("../ingest")
 from cell_metadata import CellMetadata
@@ -33,15 +34,68 @@ def get_annotation_labels(metadata, annotation, de_cells):
 def find_expected_files(labels, cluster_name, annotation, scope, method):
     """ Check that files were created for all expected annotation labels
     """
-    found = 0
+    found = []
+    sanitized_cluster_name = re.sub(r'\W', '_', cluster_name)
+    sanitized_annotation = re.sub(r'\W', '_', annotation)
     for label in labels:
-        sanitized_label = label.replace(" ", "_")
-        expected_file = (
-            f"{cluster_name}--{annotation}--{sanitized_label}--{scope}--{method}.tsv"
-        )
+        sanitized_label = re.sub(r'\W', '_', label)
+        expected_file = f"{sanitized_cluster_name}--{sanitized_annotation}--{sanitized_label}--{scope}--{method}.tsv"
         assert os.path.exists(expected_file)
-        found += 1
+        found.append(expected_file)
     return found
+
+
+def run_de(**test_config):
+    test_annotation = test_config["test_annotation"]
+    test_scope = test_config["test_scope"]
+    test_method = test_config["test_method"]
+    annot_path = test_config["annot_path"]
+    study_accession = test_config["study_accession"]
+    cluster_path = test_config["cluster_path"]
+    cluster_name = test_config["cluster_name"]
+    matrix_path = test_config["matrix_file"]
+    matrix_type = test_config["matrix_type"]
+
+    cm = CellMetadata(
+        annot_path,
+        "addedfeed000000000000000",
+        "dec0dedfeed0000000000000",
+        study_accession=study_accession,
+        tracer=None,
+    )
+
+    cluster = Clusters(
+        cluster_path,
+        "addedfeed000000000000000",
+        "dec0dedfeed0000000000000",
+        cluster_name,
+    )
+
+    de_kwargs = {
+        "study_accession": cm.study_accession,
+        "name": cluster.name,
+        "annotation_scope": test_scope,
+        "method": test_method,
+    }
+
+    if "gene_file" in test_config:
+        de_kwargs["gene_file"] = test_config["gene_file"]
+
+    if "barcode_file" in test_config:
+        de_kwargs["barcode_file"] = test_config["barcode_file"]
+
+    de = DifferentialExpression(
+        cluster, cm, matrix_path, matrix_type, test_annotation, **de_kwargs
+    )
+    de.execute_de()
+    de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
+    labels = get_annotation_labels(cm, test_annotation, de_cells)
+    # In find_expected_files, checks all files with expected names were created
+    # yields the number of files expected for an external check for file count
+    found_labels = find_expected_files(
+        labels, cluster.name, test_annotation, test_scope, test_method
+    )
+    return found_labels
 
 
 class TestDifferentialExpression(unittest.TestCase):
@@ -128,6 +182,22 @@ class TestDifferentialExpression(unittest.TestCase):
             "expected pipe delimiter undetected",
         )
 
+    def test_filename_sanitation(self):
+        """ Bugfix (SCP-4459) so sanitization does not collapse adjacent non-alphanumeric characters to
+            single underscores, see also SCP-4455 for manual fix
+        """
+        arguments = {
+            "cluster_name": "UMAP, pre-QC all cells (complexity greater than or equal to 1000)",
+            "annotation_name": "cell..type",
+        }
+        files_to_match = DifferentialExpression.string_for_output_match(arguments)
+        print(files_to_match)
+        self.assertEqual(
+            files_to_match,
+            "UMAP__pre_QC_all_cells__complexity_greater_than_or_equal_to_1000_--cell__type*.tsv",
+            "unexpected result from sanitation function",
+        )
+
     def test_de_remove_single_sample(self):
         """ Test single sample removal
         """
@@ -170,44 +240,20 @@ class TestDifferentialExpression(unittest.TestCase):
             confirm expected output
         """
         test_annotation = "cell_type__ontology_label"
-        test_scope = "study"
-        test_method = "wilcoxon"
-        cm = CellMetadata(
-            "../tests/data/differential_expression/de_dense_metadata.tsv",
-            "addedfeed000000000000000",
-            "dec0dedfeed0000000000000",
-            study_accession="SCPde",
-            tracer=None,
-        )
-
-        cluster = Clusters(
-            "../tests/data/differential_expression/de_dense_cluster.tsv",
-            "addedfeed000000000000000",
-            "dec0dedfeed0000000000000",
-            "de_integration",
-        )
-
-        de_kwargs = {
-            "study_accession": cm.study_accession,
-            "name": cluster.name,
-            "annotation_scope": test_scope,
-            "method": test_method,
+        test_config = {
+            "test_annotation": test_annotation,
+            "test_scope": "study",
+            "test_method": "wilcoxon",
+            "annot_path": "../tests/data/differential_expression/de_dense_metadata.tsv",
+            "study_accession": "SCPde",
+            "cluster_path": "../tests/data/differential_expression/de_dense_cluster.tsv",
+            "cluster_name": "de_integration",
+            "matrix_file": "../tests/data/differential_expression/de_dense_matrix.tsv",
+            "matrix_type": "dense",
         }
 
-        de = DifferentialExpression(
-            cluster,
-            cm,
-            "../tests/data/differential_expression/de_dense_matrix.tsv",
-            "dense",
-            test_annotation,
-            **de_kwargs,
-        )
-        de.execute_de()
-        de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
-        labels = get_annotation_labels(cm, test_annotation, de_cells)
-        found_label_count = find_expected_files(
-            labels, cluster.name, test_annotation, test_scope, test_method
-        )
+        found_labels = run_de(**test_config)
+        found_label_count = len(found_labels)
 
         self.assertEqual(
             found_label_count,
@@ -215,9 +261,16 @@ class TestDifferentialExpression(unittest.TestCase):
             f"expected five annotation labels for {test_annotation}",
         )
 
-        expected_file_path = (
-            "../tests/de_integration--cell_type__ontology_label"
+        expected_file = (
+            "de_integration--cell_type__ontology_label"
             "--cholinergic_neuron--study--wilcoxon.tsv"
+        )
+
+        expected_file_path = f"../tests/{expected_file}"
+
+        # confirm expected results filename was generated in found result files
+        self.assertIn(
+            expected_file, found_labels, "Expected filename not in found files list"
         )
 
         content = pd.read_csv(expected_file_path, sep="\t", index_col=0)
@@ -262,48 +315,22 @@ class TestDifferentialExpression(unittest.TestCase):
                 confirm expected output
             """
         test_annotation = "cell_type__ontology_label"
-        test_scope = "study"
-        test_method = "wilcoxon"
-        cm = CellMetadata(
-            "../tests/data/differential_expression/sparse/sparsemini_metadata.txt",
-            "addedfeed000000000000000",
-            "dec0dedfeed0000000000000",
-            study_accession="SCPsparsemini",
-            tracer=None,
-        )
-
-        cluster = Clusters(
-            "../tests/data/differential_expression/sparse/sparsemini_cluster.txt",
-            "addedfeed000000000000000",
-            "dec0dedfeed0000000000000",
-            "de_sparse_dup_gene",
-        )
-
-        de_kwargs = {
-            "study_accession": cm.study_accession,
-            "name": cluster.name,
-            "annotation_scope": test_scope,
-            "method": test_method,
+        test_config = {
+            "test_annotation": test_annotation,
+            "test_scope": "study",
+            "test_method": "wilcoxon",
+            "annot_path": "../tests/data/differential_expression/sparse/sparsemini_metadata.txt",
+            "study_accession": "SCPsparsemini",
+            "cluster_path": "../tests/data/differential_expression/sparse/sparsemini_cluster.txt",
+            "cluster_name": "de_sparse_dup_gene",
+            "matrix_file": "../tests/data/differential_expression/sparse/sparsemini_matrix.mtx",
+            "matrix_type": "mtx",
             "gene_file": "../tests/data/differential_expression/sparse/sparsemini_dup_gene_name.tsv",
             "barcode_file": "../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv",
         }
 
-        de = DifferentialExpression(
-            cluster,
-            cm,
-            "../tests/data/differential_expression/sparse/sparsemini_matrix.mtx",
-            "mtx",
-            test_annotation,
-            **de_kwargs,
-        )
-        de.execute_de()
-        de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
-        labels = get_annotation_labels(cm, test_annotation, de_cells)
-        # In find_expected_files, checks all files with expected names were created
-        # yields the number of files expected for an external check for file count
-        found_label_count = find_expected_files(
-            labels, cluster.name, test_annotation, test_scope, test_method
-        )
+        found_labels = run_de(**test_config)
+        found_label_count = len(found_labels)
 
         self.assertEqual(
             found_label_count,
@@ -311,9 +338,16 @@ class TestDifferentialExpression(unittest.TestCase):
             f"expected seven annotation labels for {test_annotation}",
         )
 
-        expected_file_path = (
-            "../tests/de_sparse_dup_gene--cell_type__ontology_label"
+        expected_file = (
+            "de_sparse_dup_gene--cell_type__ontology_label"
             "--endothelial_cell--study--wilcoxon.tsv"
+        )
+
+        expected_file_path = f"../tests/{expected_file}"
+
+        # confirm expected results filename was generated in found result files
+        self.assertIn(
+            expected_file, found_labels, "Expected filename not in found files list"
         )
 
         content = pd.read_csv(expected_file_path, sep="\t", index_col=0)
@@ -346,17 +380,11 @@ class TestDifferentialExpression(unittest.TestCase):
             "Generated output file should match expected checksum.",
         )
 
-        arguments = {"cluster_name": cluster.name, "annotation_name": test_annotation}
-        generated_output_match = DifferentialExpression.string_for_output_match(
-            arguments
-        )
-        self.assertEqual(
-            generated_output_match, "de_sparse_dup_gene--cell_type__ontology_label*.tsv"
-        )
+        expected_output_match = "de_sparse_dup_gene--cell_type__ontology_label*.tsv"
 
         with patch('ingest_files.IngestFiles.delocalize_file'):
             DifferentialExpression.delocalize_de_files(
-                'gs://fake_bucket', None, generated_output_match
+                'gs://fake_bucket', None, expected_output_match
             )
 
             self.assertEqual(
@@ -366,8 +394,97 @@ class TestDifferentialExpression(unittest.TestCase):
             )
 
         # clean up DE outputs
-        output_wildcard_match = f"../tests/de_sparse_dup_gene--{test_annotation}*.tsv"
-        files = glob.glob(output_wildcard_match)
+        files = glob.glob(expected_output_match)
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
+
+    def test_de_process_na(self):
+        """ Run DE on small test case with na-type values in matrix
+            confirm expected output filenames
+        """
+        test_annotation = "cell_type__ontology_label"
+        test_config = {
+            "test_annotation": test_annotation,
+            "test_scope": "study",
+            "test_method": "wilcoxon",
+            "annot_path": "../tests/data/differential_expression/de_dense_metadata_na.txt",
+            "study_accession": "SCPna",
+            "cluster_path": "../tests/data/differential_expression/de_dense_cluster.tsv",
+            "cluster_name": "de_na",
+            "matrix_file": "../tests/data/differential_expression/de_dense_matrix.tsv",
+            "matrix_type": "dense",
+        }
+
+        found_labels = run_de(**test_config)
+        found_label_count = len(found_labels)
+
+        self.assertEqual(
+            found_label_count,
+            9,
+            f"expected nine annotation labels for {test_annotation}",
+        )
+
+        expected_file = "de_na--cell_type__ontology_label--N_A--study--wilcoxon.tsv"
+
+        # confirm expected results filename was generated in found result files
+        self.assertIn(
+            expected_file, found_labels, "Expected filename not in found files list"
+        )
+
+        expected_output_match = "de_na--cell_type__ontology_label*.tsv"
+
+        # clean up DE outputs
+        files = glob.glob(expected_output_match)
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
+
+    def test_de_process_sanitize(self):
+        """ Run DE on small test case with na-type values in matrix
+            confirm expected output filenames
+        """
+        test_annotation = "misc++cellaneous"
+        test_config = {
+            "test_annotation": test_annotation,
+            "test_scope": "study",
+            "test_method": "wilcoxon",
+            "annot_path": "../tests/data/differential_expression/de_dense_metadata_sanitize.txt",
+            "study_accession": "SCPsanitize",
+            "cluster_path": "../tests/data/differential_expression/de_dense_cluster.tsv",
+            "cluster_name": "UMAP, pre-QC",
+            "matrix_file": "../tests/data/differential_expression/de_dense_matrix.tsv",
+            "matrix_type": "dense",
+        }
+
+        found_labels = run_de(**test_config)
+        found_label_count = len(found_labels)
+
+        self.assertEqual(
+            found_label_count,
+            5,
+            f"expected five annotation labels for {test_annotation}",
+        )
+
+        expected_file = (
+            "UMAP__pre_QC--misc__cellaneous--cholinergic__neuron_--study--wilcoxon.tsv"
+        )
+
+        # confirm expected results filename was generated in found result files
+        self.assertIn(
+            expected_file, found_labels, "Expected filename not in found files list"
+        )
+
+        expected_output_match = "UMAP__pre_QC--misc__cellaneous*.tsv"
+
+        # clean up DE outputs
+        files = glob.glob(expected_output_match)
 
         for file in files:
             try:
