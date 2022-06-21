@@ -35,12 +35,11 @@ def find_expected_files(labels, cluster_name, annotation, scope, method):
     """ Check that files were created for all expected annotation labels
     """
     found = []
+    sanitized_cluster_name = re.sub(r'\W', '_', cluster_name)
+    sanitized_annotation = re.sub(r'\W', '_', annotation)
     for label in labels:
-        # line below will conflict with bugfix in SCP-4459
-        sanitized_label = re.sub(r'\W+', '_', label)
-        expected_file = (
-            f"{cluster_name}--{annotation}--{sanitized_label}--{scope}--{method}.tsv"
-        )
+        sanitized_label = re.sub(r'\W', '_', label)
+        expected_file = f"{sanitized_cluster_name}--{sanitized_annotation}--{sanitized_label}--{scope}--{method}.tsv"
         assert os.path.exists(expected_file)
         found.append(expected_file)
     return found
@@ -437,6 +436,52 @@ class TestDifferentialExpression(unittest.TestCase):
         )
 
         expected_output_match = "de_na--cell_type__ontology_label*.tsv"
+
+        # clean up DE outputs
+        files = glob.glob(expected_output_match)
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
+
+    def test_de_process_sanitize(self):
+        """ Run DE on small test case with na-type values in matrix
+            confirm expected output filenames
+        """
+        test_annotation = "misc++cellaneous"
+        test_config = {
+            "test_annotation": test_annotation,
+            "test_scope": "study",
+            "test_method": "wilcoxon",
+            "annot_path": "../tests/data/differential_expression/de_dense_metadata_sanitize.txt",
+            "study_accession": "SCPsanitize",
+            "cluster_path": "../tests/data/differential_expression/de_dense_cluster.tsv",
+            "cluster_name": "UMAP, pre-QC",
+            "matrix_file": "../tests/data/differential_expression/de_dense_matrix.tsv",
+            "matrix_type": "dense",
+        }
+
+        found_labels = run_de(**test_config)
+        found_label_count = len(found_labels)
+
+        self.assertEqual(
+            found_label_count,
+            5,
+            f"expected five annotation labels for {test_annotation}",
+        )
+
+        expected_file = (
+            "UMAP__pre_QC--misc__cellaneous--cholinergic__neuron_--study--wilcoxon.tsv"
+        )
+
+        # confirm expected results filename was generated in found result files
+        self.assertIn(
+            expected_file, found_labels, "Expected filename not in found files list"
+        )
+
+        expected_output_match = "UMAP__pre_QC--misc__cellaneous*.tsv"
 
         # clean up DE outputs
         files = glob.glob(expected_output_match)
