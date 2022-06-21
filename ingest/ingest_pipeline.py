@@ -580,12 +580,13 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     study_file_id, arguments["study_id"], file_path, "log.txt", log_path
                 )
                 # Delocalize user log
+                user_log_path = f"parse_logs/{study_file_id}/user_log.txt"
                 IngestFiles.delocalize_file(
                     study_file_id,
                     arguments["study_id"],
                     file_path,
                     "user_log.txt",
-                    log_path,
+                    user_log_path,
                 )
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
