@@ -331,6 +331,13 @@ def create_parser():
         "--gene-file", help="Path to .genes.tsv file"
     )
 
+    # h5ad subparsers
+    parser_h5ad = subparsers.add_parser(
+        "ingest_h5ad", help="Indicates that h5ad file is being ingested"
+    )
+
+    parser_h5ad.add_argument("--h5ad-file", required=True, help="Path to h5ad file")
+
     return parser
 
 
