@@ -47,6 +47,7 @@ def setup_logger(logger_name, log_file, level=logging.DEBUG, format="default"):
 def log_exception(dev_logger, user_logger, exception):
     user_logger.critical(str(exception))
     dev_logger.exception(exception)
+    print(str(exception))
 
 
 # Modified from https://jdkandersson.com/2019/05/19/testing-decorated-python-functions/
