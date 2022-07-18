@@ -316,7 +316,7 @@ class IngestFiles:
         try:
             return sc.read_h5ad(file_path, backed='r')
         except OSError as e:
-            msg = f"Unable to read file, \"{file_path}\" using scanpy."
+            msg = f"Unable to read file, \"{file_path}\", using scanpy."
             log_exception(IngestFiles.dev_logger, IngestFiles.user_logger, msg)
             raise ValueError(msg)
 

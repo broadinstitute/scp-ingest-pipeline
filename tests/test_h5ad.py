@@ -38,7 +38,7 @@ class TestH5adIngestor(unittest.TestCase):
         # an exception before assertRaises gets called
         self.assertRaisesRegex(
             ValueError,
-            "Unable to read file, \"../tests/data/h5ad/bad.h5ad\" using scanpy.",
+            "Unable to read file, \"../tests/data/h5ad/bad.h5ad\", using scanpy.",
             lambda: truncated_input.obtain_adata(),
         )
         self.assertFalse(truncated_input.validate())
