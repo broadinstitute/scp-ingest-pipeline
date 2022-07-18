@@ -336,6 +336,13 @@ def create_parser():
         "ingest_h5ad", help="Indicates that h5ad file is being ingested"
     )
 
+    parser_h5ad.add_argument(
+        "--ingest-h5ad",
+        required=True,
+        action="store_true",
+        help="Indicates that ingest of h5ad file should be invoked",
+    )
+
     parser_h5ad.add_argument("--h5ad-file", required=True, help="Path to h5ad file")
 
     return parser

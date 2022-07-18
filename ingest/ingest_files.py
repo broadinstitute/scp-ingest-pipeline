@@ -12,6 +12,7 @@ import re
 from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import warnings
+import scanpy as sc
 
 
 import pandas as pd  # NOqa: F821
@@ -21,9 +22,9 @@ from google.cloud import storage
 # import google.cloud.logging
 
 try:
-    from monitor import setup_logger
+    from monitor import setup_logger, log_exception
 except ImportError:
-    from .monitor import setup_logger
+    from .monitor import setup_logger, log_exception
 
 
 @dataclass
@@ -75,6 +76,7 @@ class IngestFiles:
     # General logger for class
     # Logger provides more details
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
+    user_logger = setup_logger(__name__ + ".user_logger", "user_log.txt")
     # Filter out warnings about using end user credentials when running ingest_pipeline as dev
     warnings.filterwarnings(
         "ignore", "Your application has authenticated using end user credentials"
@@ -82,6 +84,8 @@ class IngestFiles:
 
     def __init__(self, file_path, allowed_file_types):
         self.file_path = file_path
+        # define filetype for h5ad file extension
+        mimetypes.add_type('application/x-hdf5', '.h5ad')
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
         self.is_remote_file = IngestFiles.is_remote_file(file_path)
@@ -195,6 +199,7 @@ class IngestFiles:
             "text/plain": self.open_txt,
             "text/tab-separated-values": self.open_tsv,
             "dataframe": self.open_pandas,
+            "application/x-hdf5": self.open_h5ad,
         }
 
         if start_point != 0:
@@ -214,6 +219,11 @@ class IngestFiles:
                         file_connections.get(file_type)(open_file, file_type, **kwargs),
                         open_file,
                     )
+                elif file_type == "application/x-hdf5":
+                    return (
+                        file_connections.get(file_type)(file_path, **kwargs),
+                        open_file,
+                    )
                 else:
                     return (
                         file_connections.get(file_type)(open_file, **kwargs),
@@ -227,9 +237,12 @@ class IngestFiles:
                     open_file,
                 )
         else:
-            raise ValueError(
-                f"Unsupported file format. Allowed file types are: {' '.join(self.allowed_file_types)}"
+            msg = (
+                f"Unsupported file format. Allowed file types are: "
+                f"{' '.join(self.allowed_file_types)}"
             )
+            log_exception(IngestFiles.dev_logger, IngestFiles.user_logger, msg)
+            raise ValueError(msg)
 
     # Inherited function
     def extract(self):
@@ -297,6 +310,15 @@ class IngestFiles:
             return pd.read_csv(file_path, low_memory=False, dialect=dialect, **kwargs)
         else:
             raise ValueError("File must be tab or comma delimited")
+
+    def open_h5ad(self, file_path, **kwargs):
+        """Opens file as AnnData object """
+        try:
+            return sc.read_h5ad(file_path, backed='r')
+        except OSError as e:
+            msg = f"Unable to read file, \"{file_path}\" using scanpy."
+            log_exception(IngestFiles.dev_logger, IngestFiles.user_logger, msg)
+            raise ValueError(msg)
 
     def open_csv(self, opened_file_object, **kwargs):
         """Opens csv file"""
