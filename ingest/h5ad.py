@@ -22,7 +22,7 @@ class H5adIngestor(IngestFiles):
             print(self.adata)
             IngestFiles.dev_logger.info(str(self.adata))
         except ValueError as e:
-            raise ValueError
+            raise ValueError(e)
 
     def validate(self):
         """
