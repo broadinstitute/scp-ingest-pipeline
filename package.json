@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "scripts": {
     "test": "export NODE_TLS_REJECT_UNAUTHORIZED=0; jest --coverage ",
     "testDebug": "node --inspect-brk node_modules/.bin/jest --runInBand",
