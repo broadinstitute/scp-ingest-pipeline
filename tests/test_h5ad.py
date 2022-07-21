@@ -38,7 +38,7 @@ class TestH5adIngestor(unittest.TestCase):
         # an exception before assertRaises gets called
         self.assertRaisesRegex(
             ValueError,
-            "Unable to read file, \"../tests/data/h5ad/bad.h5ad\", using scanpy.",
+            "Scanpy cannot read file, \"../tests/data/h5ad/bad.h5ad\".",
             lambda: truncated_input.obtain_adata(),
         )
         self.assertFalse(truncated_input.validate())
@@ -54,7 +54,7 @@ class TestH5adIngestor(unittest.TestCase):
         # an exception before assertRaises gets called
         self.assertRaisesRegex(
             ValueError,
-            "Unsupported file format. Allowed file types are: application/x-hdf5",
+            "Unsupported file format. Allowed file MIME types are: application/x-hdf5",
             lambda: bad_input.obtain_adata(),
         )
         self.assertFalse(bad_input.validate())

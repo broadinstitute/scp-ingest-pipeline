@@ -238,7 +238,7 @@ class IngestFiles:
                 )
         else:
             msg = (
-                f"Unsupported file format. Allowed file types are: "
+                f"Unsupported file format. Allowed file MIME types are: "
                 f"{' '.join(self.allowed_file_types)}"
             )
             log_exception(IngestFiles.dev_logger, IngestFiles.user_logger, msg)
@@ -316,7 +316,7 @@ class IngestFiles:
         try:
             return sc.read_h5ad(file_path, backed='r')
         except OSError as e:
-            msg = f"Unable to read file, \"{file_path}\", using scanpy."
+            msg = f"Scanpy cannot read file, \"{file_path}\"."
             log_exception(IngestFiles.dev_logger, IngestFiles.user_logger, msg)
             raise ValueError(msg)
 
