@@ -389,14 +389,14 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info("Gathering DE annotation labels")
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
-            clean_group = re.sub(r'\W', '_', group)
-            clean_annotation = re.sub(r'\W', '_', annotation)
+            clean_group = DifferentialExpression.sanitize_strings(group)
+            clean_annotation = DifferentialExpression.sanitize_strings(annotation)
             DifferentialExpression.de_logger.info(f"Writing DE output for {group}")
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
             if DifferentialExpression.delimiter_in_gene_name(rank):
                 DifferentialExpression.extract_gene_id_for_out_file(rank)
-
-            out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
+            cleaned_cluster_name = DifferentialExpression.sanitize_strings(cluster_name)
+            out_file = f'{cleaned_cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
             # Round numbers to 4 significant digits while respecting fixed point
             # and scientific notation (note: trailing zeros are removed)
             rank.to_csv(out_file, sep='\t', float_format='%.4g')
@@ -409,9 +409,18 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info("DE processing complete")
 
     @staticmethod
+    def sanitize_strings(input_string):
+        plus_converted_string = re.sub('\+', 'pos', input_string)
+        return re.sub(r'\W', '_', plus_converted_string)
+
+    @staticmethod
     def string_for_output_match(arguments):
-        cleaned_cluster_name = re.sub(r'\W', '_', arguments["cluster_name"])
-        cleaned_annotation_name = re.sub(r'\W', '_', arguments["annotation_name"])
+        cleaned_cluster_name = DifferentialExpression.sanitize_strings(
+            arguments["cluster_name"]
+        )
+        cleaned_annotation_name = DifferentialExpression.sanitize_strings(
+            arguments["annotation_name"]
+        )
         files_to_match = f"{cleaned_cluster_name}--{cleaned_annotation_name}*.tsv"
         return files_to_match
 
