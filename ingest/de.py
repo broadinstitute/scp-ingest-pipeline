@@ -51,8 +51,6 @@ class DifferentialExpression:
         self.kwargs = kwargs
         self.accession = self.kwargs["study_accession"]
         self.annot_scope = self.kwargs["annotation_scope"]
-        # only used in output filename, replacing non-alphanumeric with underscores
-        self.cluster_name = re.sub(r'\W', '_', self.kwargs["name"])
         self.method = self.kwargs["method"]
 
         if matrix_file_type == "mtx":
@@ -183,6 +181,11 @@ class DifferentialExpression:
     def execute_de(self):
         print(f'dev_info: Starting DE for {self.accession}')
         try:
+            # only used in output filename, replacing non-alphanumeric with underscores
+            # except '+' replaced with 'pos'
+            self.cluster_name = DifferentialExpression.sanitize_strings(
+                self.kwargs["name"]
+            )
             if self.matrix_file_type == "mtx":
                 DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
                 self.run_scanpy_de(
@@ -395,8 +398,7 @@ class DifferentialExpression:
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
             if DifferentialExpression.delimiter_in_gene_name(rank):
                 DifferentialExpression.extract_gene_id_for_out_file(rank)
-            cleaned_cluster_name = DifferentialExpression.sanitize_strings(cluster_name)
-            out_file = f'{cleaned_cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
+            out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
             # Round numbers to 4 significant digits while respecting fixed point
             # and scientific notation (note: trailing zeros are removed)
             rank.to_csv(out_file, sep='\t', float_format='%.4g')
