@@ -412,6 +412,10 @@ class DifferentialExpression:
 
     @staticmethod
     def sanitize_strings(input_string):
+        """
+        Replace '+' with 'pos', then replace non-alphanumerics with underscore
+        this allows distinct sanitization for "CD16+ monocyte" vs "CD16- monocyte"
+        """
         plus_converted_string = re.sub('\+', 'pos', input_string)
         return re.sub(r'\W', '_', plus_converted_string)
 
