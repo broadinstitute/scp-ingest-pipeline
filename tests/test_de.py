@@ -35,10 +35,10 @@ def find_expected_files(labels, cluster_name, annotation, scope, method):
     """ Check that files were created for all expected annotation labels
     """
     found = []
-    sanitized_cluster_name = re.sub(r'\W', '_', cluster_name)
-    sanitized_annotation = re.sub(r'\W', '_', annotation)
+    sanitized_cluster_name = DifferentialExpression.sanitize_strings(cluster_name)
+    sanitized_annotation = DifferentialExpression.sanitize_strings(annotation)
     for label in labels:
-        sanitized_label = re.sub(r'\W', '_', label)
+        sanitized_label = DifferentialExpression.sanitize_strings(label)
         expected_file = f"{sanitized_cluster_name}--{sanitized_annotation}--{sanitized_label}--{scope}--{method}.tsv"
         assert os.path.exists(expected_file)
         found.append(expected_file)
@@ -185,16 +185,26 @@ class TestDifferentialExpression(unittest.TestCase):
     def test_filename_sanitation(self):
         """ Bugfix (SCP-4459) so sanitization does not collapse adjacent non-alphanumeric characters to
             single underscores, see also SCP-4455 for manual fix
+
+            Bugfix (SCP-4533) convert '+' to 'pos' so labels differing in only +/-
+            do not clobber and cause display of incorrect results for one of the labels.
         """
+        test_string = "foo++)"
+        plus_converted_result = DifferentialExpression.sanitize_strings(test_string)
+        self.assertEqual(
+            plus_converted_result,
+            "foopospos_",
+            "unexpected result from sanitation sanitize_strings function",
+        )
+
         arguments = {
-            "cluster_name": "UMAP, pre-QC all cells (complexity greater than or equal to 1000)",
+            "cluster_name": "UMAP+, pre-QC all cells (complexity greater than or equal to 1000)",
             "annotation_name": "cell..type",
         }
         files_to_match = DifferentialExpression.string_for_output_match(arguments)
-        print(files_to_match)
         self.assertEqual(
             files_to_match,
-            "UMAP__pre_QC_all_cells__complexity_greater_than_or_equal_to_1000_--cell__type*.tsv",
+            "UMAPpos__pre_QC_all_cells__complexity_greater_than_or_equal_to_1000_--cell__type*.tsv",
             "unexpected result from sanitation function",
         )
 
@@ -472,9 +482,7 @@ class TestDifferentialExpression(unittest.TestCase):
             f"expected five annotation labels for {test_annotation}",
         )
 
-        expected_file = (
-            "UMAP__pre_QC--misc__cellaneous--cholinergic__neuron_--study--wilcoxon.tsv"
-        )
+        expected_file = "UMAP__pre_QC--miscposposcellaneous--cholinergic__neuron_--study--wilcoxon.tsv"
 
         # confirm expected results filename was generated in found result files
         self.assertIn(

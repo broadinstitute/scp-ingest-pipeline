@@ -51,8 +51,6 @@ class DifferentialExpression:
         self.kwargs = kwargs
         self.accession = self.kwargs["study_accession"]
         self.annot_scope = self.kwargs["annotation_scope"]
-        # only used in output filename, replacing non-alphanumeric with underscores
-        self.cluster_name = re.sub(r'\W', '_', self.kwargs["name"])
         self.method = self.kwargs["method"]
 
         if matrix_file_type == "mtx":
@@ -183,6 +181,11 @@ class DifferentialExpression:
     def execute_de(self):
         print(f'dev_info: Starting DE for {self.accession}')
         try:
+            # only used in output filename, replacing non-alphanumeric with underscores
+            # except '+' replaced with 'pos'
+            self.cluster_name = DifferentialExpression.sanitize_strings(
+                self.kwargs["name"]
+            )
             if self.matrix_file_type == "mtx":
                 DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
                 self.run_scanpy_de(
@@ -389,13 +392,12 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info("Gathering DE annotation labels")
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
-            clean_group = re.sub(r'\W', '_', group)
-            clean_annotation = re.sub(r'\W', '_', annotation)
+            clean_group = DifferentialExpression.sanitize_strings(group)
+            clean_annotation = DifferentialExpression.sanitize_strings(annotation)
             DifferentialExpression.de_logger.info(f"Writing DE output for {group}")
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
             if DifferentialExpression.delimiter_in_gene_name(rank):
                 DifferentialExpression.extract_gene_id_for_out_file(rank)
-
             out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
             # Round numbers to 4 significant digits while respecting fixed point
             # and scientific notation (note: trailing zeros are removed)
@@ -409,9 +411,22 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info("DE processing complete")
 
     @staticmethod
+    def sanitize_strings(input_string):
+        """
+        Replace '+' with 'pos', then replace non-alphanumerics with underscore
+        this allows distinct sanitization for "CD16+ monocyte" vs "CD16- monocyte"
+        """
+        plus_converted_string = re.sub('\+', 'pos', input_string)
+        return re.sub(r'\W', '_', plus_converted_string)
+
+    @staticmethod
     def string_for_output_match(arguments):
-        cleaned_cluster_name = re.sub(r'\W', '_', arguments["cluster_name"])
-        cleaned_annotation_name = re.sub(r'\W', '_', arguments["annotation_name"])
+        cleaned_cluster_name = DifferentialExpression.sanitize_strings(
+            arguments["cluster_name"]
+        )
+        cleaned_annotation_name = DifferentialExpression.sanitize_strings(
+            arguments["annotation_name"]
+        )
         files_to_match = f"{cleaned_cluster_name}--{cleaned_annotation_name}*.tsv"
         return files_to_match
 
