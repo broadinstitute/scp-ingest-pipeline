@@ -82,10 +82,20 @@ class IngestFiles:
         "ignore", "Your application has authenticated using end user credentials"
     )
 
+    ALLOWED_FILE_EXTENSIONS = {
+        "text/csv": [".csv"],
+        "text/plain": [".txt"],
+        "text/tab-separated-values": [".tsv"],
+        "dataframe": [".tsv"],
+        "application/x-hdf5": [".h5ad", ".h5", ".hdf5"],
+    }
+
     def __init__(self, file_path, allowed_file_types):
         self.file_path = file_path
-        # define filetype for h5ad file extension
+        # valid suffixes for Anndata (h5ad file extensions)
         mimetypes.add_type('application/x-hdf5', '.h5ad')
+        mimetypes.add_type('application/x-hdf5', '.h5')
+        mimetypes.add_type('application/x-hdf5', '.hdf5')
         # File is remote (in GCS bucket) when running via PAPI,
         # and typically local when developing
         self.is_remote_file = IngestFiles.is_remote_file(file_path)
@@ -237,10 +247,19 @@ class IngestFiles:
                     open_file,
                 )
         else:
-            msg = (
-                f"Unsupported file format. Allowed file MIME types are: "
-                f"{' '.join(self.allowed_file_types)}"
-            )
+            expected_suffixes = []
+            for t in self.allowed_file_types:
+                expected_suffixes.extend(self.ALLOWED_FILE_EXTENSIONS[t])
+            if file_type == None:
+                msg = (
+                    f"File type not detected for {file_path}, expected file endings are: "
+                    f"{' '.join(expected_suffixes)}"
+                )
+            else:
+                msg = (
+                    f"Unsupported file format {file_path}. Expected file suffix are: "
+                    f"{' '.join(expected_suffixes)}"
+                )
             log_exception(IngestFiles.dev_logger, IngestFiles.user_logger, msg)
             raise ValueError(msg)
 

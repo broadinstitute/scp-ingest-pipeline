@@ -44,9 +44,25 @@ def setup_logger(logger_name, log_file, level=logging.DEBUG, format="default"):
     return logger
 
 
+def bypass_mongo_writes():
+    """Check if developer has set environment variable to bypass writing data to MongoDB
+        BYPASS_MONGO_WRITES='yes'
+    """
+    if os.environ.get("BYPASS_MONGO_WRITES") is not None:
+        skip = os.environ["BYPASS_MONGO_WRITES"]
+        if skip == "yes":
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
 def log_exception(dev_logger, user_logger, exception):
     user_logger.critical(str(exception))
     dev_logger.exception(exception)
+    if bypass_mongo_writes():
+        print(str(exception))
 
 
 # Modified from https://jdkandersson.com/2019/05/19/testing-decorated-python-functions/

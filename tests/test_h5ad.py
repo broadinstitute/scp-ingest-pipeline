@@ -27,9 +27,9 @@ class TestH5adIngestor(unittest.TestCase):
             good_input.validate(), "expect known good file to open with scanpy"
         )
 
-    def test_truncated_h5ad(self):
+    def test_truncated_anndata(self):
         truncated_input = H5adIngestor(
-            "../tests/data/h5ad/bad.h5ad",
+            "../tests/data/h5ad/bad.h5",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
         )
@@ -38,14 +38,14 @@ class TestH5adIngestor(unittest.TestCase):
         # an exception before assertRaises gets called
         self.assertRaisesRegex(
             ValueError,
-            "Scanpy cannot read file, \"../tests/data/h5ad/bad.h5ad\".",
+            "Scanpy cannot read file, \"../tests/data/h5ad/bad.h5\".",
             lambda: truncated_input.obtain_adata(),
         )
         self.assertFalse(truncated_input.validate())
 
-    def test_input_not_h5ad(self):
+    def test_input_bad_suffix(self):
         bad_input = H5adIngestor(
-            "../tests/data/h5ad/bad.h5",
+            "../tests/data/h5ad/bad.foo",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
         )
@@ -54,7 +54,7 @@ class TestH5adIngestor(unittest.TestCase):
         # an exception before assertRaises gets called
         self.assertRaisesRegex(
             ValueError,
-            "Unsupported file format. Allowed file MIME types are: application/x-hdf5",
+            "File type not detected for ../tests/data/h5ad/bad.foo, expected file endings are: .h5ad .h5 .hdf5",
             lambda: bad_input.obtain_adata(),
         )
         self.assertFalse(bad_input.validate())
