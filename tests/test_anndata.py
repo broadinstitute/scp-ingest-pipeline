@@ -1,25 +1,18 @@
-""" test_de.py
-    integration test to verify that de process generates expected output
+""" test_anndata.py
+    verify basic AnnData validation works as expected
 """
 
 import unittest
 import sys
-import hashlib
-import os
-import glob
-from unittest.mock import patch
-import scanpy as sc
-
 
 sys.path.append("../ingest")
-from ingest_files import IngestFiles
-from h5ad import H5adIngestor
+from anndata_ import AnnDataIngestor
 
 
-class TestH5adIngestor(unittest.TestCase):
-    def test_minimal_valid_h5ad(self):
-        good_input = H5adIngestor(
-            "../tests/data/h5ad/test.h5ad",
+class TestAnnDataIngestor(unittest.TestCase):
+    def test_minimal_valid_anndata(self):
+        good_input = AnnDataIngestor(
+            "../tests/data/anndata/test.h5ad",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
         )
@@ -28,8 +21,8 @@ class TestH5adIngestor(unittest.TestCase):
         )
 
     def test_truncated_anndata(self):
-        truncated_input = H5adIngestor(
-            "../tests/data/h5ad/bad.h5",
+        truncated_input = AnnDataIngestor(
+            "../tests/data/anndata/bad.h5",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
         )
@@ -38,14 +31,14 @@ class TestH5adIngestor(unittest.TestCase):
         # an exception before assertRaises gets called
         self.assertRaisesRegex(
             ValueError,
-            "Scanpy cannot read file, \"../tests/data/h5ad/bad.h5\".",
+            "Scanpy cannot read file, \"../tests/data/anndata/bad.h5\".",
             lambda: truncated_input.obtain_adata(),
         )
         self.assertFalse(truncated_input.validate())
 
     def test_input_bad_suffix(self):
-        bad_input = H5adIngestor(
-            "../tests/data/h5ad/bad.foo",
+        bad_input = AnnDataIngestor(
+            "../tests/data/anndata/bad.foo",
             "addedfeed000000000000000",
             "dec0dedfeed0000000000000",
         )
@@ -54,7 +47,7 @@ class TestH5adIngestor(unittest.TestCase):
         # an exception before assertRaises gets called
         self.assertRaisesRegex(
             ValueError,
-            "File type not detected for ../tests/data/h5ad/bad.foo, expected file endings are: .h5ad .h5 .hdf5",
+            "File type not detected for ../tests/data/anndata/bad.foo, expected file endings are: .h5ad .h5 .hdf5",
             lambda: bad_input.obtain_adata(),
         )
         self.assertFalse(bad_input.validate())
