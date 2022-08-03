@@ -26,8 +26,8 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 # Ingest dense file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_1000_cells.txt --matrix-file-type dense
 
-# Ingest h5ad file
-python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_h5ad --h5ad-file ../tests/data/test.h5ad
+# Ingest AnnData file
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --anndata-file ../tests/data/anndata/test.h5ad
 
 # Subsample cluster and metadata file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --name custer1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
@@ -51,12 +51,8 @@ import re
 from contextlib import nullcontext
 from typing import Dict, Generator, List, Tuple, Union
 from wsgiref.simple_server import WSGIRequestHandler  # noqa: F401
-
-
 from bson.objectid import ObjectId
 
-
-# from google.cloud.logging.resource import Resource
 try:
     # Used when importing internally and in tests
     from ingest_files import IngestFiles
@@ -82,9 +78,12 @@ try:
     from clusters import Clusters
     from expression_files.mtx import MTXIngestor
     from expression_files.dense_ingestor import DenseIngestor
-    from h5ad import H5adIngestor
     from monitor import setup_logger, log_exception
     from de import DifferentialExpression
+
+    # scanpy uses anndata python package, disamibguate local anndata
+    # using underscore https://peps.python.org/pep-0008/#naming-conventions
+    from anndata_ import AnnDataIngestor
 
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
@@ -103,7 +102,7 @@ except ImportError:
     from .clusters import Clusters
     from .expression_files.dense_ingestor import DenseIngestor
     from .expression_files.mtx import MTXIngestor
-    from .h5ad import H5adIngestor
+    from .anndata import AnnDataIngestor
     from .cli_parser import create_parser, validate_arguments
     from .de import DifferentialExpression
 
@@ -127,7 +126,7 @@ class IngestPipeline:
         matrix_file_type: str = None,
         cell_metadata_file: str = None,
         cluster_file: str = None,
-        h5ad_file: str = None,
+        anndata_file: str = None,
         subsample=False,
         ingest_cell_metadata=False,
         ingest_cluster=False,
@@ -147,7 +146,7 @@ class IngestPipeline:
         else:
             self.db = None
         self.cluster_file = cluster_file
-        self.h5ad_file = h5ad_file
+        self.anndata_file = anndata_file
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
         self.props = {}
@@ -479,15 +478,15 @@ class IngestPipeline:
         return 0
 
     @custom_metric(config.get_metric_properties)
-    def ingest_h5ad(self):
-        """Ingests h5ad files."""
-        self.h5ad = H5adIngestor(
-            self.h5ad_file, self.study_id, self.study_file_id, **self.kwargs
+    def ingest_anndata(self):
+        """Ingests anndata files."""
+        self.anndata = AnnDataIngestor(
+            self.anndata_file, self.study_id, self.study_file_id, **self.kwargs
         )
-        if self.h5ad.validate():
+        if self.anndata.validate():
             self.report_validation("success")
             return 0
-        # scanpy unable to open h5ad file
+        # scanpy unable to open AnnData file
         else:
             self.report_validation("failure")
             return 1
@@ -541,11 +540,11 @@ def run_ingest(ingest, arguments, parsed_args):
             config.set_parent_event_name("ingest-pipeline:subsample:ingest")
             status_subsample = ingest.subsample()
             status.append(status_subsample)
-    elif "ingest_h5ad" in arguments:
-        if arguments["ingest_h5ad"]:
-            config.set_parent_event_name("ingest-pipeline:h5ad:ingest")
-            status_h5ad = ingest.ingest_h5ad()
-            status.append(status_h5ad)
+    elif "ingest_anndata" in arguments:
+        if arguments["ingest_anndata"]:
+            config.set_parent_event_name("ingest-pipeline:anndata:ingest")
+            status_anndata = ingest.ingest_anndata()
+            status.append(status_anndata)
     elif "differential_expression" in arguments:
         config.set_parent_event_name("ingest-pipeline:differential-expression")
         status_de = ingest.calculate_de()

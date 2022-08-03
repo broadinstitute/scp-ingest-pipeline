@@ -92,7 +92,8 @@ class IngestFiles:
 
     def __init__(self, file_path, allowed_file_types):
         self.file_path = file_path
-        # valid suffixes for Anndata (h5ad file extensions)
+        # valid suffixes for AnnData ingest (expecting .h5ad)
+        # including hdf5 file extensions - AnnData files should be valid hdf5
         mimetypes.add_type('application/x-hdf5', '.h5ad')
         mimetypes.add_type('application/x-hdf5', '.h5')
         mimetypes.add_type('application/x-hdf5', '.hdf5')
@@ -209,7 +210,7 @@ class IngestFiles:
             "text/plain": self.open_txt,
             "text/tab-separated-values": self.open_tsv,
             "dataframe": self.open_pandas,
-            "application/x-hdf5": self.open_h5ad,
+            "application/x-hdf5": self.open_anndata,
         }
 
         if start_point != 0:
@@ -330,7 +331,7 @@ class IngestFiles:
         else:
             raise ValueError("File must be tab or comma delimited")
 
-    def open_h5ad(self, file_path, **kwargs):
+    def open_anndata(self, file_path, **kwargs):
         """Opens file as AnnData object """
         try:
             return sc.read_h5ad(file_path, backed='r')

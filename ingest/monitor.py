@@ -50,10 +50,7 @@ def bypass_mongo_writes():
     """
     if os.environ.get("BYPASS_MONGO_WRITES") is not None:
         skip = os.environ["BYPASS_MONGO_WRITES"]
-        if skip == "yes":
-            return True
-        else:
-            return False
+        return skip == "yes"
     else:
         return False
 
