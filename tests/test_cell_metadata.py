@@ -9,7 +9,6 @@ from mock_data.annotation.metadata.convention.valid_array_v2_1_2 import (
 sys.path.append("../ingest")
 from cell_metadata import CellMetadata
 from validation.validate_metadata import collect_jsonschema_errors
-from ingest_pipeline import IngestPipeline
 from ingest_files import IngestFiles
 
 

@@ -7,7 +7,7 @@ except ImportError:
     from .monitor import log_exception
 
 
-class H5adIngestor(IngestFiles):
+class AnnDataIngestor(IngestFiles):
     ALLOWED_FILE_TYPES = ['application/x-hdf5']
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
