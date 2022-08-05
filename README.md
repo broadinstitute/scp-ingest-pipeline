@@ -139,7 +139,7 @@ Run this every time you start a new terminal to work on this project:
 source env/bin/activate
 ```
 
-See [`ingest_pipeline.py`](https://github.com/broadinstitute/scp-ingest-pipeline/blob/ew-tests-hook/ingest/ingest_pipeline.py) for usage examples.
+See [`ingest_pipeline.py`](https://github.com/broadinstitute/scp-ingest-pipeline/blob/development/ingest/ingest_pipeline.py) for usage examples.
 
 ## Troubleshooting during set up
 
