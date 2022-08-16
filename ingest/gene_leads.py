@@ -109,6 +109,7 @@ def write_de_files():
 
 write_de_files()
 
+i = 0
 with open('genes.txt') as file:
     reader = csv.reader(file, delimiter="\t")
     for row in reader:
@@ -155,7 +156,7 @@ for gene in seen_genes:
     if gene in most_de_by_gene:
         de_context = "<br/><br/>" + contextualize_de(most_de_by_gene[gene])
     significance = f"{count_context}<br/>{rank_context}{de_context}"
-    row = [gene, chromosome, start, length, "#344563", full_name, significance]
+    row = [gene, chromosome, start, length, "#4d72aa", full_name, significance]
     rows.append("\t".join(row))
     i += 1
 
