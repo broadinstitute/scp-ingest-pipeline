@@ -3,10 +3,11 @@ import urllib
 import urllib.request as request
 import csv
 
+# TODO (pre-GA): Extract these to CLI arguments and/or SCP API calls
 organism = "homo-sapiens"
 bucket = "fc-65379b91-5ded-4d28-8e51-ada209542117"
 clustering = "All_Cells_UMAP"
-annotation = "--General_Celltype--"
+annotation = "General_Celltype"
 all_groups = [
     "B cells",
     "CSN1S1 macrophages",
@@ -20,6 +21,10 @@ all_groups = [
     "T cells"
 ]
 
+# Temporarily duplicated from SCP UI code.
+#
+# TODO (pre-GA): Expose related genes kit internals via Ideogram.js
+# so the end client UI (i.e., SCP UI) can handle color, etc.
 color_brewer_list = [
   '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#a65628',
   '#f781bf', '#999999', '#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3',
@@ -44,14 +49,24 @@ def download_gzip(url, output_path, cache=0):
         f.write(content)
 
 # Example URL:
-# https://ftp.ncbi.nlm.nih.gov/genomes/genbank/vertebrate_mammalian/assembly_summary.txt
+# https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1.full.txt
+#
+# TODO (pre-GA, story): Resolve publication IDs to text.   This would take in
+# any URL to a public (not-needing-authorization) publication in any major
+# venue (e.g. Nature, Science, bioRxiv, etc.) and resolve it a URL that will
+# return an easily machine-parseable (e.g. plaintext) file containing the
+# publication's entire prose content (excluding e.g. supplementary files).
+#
+# If it fails, log an error to Sentry and/or Mixpanel and exit PAPI
 url = f'https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1.full.txt'
 with request.urlopen(url) as response:
     publication_text = response.read().decode('utf-8')
 
+
 genes_url = f"https://github.com/eweitz/ideogram/blob/master/dist/data/cache/genes/{organism}-genes.tsv.gz?raw=true"
 download_gzip(genes_url, 'genes.txt')
 
+# Populate containers for various name and significance fields
 view_rank_by_gene = {}
 counts_by_gene = {}
 loci_by_gene = {}
@@ -89,7 +104,9 @@ for gene in counts_by_gene:
 
 most_de_by_gene = {}
 
-def write_de_files():
+def process_de_files():
+    """Fetch, write, and process precomputed differential expression files
+    """
     origin = "https://storage.googleapis.com"
     directory = "_scp_internal%2Fdifferential_expression%2F"
     de_url_stem = f"{origin}/download/storage/v1/b/{bucket}/o/{directory}"
@@ -98,12 +115,13 @@ def write_de_files():
 
     for group in all_groups:
         safe_group = group.replace(' ', '_')
-        de_filename = "_scp_internal_differential_expression_" + clustering + annotation + safe_group + leaf
+        tmp_dir = directory.replace('%2F', '_')
+        de_filename = f"{tmp_dir}{clustering}--{annotation}--{safe_group}{leaf}"
 
+        # TODO (pre-GA): Fetch these from bucket; requires auth token
         # de_url = de_url_stem + de_filename + params
         # with request.urlopen(de_url) as response:
         #     de_content = response.read().decode('utf-8')
-
         # with open(de_filename, "w") as f:
         #     f.write(de_content)
 
@@ -113,7 +131,15 @@ def write_de_files():
             # Headers:
             # names	scores	logfoldchanges	pvals	pvals_adj	pct_nz_group	pct_nz_reference
             for row in reader:
+                # TODO (pre-GA):
+                # - Account for studies with few assayed genes
+                # - Include log2FC, pvals_adj for each high-DE group
                 if i < 500:
+                    # 500 is ~2% of 25k-ish genes in Ensembl genome annotation.
+                    # Like the rest of "gene leads", a big factor in this value
+                    # choice is its ability to yield an engaging UI.  In this case,
+                    # 500 produced a wide-but-not-overwhelming palette of colors
+                    # in the gene leads ideogram.
                     gene = row[1]
                     if gene in most_de_by_gene:
                         most_de_by_gene[gene].append(group)
@@ -121,34 +147,14 @@ def write_de_files():
                         most_de_by_gene[gene] = [group]
                 i += 1
 
-write_de_files()
-
-i = 0
-with open('genes.txt') as file:
-    reader = csv.reader(file, delimiter="\t")
-    for row in reader:
-        if row[0] == '#' or len(row) < 2: continue
-        gene = row[4]
-        full_name = row[5]
-        counts_by_gene[gene] = 0
-        view_rank_by_gene[gene] = i
-        loci_by_gene[gene] = {
-            "chromosome": row[0],
-            "start": row[1],
-            "length": row[2]
-        }
-        full_names_by_gene[gene] = full_name
-        i += 1
-
-
-# sorted_seen_genes = dict(sorted(seen_genes.items(), key=lambda item: -item[1]))
+process_de_files()
 
 def contextualize_count(count):
     # return f"Mentioned {count} times in linked publication."
     return f"Mentioned in linked publication."
 
 def contextualize_rank(rank):
-    return f"Ranked {rank} in worldwide interest."
+    return f"Ranked {rank} in global interest."
 
 def contextualize_de(groups):
     pretty_groups = " and ".join(groups)
@@ -157,8 +163,7 @@ def contextualize_de(groups):
     color = color_brewer_list[first_group_index]
     return [text, color]
 
-print("most_de_by_gene")
-print(most_de_by_gene)
+# Process main content for output
 rows = []
 i = 0
 for gene in seen_genes:
@@ -184,7 +189,9 @@ rows = "\n".join(rows)
 header = "##name\tchromosome\tstart\tlength\tcolor\tfull_name\tsignificance\n"
 
 content = header + rows
-with open("gene_highlights_v4.tsv", "w") as f:
+
+output_path = f"gene_leads_{clustering}--{annotation}.tsv"
+with open(output_path, "w") as f:
     f.write(content)
 
 print('Wrote content')
