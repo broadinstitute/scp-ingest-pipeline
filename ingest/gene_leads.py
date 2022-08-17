@@ -7,7 +7,7 @@ published gene is very DE'd (if any) are noted.  Finally, data on each gene's
 worldwide popularity, ultimately measured via the Gene Hints pipeline using
 either Wikipedia page views or PubMed citation counts, is also included.
 
-The output TSV file contains a one gene per row. This is parsed by Ideogram.js
+The output TSV file contains one gene per row. This is parsed by Ideogram.js
 in the SCP UI to display gene leads.  The genome visualization is designed to
 engage users with relevant information, and prime the study gene search UX.
 """
@@ -78,7 +78,7 @@ with request.urlopen(url) as response:
 
 
 genes_filename = f"{organism}-genes.tsv" # e.g. homo-sapiens-genes.tsv
-genes_url = f"https://github.com/eweitz/ideogram/blob/master/dist/data/cache/genes/{genes_filename}.gz?raw=true"
+genes_url = f"https://cdn.jsdelivr.net/npm/ideogram@1.37.0/dist/data/cache/{genes_filename}.gz"
 download_gzip(genes_url, genes_filename)
 
 # Populate containers for various name and significance fields
