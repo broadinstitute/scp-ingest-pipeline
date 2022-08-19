@@ -62,67 +62,78 @@ def download_gzip(url, output_path, cache=0):
     with open(output_path, "w") as f:
         f.write(content)
 
-# Example URL:
-# https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1.full.txt
-#
-# TODO (pre-GA, story): Resolve publication IDs to text.   This would take in
-# any URL to a public (not-needing-authorization) publication in any major
-# venue (e.g. Nature, Science, bioRxiv, etc.) and resolve it a URL that will
-# return an easily machine-parseable (e.g. plaintext) file containing the
-# publication's entire prose content (excluding e.g. supplementary files).
-#
-# If it fails, log an error to Sentry and/or Mixpanel and exit PAPI
-url = f'https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1.full.txt'
-with request.urlopen(url) as response:
-    publication_text = response.read().decode('utf-8')
+def extract(organism, bucket, clustering, annotation, all_groups):
+    # Example URL:
+    # https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1.full.txt
+    #
+    # TODO (pre-GA, story): Resolve publication IDs to text.   This would take in
+    # any URL to a public (not-needing-authorization) publication in any major
+    # venue (e.g. Nature, Science, bioRxiv, etc.) and resolve it a URL that will
+    # return an easily machine-parseable (e.g. plaintext) file containing the
+    # publication's entire prose content (excluding e.g. supplementary files).
+    #
+    # If it fails, log an error to Sentry and/or Mixpanel and exit PAPI
+    url = f'https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1.full.txt'
+    with request.urlopen(url) as response:
+        publication_text = response.read().decode('utf-8')
 
+    genes_filename = f"{organism}-genes.tsv" # e.g. homo-sapiens-genes.tsv
+    genes_url = f"https://cdn.jsdelivr.net/npm/ideogram@1.37.0/dist/data/cache/{genes_filename}.gz"
+    download_gzip(genes_url, genes_filename)
 
-genes_filename = f"{organism}-genes.tsv" # e.g. homo-sapiens-genes.tsv
-genes_url = f"https://cdn.jsdelivr.net/npm/ideogram@1.37.0/dist/data/cache/{genes_filename}.gz"
-download_gzip(genes_url, genes_filename)
+    # Populate containers for various name and significance fields
+    interest_rank_by_gene = {}
+    counts_by_gene = {}
+    loci_by_gene = {}
+    full_names_by_gene = {}
 
-# Populate containers for various name and significance fields
-interest_rank_by_gene = {}
-counts_by_gene = {}
-loci_by_gene = {}
-full_names_by_gene = {}
-i = 0
-with open(genes_filename) as file:
-    reader = csv.reader(file, delimiter="\t")
-    for row in reader:
-        if row[0] == '#' or len(row) < 2: continue
-        gene = row[4]
-        full_name = row[5]
-        counts_by_gene[gene] = 0
-        loci_by_gene[gene] = {
-            "chromosome": row[0],
-            "start": row[1],
-            "length": row[2]
-        }
-        full_names_by_gene[gene] = full_name
-         # Genes in upstream file are ordered by global popularity
-        interest_rank_by_gene[gene] = i
-        i += 1
+    i = 0
+    with open(genes_filename) as file:
+        reader = csv.reader(file, delimiter="\t")
+        for row in reader:
+            if row[0] == '#' or len(row) < 2: continue
+            gene = row[4]
+            full_name = row[5]
+            counts_by_gene[gene] = 0
+            loci_by_gene[gene] = {
+                "chromosome": row[0],
+                "start": row[1],
+                "length": row[2]
+            }
+            full_names_by_gene[gene] = full_name
+            # Genes in upstream file are ordered by global popularity
+            interest_rank_by_gene[gene] = i
+            i += 1
 
-publication_words = publication_text.split(' ')
-for word in publication_words:
-    raw_word = word.strip('*,.()—')
-    if raw_word in counts_by_gene:
-        # print(raw_word)
-        counts_by_gene[raw_word] += 1
+    publication_words = publication_text.split(' ')
+    for word in publication_words:
+        raw_word = word.strip('*,.()—')
+        if raw_word in counts_by_gene:
+            # print(raw_word)
+            counts_by_gene[raw_word] += 1
 
-mentioned_genes = {}
-for gene in counts_by_gene:
-    counts_by_gene[gene]
-    count = counts_by_gene[gene]
-    if counts_by_gene[gene] > 0:
-        mentioned_genes[gene] = count
+    mentions_by_gene = {}
+    for gene in counts_by_gene:
+        counts_by_gene[gene]
+        count = counts_by_gene[gene]
+        if counts_by_gene[gene] > 0:
+            mentions_by_gene[gene] = count
 
-de_by_gene = {}
+    de_by_gene = extract_de(bucket, clustering, annotation, all_groups)
 
-def process_de_files():
-    """Fetch, write, and process precomputed differential expression files
+    return [
+        interest_rank_by_gene,
+        mentions_by_gene,
+        de_by_gene,
+        loci_by_gene,
+        full_names_by_gene
+    ]
+
+def extract_de(bucket, clustering, annotation, all_groups):
+    """Fetch differential expression (DE) files, return DE fields by gene
     """
+    de_by_gene = {}
+
     origin = "https://storage.googleapis.com"
     directory = "_scp_internal%2Fdifferential_expression%2F"
     de_url_stem = f"{origin}/download/storage/v1/b/{bucket}/o/{directory}"
@@ -144,7 +155,7 @@ def process_de_files():
         with open(de_filename) as file:
             reader = csv.reader(file, delimiter="\t")
             i = 0
-            # Headers:
+            # Headers in upstream, precomputed DE files:
             # names	scores	logfoldchanges	pvals	pvals_adj	pct_nz_group	pct_nz_reference
             for row in reader:
                 if i < 500:
@@ -166,7 +177,7 @@ def process_de_files():
                         de_by_gene[gene] = [de_entry]
                 i += 1
 
-process_de_files()
+    return de_by_gene
 
 def get_de_and_color_columns(gene, de_by_gene):
     # TODO (SCP-4061): Move color handling to SCP UI
@@ -196,42 +207,64 @@ def get_de_and_color_columns(gene, de_by_gene):
 
     return [de_column, color]
 
-# Process main content for output
-rows = []
-i = 0
-for gene in mentioned_genes:
-    loci = loci_by_gene[gene]
-    chromosome = loci["chromosome"]
-    start = loci["start"]
-    length = loci["length"]
-    full_name = full_names_by_gene[gene]
+def transform(gene_dicts):
+    """Transform extracted dicts into TSV content
+    """
+    [
+        interest_rank_by_gene,
+        mentions_by_gene,
+        de_by_gene,
+        loci_by_gene,
+        full_names_by_gene
+    ] = gene_dicts
+    rows = []
+    i = 0
+    for gene in mentions_by_gene:
+        loci = loci_by_gene[gene]
+        chromosome = loci["chromosome"]
+        start = loci["start"]
+        length = loci["length"]
+        full_name = full_names_by_gene[gene]
 
-    [de, color] = get_de_and_color_columns(gene, de_by_gene)
-    mentions = str(mentioned_genes[gene])
-    interest_rank = str(interest_rank_by_gene[gene])
-    row = [
-        gene, chromosome, start, length, color, full_name,
-        de, mentions, interest_rank
-    ]
-    rows.append("\t".join(row))
-    i += 1
+        [de, color] = get_de_and_color_columns(gene, de_by_gene)
+        mentions = str(mentions_by_gene[gene])
+        interest_rank = str(interest_rank_by_gene[gene])
+        row = [
+            gene, chromosome, start, length, color, full_name,
+            de, mentions, interest_rank
+        ]
+        rows.append("\t".join(row))
+        i += 1
 
-rows = "\n".join(rows)
-header = "##" + "\t".join([
-    'name', 'chromosome', 'start', 'length', 'color', 'full_name',
-    'differential_expression', 'publication_mentions', 'interest_rank'
-]) + "\n"
+    rows = "\n".join(rows)
+    metainformation = "##"
+    header = "## " + "\t".join([
+        'name', 'chromosome', 'start', 'length', 'color', 'full_name',
+        'differential_expression', 'publication_mentions', 'interest_rank'
+    ]) + "\n"
 
-content = header + rows
+    tsv_content = header + rows
 
-cache_buster = "_v3" # TODO (pre-GA): Improve handling if needed beyond dev
-output_path = f"gene_leads_{clustering}--{annotation}{cache_buster}.tsv"
-with open(output_path, "w") as f:
-    f.write(content)
+    return tsv_content
 
-print('Wrote content')
-print(content)
+def load(tsv_content):
+    """Load TSV content into file, write to disk
+    """
+    # TODO (pre-GA): Write output files to whichever bucket we write DE to.
+    # The # of gene leads files will be many fewer than DE in Q2 '22,
+    # i.e. << A-vs-all DE.
+    cache_buster = "_v3" # TODO (pre-GA): Improve handling if needed beyond dev
+    output_path = f"gene_leads_{clustering}--{annotation}{cache_buster}.tsv"
+    with open(output_path, "w") as f:
+        f.write(tsv_content)
 
-# TODO (pre-GA): Write output files to whichever bucket we write DE to.
-# The # of gene leads files will be many fewer than DE in Q2 '22,
-# i.e. << A-vs-all DE.
+    print('Wrote content')
+    print(tsv_content)
+
+def main(organism, bucket, clustering, annotation, all_groups):
+    gene_dicts = extract(organism, bucket, clustering, annotation, all_groups)
+    tsv_content = transform(gene_dicts)
+    load(tsv_content)
+
+if __name__ == '__main__':
+    main(organism, bucket, clustering, annotation, all_groups)
