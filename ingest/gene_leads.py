@@ -118,7 +118,7 @@ for gene in counts_by_gene:
     if counts_by_gene[gene] > 0:
         mentioned_genes[gene] = count
 
-very_de_by_gene = {}
+de_by_gene = {}
 
 def process_de_files():
     """Fetch, write, and process precomputed differential expression files
@@ -147,9 +147,6 @@ def process_de_files():
             # Headers:
             # names	scores	logfoldchanges	pvals	pvals_adj	pct_nz_group	pct_nz_reference
             for row in reader:
-                # TODO (pre-GA):
-                # - Account for studies with few assayed genes
-                # - Include log2FC, pvals_adj for each very-DE group
                 if i < 500:
                     # 500 is ~2% of 25k-ish genes in Ensembl genome annotation.
                     # Like the rest of "gene leads", a big factor in this value
@@ -157,25 +154,47 @@ def process_de_files():
                     # 500 produced a wide-but-not-overwhelming palette of colors
                     # in the gene leads ideogram.
                     gene = row[1]
-                    if gene in very_de_by_gene:
-                        very_de_by_gene[gene].append(group)
+                    de_entry = {
+                        "group": group,
+                        "log2fc": row[3], # Scanpy `logfoldchanges`
+                        "adjusted_pval": row[5], # Scanpy `pvals_adj`
+                        "scores_rank": str(i) # per Scanpy `scores`
+                    }
+                    if gene in de_by_gene:
+                        de_by_gene[gene].append(de_entry)
                     else:
-                        very_de_by_gene[gene] = [group]
+                        de_by_gene[gene] = [de_entry]
                 i += 1
 
 process_de_files()
 
-def contextualize_de(gene, very_de_by_gene):
-    # TODO (pre-GA):
-    # - Include log2FC, pvals_adj for each high-DE group
-    # - Improve formatting for cases where gene is high-DE in many groups
-    if gene not in very_de_by_gene:
+def get_de_and_color_columns(gene, de_by_gene):
+    # TODO (SCP-4061): Move color handling to SCP UI
+    if gene not in de_by_gene:
         return ["", "#4d72aa"] # Empty string, default color
-    groups = very_de_by_gene[gene]
-    delimited_groups = ";".join(groups)
-    first_group_index = all_groups.index(groups[0])
+    de_entries = de_by_gene[gene]
+    # Sort each group by Scanpy `scores` rank
+    de_entries = sorted(de_entries, key=lambda de: int(de["scores_rank"]))
+
+    # Collapse DE props for each group, delimit inner fields with "!"
+    de_grouped_props = []
+    for de in de_entries:
+        de_grouped_props.append(
+            "!".join([
+                de["group"], de["log2fc"],
+                de["adjusted_pval"], de["scores_rank"]
+            ])
+        )
+
+    # Collapse grouped props, all DE data for each gene is in one TSV column
+    de_column = ";".join(de_grouped_props)
+
+    # Set color to that of the highest scores-ranked group
+    # TODO (SCP-4061): Move color handling to SCP UI
+    first_group_index = all_groups.index(de_entries[0]["group"])
     color = color_brewer_list[first_group_index]
-    return [delimited_groups, color]
+
+    return [de_column, color]
 
 # Process main content for output
 rows = []
@@ -187,7 +206,7 @@ for gene in mentioned_genes:
     length = loci["length"]
     full_name = full_names_by_gene[gene]
 
-    [de, color] = contextualize_de(gene, very_de_by_gene)
+    [de, color] = get_de_and_color_columns(gene, de_by_gene)
     mentions = str(mentioned_genes[gene])
     interest_rank = str(interest_rank_by_gene[gene])
     row = [
