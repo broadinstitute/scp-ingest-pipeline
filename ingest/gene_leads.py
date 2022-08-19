@@ -29,9 +29,9 @@ all_groups = [
     "eosinophils",
     "fibroblasts",
     "GPMNB macrophages",
-    "neutrophils",
     "LC1",
     "LC2",
+    "neutrophils",
     "T cells"
 ]
 
@@ -217,7 +217,7 @@ header = "##name\tchromosome\tstart\tlength\tcolor\tfull_name\tsignificance\n"
 
 content = header + rows
 
-cache_buster = "_v2" # TODO (pre-GA): Improve handling if needed beyond dev
+cache_buster = "_v3" # TODO (pre-GA): Improve handling if needed beyond dev
 output_path = f"gene_leads_{clustering}--{annotation}{cache_buster}.tsv"
 with open(output_path, "w") as f:
     f.write(content)
