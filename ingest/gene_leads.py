@@ -82,7 +82,7 @@ genes_url = f"https://cdn.jsdelivr.net/npm/ideogram@1.37.0/dist/data/cache/{gene
 download_gzip(genes_url, genes_filename)
 
 # Populate containers for various name and significance fields
-view_rank_by_gene = {}
+interest_rank_by_gene = {}
 counts_by_gene = {}
 loci_by_gene = {}
 full_names_by_gene = {}
@@ -101,7 +101,7 @@ with open(genes_filename) as file:
         }
         full_names_by_gene[gene] = full_name
          # Genes in upstream file are ordered by global popularity
-        view_rank_by_gene[gene] = i
+        interest_rank_by_gene[gene] = i
         i += 1
 
 publication_words = publication_text.split(' ')
@@ -111,12 +111,12 @@ for word in publication_words:
         # print(raw_word)
         counts_by_gene[raw_word] += 1
 
-seen_genes = {}
+mentioned_genes = {}
 for gene in counts_by_gene:
     counts_by_gene[gene]
     count = counts_by_gene[gene]
     if counts_by_gene[gene] > 0:
-        seen_genes[gene] = count
+        mentioned_genes[gene] = count
 
 very_de_by_gene = {}
 
@@ -165,17 +165,6 @@ def process_de_files():
 
 process_de_files()
 
-br2 = "<br/><br/>"
-def contextualize_count(count):
-    times = f" {count} times" if count > 1 else ""
-    return f"Mentioned{times} in linked publication."
-
-def contextualize_rank(rank):
-    """Note gene's global popularity, if in top ~2% for organism's known genes
-    """
-    text = f"Ranked {rank} in global interest." if rank < 500 else ""
-    return text
-
 def contextualize_de(gene, very_de_by_gene):
     # TODO (pre-GA):
     # - Include log2FC, pvals_adj for each high-DE group
@@ -183,37 +172,36 @@ def contextualize_de(gene, very_de_by_gene):
     if gene not in very_de_by_gene:
         return ["", "#4d72aa"] # Empty string, default color
     groups = very_de_by_gene[gene]
-    pretty_groups = " and ".join(groups)
-    text = f"Very differentially expressed in:<br/>{pretty_groups}{br2}"
+    delimited_groups = ";".join(groups)
     first_group_index = all_groups.index(groups[0])
     color = color_brewer_list[first_group_index]
-    return [text, color]
+    return [delimited_groups, color]
 
 # Process main content for output
 rows = []
 i = 0
-for gene in seen_genes:
+for gene in mentioned_genes:
     loci = loci_by_gene[gene]
     chromosome = loci["chromosome"]
     start = loci["start"]
     length = loci["length"]
     full_name = full_names_by_gene[gene]
 
-    # TODO (pre-GA): Handling of line breaks, prose wording, color, etc. should
-    # be handled in SCP UI.  Expose Ideogram kit internals via its JS API to
-    # enable that.
-    [de_text, color] = contextualize_de(gene, very_de_by_gene)
-    count_text = contextualize_count(seen_genes[gene])
-    rank_text = contextualize_rank(view_rank_by_gene[gene])
-    if rank_text != "":
-        count_text += br2
-    significance = de_text + count_text + rank_text
-    row = [gene, chromosome, start, length, color, full_name, significance]
+    [de, color] = contextualize_de(gene, very_de_by_gene)
+    mentions = str(mentioned_genes[gene])
+    interest_rank = str(interest_rank_by_gene[gene])
+    row = [
+        gene, chromosome, start, length, color, full_name,
+        de, mentions, interest_rank
+    ]
     rows.append("\t".join(row))
     i += 1
 
 rows = "\n".join(rows)
-header = "##name\tchromosome\tstart\tlength\tcolor\tfull_name\tsignificance\n"
+header = "##" + "\t".join([
+    'name', 'chromosome', 'start', 'length', 'color', 'full_name',
+    'differential_expression', 'publication_mentions', 'interest_rank'
+]) + "\n"
 
 content = header + rows
 
