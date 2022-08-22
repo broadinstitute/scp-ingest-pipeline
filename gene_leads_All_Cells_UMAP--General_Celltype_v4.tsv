@@ -1,0 +1,70 @@
+## Gene leads ideogram data - Single Cell Portal
+## accession=SCP138;organism=homo-sapiens;bucket=fc-65379b91-5ded-4d28-8e51-ada209542117;clustering=All_Cells_UMAP;annotation=General_Celltype
+## differential_expression keys: group;log2fc;adjusted_pval;scores_rank
+# name	chromosome	start	length	color	full_name	differential_expression	publication_mentions	interest_rank
+EGFR	7	55019017	192611	#f781bf	epidermal growth factor receptor	LC1!2.487!5.586e-252!365	1	4
+ERBB2	17	39687914	42512	#4d72aa	erb-b2 receptor tyrosine kinase 2		1	27
+APP	21	25880550	290578	#999999	amyloid beta precursor protein	LC2!0.9691!0!399	1	30
+ESR1	6	151656691	472928	#4d72aa	estrogen receptor 1		3	70
+JAK2	9	4984390	145558	#984ea3	Janus kinase 2	eosinophils!3.443!0.0008581!200	1	73
+INSR	19	7112255	182159	#f781bf	insulin receptor	LC1!1.76!0!239	3	96
+S100A9	1	153357854	3169	#66c2a5	S100 calcium binding protein A9	neutrophils!3.308!5.539e-231!70	1	129
+SOX9	17	72121020	5396	#f781bf	SRY-box transcription factor 9	LC1!1.325!3.354e-251!369;LC2!1.055!0!473	1	134
+TREM2	6	41158506	4680	#377eb8	triggering receptor expressed on myeloid cells 2	CSN1S1 macrophages!3.457!5.948e-155!155;GPMNB macrophages!6.201!0!226	1	146
+EGF	4	109912883	100883	#4d72aa	epidermal growth factor		1	161
+TOP2A	17	40388525	29371	#4d72aa	DNA topoisomerase II alpha		1	190
+SERPINH1	11	75562056	10727	#ff7f00	serpin family H member 1	fibroblasts!8.078!1.232e-87!6	1	240
+HLA-B	6	31353872	3316	#66c2a5	major histocompatibility complex%2C class I%2C B	neutrophils!4.086!0!5;T cells!3.023!0!9;eosinophils!3.61!5.719e-11!12;CSN1S1 macrophages!2.577!0!14;GPMNB macrophages!3.521!0!19;dendritic cells!2.623!5.659e-146!50	1	271
+KRT18	12	52948871	4035	#f781bf	keratin 18	LC1!1.358!0!192;LC2!1.198!0!329	2	278
+SCD	10	100347233	17593	#4d72aa	stearoyl-CoA desaturase		1	314
+VIM	10	17228241	9352	#377eb8	vimentin	CSN1S1 macrophages!4.985!0!3;GPMNB macrophages!7.071!0!4;dendritic cells!4.973!3.966e-172!20;fibroblasts!4.836!1.735e-54!119;T cells!2.132!4.485e-101!214	1	335
+ANXA1	9	73151865	18528	#377eb8	annexin A1	CSN1S1 macrophages!2.206!1.192e-171!130;eosinophils!3.032!0.0001193!150;GPMNB macrophages!3.151!0!179	1	433
+JUN	1	58776845	7203	#f781bf	Jun proto-oncogene%2C AP-1 transcription factor subunit	LC1!4.893!0!2;fibroblasts!3.164!4.781e-46!190;CSN1S1 macrophages!1.742!1.805e-116!220;GPMNB macrophages!2.773!0!275	2	544
+GPNMB	7	23235967	39141	#377eb8	glycoprotein nmb	CSN1S1 macrophages!4.236!0!11;GPMNB macrophages!5.858!0!16	1	808
+ATF3	1	212565334	55443	#f781bf	activating transcription factor 3	LC1!4.877!0!4	1	1133
+ITGA6	2	172427354	79105	#f781bf	integrin subunit alpha 6	LC1!1.211!0!225;LC2!1.246!0!280	1	1478
+KRT8	12	52897187	52767	#4d72aa	keratin 8		1	1505
+KRT19	17	41523617	4691	#999999	keratin 19	LC2!1.61!0!226;LC1!1.33!7.821e-304!281	1	1506
+STMN1	1	25884181	22810	#ff7f00	stathmin 1	fibroblasts!3.82!6.681e-47!182	1	1512
+CCDC50	3	191329085	69574	#f781bf	coiled-coil domain containing 50	LC1!1.579!4.058e-211!478	1	4511
+MALAT1	11	65497688	8828	#66c2a5	metastasis associated lung adenocarcinoma transcript 1	neutrophils!7.031!0!1;LC1!4.424!0!5;T cells!5.033!0!6;eosinophils!5.649!6.737e-11!13;fibroblasts!6.223!5.821e-77!31;CSN1S1 macrophages!2.926!5.048e-234!62;dendritic cells!3.636!1.252e-132!67;GPMNB macrophages!3.561!0!183	1	4706
+ACACA	17	37084992	321844	#4d72aa	acetyl-CoA carboxylase alpha		2	4805
+ACACB	12	109116595	151631	#999999	acetyl-CoA carboxylase beta	LC2!2.729!0!94	1	4806
+CD74	5	150400041	12888	#4daf4a	CD74 molecule	dendritic cells!4.846!1.031e-254!2;CSN1S1 macrophages!2.494!9.391e-288!29;GPMNB macrophages!3.546!0!43;eosinophils!1.252!0.07599!400	1	4851
+CTSL	9	87724051	7418	#377eb8	cathepsin L	CSN1S1 macrophages!4.634!0!8;GPMNB macrophages!7.039!0!12	1	4883
+ETS1	11	128458761	128797	#fc8d62	ETS proto-oncogene 1%2C transcription factor	T cells!8.649!0!1	1	4905
+SORL1	11	121452314	181449	#984ea3	sortilin related receptor 1	eosinophils!4.843!6.516e-12!6;neutrophils!2.435!4.344e-77!248	1	5065
+STAT5A	17	42287547	24396	#999999	signal transducer and activator of transcription 5A	LC2!1.327!0!196	3	5071
+TCF4	18	55222185	442602	#4daf4a	transcription factor 4	dendritic cells!4.817!6.251e-72!252;fibroblasts!4.864!4.875e-40!287	1	5075
+FASN	17	82078338	19956	#999999	fatty acid synthase	LC2!4.108!0!12	1	5459
+FBP1	9	94603133	37116	#4d72aa	fructose-bisphosphatase 1		1	5461
+NR4A3	9	99821855	45036	#4daf4a	nuclear receptor subfamily 4 group A member 3	dendritic cells!7.03!3.452e-197!11	1	5714
+IFITM3	11	319676	7861	#377eb8	interferon induced transmembrane protein 3	CSN1S1 macrophages!1.839!7.678e-96!283;neutrophils!1.774!1.781e-24!477;GPMNB macrophages!2.409!0!495	1	5793
+FTH1	11	61959718	7916	#999999	ferritin heavy chain 1	LC2!1.261!0!48;neutrophils!0.595!6.059e-47!338	1	6305
+EPCAM	2	47345158	42443	#999999	epithelial cell adhesion molecule	LC2!1.67!0!183;LC1!0.9711!1.072e-222!448	1	6360
+XDH	2	31334321	80421	#999999	xanthine dehydrogenase	LC2!4.77!0!1	2	6467
+REL	2	60881521	50091	#4daf4a	REL proto-oncogene%2C NF-kB subunit	dendritic cells!4.719!2.232e-194!12	1	6837
+NUPR1	16	28532708	6300	#999999	nuclear protein 1%2C transcriptional regulator	LC2!1.756!0!132	1	6876
+CD68	17	7579491	2620	#a65628	CD68 molecule	GPMNB macrophages!6.512!0!3;CSN1S1 macrophages!4.36!0!7;dendritic cells!2!1.234e-53!375	3	7125
+KLF6	10	3775996	9285	#f781bf	Kruppel like factor 6	LC1!4.608!0!3;dendritic cells!3.042!3.043e-120!88;T cells!2.666!5.001e-172!97;CSN1S1 macrophages!2.104!7.591e-164!139;GPMNB macrophages!3.02!0!201;neutrophils!1.588!4.567e-48!333	2	7183
+CLDN4	7	73799542	33151	#f781bf	claudin 4	LC1!4.691!0!1	2	7188
+CSF3R	1	36466043	17235	#66c2a5	colony stimulating factor 3 receptor	neutrophils!7.771!0!13;CSN1S1 macrophages!1.972!7.52e-63!436	1	7210
+FOS	14	75278826	3404	#984ea3	Fos proto-oncogene%2C AP-1 transcription factor subunit	eosinophils!4.621!5.142e-09!42;LC1!2.89!0!53;neutrophils!4.366!3.64e-259!61;dendritic cells!3.363!5.713e-123!81;CSN1S1 macrophages!2.695!1.704e-206!89;GPMNB macrophages!3.936!0!139	1	7363
+LIPA	10	89213569	200988	#377eb8	lipase A%2C lysosomal acid type	CSN1S1 macrophages!4.205!0!15;GPMNB macrophages!5.988!0!31	1	7607
+LTA4H	12	96000753	42767	#a65628	leukotriene A4 hydrolase	GPMNB macrophages!2.692!0!327;CSN1S1 macrophages!1.275!1.775e-55!488	1	7612
+PC	11	66848417	109969	#4d72aa	pyruvate carboxylase		1	7740
+PRLR	5	35048756	181731	#999999	prolactin receptor	LC2!2.136!0!124	5	7837
+PTN	7	137227341	116433	#ff7f00	pleiotrophin	fibroblasts!10.23!1.607e-85!13	1	7879
+ATP2C2	16	84368527	95660	#999999	ATPase secretory pathway Ca2+ transporting 2	LC2!2.641!0!180	1	8494
+CORO1A	16	30182827	6249	#984ea3	coronin 1A	eosinophils!6.598!2.155e-12!4;T cells!4.775!1.237e-202!69;CSN1S1 macrophages!2.446!9.072e-73!382;neutrophils!2.947!1.895e-33!418	1	8690
+CHRDL2	11	74696429	34997	#999999	chordin like 2	LC2!4.091!0!18	2	8854
+TCN1	11	59852800	13689	#4d72aa	transcobalamin 1		1	15866
+LALBA	12	48567684	2382	#999999	lactalbumin alpha	LC2!5.078!0!3	2	17573
+LYZ	12	69348381	5853	#4d72aa	lysozyme		2	17965
+KRT15	17	41513745	8784	#999999	keratin 15	LC2!1.942!0!410	2	24962
+CIDEA	18	12254361	23234	#999999	cell death inducing DFFA like effector a	LC2!3.405!0!42	1	26026
+UGP2	2	63840952	50610	#999999	UDP-glucose pyrophosphorylase 2	LC2!2.991!0!17	1	29132
+SEL1L3	4	25747433	116327	#4daf4a	SEL1L family member 3	dendritic cells!4.932!3.814e-114!101	1	35224
+CSN1S1	4	69931068	15506	#999999	casein alpha s1	LC2!4.966!0!2	2	35529
+CSN2	4	69955256	5751	#999999	casein beta	LC2!5.181!0!6	2	35530
+CSN3	4	70242588	8840	#999999	casein kappa	LC2!4.661!0!4	1	35536
