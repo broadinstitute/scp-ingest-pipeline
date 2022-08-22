@@ -1,4 +1,4 @@
-"""Compute "gene leads", interesting genes to search in a single-cell study
+"""Extract, transform, and load data into TSV files for gene leads ideogram
 
 Gene leads are all, at least, mentioned in a study's related publication.
 These published genes are then sought among very differentially expressed
@@ -20,6 +20,7 @@ import csv
 # TODO (pre-GA): Extract these to CLI arguments and/or SCP API calls
 organism = "homo-sapiens"
 bucket = "fc-65379b91-5ded-4d28-8e51-ada209542117"
+accession = "SCP138"
 clustering = "All_Cells_UMAP"
 annotation = "General_Celltype"
 all_groups = [
@@ -62,7 +63,8 @@ def download_gzip(url, output_path, cache=0):
     with open(output_path, "w") as f:
         f.write(content)
 
-def extract(organism, bucket, clustering, annotation, all_groups):
+def extract(meta, all_groups):
+    [accession, organism, bucket, clustering, annotation] = list(meta.values())
     # Example URL:
     # https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1.full.txt
     #
@@ -179,7 +181,7 @@ def extract_de(bucket, clustering, annotation, all_groups):
 
     return de_by_gene
 
-def get_de_and_color_columns(gene, de_by_gene):
+def get_de_and_color_columns(gene, de_by_gene, de_meta_keys):
     # TODO (SCP-4061): Move color handling to SCP UI
     if gene not in de_by_gene:
         return ["", "#4d72aa"] # Empty string, default color
@@ -190,11 +192,9 @@ def get_de_and_color_columns(gene, de_by_gene):
     # Collapse DE props for each group, delimit inner fields with "!"
     de_grouped_props = []
     for de in de_entries:
+        props = [de[key] for key in de_meta_keys]
         de_grouped_props.append(
-            "!".join([
-                de["group"], de["log2fc"],
-                de["adjusted_pval"], de["scores_rank"]
-            ])
+            "!".join(props)
         )
 
     # Collapse grouped props, all DE data for each gene is in one TSV column
@@ -207,7 +207,22 @@ def get_de_and_color_columns(gene, de_by_gene):
 
     return [de_column, color]
 
-def transform(gene_dicts):
+def get_metainformation(meta, de_meta_keys):
+    """Get headers about entire content, and inner column formats
+
+    Metainformation fields are also used in the VCF file specification.
+    """
+    content_meta = ";".join([f"{k}={v}" for (k, v) in meta.items()])
+    de_meta = "differential_expression keys: " + ";".join(de_meta_keys)
+    metainformation = "## " + "\n## ".join([
+        "Gene leads ideogram data - Single Cell Portal",
+        content_meta,
+        de_meta
+    ]) + "\n"
+
+    return metainformation
+
+def transform(gene_dicts, meta):
     """Transform extracted dicts into TSV content
     """
     [
@@ -217,6 +232,10 @@ def transform(gene_dicts):
         loci_by_gene,
         full_names_by_gene
     ] = gene_dicts
+
+
+    de_meta_keys = ["group", "log2fc", "adjusted_pval", "scores_rank"]
+
     rows = []
     i = 0
     for gene in mentions_by_gene:
@@ -225,8 +244,7 @@ def transform(gene_dicts):
         start = loci["start"]
         length = loci["length"]
         full_name = full_names_by_gene[gene]
-
-        [de, color] = get_de_and_color_columns(gene, de_by_gene)
+        [de, color] = get_de_and_color_columns(gene, de_by_gene, de_meta_keys)
         mentions = str(mentions_by_gene[gene])
         interest_rank = str(interest_rank_by_gene[gene])
         row = [
@@ -237,13 +255,13 @@ def transform(gene_dicts):
         i += 1
 
     rows = "\n".join(rows)
-    metainformation = "##"
-    header = "## " + "\t".join([
+    metainformation = get_metainformation(meta, de_meta_keys)
+    header = "# " + "\t".join([
         'name', 'chromosome', 'start', 'length', 'color', 'full_name',
         'differential_expression', 'publication_mentions', 'interest_rank'
     ]) + "\n"
 
-    tsv_content = header + rows
+    tsv_content = metainformation + header + rows
 
     return tsv_content
 
@@ -253,7 +271,7 @@ def load(tsv_content):
     # TODO (pre-GA): Write output files to whichever bucket we write DE to.
     # The # of gene leads files will be many fewer than DE in Q2 '22,
     # i.e. << A-vs-all DE.
-    cache_buster = "_v3" # TODO (pre-GA): Improve handling if needed beyond dev
+    cache_buster = "_v4" # TODO (pre-GA): Improve handling if needed beyond dev
     output_path = f"gene_leads_{clustering}--{annotation}{cache_buster}.tsv"
     with open(output_path, "w") as f:
         f.write(tsv_content)
@@ -262,8 +280,17 @@ def load(tsv_content):
     print(tsv_content)
 
 def main(organism, bucket, clustering, annotation, all_groups):
-    gene_dicts = extract(organism, bucket, clustering, annotation, all_groups)
-    tsv_content = transform(gene_dicts)
+    """Extract, transform, and load data into TSV files for gene leads ideogram
+    """
+    meta = {
+        "accession": accession,
+        "organism": organism,
+        "bucket": bucket,
+        "clustering": clustering,
+        "annotation": annotation
+    }
+    gene_dicts = extract(meta, all_groups)
+    tsv_content = transform(gene_dicts, meta)
     load(tsv_content)
 
 if __name__ == '__main__':
