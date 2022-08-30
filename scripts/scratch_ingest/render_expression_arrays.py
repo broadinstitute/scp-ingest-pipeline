@@ -203,7 +203,7 @@ def process_dense_data(matrix_file_path, cluster_cells, cluster_name, data_dir):
             clean_line = line.rstrip()
             raw_vals = re.split(COMMA_OR_TAB, clean_line)
             gene_name = raw_vals.pop(0)
-            exp_vals = [round(float(val), precision) for val in raw_vals]
+            exp_vals = [round(float(val), precision) if float(val) != 0.0 else 0 for val in raw_vals]
             filtered_expression = filter_expression_for_cluster(
                 cluster_cells, cells, exp_vals
             )
@@ -221,8 +221,7 @@ def filter_expression_for_cluster(cluster_cells, exp_cells, exp_scores):
         
     Returns:
         (List): Expression values, ordered by cluster_cells
-    """ 
-    filtered_scores = []
+    """
     observed_exp = dict(zip(exp_cells, exp_scores))
     return (observed_exp.get(cell, 0) for cell in cluster_cells)
 
