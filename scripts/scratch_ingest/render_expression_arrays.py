@@ -196,7 +196,6 @@ def process_dense_data(matrix_file_path, cluster_cells, cluster_name, data_dir):
         data_dir (String): output data directory
     """
     with open_file(matrix_file_path) as matrix_file:
-        print(f"reading cells from {matrix_file.name}")
         header = matrix_file.readline().rstrip()
         values = re.split(COMMA_OR_TAB, header)
         cells = values[1:]
