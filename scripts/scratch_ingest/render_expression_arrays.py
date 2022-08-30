@@ -268,6 +268,7 @@ data_dir = make_data_dir(sanitized_cluster_name)
 cluster_cells = get_cluster_cells(cluster_file_path)
 if args.precision is not None:
     precision = int(args.precision)
+print(f"using {precision} digits of precision for non-zero data")
 if args.genes_file is not None and args.barcodes_file is not None:
     print(f"reading {expression_file_path} as sparse matrix")
     genes_file = open_file(args.genes_file)
