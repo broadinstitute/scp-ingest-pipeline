@@ -11,6 +11,12 @@ dense matrix:
 python3 render_expression_arrays.py --matrix-file ../../tests/data/dense_expression_matrix.txt \
                                     --cluster-file ../../tests/data/cluster_example.txt \
                                     --cluster-name 'Dense Example'
+
+dense matrix with precision override:
+python3 render_expression_arrays.py --matrix-file ../../tests/data/dense_expression_matrix.txt \
+                                    --cluster-file ../../tests/data/cluster_example.txt \
+                                    --cluster-name 'Dense Example' --precision 1
+
 sparse matrix:
 python3 render_expression_arrays.py --matrix-file ../../tests/data/mtx/sorted_matrix_header.mtx \
                                     --genes-file ../../tests/data/mtx/sampled_genes.tsv \
