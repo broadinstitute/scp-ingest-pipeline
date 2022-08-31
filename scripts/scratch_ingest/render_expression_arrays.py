@@ -48,6 +48,12 @@ GZIP_MAGIC_NUM = b'\x1f\x8b'
 # default level of precision
 precision = 3
 
+all_cores = multiprocessing.cpu_count()
+if all_cores is not None:
+    num_cores = all_cores - 1
+else:
+    num_cores = 3
+
 def is_gz_file(filepath):
     """
     Determine if a file is gzipped by reading the first two bytes and comparing to the 'magic number'
@@ -159,7 +165,7 @@ def divide_sparse_matrix(matrix_file_path, genes, data_dir):
         outfile = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
         command = f"{reader_cmd} '^{gene_idx}\s' {matrix_file_path} > {outfile}"
         commands.append(command)
-    pool = multiprocessing.Pool(3)
+    pool = multiprocessing.Pool(num_cores)
     print(f"dividing {matrix_file_path} on gene indices")
     pool.map(os.system, commands)
 
@@ -201,7 +207,7 @@ def process_sparse_data_fragments(barcodes, cluster_cells, cluster_name, data_di
     """
     fragments = os.listdir(f"{data_dir}/gene_entries")
     print(f"subdivision complete, processing {len(fragments)} fragments")
-    pool = multiprocessing.Pool(3)
+    pool = multiprocessing.Pool(num_cores)
     processor = partial(process_fragment, barcodes, cluster_cells, cluster_name, data_dir)
     pool.map(processor, fragments)
 
@@ -227,7 +233,7 @@ def process_dense_data(matrix_file_path, cluster_cells, cluster_name, data_dir):
         cluster_name (String): name of cluster object
         data_dir (String): output data directory
     """
-    pool = multiprocessing.Pool(3)
+    pool = multiprocessing.Pool(num_cores)
     with open_file(matrix_file_path) as matrix_file:
         header = matrix_file.readline().rstrip()
         values = re.split(COMMA_OR_TAB, header)
