@@ -58,7 +58,8 @@ def is_gz_file(filepath):
         return test_f.read(2) == GZIP_MAGIC_NUM
         
 def open_file(filepath):
-    """Open a file with the correct reader
+    """
+    Open a file with the correct reader
     Args:
         filepath (String): path to file to open
 
@@ -72,7 +73,8 @@ def open_file(filepath):
 
 def make_data_dir(name):
     """
-    Make a directory to put output files in
+    Make a directory to put output files in.  Appends a UUID to the end of the directory to allow for
+    quick iteration and side-by-side comparison of outputs without manually moving directories
     Args:
         name (String): name of directory
         
@@ -101,7 +103,7 @@ def get_cluster_cells(file_path):
             cell = re.split(COMMA_OR_TAB, row)[0]
             cells.append(cell)
     return cells
-    
+
 def load_entities_as_list(file, column = None):
     """
     Read an entire 10X feature/barcode file into a list for parsing sparse data
@@ -115,12 +117,7 @@ def load_entities_as_list(file, column = None):
     if not column:
         return list(map(str.rstrip, file.readlines()))
     else:
-        entities = []
-        for line in file:
-            entry = re.split(ALL_DELIM, line.strip())[column]
-            entities.append(entry)
-        return entities
-        
+        return list(re.split(ALL_DELIM, line.strip())[column] for line in file)
             
 def process_sparse_data(
         matrix_file_path, genes, barcodes, cluster_cells, cluster_name, data_dir
