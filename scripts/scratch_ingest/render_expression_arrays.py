@@ -32,6 +32,8 @@ import argparse
 import uuid
 import gzip
 import time
+import multiprocessing
+from functools import partial
 
 # regex to split on commas and tabs
 COMMA_OR_TAB = r"[,\t]"
@@ -44,6 +46,9 @@ GZIP_MAGIC_NUM = b'\x1f\x8b'
 
 # default level of precision
 precision = 3
+
+# default number of threads
+max_threads = 10
 
 def is_gz_file(filepath):
     """
@@ -192,19 +197,23 @@ def process_dense_data(matrix_file_path, cluster_cells, cluster_name, data_dir):
         cluster_name (String): name of cluster object
         data_dir (String): output data directory
     """
+    pool = multiprocessing.Pool(3)
     with open_file(matrix_file_path) as matrix_file:
         header = matrix_file.readline().rstrip()
         values = re.split(COMMA_OR_TAB, header)
         cells = values[1:]
-        for line in matrix_file:
-            clean_line = line.rstrip()
-            raw_vals = re.split(COMMA_OR_TAB, clean_line)
-            gene_name = raw_vals.pop(0)
-            exp_vals = [round(float(val), precision) if float(val) != 0.0 else 0 for val in raw_vals]
-            filtered_expression = filter_expression_for_cluster(
-                cluster_cells, cells, exp_vals
-            )
-            write_gene_scores(cluster_name, gene_name, filtered_expression, data_dir)  
+        processor = partial(process_dense_line, cells, cluster_cells, cluster_name, data_dir)
+        pool.map(processor, matrix_file.readlines())
+
+def process_dense_line(matrix_cells, cluster_cells, cluster_name, data_dir, line):
+    clean_line = line.rstrip()
+    raw_vals = re.split(COMMA_OR_TAB, clean_line)
+    gene_name = raw_vals.pop(0)
+    exp_vals = [round(float(val), precision) if float(val) != 0.0 else 0 for val in raw_vals]
+    filtered_expression = filter_expression_for_cluster(
+        cluster_cells, matrix_cells, exp_vals
+    )
+    write_gene_scores(cluster_name, gene_name, filtered_expression, data_dir)
 
 def filter_expression_for_cluster(cluster_cells, exp_cells, exp_scores):
     """
@@ -237,49 +246,49 @@ def write_gene_scores(cluster_name, gene_name, exp_values, data_dir):
     Returns:
         (File): JSON file as a List of expression values
     """
-    start_write = time.time()
-    print(f"writing {gene_name} data... ", end = '')
     with gzip.open(f"{data_dir}/{cluster_name}--{gene_name}.json.gz", "wt") as file:
         json.dump(list(exp_values), file, separators=(',', ':'))
-    end_write = time.time()
-    time_in_sec = float(end_write - start_write)
-    print(f"{round(time_in_sec, 2)}s")
-    
-# parse cli arguments
-parser = argparse.ArgumentParser()
-parser.add_argument('--cluster-file', help='path to cluster file', required=True)
-parser.add_argument('--cluster-name', help='name of cluster object', required=True)
-parser.add_argument('--matrix-file', help='path to matrix file', required=True)
-parser.add_argument('--precision', help='number of digits of precision for non-zero data')
-parser.add_argument('--genes-file', help='path to genes file (None for dense matrix files)')
-parser.add_argument('--barcodes-file', help='path to barcodes file (None for dense matrix files)')
-args = parser.parse_args()
 
-# main execution, set cluster name 
-start_time = time.time()
-cluster_file_path = args.cluster_file
-expression_file_path = args.matrix_file
-sanitized_cluster_name = re.sub(r'\W', '_', args.cluster_name)
-data_dir = make_data_dir(sanitized_cluster_name)
-cluster_cells = get_cluster_cells(cluster_file_path)
-if args.precision is not None:
-    precision = int(args.precision)
-print(f"using {precision} digits of precision for non-zero data")
-if args.genes_file is not None and args.barcodes_file is not None:
-    print(f"reading {expression_file_path} as sparse matrix")
-    genes_file = open_file(args.genes_file)
-    genes = load_entities_as_list(genes_file, 1)
-    barcodes_file = open_file(args.barcodes_file)
-    barcodes = load_entities_as_list(barcodes_file)
-    process_sparse_data(
-        expression_file_path, genes, barcodes, cluster_cells, sanitized_cluster_name,
-        data_dir
-    )
-else:
-    print(f"reading {expression_file_path} as dense matrix")
-    process_dense_data(
-        expression_file_path, cluster_cells, sanitized_cluster_name, data_dir
-    )
-end_time = time.time()
-time_in_min = round(float(end_time - start_time), 3) / 60
-print(f"completed, total runtime in minutes: {time_in_min}")
+if __name__ == '__main__':
+    # parse cli arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cluster-file', help='path to cluster file', required=True)
+    parser.add_argument('--cluster-name', help='name of cluster object', required=True)
+    parser.add_argument('--matrix-file', help='path to matrix file', required=True)
+    parser.add_argument('--precision', help='number of digits of precision for non-zero data')
+    parser.add_argument('--max-threads', help='number threads for processing')
+    parser.add_argument('--genes-file', help='path to genes file (None for dense matrix files)')
+    parser.add_argument('--barcodes-file', help='path to barcodes file (None for dense matrix files)')
+    args = parser.parse_args()
+
+    # main execution, set cluster name
+    start_time = time.time()
+    cluster_file_path = args.cluster_file
+    expression_file_path = args.matrix_file
+    sanitized_cluster_name = re.sub(r'\W', '_', args.cluster_name)
+    data_dir = make_data_dir(sanitized_cluster_name)
+    cluster_cells = get_cluster_cells(cluster_file_path)
+    if args.precision is not None:
+        precision = int(args.precision)
+        print(f"using {precision} digits of precision for non-zero data")
+    if args.max_threads is not None:
+        max_threads = int(args.precision)
+        print(f"using {max_threads} threads for processing")
+    if args.genes_file is not None and args.barcodes_file is not None:
+        print(f"reading {expression_file_path} as sparse matrix")
+        genes_file = open_file(args.genes_file)
+        genes = load_entities_as_list(genes_file, 1)
+        barcodes_file = open_file(args.barcodes_file)
+        barcodes = load_entities_as_list(barcodes_file)
+        process_sparse_data(
+            expression_file_path, genes, barcodes, cluster_cells,
+            sanitized_cluster_name, data_dir
+        )
+    else:
+        print(f"reading {expression_file_path} as dense matrix")
+        process_dense_data(
+            expression_file_path, cluster_cells, sanitized_cluster_name, data_dir
+        )
+        end_time = time.time()
+        time_in_min = round(float(end_time - start_time), 3) / 60
+        print(f"completed, total runtime in minutes: {time_in_min}")
