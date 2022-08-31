@@ -33,6 +33,7 @@ import uuid
 import gzip
 import time
 import multiprocessing
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 # regex to split on commas and tabs
@@ -46,9 +47,6 @@ GZIP_MAGIC_NUM = b'\x1f\x8b'
 
 # default level of precision
 precision = 3
-
-# default number of threads
-max_threads = 10
 
 def is_gz_file(filepath):
     """
@@ -89,6 +87,7 @@ def make_data_dir(name):
     dirname = str(f"{name}-{uuid.uuid4()}")
     print(f"creating data directory at {dirname}")
     os.mkdir(dirname)
+    os.mkdir(f"{dirname}/gene_entries")
     return dirname
     
 def get_cluster_cells(file_path):
@@ -123,57 +122,88 @@ def load_entities_as_list(file, column = None):
         return list(map(str.rstrip, file.readlines()))
     else:
         return list(re.split(ALL_DELIM, line.strip())[column] for line in file)
-            
-def process_sparse_data(
-        matrix_file_path, genes, barcodes, cluster_cells, cluster_name, data_dir
-    ):
-    """
-    Main handler to read sparse mtx data and process entries at the gene level
-    Args:
-        matrix_file_path (String): path to matrix file
-        genes (List): gene names
-        barcodes (List): cell names
-        cluster_cells (List): cell names from cluster file
-        cluster_name (String): name of cluster object
-        data_dir (String): output data directory
-    """
-    observed_cells = []
-    exp_vals = []
-    current_gene = 0
-    # cache a copy of an empty expression array to write out for missing genes
-    empty_exp = [0] * len(cluster_cells)
+
+def load_sparse_data(matrix_file_path, genes, data_dir):
+    print(f"loading sparse data from {matrix_file_path}")
     with open_file(matrix_file_path) as matrix_file:
         matrix_file.readline()
         matrix_file.readline()
         matrix_file.readline()
-        print("processing sparse data")
-        for line in matrix_file:
+        for index, line in enumerate(matrix_file):
+            if index % 1000 == 0:
+                print(f"processed {index} lines from {matrix_file_path}")
             gene_idx, barcode_idx, exp_val = extract_sparse_line(line)
-            # special case for first line of data
-            if current_gene == 0:
-                current_gene = gene_idx
-            if gene_idx == current_gene:
-                gene_name = genes[gene_idx - 1]
-                observed_cells.append(barcodes[barcode_idx - 1])
-                exp_vals.append(exp_val)
-            else:
-                print(f"preparing data for {gene_name} with {len(exp_vals)} entries... ", end = '')
-                filtered_expression = filter_expression_for_cluster(
-                    cluster_cells, observed_cells, exp_vals
-                )
-                write_gene_scores(cluster_name, gene_name, filtered_expression, data_dir)
-                offset = gene_idx - current_gene
-                if offset > 1:
-                    # we're are missing a gene here, so write empty expression arrays
-                    missing_range = range(current_gene + 1, gene_idx)
-                    for idx in missing_range:
-                        missing_gene = genes[idx - 1]
-                        print(f"####### {missing_gene} has no expression... ", end = '')
-                        write_gene_scores(cluster_name, missing_gene, empty_exp, data_dir)
-                gene_name = genes[gene_idx - 1]
-                current_gene = gene_idx
-                observed_cells = [barcodes[barcode_idx - 1]]
-                exp_vals = [exp_val]
+            gene_name = genes[gene_idx - 1]
+            outfile = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
+            write_data_fragment(gene_idx, barcode_idx, exp_val, outfile)
+
+def write_data_fragment(gene_idx, barcode_idx, exp_val, file_path):
+    with open(file_path, 'a+') as file:
+        file.write(f"{gene_idx} {barcode_idx} {exp_val}\n")
+
+def divide_sparse_matrix(matrix_file_path, genes, data_dir):
+    """
+    Divide a sparse matrix on gene index to produce 'fragment' files
+    representing single-gene expression
+    Args:
+        matrix_file_path (String): path to sparse matrix file
+        genes (List): list of genes
+        data_dir (String): output path to generate fragments in
+    """
+    commands = []
+    reader_cmd = "grep"
+    if is_gz_file(matrix_file_path):
+        reader_cmd = "zgrep"
+    for index, gene_name in enumerate(genes):
+        gene_idx = index + 1
+        outfile = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
+        command = f"{reader_cmd} '^{gene_idx}\s' {matrix_file_path} > {outfile}"
+        commands.append(command)
+    pool = multiprocessing.Pool(3)
+    print(f"dividing {matrix_file_path} on gene indices")
+    pool.map(os.system, commands)
+
+def process_fragment(barcodes, cluster_cells, cluster_name, data_dir, fragment_name):
+    """
+    Process a single-gene sparse matrix fragment and write expression array
+    Args:
+        barcodes (List): list of cell barcodes
+        cluster_cells (List): list of cells from cluster file
+        cluster_name (String): name of cluster object
+        data_dir (String): output path to write data in
+        fragment_name (String): name of gene-level fragment file
+    """
+    gene_name = fragment_name.split('__')[0]
+    full_path = f"{data_dir}/gene_entries/{fragment_name}"
+    observed_cells = []
+    exp_vals = []
+    # write array of 0 values if file is empty
+    if os.stat(full_path).st_size == 0:
+        empty_exp = [0] * len(cluster_cells)
+        write_gene_scores(cluster_name, gene_name, empty_exp, data_dir)
+    for line in open_file(full_path):
+        gene_idx, barcode_idx, exp_val = extract_sparse_line(line)
+        observed_cells.append(barcodes[barcode_idx - 1])
+        exp_vals.append(exp_val)
+    filtered_expression = filter_expression_for_cluster(
+        cluster_cells, observed_cells, exp_vals
+    )
+    write_gene_scores(cluster_name, gene_name, filtered_expression, data_dir)
+
+def process_sparse_data_fragments(barcodes, cluster_cells, cluster_name, data_dir):
+    """
+    Find and process all generated single-gene sparse data fragments
+    Args:
+        barcodes (List): list of cell barcodes
+        cluster_cells (List): list of cells from cluster file
+        cluster_name (String): name of cluster object
+        data_dir (String): output path to write data in
+    """
+    fragments = os.listdir(f"{data_dir}/gene_entries")
+    print(f"subdivision complete, processing {len(fragments)} fragments")
+    pool = multiprocessing.Pool(3)
+    processor = partial(process_fragment, barcodes, cluster_cells, cluster_name, data_dir)
+    pool.map(processor, fragments)
 
 def extract_sparse_line(line):
     """
@@ -203,7 +233,7 @@ def process_dense_data(matrix_file_path, cluster_cells, cluster_name, data_dir):
         values = re.split(COMMA_OR_TAB, header)
         cells = values[1:]
         processor = partial(process_dense_line, cells, cluster_cells, cluster_name, data_dir)
-        pool.map(processor, matrix_file.readlines())
+        pool.map(processor, (matrix_file.readlines))
 
 def process_dense_line(matrix_cells, cluster_cells, cluster_name, data_dir, line):
     clean_line = line.rstrip()
@@ -256,7 +286,6 @@ if __name__ == '__main__':
     parser.add_argument('--cluster-name', help='name of cluster object', required=True)
     parser.add_argument('--matrix-file', help='path to matrix file', required=True)
     parser.add_argument('--precision', help='number of digits of precision for non-zero data')
-    parser.add_argument('--max-threads', help='number threads for processing')
     parser.add_argument('--genes-file', help='path to genes file (None for dense matrix files)')
     parser.add_argument('--barcodes-file', help='path to barcodes file (None for dense matrix files)')
     args = parser.parse_args()
@@ -271,24 +300,21 @@ if __name__ == '__main__':
     if args.precision is not None:
         precision = int(args.precision)
         print(f"using {precision} digits of precision for non-zero data")
-    if args.max_threads is not None:
-        max_threads = int(args.precision)
-        print(f"using {max_threads} threads for processing")
     if args.genes_file is not None and args.barcodes_file is not None:
         print(f"reading {expression_file_path} as sparse matrix")
         genes_file = open_file(args.genes_file)
         genes = load_entities_as_list(genes_file, 1)
         barcodes_file = open_file(args.barcodes_file)
         barcodes = load_entities_as_list(barcodes_file)
-        process_sparse_data(
-            expression_file_path, genes, barcodes, cluster_cells,
-            sanitized_cluster_name, data_dir
-        )
+        # load_sparse_data(expression_file_path, genes, data_dir)
+        divide_sparse_matrix(expression_file_path, genes, data_dir)
+        process_sparse_data_fragments(barcodes, cluster_cells, sanitized_cluster_name, data_dir)
     else:
         print(f"reading {expression_file_path} as dense matrix")
         process_dense_data(
             expression_file_path, cluster_cells, sanitized_cluster_name, data_dir
         )
-        end_time = time.time()
-        time_in_min = round(float(end_time - start_time), 3) / 60
-        print(f"completed, total runtime in minutes: {time_in_min}")
+
+    end_time = time.time()
+    time_in_min = round(float(end_time - start_time), 3) / 60
+    print(f"completed, total runtime in minutes: {time_in_min}")
