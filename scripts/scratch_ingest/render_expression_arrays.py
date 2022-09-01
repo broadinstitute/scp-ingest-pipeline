@@ -51,9 +51,6 @@ precision = 3
 # cores to use in process pooling
 num_cores = multiprocessing.cpu_count() - 1
 
-# thread workers for dividing files
-num_workers = 20
-
 def is_gz_file(filepath):
     """
     Determine if a file is gzipped by reading the first two bytes and comparing to the 'magic number'
@@ -152,8 +149,8 @@ def get_file_seek_points(matrix_file_path):
     Determine start/stop points in a matrix to process in parallel
     """
     file_size = get_matrix_size(matrix_file_path)
-    chunk_size = int(file_size / num_workers)
-    print(f"determining {num_workers} seek points for {matrix_file_path} with chunk size {chunk_size}")
+    chunk_size = int(file_size / num_cores)
+    print(f"determining {num_cores} seek points for {matrix_file_path} with chunk size {chunk_size}")
     with open_file(matrix_file_path) as matrix_file:
         # fast-forward through any comments if this is a sparse matrix
         if matrix_file.read(1) == '%':
@@ -163,10 +160,10 @@ def get_file_seek_points(matrix_file_path):
         current_pos = matrix_file.tell()
         current_seek = [current_pos]
         seek_points = []
-        for index in range(num_workers):
+        for index in range(num_cores):
             # special case for last seek point, should be end of file
             # likely means the last chunk is slightly larger, depending on where newlines occurred
-            if index == num_workers - 1:
+            if index == num_cores - 1:
                 seek_points.append([current_pos, file_size])
                 continue
             seek_point = current_pos + chunk_size
@@ -199,9 +196,9 @@ def read_sparse_matrix_slice(matrix_file_path, genes, data_dir, indexes):
 def divide_sparse_matrix(matrix_file_path, genes, data_dir):
     print(f"loading sparse data from {matrix_file_path}")
     slice_indexes = get_file_seek_points(matrix_file_path)
-    with ThreadPoolExecutor(max_workers=num_workers) as pool:
-        processor = partial(read_sparse_matrix_slice, matrix_file_path, genes, data_dir)
-        pool.map(processor, slice_indexes)
+    pool = multiprocessing.Pool(num_cores)
+    processor = partial(read_sparse_matrix_slice, matrix_file_path, genes, data_dir)
+    pool.map(processor, slice_indexes)
 
 def process_fragment(barcodes, cluster_cells, cluster_name, data_dir, fragment_name):
     """
