@@ -49,7 +49,10 @@ GZIP_MAGIC_NUM = b'\x1f\x8b'
 precision = 3
 
 # cores to use in process pooling
-num_cores = multiprocessing.cpu_count() - 1
+num_cores = 3 #multiprocessing.cpu_count() - 1
+
+# 1GB, default chunk size for reading
+chunk_size = 1024 * 1024 * 1024
 
 def is_gz_file(filepath):
     """
@@ -126,31 +129,18 @@ def load_entities_as_list(file, column = None):
     else:
         return list(re.split(ALL_DELIM, line.strip())[column] for line in file)
 
-def get_matrix_size(matrix_file_path):
+def get_file_seek_points(matrix_file_path):
     """
-    Get the 'actual' size of a matrix, whether compressed or not
-    Needed for determining seek positions when slicing a matrix
+    Determine start/stop points in a matrix to process in parallel
+    Will read in 1GB chunks and return a list of start/stop points to read from
+    Ensures breaks on newlines
     Args:
         matrix_file_path (String): path to matrix file
 
     Returns:
-        (Int): actual size of matrix in bytes (uncompressed)
+        (List): list of start/stop points for reading matrix
     """
-    if is_gz_file(matrix_file_path):
-        pipe_in = os.popen(f"gzip -l {matrix_file_path}")
-        output = pipe_in.readlines()
-        size, uncomp_size, ratio, name = output[1].split()
-        return int(uncomp_size)
-    else:
-        return os.stat(matrix_file_path).st_size
-
-def get_file_seek_points(matrix_file_path):
-    """
-    Determine start/stop points in a matrix to process in parallel
-    """
-    file_size = get_matrix_size(matrix_file_path)
-    chunk_size = int(file_size / num_cores)
-    print(f"determining {num_cores} seek points for {matrix_file_path} with chunk size {chunk_size}")
+    print(f"determining seek points for {matrix_file_path} with chunk size {chunk_size}")
     with open_file(matrix_file_path) as matrix_file:
         # fast-forward through any comments if this is a sparse matrix
         if matrix_file.read(1) == '%':
@@ -160,22 +150,21 @@ def get_file_seek_points(matrix_file_path):
         current_pos = matrix_file.tell()
         current_seek = [current_pos]
         seek_points = []
-        for index in range(num_cores):
-            # special case for last seek point, should be end of file
-            # likely means the last chunk is slightly larger, depending on where newlines occurred
-            if index == num_cores - 1:
-                seek_points.append([current_pos, file_size])
-                continue
+        while True:
             seek_point = current_pos + chunk_size
             matrix_file.seek(seek_point)
-            char = matrix_file.read(1)
-            while char != "\n":
-                char = matrix_file.read(1)
+            current_byte = matrix_file.read(1)
+            if current_byte == '': # eof
+                break
+            while current_byte != "\n":
+                current_byte = matrix_file.read(1)
                 seek_point += 1
             current_seek.append(seek_point)
             seek_points.append(current_seek)
             current_pos = seek_point + 1
             current_seek = [current_pos]
+        final_pos = matrix_file.tell()
+        current_seek.append(final_pos)
     return seek_points
 
 def read_sparse_matrix_slice(matrix_file_path, genes, data_dir, indexes):
