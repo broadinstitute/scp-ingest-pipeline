@@ -48,7 +48,11 @@ GZIP_MAGIC_NUM = b'\x1f\x8b'
 # default level of precision
 precision = 3
 
+# cores to use in process pooling
 num_cores = multiprocessing.cpu_count() - 1
+
+# thread workers for dividing files
+num_workers = 20
 
 def is_gz_file(filepath):
     """
@@ -125,18 +129,79 @@ def load_entities_as_list(file, column = None):
     else:
         return list(re.split(ALL_DELIM, line.strip())[column] for line in file)
 
-def divide_sparse_matrix(matrix_file_path, genes, data_dir):
-    print(f"loading sparse data from {matrix_file_path}")
+def get_matrix_size(matrix_file_path):
+    """
+    Get the 'actual' size of a matrix, whether compressed or not
+    Needed for determining seek positions when slicing a matrix
+    Args:
+        matrix_file_path (String): path to matrix file
+
+    Returns:
+        (Int): actual size of matrix in bytes (uncompressed)
+    """
+    if is_gz_file(matrix_file_path):
+        pipe_in = os.popen(f"gzip -l {matrix_file_path}")
+        output = pipe_in.readlines()
+        size, uncomp_size, ratio, name = output[1].split()
+        return int(uncomp_size)
+    else:
+        return os.stat(matrix_file_path).st_size
+
+def get_file_seek_points(matrix_file_path):
+    """
+    Determine start/stop points in a matrix to process in parallel
+    """
+    file_size = get_matrix_size(matrix_file_path)
+    chunk_size = int(file_size / num_workers)
+    print(f"determining {num_workers} seek points for {matrix_file_path} with chunk size {chunk_size}")
     with open_file(matrix_file_path) as matrix_file:
-        matrix_file.readline()
-        matrix_file.readline()
-        matrix_file.readline()
-        for line in matrix_file:
+        # fast-forward through any comments if this is a sparse matrix
+        if matrix_file.read(1) == '%':
+            matrix_file.readline()
+            matrix_file.readline()
+            matrix_file.readline()
+        current_pos = matrix_file.tell()
+        current_seek = [current_pos]
+        seek_points = []
+        for index in range(num_workers):
+            # special case for last seek point, should be end of file
+            # likely means the last chunk is slightly larger, depending on where newlines occurred
+            if index == num_workers - 1:
+                seek_points.append([current_pos, file_size])
+                continue
+            seek_point = current_pos + chunk_size
+            matrix_file.seek(seek_point)
+            char = matrix_file.read(1)
+            while char != "\n":
+                char = matrix_file.read(1)
+                seek_point += 1
+            current_seek.append(seek_point)
+            seek_points.append(current_seek)
+            current_pos = seek_point + 1
+            current_seek = [current_pos]
+    return seek_points
+
+def read_sparse_matrix_slice(matrix_file_path, genes, data_dir, indexes):
+    start_pos, end_pos = indexes
+    print(f"reading {matrix_file_path} at index {start_pos}:{end_pos}")
+    with open_file(matrix_file_path) as matrix_file:
+        current_pos = start_pos
+        matrix_file.seek(current_pos)
+        while current_pos < end_pos:
+            line = matrix_file.readline()
             gene_idx = int(line.split()[0])
             gene_name = genes[gene_idx - 1]
             fragment_path = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
             with open(fragment_path, 'a+') as file:
                 file.write(line)
+            current_pos += len(line)
+
+def divide_sparse_matrix(matrix_file_path, genes, data_dir):
+    print(f"loading sparse data from {matrix_file_path}")
+    slice_indexes = get_file_seek_points(matrix_file_path)
+    with ThreadPoolExecutor(max_workers=num_workers) as pool:
+        processor = partial(read_sparse_matrix_slice, matrix_file_path, genes, data_dir)
+        pool.map(processor, slice_indexes)
 
 def process_fragment(barcodes, cluster_cells, cluster_name, data_dir, fragment_name):
     """
@@ -207,7 +272,7 @@ def process_dense_data(matrix_file_path, cluster_cells, cluster_name, data_dir):
         values = re.split(COMMA_OR_TAB, header)
         cells = values[1:]
         processor = partial(process_dense_line, cells, cluster_cells, cluster_name, data_dir)
-        pool.map(processor, (matrix_file.readlines))
+        pool.map(processor, matrix_file.readlines())
 
 def process_dense_line(matrix_cells, cluster_cells, cluster_name, data_dir, line):
     clean_line = line.rstrip()
