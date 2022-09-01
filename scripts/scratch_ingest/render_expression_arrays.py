@@ -127,28 +127,16 @@ def load_entities_as_list(file, column = None):
 
 def divide_sparse_matrix(matrix_file_path, genes, data_dir):
     print(f"loading sparse data from {matrix_file_path}")
-    matrix_file = open_file(matrix_file_path)
-    matrix_file.readline()
-    matrix_file.readline()
-    matrix_file.readline()
-    pool = multiprocessing.Pool(num_cores)
-    file_iterator = enumerate(matrix_file)
-    processor = partial(process_sparse_line, genes, data_dir)
-    pool.map(processor, file_iterator)
-
-def process_sparse_line(genes, data_dir, processor_tuple):
-    line_no = processor_tuple[0]
-    line = processor_tuple[1]
-    if line_no % 1000 == 0:
-        print(f"at line {line_no}")
-    gene_idx = int(line.split()[0])
-    gene_name = genes[gene_idx - 1]
-    outfile = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
-    write_data_to_fragment(line, outfile)
-
-def write_data_to_fragment(fragment, file_path):
-    with open(file_path, 'a+') as file:
-        file.write(f"{fragment}")
+    with open_file(matrix_file_path) as matrix_file:
+        matrix_file.readline()
+        matrix_file.readline()
+        matrix_file.readline()
+        for line in matrix_file:
+            gene_idx = int(line.split()[0])
+            gene_name = genes[gene_idx - 1]
+            fragment_path = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
+            with open(fragment_path, 'a+') as file:
+                file.write(line)
 
 def process_fragment(barcodes, cluster_cells, cluster_name, data_dir, fragment_name):
     """
