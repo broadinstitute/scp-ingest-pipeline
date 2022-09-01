@@ -33,7 +33,6 @@ import uuid
 import gzip
 import time
 import multiprocessing
-from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 # regex to split on commas and tabs
@@ -48,7 +47,7 @@ GZIP_MAGIC_NUM = b'\x1f\x8b'
 # default level of precision
 precision = 3
 
-# cores to use in process pooling
+# cores to use in process pooling, minus one for stability
 num_cores = multiprocessing.cpu_count() - 1
 
 # 1GB, default chunk size for reading
@@ -56,12 +55,10 @@ chunk_size = 1024 * 1024 * 1024
 
 def is_gz_file(filepath):
     """
-    Determine if a file is gzipped by reading the first two bytes and comparing to the 'magic number'
-    Args:
-        filepath (String): path to file to check
+    Determine if a file is gzipped by checking first two bytes against GZIP_MAGIC_NUM
 
-    Returns:
-        (Bool): T/F if file is gzipped
+    :param filepath: (String) path to file to check
+    :returns (Bool)
     """
     with open(filepath, 'rb') as test_f:
         return test_f.read(2) == GZIP_MAGIC_NUM
@@ -69,11 +66,9 @@ def is_gz_file(filepath):
 def open_file(filepath):
     """
     Open a file with the correct reader
-    Args:
-        filepath (String): path to file to open
 
-    Returns:
-        (TextIOWrapper): opened file
+    :param filepath: (String) path to file to open
+    :returns: (TextIOWrapper)
     """
     if is_gz_file(filepath):
         return gzip.open(filepath, 'rt')
@@ -82,28 +77,24 @@ def open_file(filepath):
 
 def make_data_dir(name):
     """
-    Make a directory to put output files in.  Appends a UUID to the end of the directory to allow for
-    quick iteration and side-by-side comparison of outputs without manually moving directories
-    Args:
-        name (String): name of directory
-        
-    Returns:
-        (String): name of created diretory with UUID appended to the end
+    Make a directory to put output/work files in.  Appends a UUID to the end of the directory
+    to allow for quick iteration and side-by-side comparison of outputs without manual cleanup
+
+    :param name: (String) name of directory
+    :returns: (String)
     """
     dirname = str(f"{name}-{uuid.uuid4()}")
     print(f"creating data directory at {dirname}")
     os.mkdir(dirname)
-    os.mkdir(f"{dirname}/gene_entries")
+    os.mkdir(f"{dirname}/gene_entries") # for slicing sparse matrix files
     return dirname
     
 def get_cluster_cells(file_path):
     """
     Return a list of cell names from a cluster file (1st column, starting line 3)
-    Args:
-        file_path (String): absolute path to cluster_file
-        
-    Returns:
-        (List): cluster cell names
+
+    :param file_path: (String) absolute path to cluster_file
+    :returns: (List)
     """
     cells = []
     with open_file(file_path) as cluster_file:
@@ -117,11 +108,9 @@ def get_cluster_cells(file_path):
 def load_entities_as_list(file, column = None):
     """
     Read an entire 10X feature/barcode file into a list for parsing sparse data
-    Args:
-        file (TextIOWrapper): open file object
-        
-    Returns:
-        (List): entities from file
+
+    :param file: (TextIOWrapper) open file object
+    :returns: (List)
     """
     print(f"reading entities from {file.name}")
     if not column:
@@ -134,18 +123,16 @@ def get_file_seek_points(matrix_file_path):
     Determine start/stop points in a matrix to process in parallel
     Will read in 1GB chunks and return a list of start/stop points to read from
     Ensures breaks on newlines
-    Args:
-        matrix_file_path (String): path to matrix file
 
-    Returns:
-        (List): list of start/stop points for reading matrix
+    :param matrix_file_path: (String) path to matrix file
+    :return: (List<List>)
     """
     print(f"determining seek points for {matrix_file_path} with chunk size {chunk_size}")
     with open_file(matrix_file_path) as matrix_file:
         # fast-forward through any comments if this is a sparse matrix
-        if matrix_file.read(1) == '%':
-            matrix_file.readline()
-            matrix_file.readline()
+        first_char = matrix_file.read(1)
+        header_lines = 3 if first_char == '%' else 1
+        for i in range(header_lines):
             matrix_file.readline()
         current_pos = matrix_file.tell()
         current_seek = [current_pos]
@@ -168,6 +155,14 @@ def get_file_seek_points(matrix_file_path):
     return seek_points
 
 def read_sparse_matrix_slice(matrix_file_path, genes, data_dir, indexes):
+    """
+    Read a sparse matrix using start/stop indexes and append to individual gene-level files
+
+    :param matrix_file_path: (String): path to matrix file
+    :param genes: (List) gene names from features file
+    :param data_dir: (String) name out output dir
+    :param indexes: (List) start/stop index points to read from/to
+    """
     start_pos, end_pos = indexes
     print(f"reading {matrix_file_path} at index {start_pos}:{end_pos}")
     with open_file(matrix_file_path) as matrix_file:
@@ -183,6 +178,14 @@ def read_sparse_matrix_slice(matrix_file_path, genes, data_dir, indexes):
             current_pos += len(line)
 
 def divide_sparse_matrix(matrix_file_path, genes, data_dir):
+    """
+    Slice a sparse matrix into 1GB chunks and write out individual
+    gene-level files in parallel
+
+    :param matrix_file_path: (String): path to matrix file
+    :param genes: (List) gene names from features file
+    :param data_dir: (String) name out output dir
+    """
     print(f"loading sparse data from {matrix_file_path}")
     slice_indexes = get_file_seek_points(matrix_file_path)
     pool = multiprocessing.Pool(num_cores)
@@ -192,12 +195,11 @@ def divide_sparse_matrix(matrix_file_path, genes, data_dir):
 def process_fragment(barcodes, cluster_cells, cluster_name, data_dir, fragment_name):
     """
     Process a single-gene sparse matrix fragment and write expression array
-    Args:
-        barcodes (List): list of cell barcodes
-        cluster_cells (List): list of cells from cluster file
-        cluster_name (String): name of cluster object
-        data_dir (String): output path to write data in
-        fragment_name (String): name of gene-level fragment file
+    :param barcodes (List): list of cell barcodes
+    :param cluster_cells (List): list of cells from cluster file
+    :param cluster_name (String): name of cluster object
+    :param data_dir (String) name out output dir
+    :param fragment_name (String): name of gene-level fragment file
     """
     gene_name = fragment_name.split('__')[0]
     full_path = f"{data_dir}/gene_entries/{fragment_name}"
@@ -219,11 +221,11 @@ def process_fragment(barcodes, cluster_cells, cluster_name, data_dir, fragment_n
 def process_sparse_data_fragments(barcodes, cluster_cells, cluster_name, data_dir):
     """
     Find and process all generated single-gene sparse data fragments
-    Args:
-        barcodes (List): list of cell barcodes
-        cluster_cells (List): list of cells from cluster file
-        cluster_name (String): name of cluster object
-        data_dir (String): output path to write data in
+
+    :param barcodes (List): list of cell barcodes
+    :param cluster_cells (List): list of cells from cluster file
+    :param cluster_name (String): name of cluster object
+    :param data_dir (String) name out output dir
     """
     fragments = os.listdir(f"{data_dir}/gene_entries")
     print(f"subdivision complete, processing {len(fragments)} fragments")
@@ -234,11 +236,9 @@ def process_sparse_data_fragments(barcodes, cluster_cells, cluster_name, data_di
 def extract_sparse_line(line):
     """
     Process a single line from a sparse matrix and extract values as integers
-    Args:
-        line (String): single line from matrix file
-        
-    Returns:
-        (List): values as integers
+
+    :param line (String): single line from matrix file
+    :return: (List): values as integers
     """
     gene_idx, barcode_idx, raw_exp = line.rstrip().split(' ')
     return [int(gene_idx), int(barcode_idx), round(float(raw_exp), precision)]
@@ -246,11 +246,11 @@ def extract_sparse_line(line):
 def process_dense_data(matrix_file_path, cluster_cells, cluster_name, data_dir):
     """
     Main handler to read dense matrix data and process entries at the gene level
-    Args:
-        matrix_file_path (String): path to dense matrix file
-        cluster_cells (List): cell names from cluster file
-        cluster_name (String): name of cluster object
-        data_dir (String): output data directory
+
+    :param matrix_file_path (String): path to dense matrix file
+    :param cluster_cells (List): cell names from cluster file
+    :param cluster_name (String): name of cluster object
+    :param data_dir (String) name out output dir
     """
     pool = multiprocessing.Pool(num_cores)
     with open_file(matrix_file_path) as matrix_file:
@@ -261,6 +261,15 @@ def process_dense_data(matrix_file_path, cluster_cells, cluster_name, data_dir):
         pool.map(processor, matrix_file.readlines())
 
 def process_dense_line(matrix_cells, cluster_cells, cluster_name, data_dir, line):
+    """
+    Process a single line from a dense matrix and write gene-level data
+
+    :param matrix_cells: (List) cells from header line of dense matrix
+    :param cluster_cells: (List) cell names from cluster file
+    :param cluster_name (String): name of cluster object
+    :param data_dir (String) name out output dir
+    :param line: (String) single line from dense matrix
+    """
     clean_line = line.rstrip()
     raw_vals = re.split(COMMA_OR_TAB, clean_line)
     gene_name = raw_vals.pop(0)
@@ -274,14 +283,11 @@ def filter_expression_for_cluster(cluster_cells, exp_cells, exp_scores):
     """
     Assemble a List of expression scores, filtered & ordered from a List of cluster cells
     Will substitute 0 as a value for any cell not seen in the expression file
-    
-    Args:
-        cluster_cells (List): cluster cell names
-        exp_cells (List): expression cell names
-        exp_scores (List): expression values, in the same order as exp_cells
-        
-    Returns:
-        (List): Expression values, ordered by cluster_cells
+
+    :param cluster_cells (List): cluster cell names
+    :param exp_cells (List): expression cell names
+    :param exp_scores (List): expression values, in the same order as exp_cells
+    :return: (List): Expression values, ordered by cluster_cells
     """
     observed_exp = dict(zip(exp_cells, exp_scores))
     return (observed_exp.get(cell, 0) for cell in cluster_cells)
@@ -292,14 +298,10 @@ def write_gene_scores(cluster_name, gene_name, exp_values, data_dir):
     Write a JSON array of expression values
     Filename uses {cluster_name}--{gene_name}.json format
 
-    Args:
-        cluster_name (String): Name of cluster
-        gene_name (String): Name of gene
-        exp_values (List): expression values
-        data_dir (String): output data directory to write in
-        
-    Returns:
-        (File): JSON file as a List of expression values
+    :param cluster_name (String): Name of cluster
+    :param gene_name (String): Name of gene
+    :param exp_values (List): expression values
+    :param data_dir (String) name out output dir
     """
     with gzip.open(f"{data_dir}/{cluster_name}--{gene_name}.json.gz", "wt") as file:
         json.dump(list(exp_values), file, separators=(',', ':'))
