@@ -48,11 +48,7 @@ GZIP_MAGIC_NUM = b'\x1f\x8b'
 # default level of precision
 precision = 3
 
-all_cores = multiprocessing.cpu_count()
-if all_cores is not None:
-    num_cores = all_cores - 1
-else:
-    num_cores = 3
+num_cores = 3
 
 def is_gz_file(filepath):
     """
@@ -129,45 +125,30 @@ def load_entities_as_list(file, column = None):
     else:
         return list(re.split(ALL_DELIM, line.strip())[column] for line in file)
 
-def load_sparse_data(matrix_file_path, genes, data_dir):
-    print(f"loading sparse data from {matrix_file_path}")
-    with open_file(matrix_file_path) as matrix_file:
-        matrix_file.readline()
-        matrix_file.readline()
-        matrix_file.readline()
-        for index, line in enumerate(matrix_file):
-            if index % 1000 == 0:
-                print(f"processed {index} lines from {matrix_file_path}")
-            gene_idx, barcode_idx, exp_val = extract_sparse_line(line)
-            gene_name = genes[gene_idx - 1]
-            outfile = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
-            write_data_fragment(gene_idx, barcode_idx, exp_val, outfile)
-
-def write_data_fragment(gene_idx, barcode_idx, exp_val, file_path):
-    with open(file_path, 'a+') as file:
-        file.write(f"{gene_idx} {barcode_idx} {exp_val}\n")
-
 def divide_sparse_matrix(matrix_file_path, genes, data_dir):
-    """
-    Divide a sparse matrix on gene index to produce 'fragment' files
-    representing single-gene expression
-    Args:
-        matrix_file_path (String): path to sparse matrix file
-        genes (List): list of genes
-        data_dir (String): output path to generate fragments in
-    """
-    commands = []
-    reader_cmd = "grep"
-    if is_gz_file(matrix_file_path):
-        reader_cmd = "zgrep"
-    for index, gene_name in enumerate(genes):
-        gene_idx = index + 1
-        outfile = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
-        command = f"{reader_cmd} '^{gene_idx}\s' {matrix_file_path} > {outfile}"
-        commands.append(command)
+    print(f"loading sparse data from {matrix_file_path}")
+    matrix_file = open_file(matrix_file_path)
+    matrix_file.readline()
+    matrix_file.readline()
+    matrix_file.readline()
     pool = multiprocessing.Pool(num_cores)
-    print(f"dividing {matrix_file_path} on gene indices")
-    pool.map(os.system, commands)
+    file_iterator = enumerate(matrix_file)
+    processor = partial(process_sparse_line, genes, data_dir)
+    pool.map(processor, file_iterator)
+
+def process_sparse_line(genes, data_dir, processor_tuple):
+    line_no = processor_tuple[0]
+    line = processor_tuple[1]
+    if line_no % 1000 == 0:
+        print(f"at line {line_no}")
+    gene_idx = int(line.split()[0])
+    gene_name = genes[gene_idx - 1]
+    outfile = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
+    write_data_to_fragment(line, outfile)
+
+def write_data_to_fragment(fragment, file_path):
+    with open(file_path, 'a+') as file:
+        file.write(f"{fragment}")
 
 def process_fragment(barcodes, cluster_cells, cluster_name, data_dir, fragment_name):
     """
@@ -222,7 +203,6 @@ def extract_sparse_line(line):
     """
     gene_idx, barcode_idx, raw_exp = line.rstrip().split(' ')
     return [int(gene_idx), int(barcode_idx), round(float(raw_exp), precision)]
-
 
 def process_dense_data(matrix_file_path, cluster_cells, cluster_name, data_dir):
     """
@@ -303,6 +283,7 @@ if __name__ == '__main__':
     sanitized_cluster_name = re.sub(r'\W', '_', args.cluster_name)
     data_dir = make_data_dir(sanitized_cluster_name)
     cluster_cells = get_cluster_cells(cluster_file_path)
+    print(f"using {num_cores} cores for multiprocessing")
     if args.precision is not None:
         precision = int(args.precision)
         print(f"using {precision} digits of precision for non-zero data")
@@ -312,7 +293,6 @@ if __name__ == '__main__':
         genes = load_entities_as_list(genes_file, 1)
         barcodes_file = open_file(args.barcodes_file)
         barcodes = load_entities_as_list(barcodes_file)
-        # load_sparse_data(expression_file_path, genes, data_dir)
         divide_sparse_matrix(expression_file_path, genes, data_dir)
         process_sparse_data_fragments(barcodes, cluster_cells, sanitized_cluster_name, data_dir)
     else:
