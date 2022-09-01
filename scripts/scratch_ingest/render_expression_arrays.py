@@ -48,7 +48,7 @@ GZIP_MAGIC_NUM = b'\x1f\x8b'
 # default level of precision
 precision = 3
 
-num_cores = 3
+num_cores = multiprocessing.cpu_count() - 1
 
 def is_gz_file(filepath):
     """
