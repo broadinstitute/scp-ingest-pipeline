@@ -49,7 +49,7 @@ GZIP_MAGIC_NUM = b'\x1f\x8b'
 precision = 3
 
 # cores to use in process pooling
-num_cores = 3 #multiprocessing.cpu_count() - 1
+num_cores = multiprocessing.cpu_count() - 1
 
 # 1GB, default chunk size for reading
 chunk_size = 1024 * 1024 * 1024
