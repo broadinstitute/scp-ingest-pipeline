@@ -50,9 +50,6 @@ precision = 3
 # cores to use in process pooling, minus one for stability
 num_cores = multiprocessing.cpu_count() - 1
 
-# 1GB, default chunk size for reading
-chunk_size = 1024 * 1024 * 1024
-
 def is_gz_file(filepath):
     """
     Determine if a file is gzipped by checking first two bytes against GZIP_MAGIC_NUM
@@ -88,6 +85,25 @@ def make_data_dir(name):
     os.mkdir(dirname)
     os.mkdir(f"{dirname}/gene_entries") # for slicing sparse matrix files
     return dirname
+
+def get_matrix_size(matrix_file_path):
+    """
+    Get the actual size of a matrix file, whether gzipped or not
+    Because gzipped files only use 4 bytes to store the 'original' file size,
+    any files larger that 4GB will only store the modulus of 2 ** 32, not the
+    actual size of the file.
+    Using seek() and tell() will return the last byte position
+
+    :param matrix_file_path: (String) path to matrix file
+    :return: (Int)
+    """
+
+    if is_gz_file(matrix_file_path):
+        with open_file(matrix_file_path) as matrix_file:
+            matrix_file.seek(0, 2)
+            return matrix_file.tell()
+    else:
+        return os.stat(matrix_file_path).st_size
     
 def get_cluster_cells(file_path):
     """
@@ -127,6 +143,8 @@ def get_file_seek_points(matrix_file_path):
     :param matrix_file_path: (String) path to matrix file
     :return: (List<List>)
     """
+    file_size = get_matrix_size(matrix_file_path)
+    chunk_size = int(file_size / num_cores)
     print(f"determining seek points for {matrix_file_path} with chunk size {chunk_size}")
     with open_file(matrix_file_path) as matrix_file:
         # fast-forward through any comments if this is a sparse matrix
@@ -137,11 +155,15 @@ def get_file_seek_points(matrix_file_path):
         current_pos = matrix_file.tell()
         current_seek = [current_pos]
         seek_points = []
-        while True:
+        for index in range(num_cores):
+            if index == num_cores - 1:
+                current_seek.append(file_size)
+                seek_points.append(current_seek)
+                break
             seek_point = current_pos + chunk_size
             matrix_file.seek(seek_point)
             current_byte = matrix_file.read(1)
-            if current_byte == '': # eof
+            if current_byte == '':  # eof
                 break
             while current_byte != "\n":
                 current_byte = matrix_file.read(1)
@@ -150,8 +172,6 @@ def get_file_seek_points(matrix_file_path):
             seek_points.append(current_seek)
             current_pos = seek_point + 1
             current_seek = [current_pos]
-        final_pos = matrix_file.tell()
-        current_seek.append(final_pos)
     return seek_points
 
 def read_sparse_matrix_slice(matrix_file_path, genes, data_dir, indexes):
@@ -195,6 +215,7 @@ def divide_sparse_matrix(matrix_file_path, genes, data_dir):
 def process_fragment(barcodes, cluster_cells, cluster_name, data_dir, fragment_name):
     """
     Process a single-gene sparse matrix fragment and write expression array
+
     :param barcodes (List): list of cell barcodes
     :param cluster_cells (List): list of cells from cluster file
     :param cluster_name (String): name of cluster object
@@ -247,20 +268,41 @@ def process_dense_data(matrix_file_path, cluster_cells, cluster_name, data_dir):
     """
     Main handler to read dense matrix data and process entries at the gene level
 
-    :param matrix_file_path (String): path to dense matrix file
-    :param cluster_cells (List): cell names from cluster file
-    :param cluster_name (String): name of cluster object
-    :param data_dir (String) name out output dir
+    :param matrix_file_path: (String) path to dense matrix file
+    :param cluster_cells: (List) cell names from cluster file
+    :param cluster_name: (String) name of cluster object
+    :param data_dir: (String) name out output dir
     """
     pool = multiprocessing.Pool(num_cores)
-    with open_file(matrix_file_path) as matrix_file:
-        header = matrix_file.readline().rstrip()
-        values = re.split(COMMA_OR_TAB, header)
-        cells = values[1:]
-        processor = partial(process_dense_line, cells, cluster_cells, cluster_name, data_dir)
-        pool.map(processor, matrix_file.readlines())
+    slice_indexes = get_file_seek_points(matrix_file_path)
+    matrix_file = open_file(matrix_file_path)
+    header = matrix_file.readline().rstrip()
+    values = re.split(COMMA_OR_TAB, header)
+    cells = values[1:]
+    processor = partial(read_dense_matrix_slice, matrix_file_path, cells, cluster_cells, cluster_name, data_dir)
+    pool.map(processor, slice_indexes)
 
-def process_dense_line(matrix_cells, cluster_cells, cluster_name, data_dir, line):
+def read_dense_matrix_slice(matrix_file_path, matrix_cells, cluster_cells, cluster_name, data_dir, indexes):
+    """
+    Read a dense matrix using start/stop indexes and create to individual gene-level files
+    :param matrix_file_path: (String) path to dense matrix file
+    :param matrix_cells: (List) cell names from matrix file
+    :param cluster_cells: (List) cell names from cluster file
+    :param cluster_name: (String) name of cluster object
+    :param data_dir: (String) name out output dir
+    :param indexes: (List) start/stop index points to read from/to
+    """
+    start_pos, end_pos = indexes
+    print(f"reading {matrix_file_path} at index {start_pos}:{end_pos}")
+    with open_file(matrix_file_path) as matrix_file:
+        current_pos = start_pos
+        matrix_file.seek(current_pos)
+        while current_pos < end_pos:
+            line = matrix_file.readline()
+            process_dense_line(line, matrix_cells, cluster_cells, cluster_name, data_dir)
+            current_pos += len(line)
+
+def process_dense_line(line, matrix_cells, cluster_cells, cluster_name, data_dir):
     """
     Process a single line from a dense matrix and write gene-level data
 
@@ -270,9 +312,12 @@ def process_dense_line(matrix_cells, cluster_cells, cluster_name, data_dir, line
     :param data_dir (String) name out output dir
     :param line: (String) single line from dense matrix
     """
-    clean_line = line.rstrip()
+    clean_line = line.rstrip().replace('"','')
     raw_vals = re.split(COMMA_OR_TAB, clean_line)
     gene_name = raw_vals.pop(0)
+    if len(raw_vals) == 0:
+        print(f"got bad data: {raw_vals}")
+        exit(1)
     exp_vals = [round(float(val), precision) if float(val) != 0.0 else 0 for val in raw_vals]
     filtered_expression = filter_expression_for_cluster(
         cluster_cells, matrix_cells, exp_vals
