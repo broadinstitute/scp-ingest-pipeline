@@ -9,20 +9,20 @@ EXAMPLES
 
 dense matrix:
 python3 expression_writer.py --matrix-file ../../tests/data/dense_expression_matrix.txt \
-                                    --cluster-file ../../tests/data/cluster_example.txt \
-                                    --cluster-name 'Dense Example'
+                             --cluster-file ../../tests/data/cluster_example.txt \
+                             --cluster-name 'Dense Example'
 
 dense matrix with precision override:
 python3 expression_writer.py --matrix-file ../../tests/data/dense_expression_matrix.txt \
-                                    --cluster-file ../../tests/data/cluster_example.txt \
-                                    --cluster-name 'Dense Example' --precision 1
+                             --cluster-file ../../tests/data/cluster_example.txt \
+                             --cluster-name 'Dense Example' --precision 1
 
 sparse matrix:
 python3 expression_writer.py --matrix-file ../../tests/data/mtx/matrix_with_header.mtx \
-                                    --genes-file ../../tests/data/mtx/sampled_genes.tsv \
-                                    --barcodes-file ../../tests/data/mtx/barcodes.tsv \
-                                    --cluster-file ../../tests/data/mtx/cluster_mtx_barcodes.tsv \
-                                    --cluster-name 'Sparse Example'
+                             --genes-file ../../tests/data/mtx/sampled_genes.tsv \
+                             --barcodes-file ../../tests/data/mtx/barcodes.tsv \
+                             --cluster-file ../../tests/data/mtx/cluster_mtx_barcodes.tsv \
+                             --cluster-name 'Sparse Example'
 """
 
 import json
