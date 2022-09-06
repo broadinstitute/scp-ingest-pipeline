@@ -18,7 +18,7 @@ python3 expression_writer.py --matrix-file ../../tests/data/dense_expression_mat
                                     --cluster-name 'Dense Example' --precision 1
 
 sparse matrix:
-python3 expression_writer.py --matrix-file ../../tests/data/mtx/sorted_matrix_header.mtx \
+python3 expression_writer.py --matrix-file ../../tests/data/mtx/matrix_with_header.mtx \
                                     --genes-file ../../tests/data/mtx/sampled_genes.tsv \
                                     --barcodes-file ../../tests/data/mtx/barcodes.tsv \
                                     --cluster-file ../../tests/data/mtx/cluster_mtx_barcodes.tsv \
@@ -189,15 +189,30 @@ class ExpressionWriter:
                 current_seek = [current_pos]
         return seek_points
 
+    def divide_sparse_matrix(self, genes, data_dir):
+        """
+        Slice a sparse matrix into 1GB chunks and write out individual
+        gene-level files in parallel
+
+        :param genes: (List) gene names from features file
+        :param data_dir: (String) name out output dir
+        """
+        print(f"loading sparse data from {self.matrix_file_path}")
+        slice_indexes = self.get_file_seek_points()
+        pool = multiprocessing.Pool(self.num_cores)
+        processor = partial(self.read_sparse_matrix_slice,
+                            matrix_file_path=self.matrix_file_path, genes=genes, data_dir=data_dir)
+        pool.map(processor, slice_indexes)
+
     @staticmethod
-    def read_sparse_matrix_slice(matrix_file_path, genes, data_dir, indexes):
+    def read_sparse_matrix_slice(indexes, matrix_file_path, genes, data_dir):
         """
         Read a sparse matrix using start/stop indexes and append to individual gene-level files
 
+        :param indexes: (List) start/stop index points to read from/to
         :param matrix_file_path: (String): path to matrix file
         :param genes: (List) gene names from features file
         :param data_dir: (String) name out output dir
-        :param indexes: (List) start/stop index points to read from/to
         """
         start_pos, end_pos = indexes
         print(f"reading {matrix_file_path} at index {start_pos}:{end_pos}")
@@ -213,47 +228,6 @@ class ExpressionWriter:
                     file.write(line)
                 current_pos += len(line)
 
-    def divide_sparse_matrix(self, genes, data_dir):
-        """
-        Slice a sparse matrix into 1GB chunks and write out individual
-        gene-level files in parallel
-
-        :param genes: (List) gene names from features file
-        :param data_dir: (String) name out output dir
-        """
-        print(f"loading sparse data from {self.matrix_file_path}")
-        slice_indexes = self.get_file_seek_points()
-        pool = multiprocessing.Pool(self.num_cores)
-        processor = partial(self.read_sparse_matrix_slice, self.matrix_file_path, genes, data_dir)
-        pool.map(processor, slice_indexes)
-
-    def process_fragment(self, barcodes, cluster_cells, cluster_name, data_dir, fragment_name):
-        """
-        Process a single-gene sparse matrix fragment and write expression array
-
-        :param barcodes: (List) list of cell barcodes
-        :param cluster_cells: (List) list of cells from cluster file
-        :param cluster_name: (String) name of cluster object
-        :param data_dir: (String) name out output dir
-        :param fragment_name: (String) name of gene-level fragment file
-        """
-        gene_name = fragment_name.split('__')[0]
-        full_path = f"{data_dir}/gene_entries/{fragment_name}"
-        observed_cells = []
-        exp_vals = []
-        # write array of 0 values if file is empty
-        if os.stat(full_path).st_size == 0:
-            empty_exp = [0] * len(cluster_cells)
-            ExpressionWriter.write_gene_scores(cluster_name, gene_name, empty_exp, data_dir)
-        for line in ExpressionWriter.open_file(full_path):
-            gene_idx, barcode_idx, exp_val = self.extract_sparse_line(line)
-            observed_cells.append(barcodes[barcode_idx - 1])
-            exp_vals.append(exp_val)
-        filtered_expression = ExpressionWriter.filter_expression_for_cluster(
-            cluster_cells, observed_cells, exp_vals
-        )
-        ExpressionWriter.write_gene_scores(cluster_name, gene_name, filtered_expression, data_dir)
-
     def process_sparse_data_fragments(self, barcodes, cluster_cells, cluster_name, data_dir):
         """
         Find and process all generated single-gene sparse data fragments
@@ -266,8 +240,33 @@ class ExpressionWriter:
         fragments = os.listdir(f"{data_dir}/gene_entries")
         print(f"subdivision complete, processing {len(fragments)} fragments")
         pool = multiprocessing.Pool(self.num_cores)
-        processor = partial(self.process_fragment, barcodes, cluster_cells, cluster_name, data_dir)
+        processor = partial(self.process_fragment,
+                            barcodes=barcodes, cluster_cells=cluster_cells,
+                            cluster_name=cluster_name, data_dir=data_dir)
         pool.map(processor, fragments)
+
+    def process_fragment(self, fragment_name, barcodes, cluster_cells, cluster_name, data_dir):
+        """
+        Process a single-gene sparse matrix fragment and write expression array
+
+        :param fragment_name: (String) name of gene-level fragment file
+        :param barcodes: (List) list of cell barcodes
+        :param cluster_cells: (List) list of cells from cluster file
+        :param cluster_name: (String) name of cluster object
+        :param data_dir: (String) name out output dir
+        """
+        gene_name = fragment_name.split('__')[0]
+        full_path = f"{data_dir}/gene_entries/{fragment_name}"
+        observed_cells = []
+        exp_vals = []
+        for line in ExpressionWriter.open_file(full_path):
+            gene_idx, barcode_idx, exp_val = self.extract_sparse_line(line)
+            observed_cells.append(barcodes[barcode_idx - 1])
+            exp_vals.append(exp_val)
+        filtered_expression = ExpressionWriter.filter_expression_for_cluster(
+            cluster_cells, observed_cells, exp_vals
+        )
+        ExpressionWriter.write_gene_scores(gene_name, cluster_name, filtered_expression, data_dir)
 
     def extract_sparse_line(self, line):
         """
@@ -278,6 +277,24 @@ class ExpressionWriter:
         """
         gene_idx, barcode_idx, raw_exp = line.rstrip().split(' ')
         return [int(gene_idx), int(barcode_idx), round(float(raw_exp), self.precision)]
+
+    def write_empty_sparse_genes(self, genes, num_cluster_cells, cluster_name, data_dir):
+        """
+        Write out empty arrays of expression values for genes with no significant expression in a sparse matrix
+
+        :param genes: (List) gene names from features file
+        :param num_cluster_cells: (Integer) number of cells from cluster file
+        :param cluster_name: (String) name of cluster object
+        :param data_dir: (String) name out output dir
+        """
+        gene_fragments = filter(lambda file: file[0] != '.', os.listdir(f"{data_dir}/gene_entries"))
+        significant_genes = set([gene.split('__')[0] for gene in gene_fragments])
+        missing_genes = [gene for gene in genes if gene not in significant_genes]
+        empty_expression = [0] * num_cluster_cells
+        pool = multiprocessing.Pool(self.num_cores)
+        processor = partial(ExpressionWriter.write_gene_scores,
+                            cluster_name=cluster_name, exp_values=empty_expression, data_dir=data_dir)
+        pool.map(processor, missing_genes)
 
     def process_dense_data(self, cluster_cells, cluster_name, data_dir):
         """
@@ -294,18 +311,19 @@ class ExpressionWriter:
         values = re.split(COMMA_OR_TAB, header)
         cells = values[1:]
         processor = partial(
-            self.read_dense_matrix_slice, cells, cluster_cells, cluster_name, data_dir
+            self.read_dense_matrix_slice,
+            matrix_cells=cells, cluster_cells=cluster_cells, cluster_name=cluster_name, data_dir=data_dir
         )
         pool.map(processor, slice_indexes)
 
-    def read_dense_matrix_slice(self, matrix_cells, cluster_cells, cluster_name, data_dir, indexes):
+    def read_dense_matrix_slice(self, indexes, matrix_cells, cluster_cells, cluster_name, data_dir):
         """
         Read a dense matrix using start/stop indexes and create to individual gene-level files
+        :param indexes: (List) start/stop index points to read from/to
         :param matrix_cells: (List) cell names from matrix file
         :param cluster_cells: (List) cell names from cluster file
         :param cluster_name: (String) name of cluster object
         :param data_dir: (String) name out output dir
-        :param indexes: (List) start/stop index points to read from/to
         """
         start_pos, end_pos = indexes
         print(f"reading {self.matrix_file_path} at index {start_pos}:{end_pos}")
@@ -334,7 +352,7 @@ class ExpressionWriter:
         filtered_expression = ExpressionWriter.filter_expression_for_cluster(
             cluster_cells, matrix_cells, exp_vals
         )
-        ExpressionWriter.write_gene_scores(cluster_name, gene_name, filtered_expression, data_dir)
+        ExpressionWriter.write_gene_scores(gene_name, cluster_name, filtered_expression, data_dir)
 
     @staticmethod
     def filter_expression_for_cluster(cluster_cells, exp_cells, exp_scores):
@@ -351,13 +369,13 @@ class ExpressionWriter:
         return (observed_exp.get(cell, 0) for cell in cluster_cells)
 
     @staticmethod
-    def write_gene_scores(cluster_name, gene_name, exp_values, data_dir):
+    def write_gene_scores(gene_name, cluster_name, exp_values, data_dir):
         """
         Write a JSON array of expression values
         Filename uses {cluster_name}--{gene_name}.json format
 
-        :param cluster_name: (String) Name of cluster
         :param gene_name: (String) Name of gene
+        :param cluster_name: (String) Name of cluster
         :param exp_values: (List) expression values
         :param data_dir: (String) name out output dir
         """
@@ -381,6 +399,7 @@ class ExpressionWriter:
             barcodes_file = ExpressionWriter.open_file(args.barcodes_file)
             barcodes = ExpressionWriter.load_entities_as_list(barcodes_file)
             self.divide_sparse_matrix(genes, data_dir)
+            self.write_empty_sparse_genes(genes, len(cluster_cells), sanitized_cluster_name, data_dir)
             self.process_sparse_data_fragments(barcodes, cluster_cells, sanitized_cluster_name, data_dir)
         else:
             print(f"reading {expression_file_path} as dense matrix")
