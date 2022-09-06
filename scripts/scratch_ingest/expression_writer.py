@@ -1,5 +1,3 @@
-#! /usr/bin/env python3
-
 """expression_writer.py
 extract gene-level expression data from dense/sparse matrix files and process in the
 context of a cluster file's cells.
