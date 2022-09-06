@@ -393,9 +393,9 @@ if __name__ == '__main__':
     parser.add_argument('--cluster-name', help='name of cluster object', required=True)
     parser.add_argument('--matrix-file', help='path to matrix file', required=True)
     parser.add_argument('--precision', help='number of digits of precision for non-zero data',
-                        nargs='?', const=1, type=int, default=3)
+                        nargs='?', const=1, type=int)
     parser.add_argument('--cores', help='number of cores to use in multiprocessing',
-                        nargs='?', const=1, type=int, default=multiprocessing.cpu_count() - 1)
+                        nargs='?', const=1, type=int)
     parser.add_argument('--genes-file', help='path to genes file (None for dense matrix files)')
     parser.add_argument('--barcodes-file', help='path to barcodes file (None for dense matrix files)')
     args = parser.parse_args()
