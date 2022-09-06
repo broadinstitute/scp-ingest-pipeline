@@ -370,7 +370,10 @@ class ExpressionWriter:
             json.dump(list(exp_values), file, separators=(',', ':'))
 
 
-    def main(self) -> None:
+    def main(self):
+        """
+        Main handler, determines type of processing to execute (dense vs. sparse)
+        """
         cluster_file_path = args.cluster_file
         expression_file_path = args.matrix_file
         sanitized_cluster_name = re.sub(r'\W', '_', args.cluster_name)
