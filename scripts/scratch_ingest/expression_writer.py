@@ -181,6 +181,8 @@ class ExpressionWriter:
                 matrix_file.seek(seek_point)
                 current_byte = matrix_file.read(1)
                 if current_byte == '':  # eof
+                    current_seek.append(file_size)
+                    seek_points.append(current_seek)
                     break
                 while current_byte != "\n":
                     current_byte = matrix_file.read(1)
