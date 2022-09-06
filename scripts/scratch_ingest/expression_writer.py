@@ -154,7 +154,7 @@ class ExpressionWriter:
     def get_file_seek_points(self):
         """
         Determine start/stop points in a matrix to process in parallel
-        Will read in 1GB chunks and return a list of start/stop points to read from
+        Will read in chunks and return a list of start/stop points
         Ensures breaks on newlines
 
         :param matrix_file_path: (String) path to matrix file
