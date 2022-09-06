@@ -173,10 +173,6 @@ class ExpressionWriter:
             current_seek = [current_pos]
             seek_points = []
             for index in range(self.num_cores):
-                if index == self.num_cores - 1:
-                    current_seek.append(file_size)
-                    seek_points.append(current_seek)
-                    break
                 seek_point = current_pos + chunk_size
                 matrix_file.seek(seek_point)
                 current_byte = matrix_file.read(1)
