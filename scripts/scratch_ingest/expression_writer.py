@@ -129,10 +129,10 @@ class ExpressionWriter:
         :returns: (List)
         """
         cells = []
-        with ExpressionWriter.open_file(file_path) as cluster_file:
-            cluster_file.readline()
-            cluster_file.readline()
-            for row in cluster_file:
+        with ExpressionWriter.open_file(file_path) as file:
+            file.readline()
+            file.readline()
+            for row in file:
                 cell = re.split(COMMA_OR_TAB, row)[0]
                 cells.append(cell)
         return cells
@@ -143,6 +143,7 @@ class ExpressionWriter:
         Read an entire 10X feature/barcode file into a list for parsing sparse data
 
         :param file: (TextIOWrapper) open file object
+        :param column: (Integer) specific column to extract from entity file
         :returns: (List)
         """
         print(f"reading entities from {file.name}")
@@ -157,7 +158,6 @@ class ExpressionWriter:
         Will read in chunks and return a list of start/stop points
         Ensures breaks on newlines
 
-        :param matrix_file_path: (String) path to matrix file
         :return: (List<List>)
         """
         file_size = ExpressionWriter.get_matrix_size(self.matrix_file_path)
@@ -218,7 +218,6 @@ class ExpressionWriter:
         Slice a sparse matrix into 1GB chunks and write out individual
         gene-level files in parallel
 
-        :param matrix_file_path: (String): path to matrix file
         :param genes: (List) gene names from features file
         :param data_dir: (String) name out output dir
         """
@@ -232,11 +231,11 @@ class ExpressionWriter:
         """
         Process a single-gene sparse matrix fragment and write expression array
 
-        :param barcodes (List): list of cell barcodes
-        :param cluster_cells (List): list of cells from cluster file
-        :param cluster_name (String): name of cluster object
-        :param data_dir (String) name out output dir
-        :param fragment_name (String): name of gene-level fragment file
+        :param barcodes: (List) list of cell barcodes
+        :param cluster_cells: (List) list of cells from cluster file
+        :param cluster_name: (String) name of cluster object
+        :param data_dir: (String) name out output dir
+        :param fragment_name: (String) name of gene-level fragment file
         """
         gene_name = fragment_name.split('__')[0]
         full_path = f"{data_dir}/gene_entries/{fragment_name}"
@@ -259,10 +258,10 @@ class ExpressionWriter:
         """
         Find and process all generated single-gene sparse data fragments
 
-        :param barcodes (List): list of cell barcodes
-        :param cluster_cells (List): list of cells from cluster file
-        :param cluster_name (String): name of cluster object
-        :param data_dir (String) name out output dir
+        :param barcodes: (List) list of cell barcodes
+        :param cluster_cells: (List) list of cells from cluster file
+        :param cluster_name: (String) name of cluster object
+        :param data_dir: (String) name out output dir
         """
         fragments = os.listdir(f"{data_dir}/gene_entries")
         print(f"subdivision complete, processing {len(fragments)} fragments")
@@ -274,7 +273,7 @@ class ExpressionWriter:
         """
         Process a single line from a sparse matrix and extract values as integers
 
-        :param line (String): single line from matrix file
+        :param line: (String) single line from matrix file
         :return: (List): values as integers
         """
         gene_idx, barcode_idx, raw_exp = line.rstrip().split(' ')
@@ -284,7 +283,6 @@ class ExpressionWriter:
         """
         Main handler to read dense matrix data and process entries at the gene level
 
-        :param matrix_file_path: (String) path to dense matrix file
         :param cluster_cells: (List) cell names from cluster file
         :param cluster_name: (String) name of cluster object
         :param data_dir: (String) name out output dir
@@ -303,7 +301,6 @@ class ExpressionWriter:
     def read_dense_matrix_slice(self, matrix_cells, cluster_cells, cluster_name, data_dir, indexes):
         """
         Read a dense matrix using start/stop indexes and create to individual gene-level files
-        :param matrix_file_path: (String) path to dense matrix file
         :param matrix_cells: (List) cell names from matrix file
         :param cluster_cells: (List) cell names from cluster file
         :param cluster_name: (String) name of cluster object
@@ -326,7 +323,7 @@ class ExpressionWriter:
 
         :param matrix_cells: (List) cells from header line of dense matrix
         :param cluster_cells: (List) cell names from cluster file
-        :param cluster_name (String): name of cluster object
+        :param cluster_name: (String) name of cluster object
         :param data_dir (String) name out output dir
         :param line: (String) single line from dense matrix
         """
@@ -345,10 +342,10 @@ class ExpressionWriter:
         Assemble a List of expression scores, filtered & ordered from a List of cluster cells
         Will substitute 0 as a value for any cell not seen in the expression file
 
-        :param cluster_cells (List): cluster cell names
-        :param exp_cells (List): expression cell names
-        :param exp_scores (List): expression values, in the same order as exp_cells
-        :return: (List): Expression values, ordered by cluster_cells
+        :param cluster_cells: (List) cluster cell names
+        :param exp_cells: (List) expression cell names
+        :param exp_scores: (List) expression values, in the same order as exp_cells
+        :return: (List) Expression values, ordered by cluster_cells
         """
         observed_exp = dict(zip(exp_cells, exp_scores))
         return (observed_exp.get(cell, 0) for cell in cluster_cells)
@@ -359,10 +356,10 @@ class ExpressionWriter:
         Write a JSON array of expression values
         Filename uses {cluster_name}--{gene_name}.json format
 
-        :param cluster_name (String): Name of cluster
-        :param gene_name (String): Name of gene
-        :param exp_values (List): expression values
-        :param data_dir (String) name out output dir
+        :param cluster_name: (String) Name of cluster
+        :param gene_name: (String) Name of gene
+        :param exp_values: (List) expression values
+        :param data_dir: (String) name out output dir
         """
         with gzip.open(f"{data_dir}/{cluster_name}--{gene_name}.json.gz", "wt") as file:
             json.dump(list(exp_values), file, separators=(',', ':'))
