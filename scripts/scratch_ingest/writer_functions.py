@@ -94,7 +94,7 @@ def get_cluster_cells(file_path):
             cells.append(cell)
     return cells
 
-def load_entities_as_list(file, column = None):
+def load_entities_as_list(file):
     """
     Read an entire 10X feature/barcode file into a list for parsing sparse data
 
@@ -102,11 +102,21 @@ def load_entities_as_list(file, column = None):
     :param column: (Integer) specific column to extract from entity file
     :returns: (List)
     """
-    print(f"reading entities from {file.name}")
-    if not column:
-        return list(map(str.rstrip, file.readlines()))
-    else:
-        return list(re.split(ALL_DELIM, line.strip())[column] for line in file)
+    column = get_entity_index(file)
+    print(f"reading entities from {file.name} in column {column + 1}")
+    return list(re.split(ALL_DELIM, line.strip())[column] for line in file)
+
+def get_entity_index(file):
+    """
+    Determine which column from a 10X entity file contains valid data
+
+    :param file: (TextIOWrapper) open file object
+    :return: (Integer)
+    """
+    first_line = file.readline().strip()
+    file.seek(0) # gotcha to reset pointer to beginning
+    entities = re.split(ALL_DELIM, first_line)
+    return 0 if len(entities) == 1 else 1
 
 def read_sparse_matrix_slice(indexes, matrix_file_path, genes, data_dir):
     """

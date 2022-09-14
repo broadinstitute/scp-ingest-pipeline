@@ -23,13 +23,16 @@ import re
 import argparse
 import time
 import multiprocessing
+import sys
 from functools import partial
 from writer_functions import round_exp, open_file, make_data_dir, get_matrix_size, get_cluster_cells,\
     load_entities_as_list, read_sparse_matrix_slice, process_sparse_fragment, write_gene_scores,\
     process_dense_line, COMMA_OR_TAB
 
 class ExpressionWriter:
-    num_cores = multiprocessing.cpu_count() - 1
+    denominator = 2 if re.match('darwin', sys.platform) else 1
+    num_cores = int(multiprocessing.cpu_count() / denominator) - 1
+    print(f"num_cores: {num_cores}")
 
     def __init__(
         self, matrix_file_path, cluster_file_path, cluster_name, genes_file, barcodes_file
@@ -179,7 +182,7 @@ class ExpressionWriter:
         if self.genes_file is not None and self.barcodes_file is not None:
             print(f"reading {expression_file_path} as sparse matrix")
             genes_file = open_file(args.genes_file)
-            genes = load_entities_as_list(genes_file, 1)
+            genes = load_entities_as_list(genes_file)
             barcodes_file = open_file(args.barcodes_file)
             barcodes = load_entities_as_list(barcodes_file)
             self.divide_sparse_matrix(genes, data_dir)
