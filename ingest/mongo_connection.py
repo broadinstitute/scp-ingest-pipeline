@@ -54,7 +54,7 @@ def graceful_auto_reconnect(mongo_op_func):
     # Adopted from https://stackoverflow.com/questions/46939285
 
     def retry(attempt_num):
-        if attempt_num < MAX_ATTEMPTS:
+        if attempt_num < MAX_ATTEMPTS - 1:
             exp_backoff = pow(2, attempt_num)
             max_jitter = math.ceil(exp_backoff * 0.2)
             final_wait_time = exp_backoff + random.randint(
@@ -70,21 +70,21 @@ def graceful_auto_reconnect(mongo_op_func):
             try:
                 return mongo_op_func(*args, **kwargs)
             except AutoReconnect as e:
-                if attempt <= MAX_ATTEMPTS:
+                if attempt < MAX_ATTEMPTS - 1:
                     dev_logger.warning("PyMongo auto-reconnecting... %s.", str(e))
                     retry(attempt)
                 else:
                     raise e
             except BulkWriteError as bwe:
-                if attempt < MAX_ATTEMPTS:
+                if attempt < MAX_ATTEMPTS - 1:
                     dev_logger.warning(
                         "Batch ops error occurred. Reinsert attempt %s.", str(attempt)
                     )
-                    error_doc = bwe.details["writeErrors"][0]
+                    error = bwe.details["writeErrors"][0]
                     # Check error code to see if any failures are due to violating a unique index (error code 11000)
                     # and discard those documents before retrying
-                    if error_doc['code'] == 11000:
-                        filtered_docs = discard_inserted_documents(error_doc, args[0], args[1], args[2])
+                    if error['code'] == 11000:
+                        filtered_docs = discard_inserted_documents(error['op'], args[0], args[1], args[2])
                         if len(filtered_docs) > 0:
                             args[0] = filtered_docs
                             retry(attempt)
