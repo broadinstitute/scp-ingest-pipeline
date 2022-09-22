@@ -80,27 +80,30 @@ def graceful_auto_reconnect(mongo_op_func):
                     dev_logger.warning(
                         "Batch ops error occurred. Reinsert attempt %s.", str(attempt)
                     )
-                    error = bwe.details["writeErrors"][0]
+                    error = bwe.details["writeErrors"]
                     # Check error code to see if any failures are due to violating a unique index (error code 11000)
                     # and discard those documents before retrying
-                    if error['code'] == 11000:
-                        filtered_docs = discard_inserted_documents(error['op'], args[0], args[1], args[2])
-                        if len(filtered_docs) > 0:
-                            args[0] = filtered_docs
-                            retry(attempt)
-                        else:
-                            return args[0]
+                    filtered_docs = discard_inserted_documents(error, args[0])
+                    if len(filtered_docs) > 0:
+                        args[0] = filtered_docs
+                        retry(attempt)
                     else:
-                        dev_logger.debug(str(bwe.details))
-                        raise bwe
+                        return args[0]
                 else:
-                    dev_logger.debug(str(bwe.details))
-                    raise bwe
+                    filtered_bwe = filter_values_from_log(bwe)
+                    dev_logger.debug(str(filtered_bwe.details))
+                    raise filtered_bwe
 
     return wrapper
 
+def filter_values_from_log(error):
+    error_doc = error.details["writeErrors"][0]['op']
+    if 'values' in error_doc:
+        error_doc['values'] = '<filtered>'
+    error.details["writeErrors"][0]['op'] = error_doc
+    return error
 
-def discard_inserted_documents(error_doc, original_documents, collection_name, mongo_client):
+def discard_inserted_documents(errors, original_documents):
     """Discard any documents that have already been inserted which are violating index constraints
        such documents will have an error code of 11000 for a DuplicateKey error
        from https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml#L467
@@ -108,22 +111,14 @@ def discard_inserted_documents(error_doc, original_documents, collection_name, m
        only first error is returned, not all possible errors
 
        Parameters:
-           error_doc (Dict): document that failed to insert in original transaction
-           original_documents (List[Dict]): list of documents from original transaction that failed
-           collection_name (String): name of collection where documents were to be inserted
-           mongo_client (MongoClient): MongoDB client to perform query for existing documents
+           errors (List<Dict>): Documents that failed to insert from transaction
+           original_documents (List<Dict>): list of documents from original transaction that failed
 
        Returns:
-           List[Dict]: list of documents with existing entries removed
+           List<Dict>: list of documents with existing entries removed
     """
-    names_to_find = list({'name': doc['name'], 'array_index': doc['array_index']} for doc in original_documents)
-    query = {
-        'study_id' : error_doc['study_id'],
-        'study_file_id' : error_doc['study_file_id'],
-        'linear_data_type': error_doc['linear_data_type'],
-        'name' : { "$in" : names_to_find }
-    }
-    fields = { 'name': 1, 'array_index': 1 }
-    raw_docs = mongo_client[collection_name].find(query, fields)
-    found_docs = list({ 'name': doc['name'], 'array_index': doc['array_index']} for doc in raw_docs)
-    return list(d for d in original_documents if {'name': d['name'], 'array_index': d['array_index']} not in found_docs)
+    error_docs = []
+    for doc in errors:
+        if doc['code'] == 11000:
+            error_docs.append({'name': doc['op']['name'], 'array_index': doc['op']['array_index']})
+    return list(d for d in original_documents if {'name': d['name'], 'array_index': d['array_index']} not in error_docs)
