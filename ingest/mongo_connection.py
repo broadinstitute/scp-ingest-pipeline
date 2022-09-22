@@ -90,18 +90,20 @@ def graceful_auto_reconnect(mongo_op_func):
                     else:
                         return args[0]
                 else:
-                    filtered_bwe = filter_values_from_log(bwe)
-                    dev_logger.debug(str(filtered_bwe.details))
-                    raise filtered_bwe
+                    log_error_without_values(bwe)
+                    raise bwe
 
     return wrapper
 
-def filter_values_from_log(error):
-    error_doc = error.details["writeErrors"][0]['op']
-    if 'values' in error_doc:
-        error_doc['values'] = '<filtered>'
-    error.details["writeErrors"][0]['op'] = error_doc
-    return error
+def log_error_without_values(error):
+    """Remove 'values' array from log messages as this is usually very long and makes logs difficult to read
+
+    :param error: BulkWriteError from failed transaction
+    """
+    for entry in error.details["writeErrors"]:
+        if 'values' in entry['op']:
+            entry['op']['values'] = '<filtered>'
+    dev_logger.debug(str(error.details))
 
 def discard_inserted_documents(errors, original_documents):
     """Discard any documents that have already been inserted which are violating index constraints
