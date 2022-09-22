@@ -109,8 +109,6 @@ def discard_inserted_documents(errors, original_documents):
     """Discard any documents that have already been inserted which are violating index constraints
        such documents will have an error code of 11000 for a DuplicateKey error
        from https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml#L467
-       Uses Mongo query to get existing names and filters against documents to be inserted as
-       only first error is returned, not all possible errors
 
        Parameters:
            errors (List<Dict>): Documents that failed to insert from transaction
