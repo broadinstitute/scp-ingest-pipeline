@@ -370,8 +370,8 @@ class TestExpressionFiles(unittest.TestCase):
         client_mock = MagicMock()
 
         docs = [
-            {'id': 1, 'name': 'foo', 'study_id': 1, 'study_file_id': 1, 'linear_data_type': 'Gene'},
-            {'id': 2, 'name': 'bar', 'study_id': 1, 'study_file_id': 1, 'linear_data_type': 'Gene'}
+            {'id': 1, 'name': 'foo', 'study_id': 1, 'study_file_id': 1, 'array_index': 0, 'linear_data_type': 'Gene'},
+            {'id': 2, 'name': 'bar', 'study_id': 1, 'study_file_id': 1, 'array_index': 0, 'linear_data_type': 'Gene'}
         ]
         GeneExpression.insert(docs, "collection", client_mock)
         client_mock["collection"].insert_many.assert_called_with(docs, ordered=False)
@@ -393,10 +393,9 @@ class TestExpressionFiles(unittest.TestCase):
         def raiseError(*args, **kwargs):
             details = {
                 "writeErrors": [
-                    {
-                        "code": 11000,
-                        "op":
-                            {'id': 1, 'name': 'foo', 'study_id': 1, 'study_file_id': 1, 'linear_data_type': 'Gene'}
+                    { "code": 11000, "op": {
+                        'id': 1, 'name': 'foo', 'study_id': 1, 'study_file_id': 1,
+                        'array_index': 0, 'linear_data_type': 'Gene'}
                     }
                 ]
             }

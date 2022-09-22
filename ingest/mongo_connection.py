@@ -116,15 +116,14 @@ def discard_inserted_documents(error_doc, original_documents, collection_name, m
        Returns:
            List[Dict]: list of documents with existing entries removed
     """
-    names_to_find = list(doc['name'] for doc in original_documents)
+    names_to_find = list({'name': doc['name'], 'array_index': doc['array_index']} for doc in original_documents)
     query = {
         'study_id' : error_doc['study_id'],
         'study_file_id' : error_doc['study_file_id'],
+        'linear_data_type': error_doc['linear_data_type'],
         'name' : { "$in" : names_to_find }
     }
-    if 'linear_data_type' in error_doc:
-        query['linear_data_type'] = error_doc['linear_data_type']
-    fields = { 'name': 1 }
-    raw_names = mongo_client[collection_name].find(query, fields)
-    existing_names = list(doc['name'] for doc in raw_names)
-    return list(doc for doc in original_documents if doc['name'] not in existing_names)
+    fields = { 'name': 1, 'array_index': 1 }
+    raw_docs = mongo_client[collection_name].find(query, fields)
+    found_docs = list({ 'name': doc['name'], 'array_index': doc['array_index']} for doc in raw_docs)
+    return list(d for d in original_documents if {'name': d['name'], 'array_index': d['array_index']} not in found_docs)
