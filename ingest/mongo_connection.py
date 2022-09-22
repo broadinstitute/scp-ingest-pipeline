@@ -105,17 +105,14 @@ def log_error_without_values(error):
             entry['op']['values'] = '<filtered>'
     dev_logger.debug(str(error.details))
 
-def discard_inserted_documents(errors, original_documents):
+def discard_inserted_documents(errors, original_documents) -> list[dict]:
     """Discard any documents that have already been inserted which are violating index constraints
-       such documents will have an error code of 11000 for a DuplicateKey error
-       from https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml#L467
+    such documents will have an error code of 11000 for a DuplicateKey error
+    from https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml#L467
 
-       Parameters:
-           errors (List<Dict>): Documents that failed to insert from transaction
-           original_documents (List<Dict>): list of documents from original transaction that failed
-
-       Returns:
-           List<Dict>: list of documents with existing entries removed
+    :param errors: (list[dict]) Documents that failed to insert from transaction
+    :param original_documents: (list[dict]) list of documents from original transaction that failed
+    :returns list[dict]: list of documents with existing entries removed
     """
     error_docs = []
     for doc in errors:
