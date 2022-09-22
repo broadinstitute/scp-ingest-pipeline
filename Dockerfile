@@ -16,11 +16,11 @@ FROM marketplace.gcr.io/google/ubuntu1804:latest
 
 # Install Python 3.7
 RUN apt-get -y update && \
-  apt -y install software-properties-common && \
+  apt-get -y install software-properties-common && \
   add-apt-repository ppa:deadsnakes/ppa && \
-  apt -y install python3-pip && \
-  apt -y install python3.7 && \
-  apt -y install python3.7-dev
+  apt-get -y install python3-pip && \
+  apt-get -y install python3.7 && \
+  apt-get -y install python3.7-dev
 
 RUN python3.7 -m pip install --upgrade pip
 
