@@ -80,6 +80,7 @@ try:
     from expression_files.dense_ingestor import DenseIngestor
     from monitor import setup_logger, log_exception
     from de import DifferentialExpression
+    from expression_writer import ExpressionWriter
 
     # scanpy uses anndata python package, disamibguate local anndata
     # using underscore https://peps.python.org/pep-0008/#naming-conventions
@@ -105,6 +106,7 @@ except ImportError:
     from .anndata import AnnDataIngestor
     from .cli_parser import create_parser, validate_arguments
     from .de import DifferentialExpression
+    from .expression_writer import ExpressionWriter
 
 
 class IngestPipeline:
@@ -508,6 +510,22 @@ class IngestPipeline:
         # ToDo: surface failed DE for analytics (SCP-4206)
         return 0
 
+    def render_expression_arrays(self):
+        try:
+            exp_writer = ExpressionWriter(
+                matrix_file_path=self.matrix_file_path,
+                matrix_file_type=self.matrix_file_type,
+                cluster_file_path=self.cluster_file,
+                cluster_name=self.kwargs.get('cluster_name'),
+                gene_file=self.kwargs.get('gene_file'),
+                barcode_file=self.kwargs.get('barcode_file')
+            )
+            exp_writer.render_artifacts()
+        except Exception as e:
+            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+            return 1
+        return 0
+
     def report_validation(self, status):
         self.props["status"] = status
         config.get_metric_properties().update(self.props)
@@ -550,6 +568,10 @@ def run_ingest(ingest, arguments, parsed_args):
         status_de = ingest.calculate_de()
         status.append(status_de)
         print(f'STATUS post-DE {status}')
+    elif "render_expression_arrays" in arguments:
+        config.set_parent_event_name("image-pipeline:render_expression_arrays")
+        status_exp_writer = ingest.render_expression_arrays()
+        status.append(status_exp_writer)
 
     return status, status_cell_metadata
 
@@ -632,6 +654,7 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
+    print(f'arguments: {parsed_args}')
     if "differential_expression" in arguments:
         # DE may use metadata or cluster file for annots BUT
         # IngestPipeline initialization assumes a "cell_metadata_file"

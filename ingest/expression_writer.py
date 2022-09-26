@@ -32,16 +32,16 @@ from writer_functions import round_exp, open_file, make_data_dir, get_matrix_siz
 class ExpressionWriter:
     denominator = 2 if re.match('darwin', sys.platform) else 1
     num_cores = int(multiprocessing.cpu_count() / denominator) - 1
-    print(f"num_cores: {num_cores}")
 
     def __init__(
-        self, matrix_file_path, cluster_file_path, cluster_name, genes_file, barcodes_file
+        self, matrix_file_path, matrix_file_type, cluster_file_path, cluster_name, gene_file, barcode_file
     ):
         self.matrix_file_path = matrix_file_path
+        self.matrix_file_type = matrix_file_type
         self.cluster_file_path = cluster_file_path
         self.cluster_name = cluster_name
-        self.genes_file = genes_file
-        self.barcodes_file = barcodes_file
+        self.gene_file = gene_file
+        self.barcode_file = barcode_file
 
     def get_file_seek_points(self):
         """
@@ -170,26 +170,24 @@ class ExpressionWriter:
                 process_dense_line(line, matrix_cells, cluster_cells, cluster_name, data_dir)
                 current_pos += len(line)
 
-    def main(self):
+    def render_artifacts(self):
         """
         Main handler, determines type of processing to execute (dense vs. sparse)
         """
-        cluster_file_path = args.cluster_file
-        expression_file_path = args.matrix_file
-        sanitized_cluster_name = re.sub(r'\W', '_', args.cluster_name)
+        sanitized_cluster_name = re.sub(r'\W', '_', self.cluster_name)
         data_dir = make_data_dir(sanitized_cluster_name)
-        cluster_cells = get_cluster_cells(cluster_file_path)
-        if self.genes_file is not None and self.barcodes_file is not None:
-            print(f"reading {expression_file_path} as sparse matrix")
-            genes_file = open_file(args.genes_file)
+        cluster_cells = get_cluster_cells(self.cluster_file_path)
+        if self.matrix_file_type == 'mtx' and self.gene_file is not None and self.barcode_file is not None:
+            print(f"reading {self.matrix_file_path} as sparse matrix")
+            genes_file = open_file(args.gene_file)
             genes = load_entities_as_list(genes_file)
-            barcodes_file = open_file(args.barcodes_file)
+            barcodes_file = open_file(args.barcode_file)
             barcodes = load_entities_as_list(barcodes_file)
             self.divide_sparse_matrix(genes, data_dir)
             self.write_empty_sparse_genes(genes, len(cluster_cells), sanitized_cluster_name, data_dir)
             self.process_sparse_data_fragments(barcodes, cluster_cells, sanitized_cluster_name, data_dir)
-        else:
-            print(f"reading {expression_file_path} as dense matrix")
+        elif self.matrix_file_type == 'dense':
+            print(f"reading {self.matrix_file_path} as dense matrix")
             self.process_dense_data(cluster_cells, sanitized_cluster_name, data_dir)
 
 if __name__ == '__main__':
@@ -197,16 +195,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--cluster-file', help='path to cluster file', required=True)
     parser.add_argument('--cluster-name', help='name of cluster object', required=True)
-    parser.add_argument('--matrix-file', help='path to matrix file', required=True)
-    parser.add_argument('--genes-file', help='path to genes file (None for dense matrix files)')
-    parser.add_argument('--barcodes-file', help='path to barcodes file (None for dense matrix files)')
+    parser.add_argument('--matrix-file-path', help='path to matrix file', required=True)
+    parser.add_argument('--matrix-file-type', help='type to matrix file (dense or mtx)', required=True)
+    parser.add_argument('--gene-file', help='path to gene file (None for dense matrix files)')
+    parser.add_argument('--barcode-file', help='path to barcode file (None for dense matrix files)')
     args = parser.parse_args()
     expression_file = args.matrix_file
     cluster_file = args.cluster_file
     writer = ExpressionWriter(
-        args.matrix_file, args.cluster_file, args.cluster_name, args.genes_file, args.barcodes_file
+        args.matrix_file, args.matrix_file_type, args.cluster_file, args.cluster_name, args.genes_file,
+        args.barcodes_file
     )
-    writer.main()
+    writer.render_artifacts()
     end_time = time.time()
     total_time = end_time - start_time
     time_in_min = round_exp(total_time, 3) / 60
