@@ -370,8 +370,8 @@ class TestExpressionFiles(unittest.TestCase):
         client_mock = MagicMock()
 
         docs = [
-            {"values": ["foo3", "foo4", "foo5"]},
-            {"values": ["foo6", "foo7", "foo8"]},
+            {'id': 1, 'name': 'foo', 'study_id': 1, 'study_file_id': 1, 'array_index': 0, 'linear_data_type': 'Gene'},
+            {'id': 2, 'name': 'bar', 'study_id': 1, 'study_file_id': 1, 'array_index': 0, 'linear_data_type': 'Gene'}
         ]
         GeneExpression.insert(docs, "collection", client_mock)
         client_mock["collection"].insert_many.assert_called_with(docs, ordered=False)
@@ -391,8 +391,14 @@ class TestExpressionFiles(unittest.TestCase):
         client_mock.reset_mock()
 
         def raiseError(*args, **kwargs):
-            details = {"writeErrors": [{"code": 2345}]}
-
+            details = {
+                "writeErrors": [
+                    { "code": 11000, "op": {
+                        'id': 1, 'name': 'foo', 'study_id': 1, 'study_file_id': 1,
+                        'array_index': 0, 'linear_data_type': 'Gene'}
+                    }
+                ]
+            }
             raise BulkWriteError(details)
 
         # Test exponential back off for BulkWriteError
