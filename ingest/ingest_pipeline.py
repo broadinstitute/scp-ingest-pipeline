@@ -654,7 +654,6 @@ def main() -> None:
     parsed_args = create_parser().parse_args()
     validate_arguments(parsed_args)
     arguments = vars(parsed_args)
-    print(f'arguments: {parsed_args}')
     if "differential_expression" in arguments:
         # DE may use metadata or cluster file for annots BUT
         # IngestPipeline initialization assumes a "cell_metadata_file"
