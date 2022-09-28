@@ -70,8 +70,7 @@ class ExpressionWriter:
 
     def get_storage_bucket_name(self):
         """
-        Load GCS storage bucket, if available
-        :return: (google.cloud.storage.Bucket)
+        get GCS storage bucket name, if available
         """
         path_header = self.matrix_file_path[:5]
         if path_header == 'gs://':
