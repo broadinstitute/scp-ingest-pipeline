@@ -1,13 +1,14 @@
 import re
 import os
-import uuid
 import gzip
 import json
 
 try:
     from monitor import setup_logger
+    from ingest_files import IngestFiles
 except ImportError:
     from .monitor import setup_logger
+    from .ingest_files import IngestFiles
 
 # regex to split on commas and tabs
 COMMA_OR_TAB = r"[,\t]"
@@ -17,6 +18,8 @@ ALL_DELIM = r"[\s,\t]"
 
 # Gzip magic number
 GZIP_MAGIC_NUM = b'\x1f\x8b'
+
+ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
 dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
@@ -40,6 +43,16 @@ def round_exp(val, precision):
     """
     return round(float(val), precision)
 
+def encode_cluster_name(name):
+    """
+    Encodes a cluster name to be used in a HTTP request
+    Will encode + signs as 'pos' to differentiate + and -
+    :param name: (String) name of cluster
+    :return: (String) encoded cluster name
+    """
+    plus_converted_string = re.sub('\+', 'pos', name)
+    return re.sub(r'\W', '_', plus_converted_string)
+
 def open_file(filepath):
     """
     Open a file with the correct reader, e.g. even if it's gzipped
@@ -47,24 +60,19 @@ def open_file(filepath):
     :param filepath: (String) path to file to open
     :returns: (TextIOWrapper)
     """
-    if is_gz_file(filepath):
-        return gzip.open(filepath, 'rt')
-    else:
-        return open(filepath, 'r')
+    ingest_file = IngestFiles(filepath, ALLOWED_FILE_TYPES)
+    file_io, local_path = ingest_file.resolve_path(filepath)
+    return file_io, local_path
 
 def make_data_dir(name):
     """
-    Make a directory to put output/work files in.  Appends a UUID to the end of the directory
-    to allow for quick iteration and side-by-side comparison of outputs without manual cleanup
+    Make a directory to put output/work files in
 
     :param name: (String) name of directory
-    :returns: (String)
     """
-    dirname = str(f"{name}-{uuid.uuid4()}")
-    dev_logger.info(f" creating data directory at {dirname}")
-    os.mkdir(dirname)
-    os.mkdir(f"{dirname}/gene_entries") # for slicing sparse matrix files
-    return dirname
+    dev_logger.info(f" creating data directory at {name}")
+    os.mkdir(name)
+    os.mkdir(f"{name}/gene_entries") # for slicing sparse matrix files
 
 def get_matrix_size(matrix_file_path):
     """
@@ -77,13 +85,12 @@ def get_matrix_size(matrix_file_path):
     :param matrix_file_path: (String) path to matrix file
     :return: (Int)
     """
-
-    if is_gz_file(matrix_file_path):
-        with open_file(matrix_file_path) as matrix_file:
-            matrix_file.seek(0, 2)
-            return matrix_file.tell()
+    matrix_file, local_path = open_file(matrix_file_path)
+    if is_gz_file(local_path):
+        matrix_file.seek(0, 2)
+        return matrix_file.tell()
     else:
-        return os.stat(matrix_file_path).st_size
+        return os.stat(local_path).st_size
 
 def get_cluster_cells(file_path):
     """
@@ -93,7 +100,7 @@ def get_cluster_cells(file_path):
     :returns: (List)
     """
     cells = []
-    with open_file(file_path) as file:
+    with open_file(file_path)[0] as file:
         file.readline()
         file.readline()
         for row in file:
@@ -110,7 +117,7 @@ def load_entities_as_list(file):
     :returns: (List)
     """
     column = get_entity_index(file)
-    print(f"reading entities from {file.name} in column {column + 1}")
+    dev_logger.info(f"reading entities from {file.name} in column {column + 1}")
     return list(re.split(ALL_DELIM, line.strip())[column] for line in file)
 
 def get_entity_index(file):
@@ -125,51 +132,27 @@ def get_entity_index(file):
     entities = re.split(ALL_DELIM, first_line)
     return 0 if len(entities) == 1 else 1
 
-def read_sparse_matrix_slice(indexes, matrix_file_path, genes, data_dir):
-    """
-    Read a sparse matrix using start/stop indexes and append to individual gene-level files
-
-    :param indexes: (List) start/stop index points to read from/to
-    :param matrix_file_path: (String): path to matrix file
-    :param genes: (List) gene names from features file
-    :param data_dir: (String) name out output dir
-    """
-    start_pos, end_pos = indexes
-    print(f"reading {matrix_file_path} at index {start_pos}:{end_pos}")
-    with open_file(matrix_file_path) as matrix_file:
-        current_pos = start_pos
-        matrix_file.seek(current_pos)
-        while current_pos < end_pos:
-            line = matrix_file.readline()
-            gene_idx = int(line.split()[0])
-            gene_name = genes[gene_idx - 1]
-            fragment_path = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
-            with open(fragment_path, 'a+') as file:
-                file.write(line)
-            current_pos += len(line)
-
-def process_sparse_fragment(fragment_name, barcodes, cluster_cells, cluster_name, data_dir):
+def process_sparse_fragment(fragment_name, barcodes, cluster_cells, data_dir):
     """
     Process a single-gene sparse matrix fragment and write expression array
 
     :param fragment_name: (String) name of gene-level fragment file
     :param barcodes: (List) list of cell barcodes
     :param cluster_cells: (List) list of cells from cluster file
-    :param cluster_name: (String) name of cluster object
     :param data_dir: (String) name out output dir
     """
     gene_name = fragment_name.split('__')[0]
     full_path = f"{data_dir}/gene_entries/{fragment_name}"
     observed_cells = []
     exp_vals = []
-    for line in open_file(full_path):
+    for line in open(full_path):
         gene_idx, barcode_idx, exp_val = extract_sparse_line(line)
         observed_cells.append(barcodes[barcode_idx - 1])
         exp_vals.append(exp_val)
     filtered_expression = filter_expression_for_cluster(
         cluster_cells, observed_cells, exp_vals
     )
-    write_gene_scores(gene_name, cluster_name, filtered_expression, data_dir)
+    write_gene_scores(gene_name, filtered_expression, data_dir)
 
 def extract_sparse_line(line):
     """
@@ -181,13 +164,12 @@ def extract_sparse_line(line):
     gene_idx, barcode_idx, raw_exp = line.rstrip().split(' ')
     return [int(gene_idx), int(barcode_idx), round_exp(raw_exp, 3)]
 
-def process_dense_line(line, matrix_cells, cluster_cells, cluster_name, data_dir):
+def process_dense_line(line, matrix_cells, cluster_cells, data_dir):
     """
     Process a single line from a dense matrix and write gene-level data
 
     :param matrix_cells: (List) cells from header line of dense matrix
     :param cluster_cells: (List) cell names from cluster file
-    :param cluster_name: (String) name of cluster object
     :param data_dir (String) name out output dir
     :param line: (String) single line from dense matrix
     """
@@ -198,7 +180,7 @@ def process_dense_line(line, matrix_cells, cluster_cells, cluster_name, data_dir
     filtered_expression = filter_expression_for_cluster(
         cluster_cells, matrix_cells, exp_vals
     )
-    write_gene_scores(gene_name, cluster_name, filtered_expression, data_dir)
+    write_gene_scores(gene_name, filtered_expression, data_dir)
 
 def filter_expression_for_cluster(cluster_cells, exp_cells, exp_scores):
     """
@@ -213,15 +195,13 @@ def filter_expression_for_cluster(cluster_cells, exp_cells, exp_scores):
     observed_exp = dict(zip(exp_cells, exp_scores))
     return (observed_exp.get(cell, 0) for cell in cluster_cells)
 
-def write_gene_scores(gene_name, cluster_name, exp_values, data_dir):
+def write_gene_scores(gene_name, exp_values, data_dir):
     """
     Write a JSON array of expression values
-    Filename uses {cluster_name}--{gene_name}.json format
 
     :param gene_name: (String) Name of gene
-    :param cluster_name: (String) Name of cluster
     :param exp_values: (List) expression values
     :param data_dir: (String) name out output dir
     """
-    with gzip.open(f"{data_dir}/{cluster_name}--{gene_name}.json.gz", "wt") as file:
+    with gzip.open(f"{data_dir}/{gene_name}.json.gz", "wt") as file:
         json.dump(list(exp_values), file, separators=(',', ':'))
