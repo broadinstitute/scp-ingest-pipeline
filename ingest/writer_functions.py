@@ -1,4 +1,5 @@
-import io
+from __future__ import annotations
+from typing import TextIO
 import re
 import os
 import gzip
@@ -29,7 +30,7 @@ def is_gz_file(filepath) -> bool:
     Determine if a file is gzipped by checking first two bytes against GZIP_MAGIC_NUM
 
     :param filepath: (str) path to file to check
-    :returns (bool)
+    :returns: (bool)
     """
     with open(filepath, 'rb') as test_f:
         return test_f.read(2) == GZIP_MAGIC_NUM
@@ -54,12 +55,12 @@ def encode_cluster_name(name) -> str:
     plus_converted_string = re.sub('\+', 'pos', name)
     return re.sub(r'\W', '_', plus_converted_string)
 
-def open_file(filepath) -> list:
+def open_file(filepath) -> list[TextIO, str]:
     """
     Open a file with the correct reader, e.g. even if it's gzipped
 
     :param filepath: (str) path to file to open
-    :returns: list[io.TextIOWrapper, str]
+    :returns: list[TextIO, str]
     """
     ingest_file = IngestFiles(filepath, ALLOWED_FILE_TYPES)
     file_io, local_path = ingest_file.resolve_path(filepath)
@@ -113,7 +114,7 @@ def load_entities_as_list(file) -> list:
     """
     Read an entire 10X feature/barcode file into a list for parsing sparse data
 
-    :param file: (io.TextIOWrapper) open file object
+    :param file: (TextIO) open file object
     :param column: (int) specific column to extract from entity file
     :returns: (list)
     """
@@ -125,7 +126,7 @@ def get_entity_index(file) -> int:
     """
     Determine which column from a 10X entity file contains valid data
 
-    :param file: (io.TextIOWrapper) open file object
+    :param file: (TextIO) open file object
     :returns: (int)
     """
     first_line = file.readline().strip()
