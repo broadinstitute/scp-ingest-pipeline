@@ -21,7 +21,7 @@ python3 ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5
                              --cluster-file ../tests/data/mtx/cluster_mtx_barcodes.tsv \
                              --cluster-name 'Sparse Example' --render-expression-arrays
 """
-
+from __future__ import annotations
 import os
 import subprocess
 import re
@@ -78,13 +78,13 @@ class ExpressionWriter:
             bucket_name = path_segments[0]
             return f"{path_header}{bucket_name}"
 
-    def get_file_seek_points(self):
+    def get_file_seek_points(self) -> list[dict]:
         """
         Determine start/stop points in a matrix to process in parallel
         Will read in chunks and return a list of start/stop points
         Ensures breaks on newlines
 
-        :return: (List<List>)
+        :returns: list[dict]
         """
         file_size = get_matrix_size(self.local_matrix_path)
         chunk_size = int(file_size / self.num_cores)
@@ -122,8 +122,8 @@ class ExpressionWriter:
         Slice a sparse matrix into 1GB chunks and write out individual
         gene-level files in parallel
 
-        :param genes: (List) gene names from features file
-        :param data_dir: (String) name of output dir
+        :param genes: (list) gene names from features file
+        :param data_dir: (str) name of output dir
         """
         self.dev_logger.info(f" loading sparse data from {self.local_matrix_path}")
         slice_indexes = self.get_file_seek_points()
@@ -135,9 +135,9 @@ class ExpressionWriter:
         """
         Read a sparse matrix using start/stop indexes and append to individual gene-level files
 
-        :param indexes: (List) start/stop index points to read from/to
-        :param genes: (List) gene names from features file
-        :param data_dir: (String) name of output dir
+        :param indexes: (list) start/stop index points to read from/to
+        :param genes: (list) gene names from features file
+        :param data_dir: (str) name of output dir
         """
         start_pos, end_pos = indexes
         self.dev_logger.info(f"reading {self.local_matrix_path} at index {start_pos}:{end_pos}")
@@ -157,9 +157,9 @@ class ExpressionWriter:
         """
         Find and process all generated single-gene sparse data fragments
 
-        :param barcodes: (List) list of cell barcodes
-        :param cluster_cells: (List) list of cells from cluster file
-        :param data_dir: (String) name of output dir
+        :param barcodes: (list) list of cell barcodes
+        :param cluster_cells: (list) list of cells from cluster file
+        :param data_dir: (str) name of output dir
         """
         fragments = os.listdir(f"{data_dir}/gene_entries")
         self.dev_logger.info(f" subdivision complete, processing {len(fragments)} fragments")
@@ -171,9 +171,9 @@ class ExpressionWriter:
         """
         Write out empty arrays of expression values for genes with no significant expression in a sparse matrix
 
-        :param genes: (List) gene names from features file
+        :param genes: (list) gene names from features file
         :param num_cluster_cells: (Integer) number of cells from cluster file
-        :param data_dir: (String) name of output dir
+        :param data_dir: (str) name of output dir
         """
         gene_fragments = filter(lambda file: file[0] != '.', os.listdir(f"{data_dir}/gene_entries"))
         significant_genes = set([gene.split('__')[0] for gene in gene_fragments])
@@ -187,8 +187,8 @@ class ExpressionWriter:
         """
         Main handler to read dense matrix data and process entries at the gene level
 
-        :param cluster_cells: (List) cell names from cluster file
-        :param data_dir: (String) name of output dir
+        :param cluster_cells: (list) cell names from cluster file
+        :param data_dir: (str) name of output dir
         """
         pool = multiprocessing.Pool(self.num_cores)
         slice_indexes = self.get_file_seek_points()
@@ -204,10 +204,10 @@ class ExpressionWriter:
     def read_dense_matrix_slice(self, indexes, matrix_cells, cluster_cells, data_dir):
         """
         Read a dense matrix using start/stop indexes and create to individual gene-level files
-        :param indexes: (List) start/stop index points to read from/to
-        :param matrix_cells: (List) cell names from matrix file
-        :param cluster_cells: (List) cell names from cluster file
-        :param data_dir: (String) name of output dir
+        :param indexes: (list) start/stop index points to read from/to
+        :param matrix_cells: (list) cell names from matrix file
+        :param cluster_cells: (list) cell names from cluster file
+        :param data_dir: (str) name of output dir
         """
         start_pos, end_pos = indexes
         self.dev_logger.info(f" reading {self.local_matrix_path} at index {start_pos}:{end_pos}")
@@ -250,7 +250,7 @@ class ExpressionWriter:
         """
         Copy all output files to study bucket in parallel using gsutil (since there are usually ~25-30K files)
 
-        :param cluster_name: (String) encoded name of cluster
+        :param cluster_name: (str) encoded name of cluster
         """
         if self.bucket is not None:
             bucket_path = f"{self.bucket}/{self.DELOCALIZE_FOLDER}/{cluster_name}"
