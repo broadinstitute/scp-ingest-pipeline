@@ -251,7 +251,6 @@ class ExpressionWriter:
         """
         Copy all output files to study bucket in parallel using gsutil (since there are usually ~25-30K files)
 
-        :param data_dir: (String) name of output dir
         :param cluster_name: (String) encoded name of cluster
         """
         if self.bucket is not None:
