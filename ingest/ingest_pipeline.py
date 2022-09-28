@@ -516,9 +516,7 @@ class IngestPipeline:
                 matrix_file_path=self.matrix_file_path,
                 matrix_file_type=self.matrix_file_type,
                 cluster_file_path=self.cluster_file,
-                cluster_name=self.kwargs.get('cluster_name'),
-                gene_file=self.kwargs.get('gene_file'),
-                barcode_file=self.kwargs.get('barcode_file')
+                **self.kwargs
             )
             exp_writer.render_artifacts()
         except Exception as e:

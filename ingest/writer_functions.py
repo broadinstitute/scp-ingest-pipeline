@@ -4,6 +4,11 @@ import uuid
 import gzip
 import json
 
+try:
+    from monitor import setup_logger
+except ImportError:
+    from .monitor import setup_logger
+
 # regex to split on commas and tabs
 COMMA_OR_TAB = r"[,\t]"
 
@@ -12,6 +17,8 @@ ALL_DELIM = r"[\s,\t]"
 
 # Gzip magic number
 GZIP_MAGIC_NUM = b'\x1f\x8b'
+
+dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
 def is_gz_file(filepath):
     """
@@ -54,7 +61,7 @@ def make_data_dir(name):
     :returns: (String)
     """
     dirname = str(f"{name}-{uuid.uuid4()}")
-    print(f"creating data directory at {dirname}")
+    dev_logger.info(f" creating data directory at {dirname}")
     os.mkdir(dirname)
     os.mkdir(f"{dirname}/gene_entries") # for slicing sparse matrix files
     return dirname

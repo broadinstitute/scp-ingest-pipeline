@@ -25,16 +25,26 @@ import time
 import multiprocessing
 import sys
 from functools import partial
-from writer_functions import round_exp, open_file, make_data_dir, get_matrix_size, get_cluster_cells,\
-    load_entities_as_list, read_sparse_matrix_slice, process_sparse_fragment, write_gene_scores,\
-    process_dense_line, COMMA_OR_TAB
+
+try:
+    from writer_functions import round_exp, open_file, make_data_dir, get_matrix_size, get_cluster_cells,\
+        load_entities_as_list, read_sparse_matrix_slice, process_sparse_fragment, write_gene_scores,\
+        process_dense_line, COMMA_OR_TAB
+    from monitor import setup_logger
+except ImportError:
+    from .writer_functions import round_exp, open_file, make_data_dir, get_matrix_size, get_cluster_cells, \
+        load_entities_as_list, read_sparse_matrix_slice, process_sparse_fragment, write_gene_scores, \
+        process_dense_line, COMMA_OR_TAB
+    from .monitor import setup_logger
 
 class ExpressionWriter:
     denominator = 2 if re.match('darwin', sys.platform) else 1
     num_cores = int(multiprocessing.cpu_count() / denominator) - 1
 
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
+
     def __init__(
-        self, matrix_file_path, matrix_file_type, cluster_file_path, cluster_name, gene_file, barcode_file
+        self, matrix_file_path, matrix_file_type, cluster_file_path, cluster_name, gene_file, barcode_file, **kwargs
     ):
         self.matrix_file_path = matrix_file_path
         self.matrix_file_type = matrix_file_type
@@ -53,7 +63,9 @@ class ExpressionWriter:
         """
         file_size = get_matrix_size(self.matrix_file_path)
         chunk_size = int(file_size / self.num_cores)
-        print(f"determining seek points for {self.matrix_file_path} with chunk size {chunk_size}")
+        ExpressionWriter.dev_logger.info(
+            f" determining seek points for {self.matrix_file_path} with chunk size {chunk_size}"
+        )
         with open_file(self.matrix_file_path) as matrix_file:
             # fast-forward through any comments if this is a sparse matrix
             first_char = matrix_file.read(1)
@@ -88,7 +100,7 @@ class ExpressionWriter:
         :param genes: (List) gene names from features file
         :param data_dir: (String) name out output dir
         """
-        print(f"loading sparse data from {self.matrix_file_path}")
+        ExpressionWriter.dev_logger.info(f" loading sparse data from {self.matrix_file_path}")
         slice_indexes = self.get_file_seek_points()
         pool = multiprocessing.Pool(self.num_cores)
         processor = partial(read_sparse_matrix_slice,
@@ -106,7 +118,7 @@ class ExpressionWriter:
         :param data_dir: (String) name out output dir
         """
         fragments = os.listdir(f"{data_dir}/gene_entries")
-        print(f"subdivision complete, processing {len(fragments)} fragments")
+        ExpressionWriter.dev_logger.info(f" subdivision complete, processing {len(fragments)} fragments")
         pool = multiprocessing.Pool(self.num_cores)
         processor = partial(process_sparse_fragment,
                             barcodes=barcodes, cluster_cells=cluster_cells,
@@ -161,7 +173,7 @@ class ExpressionWriter:
         :param data_dir: (String) name out output dir
         """
         start_pos, end_pos = indexes
-        print(f"reading {self.matrix_file_path} at index {start_pos}:{end_pos}")
+        ExpressionWriter.dev_logger.info(f" reading {self.matrix_file_path} at index {start_pos}:{end_pos}")
         with open_file(self.matrix_file_path) as matrix_file:
             current_pos = start_pos
             matrix_file.seek(current_pos)
@@ -174,11 +186,12 @@ class ExpressionWriter:
         """
         Main handler, determines type of processing to execute (dense vs. sparse)
         """
+        start_time = time.time()
         sanitized_cluster_name = re.sub(r'\W', '_', self.cluster_name)
         data_dir = make_data_dir(sanitized_cluster_name)
         cluster_cells = get_cluster_cells(self.cluster_file_path)
         if self.matrix_file_type == 'mtx' and self.gene_file is not None and self.barcode_file is not None:
-            print(f"reading {self.matrix_file_path} as sparse matrix")
+            ExpressionWriter.dev_logger.info(f" reading {self.matrix_file_path} as sparse matrix")
             genes_file = open_file(args.gene_file)
             genes = load_entities_as_list(genes_file)
             barcodes_file = open_file(args.barcode_file)
@@ -187,10 +200,17 @@ class ExpressionWriter:
             self.write_empty_sparse_genes(genes, len(cluster_cells), sanitized_cluster_name, data_dir)
             self.process_sparse_data_fragments(barcodes, cluster_cells, sanitized_cluster_name, data_dir)
         elif self.matrix_file_type == 'dense':
-            print(f"reading {self.matrix_file_path} as dense matrix")
+            ExpressionWriter.dev_logger.info(f" reading {self.matrix_file_path} as dense matrix")
             self.process_dense_data(cluster_cells, sanitized_cluster_name, data_dir)
+        end_time = time.time()
+        total_time = end_time - start_time
+        time_in_min = round_exp(total_time, 3) / 60
+        ExpressionWriter.dev_logger.info(f" completed, total runtime in minutes: {time_in_min}")
 
 if __name__ == '__main__':
+    """
+    Main function to use as standalone module outside of ingest_pipeline.py
+    """
     start_time = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument('--cluster-file', help='path to cluster file', required=True)
@@ -210,4 +230,4 @@ if __name__ == '__main__':
     end_time = time.time()
     total_time = end_time - start_time
     time_in_min = round_exp(total_time, 3) / 60
-    print(f"completed, total runtime in minutes: {time_in_min}")
+    ExpressionWriter.dev_logger.info(f" completed, total runtime in minutes: {time_in_min}")
