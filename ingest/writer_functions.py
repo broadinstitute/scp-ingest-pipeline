@@ -6,10 +6,8 @@ import gzip
 import json
 
 try:
-    from monitor import setup_logger
     from ingest_files import IngestFiles
 except ImportError:
-    from .monitor import setup_logger
     from .ingest_files import IngestFiles
 
 # regex to split on commas and tabs
@@ -22,8 +20,6 @@ ALL_DELIM = r"[\s,\t]"
 GZIP_MAGIC_NUM = b'\x1f\x8b'
 
 ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
-
-dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
 def is_gz_file(filepath) -> bool:
     """
@@ -72,7 +68,6 @@ def make_data_dir(name):
 
     :param name: (str) name of directory
     """
-    dev_logger.info(f" creating data directory at {name}")
     os.mkdir(name)
     os.mkdir(f"{name}/gene_entries") # for slicing sparse matrix files
 
@@ -119,7 +114,6 @@ def load_entities_as_list(file) -> list:
     :returns: (list)
     """
     column = get_entity_index(file)
-    dev_logger.info(f"reading entities from {file.name} in column {column + 1}")
     return list(re.split(ALL_DELIM, line.strip())[column] for line in file)
 
 def get_entity_index(file) -> int:

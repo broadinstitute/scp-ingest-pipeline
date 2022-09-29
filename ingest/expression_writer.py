@@ -49,8 +49,6 @@ class ExpressionWriter:
     denominator = 2 if re.match('darwin', sys.platform) else 1
     num_cores = int(multiprocessing.cpu_count() / denominator) - 1
 
-    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
-
     def __init__(
         self, matrix_file_path, matrix_file_type, cluster_file_path, cluster_name, gene_file, barcode_file, **kwargs
     ):
@@ -67,6 +65,11 @@ class ExpressionWriter:
 
         # set storage bucket name, if needed
         self.bucket = self.get_storage_bucket_name()
+
+        timestamp = datetime.datetime.now().isoformat(sep="T", timespec="seconds")
+        url_safe_timestamp = re.sub(':', '', timestamp)
+        log_name = f"expression_scatter_images_{url_safe_timestamp}_log.txt"
+        self.dev_logger = setup_logger(__name__, log_name, format="support_configs")
 
     def get_storage_bucket_name(self):
         """
@@ -225,12 +228,15 @@ class ExpressionWriter:
         """
         start_time = datetime.datetime.now()
         sanitized_cluster_name = encode_cluster_name(self.cluster_name)
+        self.dev_logger.info(f" creating data directory at {sanitized_cluster_name}")
         make_data_dir(sanitized_cluster_name)
         cluster_cells = get_cluster_cells(self.local_cluster_path)
         if self.matrix_file_type == 'mtx' and self.gene_file is not None and self.barcode_file is not None:
             self.dev_logger.info(f" reading {self.matrix_file_path} as sparse matrix")
+            self.dev_logger.info(f" reading entities from {self.gene_file}")
             genes_file = open_file(self.gene_file)[0]
             genes = load_entities_as_list(genes_file)
+            self.dev_logger.info(f" reading entities from {self.barcode_file}")
             barcodes_file = open_file(self.barcode_file)[0]
             barcodes = load_entities_as_list(barcodes_file)
             self.divide_sparse_matrix(genes, sanitized_cluster_name)
