@@ -81,13 +81,13 @@ class ExpressionWriter:
             bucket_name = path_segments[0]
             return f"{path_header}{bucket_name}"
 
-    def get_file_seek_points(self) -> list[dict]:
+    def get_file_seek_points(self) -> list[list]:
         """
         Determine start/stop points in a matrix to process in parallel
         Will read in chunks and return a list of start/stop points
         Ensures breaks on newlines
 
-        :returns: list[dict]
+        :returns: list[list]
         """
         file_size = get_matrix_size(self.local_matrix_path)
         chunk_size = int(file_size / self.num_cores)
