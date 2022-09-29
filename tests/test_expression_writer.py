@@ -119,7 +119,12 @@ class TestExpressionWriter(unittest.TestCase):
         cluster_name = f"{self.TEST_PREFIX}seek_points_{uuid.uuid4()}"
         exp_writer = self.setup_dense_exp_writer(cluster_name)
         seek_points = exp_writer.get_file_seek_points()
-        expected_points = [[161, 264], [265, 265]]
+        # note: this is dependent on the number of cores, and depending on your architecture this may differ
+        # this test covers cases for both 3 and 4 cores utilized
+        if exp_writer.num_cores == 3:
+            expected_points = [[161, 264], [265, 265]]
+        else:
+            expected_points = [[161, 196], [197, 264], [265, 265]]
         self.assertEqual(
             expected_points, seek_points
         )
