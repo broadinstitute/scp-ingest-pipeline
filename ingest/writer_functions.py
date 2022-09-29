@@ -48,7 +48,7 @@ def encode_cluster_name(name) -> str:
     :param name: (str) name of cluster
     :returns: (str) encoded cluster name
     """
-    plus_converted_string = re.sub('\+', 'pos', name)
+    plus_converted_string = name.replace('+', 'pos')
     return re.sub(r'\W', '_', plus_converted_string)
 
 def open_file(filepath) -> list[TextIO, str]:
@@ -169,7 +169,7 @@ def process_dense_line(line, matrix_cells, cluster_cells, data_dir):
     :param data_dir (str) name out output dir
     :param line: (str) single line from dense matrix
     """
-    clean_line = line.rstrip().replace('"','')
+    clean_line = line.rstrip().replace('"', '')
     raw_vals = re.split(COMMA_OR_TAB, clean_line)
     gene_name = raw_vals.pop(0)
     exp_vals = [round_exp(val, 3) if float(val) != 0.0 else 0 for val in raw_vals]
