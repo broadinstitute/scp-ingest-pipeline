@@ -18,7 +18,7 @@ class TestExpressionWriter(unittest.TestCase):
 
     @staticmethod
     def setup_dense_exp_writer(cluster_name) -> ExpressionWriter:
-        writer = ExpressionWriter(
+        return ExpressionWriter(
             matrix_file_path='data/dense_expression_matrix.txt',
             matrix_file_type='dense',
             cluster_file_path='data/cluster_example.txt',
@@ -26,11 +26,10 @@ class TestExpressionWriter(unittest.TestCase):
             barcode_file=None,
             cluster_name=cluster_name
         )
-        return writer
 
     @staticmethod
     def setup_sparse_exp_writer(cluster_name) -> ExpressionWriter:
-        writer = ExpressionWriter(
+        return ExpressionWriter(
             matrix_file_path='data/mtx/matrix_with_header.mtx',
             gene_file='data/mtx/sampled_genes.tsv',
             barcode_file='data/mtx/barcodes.tsv',
@@ -38,7 +37,6 @@ class TestExpressionWriter(unittest.TestCase):
             cluster_file_path='data/mtx/cluster_mtx_barcodes.tsv',
             cluster_name=cluster_name
         )
-        return writer
 
     @staticmethod
     def seed_test_gene_entries(data_dir):
@@ -51,8 +49,8 @@ class TestExpressionWriter(unittest.TestCase):
         for log in logs:
             os.remove(log)
         test_dirs = glob.glob(f"{TestExpressionWriter.TEST_PREFIX}*")
-        for dir in test_dirs:
-            rmtree(dir)
+        for dirname in test_dirs:
+            rmtree(dirname)
 
     def test_process_dense_matrix(self):
         cluster_name = encode_cluster_name(f"{self.TEST_PREFIX}dense_{uuid.uuid4()}")
@@ -200,6 +198,3 @@ class TestExpressionWriter(unittest.TestCase):
         self.assertTrue(
             os.path.exists(f"{cluster_name}/Itm2a.json.gz")
         )
-
-
-
