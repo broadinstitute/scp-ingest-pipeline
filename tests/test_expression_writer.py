@@ -93,6 +93,28 @@ class TestExpressionWriter(unittest.TestCase):
             expected_data, rendered_data
         )
 
+    def test_get_bucket_name(self):
+        with patch(
+            'ingest_files.IngestFiles.verify_file_exists',
+            return_value=None
+        ):
+            with patch(
+                'ingest_files.IngestFiles.download_from_bucket',
+                return_value='data/mtx/matrix.mtx'
+            ):
+                bucket_name = f"gs://{uuid.uuid4()}"
+                exp_writer = ExpressionWriter(
+                    matrix_file_path=f"{bucket_name}/matrix.mtx",
+                    cluster_file_path=f"{bucket_name}/cluster.txt",
+                    cluster_name='test',
+                    gene_file=None,
+                    barcode_file=None,
+                    matrix_file_type="dense"
+                )
+                self.assertEqual(
+                    bucket_name, exp_writer.get_storage_bucket_name()
+                )
+
     def test_get_file_seek_points(self):
         cluster_name = f"{self.TEST_PREFIX}seek_points_{uuid.uuid4()}"
         exp_writer = self.setup_dense_exp_writer(cluster_name)
