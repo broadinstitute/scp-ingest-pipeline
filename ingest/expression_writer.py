@@ -68,7 +68,7 @@ class ExpressionWriter:
 
         timestamp = datetime.datetime.now().isoformat(sep="T", timespec="seconds")
         url_safe_timestamp = re.sub(':', '', timestamp)
-        log_name = f"expression_scatter_images_{url_safe_timestamp}_log.txt"
+        log_name = f"expression_scatter_data_{url_safe_timestamp}_log.txt"
         self.dev_logger = setup_logger(__name__, log_name, format="support_configs")
 
     def get_storage_bucket_name(self):

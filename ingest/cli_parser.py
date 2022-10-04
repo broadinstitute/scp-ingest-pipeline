@@ -366,13 +366,13 @@ def create_parser():
         '--matrix-file-path', help='path to matrix file', required=True
     )
     parser_expression_writer.add_argument(
-        '--matrix-file-type', help='type to matrix file (dense or mtx)', required=True
+        '--matrix-file-type', help='type to matrix file (dense or mtx)', required=True, choices=['dense', 'mtx']
     )
     parser_expression_writer.add_argument(
-        '--gene-file', help='path to gene file (None for dense matrix files)'
+        '--gene-file', help='path to gene file (omit for dense matrix files)'
     )
     parser_expression_writer.add_argument(
-        '--barcode-file', help='path to barcode file (None for dense matrix files)'
+        '--barcode-file', help='path to barcode file (omit for dense matrix files)'
     )
 
     return parser

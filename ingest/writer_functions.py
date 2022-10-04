@@ -111,7 +111,6 @@ def load_entities_as_list(file) -> list:
 
     :param file: (TextIO) open file object
     :param column: (int) specific column to extract from entity file
-    :returns: (list)
     """
     column = get_entity_index(file)
     return list(re.split(ALL_DELIM, line.strip())[column] for line in file)
@@ -121,7 +120,6 @@ def get_entity_index(file) -> int:
     Determine which column from a 10X entity file contains valid data
 
     :param file: (TextIO) open file object
-    :returns: (int)
     """
     first_line = file.readline().strip()
     file.seek(0) # gotcha to reset pointer to beginning
@@ -130,7 +128,7 @@ def get_entity_index(file) -> int:
 
 def process_sparse_fragment(fragment_name, barcodes, cluster_cells, data_dir):
     """
-    Process a single-gene sparse matrix fragment and write expression array
+    Extract and filter a single-gene sparse matrix fragment and write expression array
 
     :param fragment_name: (str) name of gene-level fragment file
     :param barcodes: (list) list of cell barcodes
@@ -155,7 +153,7 @@ def extract_sparse_line(line) -> list:
     Process a single line from a sparse matrix and extract values as integers
 
     :param line: (str) single line from matrix file
-    :returns: (list): values as integers
+    :returns: values for gene index, barcode index, and rounded expression
     """
     gene_idx, barcode_idx, raw_exp = line.rstrip().split(' ')
     return [int(gene_idx), int(barcode_idx), round_exp(raw_exp, 3)]
@@ -186,7 +184,7 @@ def filter_expression_for_cluster(cluster_cells, exp_cells, exp_scores) -> list:
     :param cluster_cells: (list) cluster cell names
     :param exp_cells: (list) expression cell names
     :param exp_scores: (list) expression values, in the same order as exp_cells
-    :returns: (list) Expression values, ordered by cluster_cells
+    :returns: Expression values, ordered by cluster_cells
     """
     observed_exp = dict(zip(exp_cells, exp_scores))
     return (observed_exp.get(cell, 0) for cell in cluster_cells)
