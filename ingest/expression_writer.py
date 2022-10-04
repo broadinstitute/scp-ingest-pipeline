@@ -22,8 +22,8 @@ python3 ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5
                              --cluster-name 'Sparse Example' --render-expression-arrays
 """
 from __future__ import annotations
+
 import os
-import subprocess
 import re
 import multiprocessing
 import sys
@@ -259,10 +259,15 @@ class ExpressionWriter:
         :param cluster_name: (str) encoded name of cluster
         """
         if self.bucket is not None:
-            bucket_path = f"{self.bucket}/{self.DELOCALIZE_FOLDER}/{cluster_name}"
+            bucket_path = f"{self.DELOCALIZE_FOLDER}/{cluster_name}"
             self.dev_logger.info(f" pushing all output files to {bucket_path}")
-            subprocess.Popen(
-                ["gsutil", "-h" , "Content-Encoding:gzip", "-m", "cp", f"{cluster_name}/*.json.gz", f"{bucket_path}"]
-            )
+            dir_files = os.listdir(cluster_name)
+            files_to_push = list(file for file in dir_files if 'gene_entries' not in file)
+            for file in files_to_push:
+                local_path = f"{cluster_name}/{file}"
+                IngestFiles.delocalize_file(None, None, self.matrix_file_path, local_path, f"{bucket_path}/{file}")
             self.dev_logger.info(" push completed")
+            handler = self.dev_logger.handlers[0]
+            log_filename = handler.baseFilename.split("/").pop()
+            IngestFiles.delocalize_file(None, None, self.matrix_file_path, log_filename, f"parse_logs/{log_filename}")
 
