@@ -174,7 +174,8 @@ def process_dense_line(line, matrix_cells, cluster_cells, data_dir):
     filtered_expression = filter_expression_for_cluster(
         cluster_cells, matrix_cells, exp_vals
     )
-    write_gene_scores(gene_name, filtered_expression, data_dir)
+    if gene_name:
+        write_gene_scores(gene_name, filtered_expression, data_dir)
 
 def filter_expression_for_cluster(cluster_cells, exp_cells, exp_scores) -> list:
     """

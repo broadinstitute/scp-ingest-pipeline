@@ -222,8 +222,9 @@ class ExpressionWriter:
                 line = matrix_file.readline()
                 if line == '':  # eof
                     break
-                process_dense_line(line, matrix_cells, cluster_cells, data_dir)
-                current_pos += len(line)
+                else:
+                    process_dense_line(line, matrix_cells, cluster_cells, data_dir)
+                    current_pos += len(line)
 
     def render_artifacts(self):
         """
