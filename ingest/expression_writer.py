@@ -23,6 +23,7 @@ python3 ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5
 """
 from __future__ import annotations
 
+import logging
 import os
 import re
 import multiprocessing
@@ -69,7 +70,8 @@ class ExpressionWriter:
         timestamp = datetime.datetime.now().isoformat(sep="T", timespec="seconds")
         url_safe_timestamp = re.sub(':', '', timestamp)
         log_name = f"expression_scatter_data_{url_safe_timestamp}_log.txt"
-        self.dev_logger = setup_logger(__name__, log_name, format="support_configs")
+        self.log_name = log_name
+        self.dev_logger = setup_logger(__name__, log_name, level=logging.INFO, format="support_configs")
 
     def get_storage_bucket_name(self):
         """
@@ -110,7 +112,7 @@ class ExpressionWriter:
                 if current_byte == '':  # eof
                     current_seek.append(file_size)
                     seek_points.append(current_seek)
-                    break
+                    return seek_points
                 while current_byte != "\n":
                     current_byte = matrix_file.read(1)
                     seek_point += 1
@@ -213,12 +215,13 @@ class ExpressionWriter:
         :param data_dir: (str) name of output dir
         """
         start_pos, end_pos = indexes
-        self.dev_logger.info(f" reading {self.local_matrix_path} at index {start_pos}:{end_pos}")
         with open_file(self.local_matrix_path)[0] as matrix_file:
             current_pos = start_pos
             matrix_file.seek(current_pos)
             while current_pos < end_pos:
                 line = matrix_file.readline()
+                if line == '':  # eof
+                    break
                 process_dense_line(line, matrix_cells, cluster_cells, data_dir)
                 current_pos += len(line)
 
