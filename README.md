@@ -128,9 +128,49 @@ pytest test_ingest.py
 # Run all tests, show code coverage metrics
 pytest --cov=../ingest/
 ```
-
 For more, see <https://docs.pytest.org/en/stable/usage.html>.
 
+## Testing in Docker
+If you have difficulties installing and configuring `scp-ingest-pipeline` due to hardware issues (e.g. Mac M1 chips), 
+you can alternatively test locally by building the Docker image and then running any commands inside the container. 
+There are some extra steps required, but this sidesteps the need to install packages locally.
+
+### 1. Build the image
+Run the following command to build the testing Docker image locally (make sure Docker is running first):
+```
+docker build -t gcr.io/broad-singlecellportal-staging/ingest-pipeline:test-candidate .
+```
+### 2. Set up environment variables
+Run the following to pull database-specific secrets out of vault (passing in the path to your vault token):
+```
+source scripts/setup_mongo_dev.sh ~/.your-vault-token
+```
+Now run `env` to make sure you've set the following values:
+```
+MONGODB_USERNAME=single_cell
+DATABASE_NAME=single_cell_portal_development
+MONGODB_PASSWORD=<password>
+DATABASE_HOST=<ip address>
+```
+### 3. Print out your service account keyfile
+Run the following to export out your default service account JSON keyfile:
+```
+vault read -format=json secret/kdux/scp/development/$(whoami)/scp_service_account.json | jq .data > /tmp/keyfile.json
+```
+### 4. Start the Docker container
+Run the container, passing in the proper environment variables:
+```
+docker run --name scp-ingest-test -e MONGODB_USERNAME="$MONGODB_USERNAME" -e DATABASE_NAME="$DATABASE_NAME" \
+           -e MONGODB_PASSWORD="$MONGODB_PASSWORD" -e DATABASE_HOST="$DATABASE_HOST" \
+           -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/keyfile.json --rm -it \
+           gcr.io/broad-singlecellportal-staging/ingest-pipeline:test-candidate bash
+```
+### 5. Copy keyfile to running container
+In a separate terminal window, copy the JSON keyfile from above to the expected location:
+```
+docker cp /tmp/keyfile.json scp-ingest-test:/tmp
+```
+You can now run any `ingest_pipeline.py` command you wish inside the container.
 # Use
 
 Run this every time you start a new terminal to work on this project:
