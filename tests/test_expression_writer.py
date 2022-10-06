@@ -45,7 +45,7 @@ class TestExpressionWriter(unittest.TestCase):
 
     @classmethod
     def teardown_class(cls):
-        logs = glob.glob('expression_scatter_images_*_log.txt')
+        logs = glob.glob('expression_scatter_data_*_log.txt')
         for log in logs:
             os.remove(log)
         test_dirs = glob.glob(f"{TestExpressionWriter.TEST_PREFIX}*")
@@ -60,13 +60,13 @@ class TestExpressionWriter(unittest.TestCase):
             os.path.exists(cluster_name)
         )
         self.assertTrue(
-            os.path.exists(f"{cluster_name}/Sergef.json.gz")
+            os.path.exists(f"{cluster_name}/Sergef.json")
         )
         self.assertTrue(
-            os.path.exists(f"{cluster_name}/Itm2a.json.gz")
+            os.path.exists(f"{cluster_name}/Itm2a.json")
         )
         expected_data = json.loads(open(f"data/expression_writer/Sergef.json").read())
-        rendered_data = json.loads(gzip.open(f"{cluster_name}/Sergef.json.gz").read())
+        rendered_data = json.loads(gzip.open(f"{cluster_name}/Sergef.json").read())
         self.assertEqual(
             expected_data, rendered_data
         )
@@ -82,13 +82,13 @@ class TestExpressionWriter(unittest.TestCase):
         genes.remove('HOMER2')  # doesn't render gene entry file
         for gene in genes:
             self.assertTrue(
-                os.path.exists(f"{cluster_name}/{gene}.json.gz")
+                os.path.exists(f"{cluster_name}/{gene}.json")
             )
             self.assertTrue(
                 os.path.exists(f"{cluster_name}/gene_entries/{gene}__entries.txt")
             )
-        expected_data = json.loads(open(f"data/writer_functions/OXCT2.json").read())
-        rendered_data = json.loads(gzip.open(f"{cluster_name}/OXCT2.json.gz").read())
+        expected_data = json.loads(open(f"data/writer_functions/OXCT2.orig.json").read())
+        rendered_data = json.loads(gzip.open(f"{cluster_name}/OXCT2.json").read())
         self.assertEqual(
             expected_data, rendered_data
         )
@@ -168,7 +168,7 @@ class TestExpressionWriter(unittest.TestCase):
         genes.remove('HOMER2')
         for gene in genes:
             self.assertTrue(
-                os.path.exists(f"{cluster_name}/{gene}.json.gz")
+                os.path.exists(f"{cluster_name}/{gene}.json")
             )
 
     def test_write_empty_sparse_genes(self):
@@ -180,7 +180,7 @@ class TestExpressionWriter(unittest.TestCase):
         genes = load_entities_as_list(open(exp_writer.gene_file))
         exp_writer.write_empty_sparse_genes(genes, num_cells, cluster_name)
         # only empty gene should be HOMER2
-        gene = 'HOMER2.json.gz'
+        gene = 'HOMER2.json'
         self.assertTrue(
             os.path.exists(f"{cluster_name}/{gene}")
         )
@@ -198,8 +198,8 @@ class TestExpressionWriter(unittest.TestCase):
         cells = list(f"CELL_000{i}" for i in range(1, 16))
         exp_writer.read_dense_matrix_slice(indexes, cells, cells, cluster_name)
         self.assertTrue(
-            os.path.exists(f"{cluster_name}/Sergef.json.gz")
+            os.path.exists(f"{cluster_name}/Sergef.json")
         )
         self.assertTrue(
-            os.path.exists(f"{cluster_name}/Itm2a.json.gz")
+            os.path.exists(f"{cluster_name}/Itm2a.json")
         )
