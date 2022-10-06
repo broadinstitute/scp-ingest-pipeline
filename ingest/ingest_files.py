@@ -170,14 +170,14 @@ class IngestFiles:
 
     @staticmethod
     def delocalize_file(
-        study_file_id, study_id, file_path, file_to_delocalize, bucket_destination
+        study_file_id, study_id, file_path, file_to_delocalize, bucket_destination, content_encoding=None
     ):
         """Writes local file to Google bucket
         Args:
             file_path: path of an ingest file (MUST BE  GS url)
             file_to_delocalize: name of local file to delocalize (ie. errors.txt)
             bucket_destination: path to google bucket (ie. parse_logs/{study_file_id}/errors.txt)
-
+            content_encoding: set Content-Encoding header, if specified
         """
 
         if IngestFiles.is_remote_file(file_path):
@@ -187,6 +187,8 @@ class IngestFiles:
                 storage_client = storage.Client()
                 bucket = storage_client.get_bucket(bucket_name)
                 blob = bucket.blob(bucket_destination)
+                if content_encoding is not None:
+                    blob.content_encoding = content_encoding
                 blob.upload_from_filename(file_to_delocalize)
                 IngestFiles.dev_logger.info(
                     f"File {file_to_delocalize} uploaded to {bucket_destination}."

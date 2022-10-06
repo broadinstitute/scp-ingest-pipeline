@@ -104,10 +104,10 @@ class TestWriterFunctions(unittest.TestCase):
         # barcodes & cluster cells should be identical in this example
         process_sparse_fragment('OXCT2__entries.txt', barcodes, barcodes, data_dir)
         self.assertTrue(
-            os.path.exists(f"{data_dir}/OXCT2.json.gz")
+            os.path.exists(f"{data_dir}/OXCT2.json")
         )
-        rendered_data = json.loads(gzip.open(f"{data_dir}/OXCT2.json.gz").read())
-        expected_data = json.loads(open(f"{data_dir}/OXCT2.json").read())
+        rendered_data = json.loads(gzip.open(f"{data_dir}/OXCT2.json").read())
+        expected_data = json.loads(open(f"{data_dir}/OXCT2.orig.json").read())
         self.assertEqual(
             expected_data, rendered_data
         )
@@ -133,9 +133,9 @@ class TestWriterFunctions(unittest.TestCase):
         data_dir = 'data/writer_functions'
         process_dense_line(line, matrix_cells, cluster_cells, data_dir)
         self.assertTrue(
-            os.path.exists(f"{data_dir}/Gad1.json.gz")
+            os.path.exists(f"{data_dir}/Gad1.json")
         )
-        rendered_data = json.loads(gzip.open(f"{data_dir}/Gad1.json.gz").read())
+        rendered_data = json.loads(gzip.open(f"{data_dir}/Gad1.json").read())
         self.assertEqual(
             expected_data, rendered_data
         )
@@ -162,7 +162,7 @@ class TestWriterFunctions(unittest.TestCase):
         gene = 'Egfr'
         data_dir = 'data/writer_functions'
         write_gene_scores(gene, data, data_dir)
-        rendered_data = json.loads(gzip.open(f"{data_dir}/{gene}.json.gz").read())
+        rendered_data = json.loads(gzip.open(f"{data_dir}/{gene}.json").read())
         self.assertEqual(
             data, rendered_data
         )
