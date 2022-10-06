@@ -198,5 +198,5 @@ def write_gene_scores(gene_name, exp_values, data_dir):
     :param exp_values: (list) expression values
     :param data_dir: (str) name out output dir
     """
-    with gzip.open(f"{data_dir}/{gene_name}.json.gz", "wt") as file:
+    with gzip.open(f"{data_dir}/{gene_name}.json", "wt") as file:
         json.dump(list(exp_values), file, separators=(',', ':'))
