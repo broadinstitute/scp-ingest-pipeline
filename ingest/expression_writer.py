@@ -258,7 +258,7 @@ class ExpressionWriter:
 
     def delocalize_outputs(self, cluster_name):
         """
-        Copy all output files to study bucket in parallel using gsutil (since there are usually ~25-30K files)
+        Write all output files back to source bucket with Content-Encoding: gzip header
 
         :param cluster_name: (str) encoded name of cluster
         """
@@ -269,7 +269,9 @@ class ExpressionWriter:
             files_to_push = list(file for file in dir_files if 'gene_entries' not in file)
             for file in files_to_push:
                 local_path = f"{cluster_name}/{file}"
-                IngestFiles.delocalize_file(None, None, self.matrix_file_path, local_path, f"{bucket_path}/{file}")
+                IngestFiles.delocalize_file(
+                    None, None, self.matrix_file_path, local_path, f"{bucket_path}/{file}", 'gzip'
+                )
             self.dev_logger.info(" push completed")
             handler = self.dev_logger.handlers[0]
             log_filename = handler.baseFilename.split("/").pop()
