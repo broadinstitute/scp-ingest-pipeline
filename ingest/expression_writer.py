@@ -273,7 +273,5 @@ class ExpressionWriter:
                     None, None, self.matrix_file_path, local_path, f"{bucket_path}/{file}", 'gzip'
                 )
             self.dev_logger.info(" push completed")
-            handler = self.dev_logger.handlers[0]
-            log_filename = handler.baseFilename.split("/").pop()
-            IngestFiles.delocalize_file(None, None, self.matrix_file_path, log_filename, f"parse_logs/{log_filename}")
+            IngestFiles.delocalize_file(None, None, self.matrix_file_path, self.log_name, f"parse_logs/{self.log_name}")
 
