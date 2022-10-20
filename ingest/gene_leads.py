@@ -80,7 +80,8 @@ def extract(meta, all_groups):
         publication_text = response.read().decode('utf-8')
 
     genes_filename = f"{organism}-genes.tsv" # e.g. homo-sapiens-genes.tsv
-    genes_url = f"https://cdn.jsdelivr.net/npm/ideogram@1.37.0/dist/data/cache/{genes_filename}.gz"
+    base_url = "https://cdn.jsdelivr.net/npm/"
+    genes_url = f"{base_url}ideogram@1.37.0/dist/data/cache/{genes_filename}.gz"
     download_gzip(genes_url, genes_filename)
 
     # Populate containers for various name and significance fields
@@ -160,12 +161,13 @@ def extract_de(bucket, clustering, annotation, all_groups):
             # Headers in upstream, precomputed DE files:
             # names	scores	logfoldchanges	pvals	pvals_adj	pct_nz_group	pct_nz_reference
             for row in reader:
+                if row[0] == "": continue # Skip novel header / empty lines
                 if i < 500:
                     # 500 is ~2% of 25k-ish genes in Ensembl genome annotation.
                     # Like the rest of "gene leads", a big factor in this value
-                    # choice is its ability to yield an engaging UI.  In this case,
-                    # 500 produced a wide-but-not-overwhelming palette of colors
-                    # in the gene leads ideogram.
+                    # choice is its ability to yield an engaging UI.  In this
+                    # case, 500 produced a wide-but-not-overwhelming palette
+                    # of annotations in the gene leads ideogram.
                     gene = row[1]
                     de_entry = {
                         "group": group,
@@ -179,16 +181,16 @@ def extract_de(bucket, clustering, annotation, all_groups):
                         de_by_gene[gene] = [de_entry]
                 i += 1
 
-    return de_by_gene
+    sorted_de_by_gene = {}
+    for gene in de_by_gene:
+        de_entries = de_by_gene[gene]
+        # Sort each group by Scanpy `scores` rank
+        sorted_de = sorted(de_entries, key=lambda de: int(de["scores_rank"]))
+        sorted_de_by_gene[gene] = sorted_de
 
-def get_de_and_color_columns(gene, de_by_gene, de_meta_keys):
-    # TODO (SCP-4061): Move color handling to SCP UI
-    if gene not in de_by_gene:
-        return ["", "#4d72aa"] # Empty string, default color
-    de_entries = de_by_gene[gene]
-    # Sort each group by Scanpy `scores` rank
-    de_entries = sorted(de_entries, key=lambda de: int(de["scores_rank"]))
+    return sorted_de_by_gene
 
+def get_de_and_color_columns(gene, de_entries, de_meta_keys):
     # Collapse DE props for each group, delimit inner fields with "!"
     de_grouped_props = []
     for de in de_entries:
@@ -222,8 +224,8 @@ def get_metainformation(meta, de_meta_keys):
 
     return metainformation
 
-def transform(gene_dicts, meta):
-    """Transform extracted dicts into TSV content
+def sort_genes_by_relevance(gene_dicts):
+    """ Sort genes by DE score rank, then # mentions, then global interest rank
     """
     [
         interest_rank_by_gene,
@@ -233,28 +235,63 @@ def transform(gene_dicts, meta):
         full_names_by_gene
     ] = gene_dicts
 
+    # print('de_by_gene')
+    # print(de_by_gene)
+
+    genes = []
+    for gene in de_by_gene:
+        if gene not in interest_rank_by_gene:
+            # TODO: Handle synonyms, e.g. CECR1 for ADA2
+            continue
+        genes.append({
+            "top_de_rank": de_by_gene[gene][0]["scores_rank"],
+            "de": de_by_gene[gene],
+            "mentions": mentions_by_gene.get(gene, 0),
+            "interest_rank": interest_rank_by_gene[gene],
+            "locus": loci_by_gene[gene],
+            "full_name": full_names_by_gene[gene],
+            "symbol": gene
+        })
+
+    print("genes[0]")
+    print(genes[0])
+
+    genes = sorted(genes, key=lambda gene: int(gene["interest_rank"]))
+    genes = sorted(genes, key=lambda gene: -int(gene["mentions"]))
+    genes = sorted(genes, key=lambda gene: int(gene["top_de_rank"]))
+
+    print("genes[0] after sort")
+    print(genes[0])
+
+    return genes
+
+def transform(gene_dicts, meta):
+    """Transform extracted dicts into TSV content
+    """
 
     de_meta_keys = ["group", "log2fc", "adjusted_pval", "scores_rank"]
 
+    ranked_genes = sort_genes_by_relevance(gene_dicts)
+
     rows = []
     i = 0
-    for gene in mentions_by_gene:
-        loci = loci_by_gene[gene]
-        chromosome = loci["chromosome"]
-        start = loci["start"]
-        length = loci["length"]
-        full_name = full_names_by_gene[gene]
-        [de, color] = get_de_and_color_columns(gene, de_by_gene, de_meta_keys)
-        mentions = str(mentions_by_gene[gene])
-        interest_rank = str(interest_rank_by_gene[gene])
+    for gene in ranked_genes:
+        locus = gene["locus"]
+        chromosome = locus["chromosome"]
+        start = locus["start"]
+        length = locus["length"]
+        full_name = gene["full_name"]
+        [de, color] = get_de_and_color_columns(gene["symbol"], gene["de"], de_meta_keys)
+        mentions = str(gene["mentions"])
+        interest_rank = str(gene["interest_rank"])
         row = [
-            gene, chromosome, start, length, color, full_name,
+            gene["symbol"], chromosome, start, length, color, full_name,
             de, mentions, interest_rank
         ]
         rows.append("\t".join(row))
         i += 1
 
-    rows = "\n".join(rows)
+    rows = "\n".join(rows[:30])
     metainformation = get_metainformation(meta, de_meta_keys)
     header = "# " + "\t".join([
         'name', 'chromosome', 'start', 'length', 'color', 'full_name',
@@ -271,7 +308,7 @@ def load(tsv_content):
     # TODO (pre-GA): Write output files to whichever bucket we write DE to.
     # The # of gene leads files will be many fewer than DE in Q2 '22,
     # i.e. << A-vs-all DE.
-    cache_buster = "_v4" # TODO (pre-GA): Improve handling if needed beyond dev
+    cache_buster = "_v5" # TODO (pre-GA): Improve handling if needed beyond dev
     output_path = f"gene_leads_{clustering}--{annotation}{cache_buster}.tsv"
     with open(output_path, "w") as f:
         f.write(tsv_content)
