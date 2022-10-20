@@ -190,7 +190,7 @@ def extract_de(bucket, clustering, annotation, all_groups):
 
     return sorted_de_by_gene
 
-def get_de_and_color_columns(gene, de_entries, de_meta_keys):
+def get_de_and_color_columns(de_entries, de_meta_keys):
     # Collapse DE props for each group, delimit inner fields with "!"
     de_grouped_props = []
     for de in de_entries:
@@ -253,15 +253,9 @@ def sort_genes_by_relevance(gene_dicts):
             "symbol": gene
         })
 
-    print("genes[0]")
-    print(genes[0])
-
     genes = sorted(genes, key=lambda gene: int(gene["interest_rank"]))
     genes = sorted(genes, key=lambda gene: -int(gene["mentions"]))
     genes = sorted(genes, key=lambda gene: int(gene["top_de_rank"]))
-
-    print("genes[0] after sort")
-    print(genes[0])
 
     return genes
 
@@ -281,7 +275,7 @@ def transform(gene_dicts, meta):
         start = locus["start"]
         length = locus["length"]
         full_name = gene["full_name"]
-        [de, color] = get_de_and_color_columns(gene["symbol"], gene["de"], de_meta_keys)
+        [de, color] = get_de_and_color_columns(gene["de"], de_meta_keys)
         mentions = str(gene["mentions"])
         interest_rank = str(gene["interest_rank"])
         row = [
