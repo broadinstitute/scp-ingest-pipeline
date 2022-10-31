@@ -347,6 +347,18 @@ def create_parser():
         "--anndata-file", required=True, help="Path to AnnData file"
     )
 
+    parser_anndata.add_argument(
+        "--obsm-keys",
+        type=ast.literal_eval,
+        help="Array of obsm key(s) to extract as cluster files",
+    )
+
+    parser_anndata.add_argument(
+        "--extract-cluster",
+        action="store_true",
+        help="Indicates clustering data should be extracted",
+    )
+
     return parser
 
 
