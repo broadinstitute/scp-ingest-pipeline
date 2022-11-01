@@ -50,17 +50,17 @@ class AnnDataIngestor(IngestFiles):
         Based on clustering dimensions, write clustering NAME line to file
         """
         dim2 = ['NAME', 'X', 'Y']
-        dim3 = ['NAME', 'X', 'Y', 'Z']
-        if adata.obsm[clustering_name].shape[1] == 2:
+        dim3 = dim2 + ['Z']
+        clustering_dimension = adata.obsm[clustering_name].shape[1]
+        if clustering_dimension == 2:
             headers = dim2
-        elif adata.obsm[clustering_name].shape[1] == 3:
+        elif clustering_dimension == 3:
             headers = dim3
-        elif adata.obsm[clustering_name].shape[1] > 3:
-            msg = f"Data in obsm \"{clustering_name}\" has too many dimensions for visualization."
-            # !!! is ValueError the right type?
+        elif clustering_dimension > 3:
+            msg = f"Too many dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
             raise ValueError(msg)
         else:
-            msg = f"Data in obsm \"{clustering_name}\" has too few dimensions for visualization."
+            msg = f"Too few dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
             raise ValueError(msg)
         with open(f"{clustering_name}.tsv", "w") as f:
             f.write('\t'.join(headers) + '\n')
@@ -70,7 +70,8 @@ class AnnDataIngestor(IngestFiles):
         """
         Based on clustering dimensions, write clustering TYPE line to file
         """
-        types = ["TYPE", *["numeric"] * adata.obsm['X_umap'].shape[1]]
+        clustering_dimension = adata.obsm[clustering_name].shape[1]
+        types = ["TYPE", *["numeric"] * clustering_dimension]
         with open(f"{clustering_name}.tsv", "a") as f:
             f.write('\t'.join(types) + '\n')
 
@@ -84,7 +85,7 @@ class AnnDataIngestor(IngestFiles):
             [cluster_cells, pd.DataFrame(adata.obsm[clustering_name])], axis=1
         )
         pd.DataFrame(cluster_body).to_csv(
-            f"{clustering_name}.tsv", sep="\t", mode='a', header=None, index=False
+            f"{clustering_name}.tsv", sep="\t", mode="a", header=None, index=False
         )
 
     @staticmethod
