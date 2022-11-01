@@ -357,6 +357,33 @@ def create_parser():
         "--extract-cluster",
         action="store_true",
         help="Indicates clustering data should be extracted",
+
+    parser_expression_writer = subparsers.add_parser(
+        "render_expression_arrays",
+        help="Indicates preprocessing of cluster/expression files for image pipeline"
+    )
+
+    parser_expression_writer.add_argument(
+        '--render-expression-arrays', action="store_true", help='Invoke expression_writer.py', required=True
+    )
+
+    parser_expression_writer.add_argument(
+        '--cluster-file', help='path to cluster file', required=True
+    )
+    parser_expression_writer.add_argument(
+        '--cluster-name', help='name of cluster object', required=True
+    )
+    parser_expression_writer.add_argument(
+        '--matrix-file-path', help='path to matrix file', required=True
+    )
+    parser_expression_writer.add_argument(
+        '--matrix-file-type', help='type to matrix file (dense or mtx)', required=True, choices=['dense', 'mtx']
+    )
+    parser_expression_writer.add_argument(
+        '--gene-file', help='path to gene file (omit for dense matrix files)'
+    )
+    parser_expression_writer.add_argument(
+        '--barcode-file', help='path to barcode file (omit for dense matrix files)'
     )
 
     return parser
