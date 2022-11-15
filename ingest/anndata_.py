@@ -49,20 +49,19 @@ class AnnDataIngestor(IngestFiles):
         """
         Based on clustering dimensions, write clustering NAME line to file
         """
-        dim2 = ['NAME', 'X', 'Y']
-        dim3 = dim2 + ['Z']
+        dim = ['NAME', 'X', 'Y']
         clustering_dimension = adata.obsm[clustering_name].shape[1]
-        if clustering_dimension == 2:
-            headers = dim2
+        if clustering_dimension == 3:
+            headers = dim.append('Z')
         elif clustering_dimension == 3:
-            headers = dim3
+            headers = dim
         elif clustering_dimension > 3:
             msg = f"Too many dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
             raise ValueError(msg)
         else:
             msg = f"Too few dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
             raise ValueError(msg)
-        with open(f"{clustering_name}.tsv", "w") as f:
+        with open(f"{clustering_name}.cluster.anndata_segment.tsv", "w") as f:
             f.write('\t'.join(headers) + '\n')
 
     @staticmethod
@@ -72,7 +71,7 @@ class AnnDataIngestor(IngestFiles):
         """
         clustering_dimension = adata.obsm[clustering_name].shape[1]
         types = ["TYPE", *["numeric"] * clustering_dimension]
-        with open(f"{clustering_name}.tsv", "a") as f:
+        with open(f"{clustering_name}.cluster.anndata_segment.tsv", "a") as f:
             f.write('\t'.join(types) + '\n')
 
     @staticmethod
@@ -85,7 +84,11 @@ class AnnDataIngestor(IngestFiles):
             [cluster_cells, pd.DataFrame(adata.obsm[clustering_name])], axis=1
         )
         pd.DataFrame(cluster_body).to_csv(
-            f"{clustering_name}.tsv", sep="\t", mode="a", header=None, index=False
+            f"{clustering_name}.cluster.anndata_segment.tsv",
+            sep="\t",
+            mode="a",
+            header=None,
+            index=False,
         )
 
     @staticmethod
