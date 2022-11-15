@@ -27,7 +27,7 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_1000_cells.txt --matrix-file-type dense
 
 # Ingest AnnData file
-python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --anndata-file ../tests/data/anndata/test.h5ad
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/test.h5ad
 
 # Subsample cluster and metadata file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --name custer1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
@@ -103,7 +103,7 @@ except ImportError:
     from .clusters import Clusters
     from .expression_files.dense_ingestor import DenseIngestor
     from .expression_files.mtx import MTXIngestor
-    from .anndata import AnnDataIngestor
+    from .anndata_ import AnnDataIngestor
     from .cli_parser import create_parser, validate_arguments
     from .de import DifferentialExpression
     from .expression_writer import ExpressionWriter
@@ -487,6 +487,13 @@ class IngestPipeline:
         )
         if self.anndata.validate():
             self.report_validation("success")
+            if self.kwargs["extract_cluster"]:
+                for key in self.kwargs["obsm_keys"]:
+                    AnnDataIngestor.generate_cluster_header(self.anndata.adata, key)
+                    AnnDataIngestor.generate_cluster_type_declaration(
+                        self.anndata.adata, key
+                    )
+                    AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
             return 0
         # scanpy unable to open AnnData file
         else:
@@ -605,7 +612,16 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                 DifferentialExpression.delocalize_de_files(
                     file_path, study_file_id, files_to_match
                 )
-        # all non-DE ingest jobs can exit on success
+        # for successful anndata jobs, need to delocalize intermediate ingest files
+        elif "extract_cluster" in arguments and all(i < 1 for i in status):
+            file_path, study_file_id = get_delocalization_info(arguments)
+            # append status?
+            if IngestFiles.is_remote_file(file_path):
+                files_to_delocalize = AnnDataIngestor.files_to_delocalize(arguments)
+                AnnDataIngestor.delocalize_cluster_files(
+                    file_path, study_file_id, files_to_delocalize
+                )
+        # all non-DE, non-anndata ingest jobs can exit on success
         elif all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:

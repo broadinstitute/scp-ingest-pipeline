@@ -347,13 +347,28 @@ def create_parser():
         "--anndata-file", required=True, help="Path to AnnData file"
     )
 
+    parser_anndata.add_argument(
+        "--obsm-keys",
+        type=ast.literal_eval,
+        help="Array of obsm key(s) to extract as cluster files",
+    )
+
+    parser_anndata.add_argument(
+        "--extract-cluster",
+        action="store_true",
+        help="Indicates clustering data should be extracted",
+    )
+
     parser_expression_writer = subparsers.add_parser(
         "render_expression_arrays",
-        help="Indicates preprocessing of cluster/expression files for image pipeline"
+        help="Indicates preprocessing of cluster/expression files for image pipeline",
     )
 
     parser_expression_writer.add_argument(
-        '--render-expression-arrays', action="store_true", help='Invoke expression_writer.py', required=True
+        '--render-expression-arrays',
+        action="store_true",
+        help='Invoke expression_writer.py',
+        required=True,
     )
 
     parser_expression_writer.add_argument(
@@ -366,7 +381,10 @@ def create_parser():
         '--matrix-file-path', help='path to matrix file', required=True
     )
     parser_expression_writer.add_argument(
-        '--matrix-file-type', help='type to matrix file (dense or mtx)', required=True, choices=['dense', 'mtx']
+        '--matrix-file-type',
+        help='type to matrix file (dense or mtx)',
+        required=True,
+        choices=['dense', 'mtx'],
     )
     parser_expression_writer.add_argument(
         '--gene-file', help='path to gene file (omit for dense matrix files)'
