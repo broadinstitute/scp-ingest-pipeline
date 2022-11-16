@@ -53,7 +53,7 @@ class AnnDataIngestor(IngestFiles):
         clustering_dimension = adata.obsm[clustering_name].shape[1]
         if clustering_dimension == 3:
             headers = dim.append('Z')
-        elif clustering_dimension == 3:
+        elif clustering_dimension == 2:
             headers = dim
         elif clustering_dimension > 3:
             msg = f"Too many dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
