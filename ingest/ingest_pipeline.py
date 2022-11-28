@@ -613,7 +613,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     file_path, study_file_id, files_to_match
                 )
         # for successful anndata jobs, need to delocalize intermediate ingest files
-        elif "extract_cluster" in arguments and all(i < 1 for i in status):
+        elif "extract_cluster" in arguments and arguments.get("extract_cluster") == True and all(i < 1 for i in status):
             file_path, study_file_id = get_delocalization_info(arguments)
             # append status?
             if IngestFiles.is_remote_file(file_path):
