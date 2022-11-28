@@ -487,7 +487,9 @@ class IngestPipeline:
         )
         if self.anndata.validate():
             self.report_validation("success")
-            if self.kwargs["extract_cluster"]:
+            if self.kwargs["extract_cluster"] == True:
+                if not self.kwargs["obsm_keys"]:
+                    self.kwargs["obsm_keys"] = ['X_tsne']
                 for key in self.kwargs["obsm_keys"]:
                     AnnDataIngestor.generate_cluster_header(self.anndata.adata, key)
                     AnnDataIngestor.generate_cluster_type_declaration(
@@ -523,7 +525,7 @@ class IngestPipeline:
                 matrix_file_path=self.matrix_file_path,
                 matrix_file_type=self.matrix_file_type,
                 cluster_file_path=self.cluster_file,
-                **self.kwargs
+                **self.kwargs,
             )
             exp_writer.render_artifacts()
         except Exception as e:
@@ -613,7 +615,11 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     file_path, study_file_id, files_to_match
                 )
         # for successful anndata jobs, need to delocalize intermediate ingest files
-        elif "extract_cluster" in arguments and arguments.get("extract_cluster") == True and all(i < 1 for i in status):
+        elif (
+            "extract_cluster" in arguments
+            and arguments.get("extract_cluster") == True
+            and all(i < 1 for i in status)
+        ):
             file_path, study_file_id = get_delocalization_info(arguments)
             # append status?
             if IngestFiles.is_remote_file(file_path):
