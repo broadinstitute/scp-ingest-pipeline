@@ -1,24 +1,4 @@
 """Validate input metadata TSV file against metadata convention.
-
-DESCRIPTION
-This CLI takes a TSV metadata file and validates against a metadata convention
-using the python jsonschema library. The metadata convention JSON schema
-represents the rules that should be enforced on metadata files for studies
-participating under the convention.
-
-EXAMPLE
-# Using JSON file for latest Alexandria metadata convention in repo, validate input TSV
-$ python3 validate_metadata.py  ../../tests/data/valid_no_array_v2.0.0.tsv
-
-# generate an issues.json file to compare with reference test files
-$ python3 validate_metadata.py --issues-json ../../tests/data/valid_no_array_v2.0.0.tsv
-
-# generate a BigQuery upload file to compare with reference test files
-$ python3 validate_metadata.py --bq-json ../../tests/data/valid_no_array_v2.0.0.tsv
-
-# use a different metadata convention for validation
-$ python3 validate_metadata.py --convention <path to convention json> ../../tests/data/valid_no_array_v2.0.0.tsv
-
 """
 
 import argparse
