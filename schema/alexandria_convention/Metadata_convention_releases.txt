@@ -1,0 +1,14 @@
+2.2.1
+
+Changed
+
+* cell_type__custom no longer depends on cell_type (Zendesk #298615)
+
+2.2.0
+
+Changed
+* biosample_type optional (was required)
+
+2.1.5
+
+*
