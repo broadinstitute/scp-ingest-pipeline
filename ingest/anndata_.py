@@ -18,7 +18,7 @@ class AnnDataIngestor(IngestFiles):
         )
         # If performing cluster extraction, set obsm_keys
         extract_cluster = kwargs.get("extract_cluster")
-        if extract_cluster:
+        if extract_cluster == True:
             self.obsm_keys = kwargs["obsm_keys"]
         else:
             pass
