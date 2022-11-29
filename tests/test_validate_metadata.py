@@ -665,6 +665,16 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.teardown_metadata(metadata)
 
+        # cell_type__custom entries no longer required to have corresponding cell_type metadata
+        metadata = set_up_test("valid_cell_type__custom_v2.2.1.txt")
+        self.assertTrue(
+            metadata.validate_format(), "Valid metadata headers should not elicit error"
+        )
+        self.assertFalse(
+            report_issues(metadata), "Valid ontology content should not elicit error"
+        )
+        self.teardown_metadata(metadata)
+
         # Negative test cases
         metadata = set_up_test("invalid_array_v2.1.2.txt")
         self.assertTrue(
