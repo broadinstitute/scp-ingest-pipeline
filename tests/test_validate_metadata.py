@@ -24,13 +24,13 @@ from unittest.mock import patch
 import io
 import numpy as np
 import pandas as pd
+import pprint
 
 sys.path.append("../ingest")
 sys.path.append("../ingest/validation")
 
 from cell_metadata import CellMetadata
 from validate_metadata import (
-    create_parser,
     report_issues,
     collect_jsonschema_errors,
     validate_schema,
@@ -44,6 +44,7 @@ from validate_metadata import (
     replace_single_value_array,
     replace_synonym_in_multivalue_array,
 )
+from metadata_validation import create_parser
 
 
 # do not attempt a request, but instead throw a request exception
@@ -637,11 +638,14 @@ class TestValidateMetadata(unittest.TestCase):
         """Array-based metadata should conform to convention requirements
         """
 
-        def set_up_test(test_file_name):
+        def set_up_test(test_file_name, bq=None):
             test_file_path = "data/annotation/metadata/convention/" + test_file_name
             args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
             metadata, convention = self.setup_metadata(args + test_file_path)
-            validate_input_metadata(metadata, convention)
+            if bq:
+                validate_input_metadata(metadata, convention, bq_json=True)
+            else:
+                validate_input_metadata(metadata, convention)
 
             return metadata
 
@@ -666,7 +670,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
         # cell_type__custom entries no longer required to have corresponding cell_type metadata
-        metadata = set_up_test("valid_cell_type__custom_v2.2.1.txt")
+        metadata = set_up_test("valid_cell_type__custom_v2.2.1.txt", bq=True)
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
@@ -903,7 +907,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
-        validate_input_metadata(metadata, convention, bq_json=True)
+        validate_input_metadata(metadata, convention)
         self.assertFalse(
             report_issues(metadata), "Valid ontology content should not elicit error"
         )
