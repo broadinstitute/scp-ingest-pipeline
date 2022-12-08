@@ -52,3 +52,10 @@ class TestAnnDataIngestor(unittest.TestCase):
         )
         self.assertFalse(bad_input.validate())
 
+    def test_set_output_filename(self):
+        cluster_name = "X_Umap"
+        self.assertEqual(
+            AnnDataIngestor.set_output_filename(cluster_name),
+            "X_Umap.cluster.anndata_segment.tsv"
+        )
+

@@ -84,7 +84,7 @@ class AnnDataIngestor(IngestFiles):
             [cluster_cells, pd.DataFrame(adata.obsm[clustering_name])], axis=1
         )
         pd.DataFrame(cluster_body).to_csv(
-            f"{clustering_name}.cluster.anndata_segment.tsv",
+            AnnDataIngestor.set_output_filename(clustering_name),
             sep="\t",
             mode="a",
             header=None,
@@ -94,8 +94,12 @@ class AnnDataIngestor(IngestFiles):
     @staticmethod
     def files_to_delocalize(arguments):
         # ToDo - check if names using obsm_keys need sanitization
-        cluster_file_names = [name + ".tsv" for name in arguments["obsm_keys"]]
+        cluster_file_names = [AnnDataIngestor.set_output_filename(name) for name in arguments["obsm_keys"]]
         return cluster_file_names
+
+    @staticmethod
+    def set_output_filename(name):
+        return f"{name}.cluster.anndata_segment.tsv"
 
     @staticmethod
     def delocalize_cluster_files(file_path, study_file_id, files_to_delocalize):
