@@ -31,9 +31,7 @@ class TestAnnDataIngestor(unittest.TestCase):
             os.remove(self.output_filename)
 
     def test_minimal_valid_anndata(self):
-        self.assertTrue(
-            self.anndata_ingest.validate(), "expect known good file to open with scanpy"
-        )
+        self.assertTrue(self.anndata_ingest.validate(), "expect known good file to open with scanpy")
 
     def test_truncated_anndata(self):
         truncated_input = AnnDataIngestor(*self.invalid_args)
@@ -69,9 +67,6 @@ class TestAnnDataIngestor(unittest.TestCase):
             AnnDataIngestor.set_output_filename(cluster_name),
             "X_Umap.cluster.anndata_segment.tsv"
         )
-
-    def test_validate(self):
-        self.assertTrue(self.anndata_ingest.validate(), "Did not load adata from h5ad file")
 
     def test_generate_cluster_header(self):
         self.anndata_ingest.generate_cluster_header(self.anndata_ingest.obtain_adata(), self.cluster_name)
