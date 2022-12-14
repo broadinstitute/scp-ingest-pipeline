@@ -102,5 +102,5 @@ class TestAnnDataIngestor(unittest.TestCase):
             self.assertEqual(
                 IngestFiles.delocalize_file.call_count,
                 1,
-                "expected 1 calls to delocalize output files",
+                "expected 1 call to delocalize output files",
             )
