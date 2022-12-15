@@ -46,10 +46,9 @@ from ingest_pipeline import (
     validate_arguments,
     IngestPipeline,
     exit_pipeline,
-    run_ingest,
+    run_ingest
 )
 from expression_files.expression_files import GeneExpression
-
 
 def mock_load(self, *args, **kwargs):
     """Enables overwriting normal function with this placeholder.
@@ -674,6 +673,27 @@ class IngestTestCase(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm, self.assertRaises(ValueError):
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
+
+    def test_extract_cluster_file_from_anndata(self):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_anndata",
+            "--ingest-anndata",
+            "--extract-cluster",
+            "--anndata-file",
+            "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad",
+            "--obsm-keys",
+            "['X_tsne']"
+
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], 0)
+        filename = 'X_tsne.cluster.anndata_segment.tsv'
+        self.assertTrue(os.path.isfile(filename))
 
 
 if __name__ == "__main__":
