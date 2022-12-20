@@ -16,12 +16,13 @@ class AnnDataIngestor(IngestFiles):
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
-        # If performing cluster extraction, set obsm_keys
-        extract_cluster = kwargs.get("extract_cluster")
-        if extract_cluster == True:
-            self.obsm_keys = kwargs["obsm_keys"]
-        else:
-            pass
+        ### may be deletable - operating onn obsm_keys from ingest_pipeline.py
+        # # If performing cluster extraction, set obsm_keys
+        # extract_cluster = kwargs.get("extract_cluster")
+        # if extract_cluster == True:
+        #     self.obsm_keys = kwargs["obsm_keys"]
+        # else:
+        #     pass
 
     def obtain_adata(self):
         try:
@@ -71,7 +72,9 @@ class AnnDataIngestor(IngestFiles):
         """
         clustering_dimension = adata.obsm[clustering_name].shape[1]
         types = ["TYPE", *["numeric"] * clustering_dimension]
-        with open(f"{clustering_name}.cluster.anndata_segment.tsv", "a") as f:
+        with open(
+            f"{h5ad_name}.{clustering_name}.cluster.anndata_segment.tsv", "a"
+        ) as f:
             f.write('\t'.join(types) + '\n')
 
     @staticmethod
@@ -84,7 +87,7 @@ class AnnDataIngestor(IngestFiles):
             [cluster_cells, pd.DataFrame(adata.obsm[clustering_name])], axis=1
         )
         pd.DataFrame(cluster_body).to_csv(
-            AnnDataIngestor.set_output_filename(clustering_name),
+            AnnDataIngestor.set_clustering_filename(clustering_name),
             sep="\t",
             mode="a",
             header=None,
@@ -92,18 +95,52 @@ class AnnDataIngestor(IngestFiles):
         )
 
     @staticmethod
-    def files_to_delocalize(arguments):
+    def generate_metadata_file(adata, output_name):
+        """
+        Generate metadata NAME and TYPE lines
+        """
+        headers = adata.obs.columns.tolist()
+        types = []
+        for header in headers:
+            if pd.api.types.is_number(adata.obs[header]):
+                types.append("NUMERIC")
+            else:
+                types.append("GROUP")
+        headers.insert(0, "NAME")
+        types.insert(0, "TYPE")
+        with open(output_name, "w") as f:
+            f.write('\t'.join(headers) + '\n')
+            f.write('\t'.join(types) + '\n')
+        adata.obs.to_csv(output_name, sep="\t", mode="a", header=None, index=True)
+
+    # @staticmethod
+    # def generate_metadata_body(adata, output_name):
+    #     """
+    #     append metadata values to metadata headers
+    #     """
+
+    #     # cells = pd.DataFrame(adata.obs_names)
+    #     # metadata_body = pd.concat([cells, pd.DataFrame(adata.obs)], axis=1)
+    #     pd.DataFrame(metadata_body).to_csv(
+    #         output_name, sep="\t", mode="a", header=None, index=True
+    #     )
+
+    @staticmethod
+    def clusterings_to_delocalize(arguments):
         # ToDo - check if names using obsm_keys need sanitization
-        cluster_file_names = [AnnDataIngestor.set_output_filename(name) for name in arguments["obsm_keys"]]
+        cluster_file_names = [
+            AnnDataIngestor.set_clustering_filename(name)
+            for name in arguments["obsm_keys"]
+        ]
         return cluster_file_names
 
     @staticmethod
-    def set_output_filename(name):
+    def set_clustering_filename(name):
         return f"{name}.cluster.anndata_segment.tsv"
 
     @staticmethod
-    def delocalize_cluster_files(file_path, study_file_id, files_to_delocalize):
-        """ Copy cluster files to study bucket
+    def delocalize_extracted_files(file_path, study_file_id, files_to_delocalize):
+        """ Copy extracted files to study bucket
         """
 
         for file in files_to_delocalize:

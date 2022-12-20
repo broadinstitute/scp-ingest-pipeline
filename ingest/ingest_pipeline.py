@@ -483,8 +483,8 @@ class IngestPipeline:
         return 0
 
     @custom_metric(config.get_metric_properties)
-    def ingest_anndata(self):
-        """Ingests anndata files."""
+    def extract_from_anndata(self):
+        """Extract data subsets from anndata file per SCP filetypes."""
         self.anndata = AnnDataIngestor(
             self.anndata_file, self.study_id, self.study_file_id, **self.kwargs
         )
@@ -499,6 +499,14 @@ class IngestPipeline:
                         self.anndata.adata, key
                     )
                     AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
+            if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
+                study_info = config.get_metric_properties()
+                accession = study_info.get_properties()['studyAccession']
+                file_id = study_info.get_properties()['fileName']
+                output_filename = f"{file_id}.{accession}.metadata.anndata_segment.tsv"
+                AnnDataIngestor.generate_metadata_file(
+                    self.anndata.adata, output_filename
+                )
             return 0
         # scanpy unable to open AnnData file
         else:
@@ -571,7 +579,7 @@ def run_ingest(ingest, arguments, parsed_args):
     elif "ingest_anndata" in arguments:
         if arguments["ingest_anndata"]:
             config.set_parent_event_name("ingest-pipeline:anndata:ingest")
-            status_anndata = ingest.ingest_anndata()
+            status_anndata = ingest.extract_from_anndata()
             status.append(status_anndata)
     elif "differential_expression" in arguments:
         config.set_parent_event_name("ingest-pipeline:differential-expression")
@@ -618,16 +626,26 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     file_path, study_file_id, files_to_match
                 )
         # for successful anndata jobs, need to delocalize intermediate ingest files
-        elif (
-            arguments.get("extract")
-            and "cluster" in arguments.get("extract")
-            and all(i < 1 for i in status)
-        ):
+        elif arguments.get("extract") and all(i < 1 for i in status):
             file_path, study_file_id = get_delocalization_info(arguments)
             # append status?
+            files_to_delocalize = []
             if IngestFiles.is_remote_file(file_path):
-                files_to_delocalize = AnnDataIngestor.files_to_delocalize(arguments)
-                AnnDataIngestor.delocalize_cluster_files(
+                if "cluster" in arguments.get("extract"):
+                    files_to_delocalize.append(
+                        AnnDataIngestor.clusterings_to_delocalize(arguments)
+                    )
+                if "metadata" in arguments.get("extract"):
+                    # the next 4 lines are copied from 503-506, suggestions
+                    # welcomed for how to DRY this up
+                    study_info = config.get_metric_properties()
+                    accession = study_info.get_properties()['studyAccession']
+                    file_id = study_info.get_properties()['fileName']
+                    output_filename = (
+                        f"{file_id}.{accession}.metadata.anndata_segment.tsv"
+                    )
+                    files_to_delocalize.append(output_filename)
+                AnnDataIngestor.delocalize_extracted_files(
                     file_path, study_file_id, files_to_delocalize
                 )
         # all non-DE, non-anndata ingest jobs can exit on success
