@@ -490,20 +490,25 @@ class IngestPipeline:
         )
         if self.anndata.validate():
             self.report_validation("success")
+            study_info = config.get_metric_properties()
+            accession = study_info.get_properties()['studyAccession']
+            file_id = study_info.get_properties()['fileName']
+            outfile_prefix = f"{file_id}.{accession}"
             if self.kwargs.get("extract") and "cluster" in self.kwargs.get("extract"):
                 if not self.kwargs["obsm_keys"]:
                     self.kwargs["obsm_keys"] = ['X_tsne']
                 for key in self.kwargs["obsm_keys"]:
-                    AnnDataIngestor.generate_cluster_header(self.anndata.adata, key)
-                    AnnDataIngestor.generate_cluster_type_declaration(
-                        self.anndata.adata, key
+                    AnnDataIngestor.generate_cluster_header(
+                        self.anndata.adata, key, file_id
                     )
-                    AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
+                    AnnDataIngestor.generate_cluster_type_declaration(
+                        self.anndata.adata, key, file_id
+                    )
+                    AnnDataIngestor.generate_cluster_body(
+                        self.anndata.adata, key, file_id
+                    )
             if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
-                study_info = config.get_metric_properties()
-                accession = study_info.get_properties()['studyAccession']
-                file_id = study_info.get_properties()['fileName']
-                output_filename = f"{file_id}.{accession}.metadata.anndata_segment.tsv"
+                output_filename = f"{outfile_prefix}.metadata.anndata_segment.tsv"
                 AnnDataIngestor.generate_metadata_file(
                     self.anndata.adata, output_filename
                 )
@@ -631,16 +636,16 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
             # append status?
             files_to_delocalize = []
             if IngestFiles.is_remote_file(file_path):
+                # the next 3 lines are copied from 493-495, suggestions
+                # welcomed for how to DRY this up
+                study_info = config.get_metric_properties()
+                accession = study_info.get_properties()['studyAccession']
+                file_id = study_info.get_properties()['fileName']
                 if "cluster" in arguments.get("extract"):
-                    files_to_delocalize.append(
-                        AnnDataIngestor.clusterings_to_delocalize(arguments)
+                    files_to_delocalize.extend(
+                        AnnDataIngestor.clusterings_to_delocalize(arguments, file_id)
                     )
                 if "metadata" in arguments.get("extract"):
-                    # the next 4 lines are copied from 503-506, suggestions
-                    # welcomed for how to DRY this up
-                    study_info = config.get_metric_properties()
-                    accession = study_info.get_properties()['studyAccession']
-                    file_id = study_info.get_properties()['fileName']
                     output_filename = (
                         f"{file_id}.{accession}.metadata.anndata_segment.tsv"
                     )

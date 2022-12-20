@@ -16,13 +16,6 @@ class AnnDataIngestor(IngestFiles):
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
-        ### may be deletable - operating onn obsm_keys from ingest_pipeline.py
-        # # If performing cluster extraction, set obsm_keys
-        # extract_cluster = kwargs.get("extract_cluster")
-        # if extract_cluster == True:
-        #     self.obsm_keys = kwargs["obsm_keys"]
-        # else:
-        #     pass
 
     def obtain_adata(self):
         try:
@@ -46,7 +39,7 @@ class AnnDataIngestor(IngestFiles):
             return False
 
     @staticmethod
-    def generate_cluster_header(adata, clustering_name):
+    def generate_cluster_header(adata, clustering_name, study_file_id):
         """
         Based on clustering dimensions, write clustering NAME line to file
         """
@@ -62,23 +55,23 @@ class AnnDataIngestor(IngestFiles):
         else:
             msg = f"Too few dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
             raise ValueError(msg)
-        with open(f"{clustering_name}.cluster.anndata_segment.tsv", "w") as f:
+        file_prefix = f"{study_file_id}.{clustering_name}"
+        with open(AnnDataIngestor.set_clustering_filename(file_prefix), "w") as f:
             f.write('\t'.join(headers) + '\n')
 
     @staticmethod
-    def generate_cluster_type_declaration(adata, clustering_name):
+    def generate_cluster_type_declaration(adata, clustering_name, study_file_id):
         """
         Based on clustering dimensions, write clustering TYPE line to file
         """
         clustering_dimension = adata.obsm[clustering_name].shape[1]
         types = ["TYPE", *["numeric"] * clustering_dimension]
-        with open(
-            f"{h5ad_name}.{clustering_name}.cluster.anndata_segment.tsv", "a"
-        ) as f:
+        file_prefix = f"{study_file_id}.{clustering_name}"
+        with open(AnnDataIngestor.set_clustering_filename(file_prefix), "a") as f:
             f.write('\t'.join(types) + '\n')
 
     @staticmethod
-    def generate_cluster_body(adata, clustering_name):
+    def generate_cluster_body(adata, clustering_name, study_file_id):
         """
         Append clustering data to clustering file
         """
@@ -86,13 +79,18 @@ class AnnDataIngestor(IngestFiles):
         cluster_body = pd.concat(
             [cluster_cells, pd.DataFrame(adata.obsm[clustering_name])], axis=1
         )
+        file_prefix = f"{study_file_id}.{clustering_name}"
         pd.DataFrame(cluster_body).to_csv(
-            AnnDataIngestor.set_clustering_filename(clustering_name),
+            AnnDataIngestor.set_clustering_filename(file_prefix),
             sep="\t",
             mode="a",
             header=None,
             index=False,
         )
+
+    @staticmethod
+    def set_clustering_filename(name):
+        return f"{name}.cluster.anndata_segment.tsv"
 
     @staticmethod
     def generate_metadata_file(adata, output_name):
@@ -113,30 +111,16 @@ class AnnDataIngestor(IngestFiles):
             f.write('\t'.join(types) + '\n')
         adata.obs.to_csv(output_name, sep="\t", mode="a", header=None, index=True)
 
-    # @staticmethod
-    # def generate_metadata_body(adata, output_name):
-    #     """
-    #     append metadata values to metadata headers
-    #     """
-
-    #     # cells = pd.DataFrame(adata.obs_names)
-    #     # metadata_body = pd.concat([cells, pd.DataFrame(adata.obs)], axis=1)
-    #     pd.DataFrame(metadata_body).to_csv(
-    #         output_name, sep="\t", mode="a", header=None, index=True
-    #     )
-
     @staticmethod
-    def clusterings_to_delocalize(arguments):
+    def clusterings_to_delocalize(arguments, study_file_id):
         # ToDo - check if names using obsm_keys need sanitization
-        cluster_file_names = [
-            AnnDataIngestor.set_clustering_filename(name)
-            for name in arguments["obsm_keys"]
-        ]
+        cluster_file_names = []
+        for name in arguments["obsm_keys"]:
+            file_prefix = f"{study_file_id}.{name}"
+            cluster_file_names.append(
+                AnnDataIngestor.set_clustering_filename(file_prefix)
+            )
         return cluster_file_names
-
-    @staticmethod
-    def set_clustering_filename(name):
-        return f"{name}.cluster.anndata_segment.tsv"
 
     @staticmethod
     def delocalize_extracted_files(file_path, study_file_id, files_to_delocalize):
