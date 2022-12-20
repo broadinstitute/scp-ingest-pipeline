@@ -30,7 +30,7 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/test.h5ad
 
 # Ingest AnnData file - cluster extraction
-python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --extract-cluster --ingest-anndata --anndata-file ../tests/data/anndata/test.h5ad --obsm-keys "['X_tsne']"
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --extract "['cluster']" --ingest-anndata --anndata-file ../tests/data/anndata/test.h5ad --obsm-keys "['X_tsne']"
 
 # Subsample cluster and metadata file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_data.csv --name cluster1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
@@ -490,7 +490,7 @@ class IngestPipeline:
         )
         if self.anndata.validate():
             self.report_validation("success")
-            if self.kwargs["extract_cluster"] == True:
+            if self.kwargs.get("extract") and "cluster" in self.kwargs.get("extract"):
                 if not self.kwargs["obsm_keys"]:
                     self.kwargs["obsm_keys"] = ['X_tsne']
                 for key in self.kwargs["obsm_keys"]:
@@ -619,8 +619,8 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                 )
         # for successful anndata jobs, need to delocalize intermediate ingest files
         elif (
-            "extract_cluster" in arguments
-            and arguments.get("extract_cluster") == True
+            arguments.get("extract")
+            and "cluster" in arguments.get("extract")
             and all(i < 1 for i in status)
         ):
             file_path, study_file_id = get_delocalization_info(arguments)

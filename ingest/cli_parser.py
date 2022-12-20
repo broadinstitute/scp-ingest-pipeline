@@ -354,9 +354,9 @@ def create_parser():
     )
 
     parser_anndata.add_argument(
-        "--extract-cluster",
-        action="store_true",
-        help="Indicates clustering data should be extracted",
+        "--extract",
+        type=ast.literal_eval,
+        help="Array of file types to extract, options include ['cluster', 'matrix']",
     )
 
     parser_expression_writer = subparsers.add_parser(
