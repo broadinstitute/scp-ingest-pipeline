@@ -356,7 +356,7 @@ def create_parser():
     parser_anndata.add_argument(
         "--extract",
         type=ast.literal_eval,
-        help="Array of file types to extract, options include ['cluster', 'matrix']",
+        help="Array of file types to extract, options include ['cluster', 'metadata']",
     )
 
     parser_expression_writer = subparsers.add_parser(

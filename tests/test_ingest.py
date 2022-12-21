@@ -46,9 +46,10 @@ from ingest_pipeline import (
     validate_arguments,
     IngestPipeline,
     exit_pipeline,
-    run_ingest
+    run_ingest,
 )
 from expression_files.expression_files import GeneExpression
+
 
 def mock_load(self, *args, **kwargs):
     """Enables overwriting normal function with this placeholder.
@@ -682,12 +683,12 @@ class IngestTestCase(unittest.TestCase):
             "5dd5ae25421aa910a723a337",
             "ingest_anndata",
             "--ingest-anndata",
-            "--extract-cluster",
+            "--extract",
+            "['cluster']",
             "--anndata-file",
             "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad",
             "--obsm-keys",
-            "['X_tsne']"
-
+            "['X_tsne']",
         ]
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
         self.assertEqual(len(status), 1)
