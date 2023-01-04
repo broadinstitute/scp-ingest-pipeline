@@ -693,7 +693,7 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
         self.assertEqual(len(status), 1)
         self.assertEqual(status[0], 0)
-        filename = '5dd5ae25421aa910a723a337.X_tsne.cluster.anndata_segment.tsv'
+        filename = 'h5ad_frag.cluster.X_tsne.tsv'
         self.assertTrue(os.path.isfile(filename))
 
 
