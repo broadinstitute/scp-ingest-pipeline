@@ -16,12 +16,6 @@ class AnnDataIngestor(IngestFiles):
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
-        # If performing cluster extraction, set obsm_keys
-        extract_cluster = kwargs.get("extract_cluster")
-        if extract_cluster == True:
-            self.obsm_keys = kwargs["obsm_keys"]
-        else:
-            pass
 
     def obtain_adata(self):
         try:
@@ -61,7 +55,8 @@ class AnnDataIngestor(IngestFiles):
         else:
             msg = f"Too few dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
             raise ValueError(msg)
-        with open(f"{clustering_name}.cluster.anndata_segment.tsv", "w") as f:
+        filename = AnnDataIngestor.set_clustering_filename(clustering_name)
+        with open(filename, "w") as f:
             f.write('\t'.join(headers) + '\n')
 
     @staticmethod
@@ -71,7 +66,8 @@ class AnnDataIngestor(IngestFiles):
         """
         clustering_dimension = adata.obsm[clustering_name].shape[1]
         types = ["TYPE", *["numeric"] * clustering_dimension]
-        with open(f"{clustering_name}.cluster.anndata_segment.tsv", "a") as f:
+        filename = AnnDataIngestor.set_clustering_filename(clustering_name)
+        with open(filename, "a") as f:
             f.write('\t'.join(types) + '\n')
 
     @staticmethod
@@ -83,27 +79,45 @@ class AnnDataIngestor(IngestFiles):
         cluster_body = pd.concat(
             [cluster_cells, pd.DataFrame(adata.obsm[clustering_name])], axis=1
         )
+        filename = AnnDataIngestor.set_clustering_filename(clustering_name)
         pd.DataFrame(cluster_body).to_csv(
-            AnnDataIngestor.set_output_filename(clustering_name),
-            sep="\t",
-            mode="a",
-            header=None,
-            index=False,
+            filename, sep="\t", mode="a", header=None, index=False
         )
 
     @staticmethod
-    def files_to_delocalize(arguments):
+    def set_clustering_filename(name):
+        return f"h5ad_frag.cluster.{name}.tsv"
+
+    @staticmethod
+    def generate_metadata_file(adata, output_name):
+        """
+        Generate metadata NAME and TYPE lines
+        """
+        headers = adata.obs.columns.tolist()
+        types = []
+        for header in headers:
+            if pd.api.types.is_number(adata.obs[header]):
+                types.append("NUMERIC")
+            else:
+                types.append("GROUP")
+        headers.insert(0, "NAME")
+        types.insert(0, "TYPE")
+        with open(output_name, "w") as f:
+            f.write('\t'.join(headers) + '\n')
+            f.write('\t'.join(types) + '\n')
+        adata.obs.to_csv(output_name, sep="\t", mode="a", header=None, index=True)
+
+    @staticmethod
+    def clusterings_to_delocalize(arguments):
         # ToDo - check if names using obsm_keys need sanitization
-        cluster_file_names = [AnnDataIngestor.set_output_filename(name) for name in arguments["obsm_keys"]]
+        cluster_file_names = []
+        for name in arguments["obsm_keys"]:
+            cluster_file_names.append(AnnDataIngestor.set_clustering_filename(name))
         return cluster_file_names
 
     @staticmethod
-    def set_output_filename(name):
-        return f"{name}.cluster.anndata_segment.tsv"
-
-    @staticmethod
-    def delocalize_cluster_files(file_path, study_file_id, files_to_delocalize):
-        """ Copy cluster files to study bucket
+    def delocalize_extracted_files(file_path, study_file_id, files_to_delocalize):
+        """ Copy extracted files to study bucket
         """
 
         for file in files_to_delocalize:
@@ -112,5 +126,5 @@ class AnnDataIngestor(IngestFiles):
                 None,
                 file_path,
                 file,
-                f"_scp_internal/anndata_ingest/{file}",
+                f"_scp_internal/anndata_ingest/{study_file_id}/{file}",
             )
