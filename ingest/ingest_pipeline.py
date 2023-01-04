@@ -490,10 +490,6 @@ class IngestPipeline:
         )
         if self.anndata.validate():
             self.report_validation("success")
-            study_info = config.get_metric_properties()
-            accession = study_info.get_properties()['studyAccession']
-            file_id = study_info.get_properties()['fileName']
-            outfile_prefix = f"{file_id}.{accession}"
             if self.kwargs.get("extract") and "cluster" in self.kwargs.get("extract"):
                 if not self.kwargs["obsm_keys"]:
                     self.kwargs["obsm_keys"] = ['X_tsne']
@@ -632,11 +628,6 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
             # append status?
             files_to_delocalize = []
             if IngestFiles.is_remote_file(file_path):
-                # the next 3 lines are copied from 493-495, suggestions
-                # welcomed for how to DRY this up
-                study_info = config.get_metric_properties()
-                accession = study_info.get_properties()['studyAccession']
-                file_id = study_info.get_properties()['fileName']
                 if "cluster" in arguments.get("extract"):
                     files_to_delocalize.extend(
                         AnnDataIngestor.clusterings_to_delocalize(arguments)
