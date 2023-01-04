@@ -24,9 +24,7 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.cluster_name = 'X_tsne'
         self.valid_kwargs = {'obsm_keys': [self.cluster_name]}
         self.anndata_ingest = AnnDataIngestor(*self.valid_args, **self.valid_kwargs)
-        self.output_filename = (
-            f"{self.study_file_id}.{self.cluster_name}.cluster.anndata_segment.tsv"
-        )
+        self.output_filename = f"h5ad_frag.cluster.{self.cluster_name}.tsv"
 
     def teardown_method(self, _):
         if os.path.isfile(self.output_filename):
@@ -64,15 +62,15 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.assertFalse(bad_input.validate())
 
     def test_set_output_filename(self):
-        cluster_name = "dec0dedfeed0000000000000.X_Umap"
+        cluster_name = "X_Umap"
         self.assertEqual(
             AnnDataIngestor.set_clustering_filename(cluster_name),
-            "dec0dedfeed0000000000000.X_Umap.cluster.anndata_segment.tsv",
+            "h5ad_frag.cluster.X_Umap.tsv",
         )
 
     def test_generate_cluster_header(self):
         self.anndata_ingest.generate_cluster_header(
-            self.anndata_ingest.obtain_adata(), self.cluster_name, self.study_file_id
+            self.anndata_ingest.obtain_adata(), self.cluster_name
         )
         with open(self.output_filename) as header_file:
             header = header_file.readline().split("\t")
@@ -82,7 +80,7 @@ class TestAnnDataIngestor(unittest.TestCase):
 
     def test_generate_cluster_type_declaration(self):
         self.anndata_ingest.generate_cluster_type_declaration(
-            self.anndata_ingest.obtain_adata(), self.cluster_name, self.study_file_id
+            self.anndata_ingest.obtain_adata(), self.cluster_name
         )
         with open(self.output_filename) as header_file:
             header = header_file.readline().split("\t")
@@ -94,7 +92,7 @@ class TestAnnDataIngestor(unittest.TestCase):
 
     def test_generate_cluster_body(self):
         self.anndata_ingest.generate_cluster_body(
-            self.anndata_ingest.obtain_adata(), self.cluster_name, self.study_file_id
+            self.anndata_ingest.obtain_adata(), self.cluster_name
         )
         with open(self.output_filename) as cluster_body:
             line = cluster_body.readline().split("\t")
@@ -106,24 +104,20 @@ class TestAnnDataIngestor(unittest.TestCase):
             )
 
     def test_get_files_to_delocalize(self):
-        files = AnnDataIngestor.clusterings_to_delocalize(
-            self.valid_kwargs, self.study_file_id
-        )
+        files = AnnDataIngestor.clusterings_to_delocalize(self.valid_kwargs)
         expected_files = [self.output_filename]
         self.assertEqual(expected_files, files)
 
     def test_delocalize_files(self):
         # just create header, no reason to run full extract
         self.anndata_ingest.generate_cluster_header(
-            self.anndata_ingest.obtain_adata(), self.cluster_name, self.study_file_id
+            self.anndata_ingest.obtain_adata(), self.cluster_name
         )
         with patch('ingest_files.IngestFiles.delocalize_file'):
             AnnDataIngestor.delocalize_file(
                 "gs://fake_bucket",
                 self.study_id,
-                AnnDataIngestor.clusterings_to_delocalize(
-                    self.valid_kwargs, self.study_file_id
-                ),
+                AnnDataIngestor.clusterings_to_delocalize(self.valid_kwargs),
             )
             self.assertEqual(
                 IngestFiles.delocalize_file.call_count,

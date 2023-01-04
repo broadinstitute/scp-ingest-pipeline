@@ -39,7 +39,7 @@ class AnnDataIngestor(IngestFiles):
             return False
 
     @staticmethod
-    def generate_cluster_header(adata, clustering_name, study_file_id):
+    def generate_cluster_header(adata, clustering_name):
         """
         Based on clustering dimensions, write clustering NAME line to file
         """
@@ -55,23 +55,23 @@ class AnnDataIngestor(IngestFiles):
         else:
             msg = f"Too few dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
             raise ValueError(msg)
-        file_prefix = f"{study_file_id}.{clustering_name}"
-        with open(AnnDataIngestor.set_clustering_filename(file_prefix), "w") as f:
+        filename = AnnDataIngestor.set_clustering_filename(clustering_name)
+        with open(filename, "w") as f:
             f.write('\t'.join(headers) + '\n')
 
     @staticmethod
-    def generate_cluster_type_declaration(adata, clustering_name, study_file_id):
+    def generate_cluster_type_declaration(adata, clustering_name):
         """
         Based on clustering dimensions, write clustering TYPE line to file
         """
         clustering_dimension = adata.obsm[clustering_name].shape[1]
         types = ["TYPE", *["numeric"] * clustering_dimension]
-        file_prefix = f"{study_file_id}.{clustering_name}"
-        with open(AnnDataIngestor.set_clustering_filename(file_prefix), "a") as f:
+        filename = AnnDataIngestor.set_clustering_filename(clustering_name)
+        with open(filename, "a") as f:
             f.write('\t'.join(types) + '\n')
 
     @staticmethod
-    def generate_cluster_body(adata, clustering_name, study_file_id):
+    def generate_cluster_body(adata, clustering_name):
         """
         Append clustering data to clustering file
         """
@@ -79,18 +79,14 @@ class AnnDataIngestor(IngestFiles):
         cluster_body = pd.concat(
             [cluster_cells, pd.DataFrame(adata.obsm[clustering_name])], axis=1
         )
-        file_prefix = f"{study_file_id}.{clustering_name}"
+        filename = AnnDataIngestor.set_clustering_filename(clustering_name)
         pd.DataFrame(cluster_body).to_csv(
-            AnnDataIngestor.set_clustering_filename(file_prefix),
-            sep="\t",
-            mode="a",
-            header=None,
-            index=False,
+            filename, sep="\t", mode="a", header=None, index=False
         )
 
     @staticmethod
     def set_clustering_filename(name):
-        return f"{name}.cluster.anndata_segment.tsv"
+        return f"h5ad_frag.cluster.{name}.tsv"
 
     @staticmethod
     def generate_metadata_file(adata, output_name):
@@ -112,14 +108,11 @@ class AnnDataIngestor(IngestFiles):
         adata.obs.to_csv(output_name, sep="\t", mode="a", header=None, index=True)
 
     @staticmethod
-    def clusterings_to_delocalize(arguments, study_file_id):
+    def clusterings_to_delocalize(arguments):
         # ToDo - check if names using obsm_keys need sanitization
         cluster_file_names = []
         for name in arguments["obsm_keys"]:
-            file_prefix = f"{study_file_id}.{name}"
-            cluster_file_names.append(
-                AnnDataIngestor.set_clustering_filename(file_prefix)
-            )
+            cluster_file_names.append(AnnDataIngestor.set_clustering_filename(name))
         return cluster_file_names
 
     @staticmethod
@@ -133,5 +126,5 @@ class AnnDataIngestor(IngestFiles):
                 None,
                 file_path,
                 file,
-                f"_scp_internal/anndata_ingest/{file}",
+                f"_scp_internal/anndata_ingest/{study_file_id}/{file}",
             )

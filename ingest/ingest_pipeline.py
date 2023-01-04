@@ -498,19 +498,15 @@ class IngestPipeline:
                 if not self.kwargs["obsm_keys"]:
                     self.kwargs["obsm_keys"] = ['X_tsne']
                 for key in self.kwargs["obsm_keys"]:
-                    AnnDataIngestor.generate_cluster_header(
-                        self.anndata.adata, key, file_id
-                    )
+                    AnnDataIngestor.generate_cluster_header(self.anndata.adata, key)
                     AnnDataIngestor.generate_cluster_type_declaration(
-                        self.anndata.adata, key, file_id
+                        self.anndata.adata, key
                     )
-                    AnnDataIngestor.generate_cluster_body(
-                        self.anndata.adata, key, file_id
-                    )
+                    AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
             if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
-                output_filename = f"{outfile_prefix}.metadata.anndata_segment.tsv"
+                metadata_filename = f"h5ad_frag.metadata.tsv"
                 AnnDataIngestor.generate_metadata_file(
-                    self.anndata.adata, output_filename
+                    self.anndata.adata, metadata_filename
                 )
             return 0
         # scanpy unable to open AnnData file
@@ -643,13 +639,11 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                 file_id = study_info.get_properties()['fileName']
                 if "cluster" in arguments.get("extract"):
                     files_to_delocalize.extend(
-                        AnnDataIngestor.clusterings_to_delocalize(arguments, file_id)
+                        AnnDataIngestor.clusterings_to_delocalize(arguments)
                     )
                 if "metadata" in arguments.get("extract"):
-                    output_filename = (
-                        f"{file_id}.{accession}.metadata.anndata_segment.tsv"
-                    )
-                    files_to_delocalize.append(output_filename)
+                    metadata_filename = f"h5ad_frag.metadata.tsv"
+                    files_to_delocalize.append(metadata_filename)
                 AnnDataIngestor.delocalize_extracted_files(
                     file_path, study_file_id, files_to_delocalize
                 )
