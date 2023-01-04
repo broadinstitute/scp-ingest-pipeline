@@ -30,7 +30,7 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/test.h5ad
 
 # Ingest AnnData file - cluster extraction
-python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --extract-cluster --ingest-anndata --anndata-file ../tests/data/anndata/test.h5ad --obsm-keys "['X_tsne']"
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --extract "['cluster']" --ingest-anndata --anndata-file ../tests/data/anndata/test.h5ad --obsm-keys "['X_tsne']"
 
 # Subsample cluster and metadata file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_data.csv --name cluster1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
@@ -483,14 +483,18 @@ class IngestPipeline:
         return 0
 
     @custom_metric(config.get_metric_properties)
-    def ingest_anndata(self):
-        """Ingests anndata files."""
+    def extract_from_anndata(self):
+        """Extract data subsets from anndata file per SCP filetypes."""
         self.anndata = AnnDataIngestor(
             self.anndata_file, self.study_id, self.study_file_id, **self.kwargs
         )
         if self.anndata.validate():
             self.report_validation("success")
-            if self.kwargs["extract_cluster"] == True:
+            study_info = config.get_metric_properties()
+            accession = study_info.get_properties()['studyAccession']
+            file_id = study_info.get_properties()['fileName']
+            outfile_prefix = f"{file_id}.{accession}"
+            if self.kwargs.get("extract") and "cluster" in self.kwargs.get("extract"):
                 if not self.kwargs["obsm_keys"]:
                     self.kwargs["obsm_keys"] = ['X_tsne']
                 for key in self.kwargs["obsm_keys"]:
@@ -499,6 +503,11 @@ class IngestPipeline:
                         self.anndata.adata, key
                     )
                     AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
+            if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
+                metadata_filename = f"h5ad_frag.metadata.tsv"
+                AnnDataIngestor.generate_metadata_file(
+                    self.anndata.adata, metadata_filename
+                )
             return 0
         # scanpy unable to open AnnData file
         else:
@@ -571,7 +580,7 @@ def run_ingest(ingest, arguments, parsed_args):
     elif "ingest_anndata" in arguments:
         if arguments["ingest_anndata"]:
             config.set_parent_event_name("ingest-pipeline:anndata:ingest")
-            status_anndata = ingest.ingest_anndata()
+            status_anndata = ingest.extract_from_anndata()
             status.append(status_anndata)
     elif "differential_expression" in arguments:
         config.set_parent_event_name("ingest-pipeline:differential-expression")
@@ -618,16 +627,24 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     file_path, study_file_id, files_to_match
                 )
         # for successful anndata jobs, need to delocalize intermediate ingest files
-        elif (
-            "extract_cluster" in arguments
-            and arguments.get("extract_cluster") == True
-            and all(i < 1 for i in status)
-        ):
+        elif arguments.get("extract") and all(i < 1 for i in status):
             file_path, study_file_id = get_delocalization_info(arguments)
             # append status?
+            files_to_delocalize = []
             if IngestFiles.is_remote_file(file_path):
-                files_to_delocalize = AnnDataIngestor.files_to_delocalize(arguments)
-                AnnDataIngestor.delocalize_cluster_files(
+                # the next 3 lines are copied from 493-495, suggestions
+                # welcomed for how to DRY this up
+                study_info = config.get_metric_properties()
+                accession = study_info.get_properties()['studyAccession']
+                file_id = study_info.get_properties()['fileName']
+                if "cluster" in arguments.get("extract"):
+                    files_to_delocalize.extend(
+                        AnnDataIngestor.clusterings_to_delocalize(arguments)
+                    )
+                if "metadata" in arguments.get("extract"):
+                    metadata_filename = f"h5ad_frag.metadata.tsv"
+                    files_to_delocalize.append(metadata_filename)
+                AnnDataIngestor.delocalize_extracted_files(
                     file_path, study_file_id, files_to_delocalize
                 )
         # all non-DE, non-anndata ingest jobs can exit on success
