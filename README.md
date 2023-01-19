@@ -16,7 +16,15 @@ The SCP Ingest Pipeline is an ETL pipeline for single-cell RNA-seq data.
 - Tabix, if using `ingest/genomes/genomes_pipeline.py`
 
 # Install
+### Docker
+If on an M1, do:
+```
+scripts/docker-compose-setup.sh <PATH_TO_YOUR_VAULT_TOKEN> # E.g. ~/.github-token
+```
 
+To update dependencies when in Docker
+
+### Native 
 Fetch the code, boot your virtualenv, install dependencies:
 
 ```

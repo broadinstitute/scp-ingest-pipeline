@@ -1,0 +1,11 @@
+services:
+  ingest:
+    container_name: scp-ingest-pipeline
+    image: "${GCR_IMAGE}"
+    env_file:
+      - config/.ingest_env
+    expose:
+      - 27017 # Allow outgoing traffic to MongoDB
+    volumes:
+      - .:/scp-ingest-pipeline # Needed to mount
+
