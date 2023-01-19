@@ -15,16 +15,12 @@ $0 [OPTION]
 EOF
 )
 
-IMAGE_NAME="gcr.io/broad-singlecellportal-staging/scp-ingest-pipeline-development"
-LATEST_TAG=$(gcloud container images list-tags ${IMAGE_NAME} --format='get(tags)' | head -n 1)
-export GCR_IMAGE="${IMAGE_NAME}:${LATEST_TAG}"
-
 VAULT_TOKEN_PATH=""
 while getopts "i:t:h" OPTION; do
 case $OPTION in
   i)
     echo "### SETTING GCR IMAGE ###"
-    GCR_IMAGE="$OPTARG"
+    export GCR_IMAGE="$OPTARG"
     ;;
   t)
     echo "### SETTING VAULT TOKEN ###"
@@ -41,6 +37,13 @@ case $OPTION in
   	;;
   esac
 done
+
+if [[ $GCR_IMAGE = "" ]]; then
+  IMAGE_NAME="gcr.io/broad-singlecellportal-staging/scp-ingest-pipeline-development"
+  LATEST_TAG=$(gcloud container images list-tags ${IMAGE_NAME} --format='get(tags)' | head -n 1)
+  export GCR_IMAGE="${IMAGE_NAME}:${LATEST_TAG}"
+fi
+
 
 if [[ $VAULT_TOKEN_PATH = "" ]]; then
   echo "Did not provide VAULT_TOKEN_PATH"
