@@ -15,6 +15,7 @@ $0 [OPTION]
 EOF
 )
 
+GCR_IMAGE=""
 VAULT_TOKEN_PATH=""
 while getopts "i:t:h" OPTION; do
 case $OPTION in
