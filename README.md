@@ -52,7 +52,6 @@ brew install tabix
 ```
 
 ## Git hooks
-
 After installing Ingest Pipeline, add Git hooks to help ensure code quality:
 
 ```
@@ -62,14 +61,12 @@ pre-commit install && pre-commit install -t pre-push
 The hooks will expect that [git-secrets](https://github.com/awslabs/git-secrets) has been set up. If you are a Broad Institute employee who has not done this yet, please see: [broadinstitute/single_cell_portal_configs](https://github.com/broadinstitute/single_cell_portal_configs) for specific guidance.
 
 ### Bypass hooks
-
 In rare cases, you might need to skip Git hooks, like so:
 
 - Skip commit hooks: `git commit ... --no-verify`
 - Skip pre-push hooks: `git push ... --no-verify`
 
 # Test
-
 After [installing](#Install):
 
 ```
