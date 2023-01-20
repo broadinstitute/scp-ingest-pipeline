@@ -35,6 +35,7 @@ cd scp-ingest-pipeline
 python3 -m venv env --copies
 source env/bin/activate
 pip install -r requirements.txt
+scripts/setup-mongo-dev.sh <PATH_TO_YOUR_VAULT_TOKEN> # E.g. ~/.github-token
 ```
 
 ### Optional
@@ -106,7 +107,7 @@ docker build -t gcr.io/broad-singlecellportal-staging/ingest-pipeline:test-candi
 ### 2. Set up environment variables
 Run the following to pull database-specific secrets out of vault (passing in the path to your vault token):
 ```
-source scripts/setup_mongo_dev.sh ~/.your-vault-token
+source scripts/setup-mongo-dev.sh ~/.your-vault-token
 ```
 Now run `env` to make sure you've set the following values:
 ```

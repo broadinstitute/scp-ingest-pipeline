@@ -51,7 +51,7 @@ if [[ $VAULT_TOKEN_PATH = "" ]]; then
 fi
 
 echo "### SETTING UP ENVIRONMENT ###"
-./scripts/ingest_local_setup.bash $VAULT_TOKEN_PATH
+./scripts/ingest-local-setup.sh $VAULT_TOKEN_PATH
 
 docker pull $GCR_IMAGE
 
