@@ -2,15 +2,15 @@
 
 # docker-compose-setup.sh
 # bring up local development environment via docker-compose
+#
 # More context: 
-
-
+# See https://github.com/broadinstitute/scp-ingest-pipeline#docker
 
 usage=$(
 cat <<EOF
 $0 [OPTION]
--d   run docker-compose in detached mode (default is attatched to terminal STDOUT)
--c   enable VITE_FRONTEND_SERVICE_WORKER_CACHE (default is disabled)
+-i   Set URL for GCR image; helpful if not using latest development
+-t   Set GitHub Vault token (e.g. ~/.github-token)
 -h   print this text
 EOF
 )
@@ -45,7 +45,6 @@ if [[ $GCR_IMAGE = "" ]]; then
   export GCR_IMAGE="${IMAGE_NAME}:${LATEST_TAG}"
 fi
 
-
 if [[ $VAULT_TOKEN_PATH = "" ]]; then
   echo "Did not provide VAULT_TOKEN_PATH"
   exit 1
@@ -54,8 +53,6 @@ fi
 echo "### SETTING UP ENVIRONMENT ###"
 ./scripts/ingest_local_setup.bash $VAULT_TOKEN_PATH
 
-# If updating Python dependencies via pip
-# comment out `docker pull` line below, commit 
 docker pull $GCR_IMAGE
 
 # Run the "ingest" service (define in docker-compose-dev.yaml), 

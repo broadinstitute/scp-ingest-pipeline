@@ -17,15 +17,17 @@ The SCP Ingest Pipeline is an ETL pipeline for single-cell RNA-seq data.
 
 # Install
 ### Docker
-If on an M1, do:
+If on Apple silicon Mac (e.g. M1), do:
 ```
 scripts/docker-compose-setup.sh <PATH_TO_YOUR_VAULT_TOKEN> # E.g. ~/.github-token
 ```
 
-To update dependencies when in Docker
+To update dependencies when in Docker, you can pip install from within the Docker Bash shell after adjusting your requirements.txt.
+If you close your shell after that, your newly installed dependencies will be lost.  Dependencies only persist after merging your
+new requirements.txt into `development`.  TODO (SCP-4941): Add entry-point script to run `pip install`.
 
 ### Native 
-Fetch the code, boot your virtualenv, install dependencies:
+If on Intel Mac, fetch the code, boot your virtualenv, install dependencies:
 
 ```
 git clone git@github.com:broadinstitute/scp-ingest-pipeline.git
@@ -35,6 +37,7 @@ source env/bin/activate
 pip install -r requirements.txt
 ```
 
+### Optional
 To use `ingest/make_toy_data.py`:
 
 ```
@@ -46,54 +49,6 @@ To use `ingest/genomes/genomes_pipeline.py`:
 ```
 brew install tabix
 ```
-
-Now get secrets from Vault to set environment variables needed to write to the database:
-(see also scripts/setup_mongo_dev.sh)
-
-```
-export BROAD_USER="<username in your email address>"
-
-export DATABASE_NAME="single_cell_portal_development"
-
-vault login -method=github token=`~/bin/git-vault-token`
-
-# Get username and password
-vault read secret/kdux/scp/development/$BROAD_USER/mongo/user
-
-export MONGODB_USERNAME="<username from Vault>"
-export MONGODB_PASSWORD="<password from Vault>"
-
-# Get external IP address for host
-vault read secret/kdux/scp/development/$BROAD_USER/mongo/hostname
-
-export DATABASE_HOST="<ip from Vault (omit brackets)>"
-```
-
-For testing/development using ingest_pipeline.py on the command line, annotation file input validation and MongoDB writes can be bypassed if you set:
-(Note: this bypass does not currently apply to expression matrix ingest).
-
-```
-export BYPASS_MONGO_WRITES='yes'
-```
-
-If you are developing updates for Mixpanel logging, set the Bard host URL:
-
-```
-
-export BARD_HOST_URL="https://terra-bard-dev.appspot.com"
-```
-
-Be sure to `unset BARD_HOST_URL` when your updates are done, so development ingest events are not always sent to Mixpanel.
-
-If you are developing updates for Sentry logging, then set the DSN:
-
-```
-vault read secret/kdux/scp/production/scp_config.json | grep SENTRY
-
-export SENTRY_DSN="<Sentry DSN value from Vault>"
-```
-
-Be sure to `unset SENTRY_DSN` when your updates are done, so development logs are not always sent to Sentry.
 
 ## Git hooks
 
