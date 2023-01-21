@@ -92,6 +92,12 @@ pytest --cov=../ingest/
 For more, see <https://docs.pytest.org/en/stable/usage.html>.
 
 ## Testing in Docker
+<!-- 
+Answer in PR 290 and remove this comment:
+Since the "Docker compose" approach described in PR 290 seems more convenient than that 
+described in this "Testing in Docker" section, can I remove this "Testing in Docker" section?
+Or would it be better to scope as part of SCP-4941?
+-->
 If you have difficulties installing and configuring `scp-ingest-pipeline` due to hardware issues (e.g. Mac M1 chips), 
 you can alternatively test locally by building the Docker image and then running any commands inside the container. 
 There are some extra steps required, but this sidesteps the need to install packages locally.
