@@ -8,7 +8,7 @@ a remote MongoDB instance.
 PREREQUISITES
 See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
 
-DEVELOPER SETUP (see README.md#Install and ../scripts/setup_mongo_dev.sh)
+DEVELOPER SETUP (see README.md#Install and ../scripts/setup-mongo-dev.sh)
 
 EXAMPLES
 # Takes expression file and stores it into MongoDB

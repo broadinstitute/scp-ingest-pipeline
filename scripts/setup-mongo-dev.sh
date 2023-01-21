@@ -4,7 +4,7 @@
 # Set up your GitHub token in a file for use to access Vault
 #
 # To set up your development environment before running ingest pipeline on the command line, run: 
-# source setup_mongo_dev.sh <path to your GitHub token file>
+# source setup-mongo-dev.sh <path to your GitHub token file>
 #
 # Keep "Dev env vars" synced with `ingest-local-setup.bash`
 

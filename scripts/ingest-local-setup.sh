@@ -2,7 +2,7 @@
 
 # Called in docker-compose-setup.sh for Docker development environment
 #
-# Keep "Dev env vars" synced with `setup_mongo_dev.sh`
+# Keep "Dev env vars" synced with `setup-mongo-dev.sh`
 
 VAULT_TOKEN_PATH="$1"
 if [[ -z "$VAULT_TOKEN_PATH" ]]
