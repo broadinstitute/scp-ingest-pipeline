@@ -1,15 +1,17 @@
 #! /bin/bash
 
-## PREREQUISITE
-## Set up your Github token in a file for use to access Vault
-
-## To set up your development environment before running ingest pipeline on the command line, run: 
-## source setup_mongo_dev.sh <path to your Github token file>
+# PREREQUISITE
+# Set up your GitHub token in a file for use to access Vault
+#
+# To set up your development environment before running ingest pipeline on the command line, run: 
+# source setup-mongo-dev.sh <path to your GitHub token file>
+#
+# Keep "Dev env vars" synced with `ingest-local-setup.bash`
 
 VAULT_TOKEN_PATH="$1"
 if [[ -z "$VAULT_TOKEN_PATH" ]]
 then
-  echo "You must provide a path to a Github token to proceed"
+  echo "You must provide a path to a GitHub token to proceed"
   exit 1
 fi
 vault login -method=github token=$(cat $VAULT_TOKEN_PATH)
@@ -19,6 +21,7 @@ then
   exit 1
 fi
 
+# Dev env vars
 export BROAD_USER=`whoami`
 export MONGODB_USERNAME='single_cell'
 export DATABASE_NAME='single_cell_portal_development'
