@@ -1,19 +1,13 @@
 #! /bin/bash
 
-## PREREQUISITE
-## Set up your GitHub token in a file for use to access Vault
-
-## To set up your development environment before running Ingest Pipeline on the command line, run: 
-## source setup_mongo_dev.sh <path to your GitHub token file>
-
-# eweitz 2023-01: Change these export to echo then pipe to file at path:
-# config/secrets/.source_env.bash (do appropriate `mkdir -p` etc. before if needed)
-# Add above path to .gitignore 
+# Called in docker-compose-setup.sh for Docker development environment
+#
+# Keep "Dev env vars" synced with `setup-mongo-dev.sh`
 
 VAULT_TOKEN_PATH="$1"
 if [[ -z "$VAULT_TOKEN_PATH" ]]
 then
-  echo "You must provide a path to a GitHub token to proceed"
+  echo "You must provide a path to a GitHub token to proceed, e.g. ~/.github-token"
   exit 1
 fi
 vault login -method=github token=$(cat $VAULT_TOKEN_PATH)
@@ -23,6 +17,7 @@ then
   exit 1
 fi
 
+# Dev env vars
 BROAD_USER=`whoami`
 MONGODB_USERNAME='single_cell'
 DATABASE_NAME='single_cell_portal_development'
