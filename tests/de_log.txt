@@ -1,0 +1,61 @@
+2023-01-23T15:58:44+0000 de.de_logger CRITICAL:DE analysis infeasible for numeric annotation "seurat_clusters".
+2023-01-23T15:58:44+0000 de.de_logger CRITICAL:Error: "seurat_clusters" has unexpected type "foo".
+2023-01-23T15:58:44+0000 de.de_logger CRITICAL:Provided annotation "seurat_clusters" not found in metadata file.
+2023-01-23T15:58:44+0000 de.de_logger INFO:Initializing DifferentialExpression instance
+2023-01-23T15:58:44+0000 de.de_logger INFO:preparing DE on dense matrix
+2023-01-23T15:58:44+0000 de.de_logger INFO:subsetting metadata on cells in clustering
+2023-01-23T15:58:44+0000 de.de_logger INFO:subsetting matrix on cells in clustering
+2023-01-23T15:58:44+0000 de.de_logger INFO:calculating DE
+2023-01-23T15:58:44+0000 de.de_logger INFO:Gathering DE annotation labels
+2023-01-23T15:58:44+0000 de.de_logger INFO:Writing DE output for cholinergic neuron
+2023-01-23T15:58:44+0000 de.de_logger INFO:Writing DE output for cranial somatomotor neuron
+2023-01-23T15:58:45+0000 de.de_logger INFO:Writing DE output for pyramidal neuron
+2023-01-23T15:58:45+0000 de.de_logger INFO:Writing DE output for somatomotor neuron
+2023-01-23T15:58:45+0000 de.de_logger INFO:Writing DE output for sympathetic cholinergic neuron
+2023-01-23T15:58:45+0000 de.de_logger INFO:DE processing complete
+2023-01-23T15:58:45+0000 de.de_logger INFO:subsetting metadata on cells in clustering
+2023-01-23T15:58:45+0000 de.de_logger INFO:Initializing DifferentialExpression instance
+2023-01-23T15:58:45+0000 de.de_logger INFO:preparing DE on dense matrix
+2023-01-23T15:58:45+0000 de.de_logger INFO:subsetting metadata on cells in clustering
+2023-01-23T15:58:45+0000 de.de_logger INFO:subsetting matrix on cells in clustering
+2023-01-23T15:58:45+0000 de.de_logger INFO:calculating DE
+2023-01-23T15:58:46+0000 de.de_logger INFO:Gathering DE annotation labels
+2023-01-23T15:58:46+0000 de.de_logger INFO:Writing DE output for N/A
+2023-01-23T15:58:46+0000 de.de_logger INFO:Writing DE output for NaN
+2023-01-23T15:58:46+0000 de.de_logger INFO:Writing DE output for __Unspecified__
+2023-01-23T15:58:46+0000 de.de_logger INFO:Writing DE output for cholinergic neuron
+2023-01-23T15:58:46+0000 de.de_logger INFO:Writing DE output for cranial somatomotor neuron
+2023-01-23T15:58:47+0000 de.de_logger INFO:Writing DE output for null
+2023-01-23T15:58:47+0000 de.de_logger INFO:Writing DE output for pyramidal neuron
+2023-01-23T15:58:47+0000 de.de_logger INFO:Writing DE output for somatomotor neuron
+2023-01-23T15:58:47+0000 de.de_logger INFO:Writing DE output for sympathetic cholinergic neuron
+2023-01-23T15:58:47+0000 de.de_logger INFO:DE processing complete
+2023-01-23T15:58:47+0000 de.de_logger INFO:subsetting metadata on cells in clustering
+2023-01-23T15:58:47+0000 de.de_logger INFO:Initializing DifferentialExpression instance
+2023-01-23T15:58:47+0000 de.de_logger INFO:preparing DE on dense matrix
+2023-01-23T15:58:47+0000 de.de_logger INFO:subsetting metadata on cells in clustering
+2023-01-23T15:58:48+0000 de.de_logger INFO:subsetting matrix on cells in clustering
+2023-01-23T15:58:48+0000 de.de_logger INFO:calculating DE
+2023-01-23T15:58:48+0000 de.de_logger INFO:Gathering DE annotation labels
+2023-01-23T15:58:48+0000 de.de_logger INFO:Writing DE output for cholinergic (neuron)
+2023-01-23T15:58:48+0000 de.de_logger INFO:Writing DE output for cranial +somatomotor+ neuron
+2023-01-23T15:58:48+0000 de.de_logger INFO:Writing DE output for pyramidal -neuron
+2023-01-23T15:58:48+0000 de.de_logger INFO:Writing DE output for somatomotor neuron 
+2023-01-23T15:58:48+0000 de.de_logger INFO:Writing DE output for sympathetic ?cholinergic neuron
+2023-01-23T15:58:49+0000 de.de_logger INFO:DE processing complete
+2023-01-23T15:58:49+0000 de.de_logger INFO:subsetting metadata on cells in clustering
+2023-01-23T15:58:49+0000 de.de_logger INFO:Initializing DifferentialExpression instance
+2023-01-23T15:58:49+0000 de.de_logger INFO:preparing DE on sparse matrix
+2023-01-23T15:58:49+0000 de.de_logger INFO:subsetting metadata on cells in clustering
+2023-01-23T15:58:51+0000 de.de_logger INFO:subsetting matrix on cells in clustering
+2023-01-23T16:01:21+0000 de.de_logger INFO:calculating DE
+2023-01-23T16:01:27+0000 de.de_logger INFO:Gathering DE annotation labels
+2023-01-23T16:01:27+0000 de.de_logger INFO:Writing DE output for endothelial cell
+2023-01-23T16:01:27+0000 de.de_logger INFO:Writing DE output for endothelial cell of lymphatic vessel
+2023-01-23T16:01:28+0000 de.de_logger INFO:Writing DE output for fibroblast
+2023-01-23T16:01:28+0000 de.de_logger INFO:Writing DE output for glial cell
+2023-01-23T16:01:28+0000 de.de_logger INFO:Writing DE output for interstitial cell of Cajal
+2023-01-23T16:01:28+0000 de.de_logger INFO:Writing DE output for pericyte cell
+2023-01-23T16:01:28+0000 de.de_logger INFO:Writing DE output for smooth muscle cell
+2023-01-23T16:01:28+0000 de.de_logger INFO:DE processing complete
+2023-01-23T16:01:28+0000 de.de_logger INFO:subsetting metadata on cells in clustering
