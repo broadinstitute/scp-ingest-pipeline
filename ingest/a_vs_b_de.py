@@ -34,7 +34,7 @@ import diffxpy.api as de
 
 #noise_model: default is nb, specify NONE for wald and t test
 
-h5ad_file = "/Users/mvelyuns/scp-ingest-pipeline/tests/data/anndata/trimmed_compliant_pbmc3K.h5ad"
+h5ad_file = "tests/data/anndata/trimmed_compliant_pbmc3K.h5ad"
 
 adata_file = sc.read_h5ad(h5ad_file)
 
@@ -43,11 +43,11 @@ adata_file.var_names_make_unique()
 #print(adata_file.obs["louvain"])
 
 test = de.test.pairwise(
-    data= adata_file,
+    data=adata_file,
     grouping="louvain",
-    test="t-test",
+    test="rank",
     lazy=False,
-    noise_model = None
+    noise_model=None
  )
 
 #Accessing results
