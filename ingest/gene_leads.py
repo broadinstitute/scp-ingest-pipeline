@@ -10,31 +10,18 @@ either Wikipedia page views or PubMed citation counts, is also included.
 The output TSV file contains one gene per row. This is parsed by Ideogram.js
 in the SCP UI to display gene leads.  The genome visualization is designed to
 engage users with relevant information, and prime the study gene search UX.
+
+EXAMPLES
+
+python3 ingest/gene_leads.py --study-accession SCP138 --bucket-name fc-65379b91-5ded-4d28-8e51-ada209542117 --taxon-name="Homo sapiens" --clustering="All Cells UMAP" --annotation-name="General Celltype" --annotation-groups '["B cells", "CSN1S1 macrophages", "dendritic cells", "eosinophils", "fibroblasts", "GPMNB macrophages", "LC1", "LC2", "neutrophils", "T cells"]'
 """
 
+import argparse
+import ast
 import gzip
 import urllib
 import urllib.request as request
 import csv
-
-# TODO (pre-GA): Extract these to CLI arguments and/or SCP API calls
-organism = "homo-sapiens"
-bucket = "fc-65379b91-5ded-4d28-8e51-ada209542117"
-accession = "SCP138"
-clustering = "All_Cells_UMAP"
-annotation = "General_Celltype"
-all_groups = [
-    "B cells",
-    "CSN1S1 macrophages",
-    "dendritic cells",
-    "eosinophils",
-    "fibroblasts",
-    "GPMNB macrophages",
-    "LC1",
-    "LC2",
-    "neutrophils",
-    "T cells"
-]
 
 # Temporarily duplicated from SCP UI code.
 #
@@ -81,7 +68,7 @@ def extract(meta, all_groups):
 
     genes_filename = f"{organism}-genes.tsv" # e.g. homo-sapiens-genes.tsv
     base_url = "https://cdn.jsdelivr.net/npm/"
-    genes_url = f"{base_url}ideogram@1.37.0/dist/data/cache/{genes_filename}.gz"
+    genes_url = f"{base_url}ideogram@1.41.0/dist/data/cache/genes/{genes_filename}.gz"
     download_gzip(genes_url, genes_filename)
 
     # Populate containers for various name and significance fields
@@ -161,7 +148,8 @@ def extract_de(bucket, clustering, annotation, all_groups):
             # Headers in upstream, precomputed DE files:
             # names	scores	logfoldchanges	pvals	pvals_adj	pct_nz_group	pct_nz_reference
             for row in reader:
-                if row[0] == "": continue # Skip novel header / empty lines
+                if row[0] == "":
+                    continue  # Skip novel header / empty lines
                 if i < 500:
                     # 500 is ~2% of 25k-ish genes in Ensembl genome annotation.
                     # Like the rest of "gene leads", a big factor in this value
@@ -310,9 +298,12 @@ def load(tsv_content):
     print('Wrote content')
     print(tsv_content)
 
-def main(organism, bucket, clustering, annotation, all_groups):
+def gene_leads(accession, bucket, organism, clustering, annotation, all_groups):
     """Extract, transform, and load data into TSV files for gene leads ideogram
     """
+    organism = organism.lower().replace(' ', '-')
+    clustering = clustering.replace(' ', '_')
+    annotation = annotation.replace(' ', '_')
     meta = {
         "accession": accession,
         "organism": organism,
@@ -325,4 +316,60 @@ def main(organism, bucket, clustering, annotation, all_groups):
     load(tsv_content)
 
 if __name__ == '__main__':
-    main(organism, bucket, clustering, annotation, all_groups)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    parser.add_argument(
+        "--study-accession",
+        required=True,
+        help="Single study accession associated with provided DE input files.",
+    )
+    parser.add_argument(
+        "--bucket-name",
+        required=True,
+        help=(
+            "Name of GCS bucket, e.g. fc-65379b91-5ded-4d28-8e51-ada209541234"
+        )
+    )
+    parser.add_argument(
+        "--taxon-name",
+        required=True,
+        help=(
+            "Scientific name of organism, e.g. \"Homo sapiens\""
+        )
+    )
+    parser.add_argument(
+        "--clustering",
+        required=True,
+        help=(
+            "Name of clustering"
+        )
+    )
+    parser.add_argument(
+        "--annotation-name",
+        required=True,
+        help=(
+            "Name of annotation"
+        )
+    )
+    parser.add_argument(
+        "--annotation-groups",
+        required=True,
+        type=ast.literal_eval,
+        help=(
+            "List of annotation groups, e.g. ['B cells', 'CSN1S1 macrophages']"
+        )
+    )
+
+    args = parser.parse_args()
+
+    accession = args.study_accession
+    bucket = args.bucket_name
+    organism = args.taxon_name
+    clustering = args.clustering
+    annotation = args.annotation_name
+    all_groups = args.annotation_groups
+
+    gene_leads(accession, bucket, organism, clustering, annotation, all_groups)
