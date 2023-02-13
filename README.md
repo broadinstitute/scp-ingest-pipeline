@@ -16,8 +16,18 @@ The SCP Ingest Pipeline is an ETL pipeline for single-cell RNA-seq data.
 - Tabix, if using `ingest/genomes/genomes_pipeline.py`
 
 # Install
+### Docker
+If on Apple silicon Mac (e.g. M1), do:
+```
+scripts/docker-compose-setup.sh <PATH_TO_YOUR_VAULT_TOKEN> # E.g. ~/.github-token
+```
 
-Fetch the code, boot your virtualenv, install dependencies:
+To update dependencies when in Docker, you can pip install from within the Docker Bash shell after adjusting your requirements.txt.
+If you close your shell after that, your newly installed dependencies will be lost.  Dependencies only persist after merging your
+new requirements.txt into `development`.  TODO (SCP-4941): Add entry-point script to run `pip install`.
+
+### Native 
+If on Intel Mac, fetch the code, boot your virtualenv, install dependencies:
 
 ```
 git clone git@github.com:broadinstitute/scp-ingest-pipeline.git
@@ -25,8 +35,10 @@ cd scp-ingest-pipeline
 python3 -m venv env --copies
 source env/bin/activate
 pip install -r requirements.txt
+scripts/setup-mongo-dev.sh <PATH_TO_YOUR_VAULT_TOKEN> # E.g. ~/.github-token
 ```
 
+### Optional
 To use `ingest/make_toy_data.py`:
 
 ```
@@ -39,56 +51,7 @@ To use `ingest/genomes/genomes_pipeline.py`:
 brew install tabix
 ```
 
-Now get secrets from Vault to set environment variables needed to write to the database:
-(see also scripts/setup_mongo_dev.sh)
-
-```
-export BROAD_USER="<username in your email address>"
-
-export DATABASE_NAME="single_cell_portal_development"
-
-vault login -method=github token=`~/bin/git-vault-token`
-
-# Get username and password
-vault read secret/kdux/scp/development/$BROAD_USER/mongo/user
-
-export MONGODB_USERNAME="<username from Vault>"
-export MONGODB_PASSWORD="<password from Vault>"
-
-# Get external IP address for host
-vault read secret/kdux/scp/development/$BROAD_USER/mongo/hostname
-
-export DATABASE_HOST="<ip from Vault (omit brackets)>"
-```
-
-For testing/development using ingest_pipeline.py on the command line, annotation file input validation and MongoDB writes can be bypassed if you set:
-(Note: this bypass does not currently apply to expression matrix ingest).
-
-```
-export BYPASS_MONGO_WRITES='yes'
-```
-
-If you are developing updates for Mixpanel logging, set the Bard host URL:
-
-```
-
-export BARD_HOST_URL="https://terra-bard-dev.appspot.com"
-```
-
-Be sure to `unset BARD_HOST_URL` when your updates are done, so development ingest events are not always sent to Mixpanel.
-
-If you are developing updates for Sentry logging, then set the DSN:
-
-```
-vault read secret/kdux/scp/production/scp_config.json | grep SENTRY
-
-export SENTRY_DSN="<Sentry DSN value from Vault>"
-```
-
-Be sure to `unset SENTRY_DSN` when your updates are done, so development logs are not always sent to Sentry.
-
 ## Git hooks
-
 After installing Ingest Pipeline, add Git hooks to help ensure code quality:
 
 ```
@@ -98,14 +61,12 @@ pre-commit install && pre-commit install -t pre-push
 The hooks will expect that [git-secrets](https://github.com/awslabs/git-secrets) has been set up. If you are a Broad Institute employee who has not done this yet, please see: [broadinstitute/single_cell_portal_configs](https://github.com/broadinstitute/single_cell_portal_configs) for specific guidance.
 
 ### Bypass hooks
-
 In rare cases, you might need to skip Git hooks, like so:
 
 - Skip commit hooks: `git commit ... --no-verify`
 - Skip pre-push hooks: `git push ... --no-verify`
 
 # Test
-
 After [installing](#Install):
 
 ```
@@ -128,9 +89,55 @@ pytest test_ingest.py
 # Run all tests, show code coverage metrics
 pytest --cov=../ingest/
 ```
-
 For more, see <https://docs.pytest.org/en/stable/usage.html>.
 
+## Testing in Docker
+<!-- 
+Answer in PR 290 and remove this comment:
+Since the "Docker compose" approach described in PR 290 seems more convenient than that 
+described in this "Testing in Docker" section, can I remove this "Testing in Docker" section?
+Or would it be better to scope as part of SCP-4941?
+-->
+If you have difficulties installing and configuring `scp-ingest-pipeline` due to hardware issues (e.g. Mac M1 chips), 
+you can alternatively test locally by building the Docker image and then running any commands inside the container. 
+There are some extra steps required, but this sidesteps the need to install packages locally.
+
+### 1. Build the image
+Run the following command to build the testing Docker image locally (make sure Docker is running first):
+```
+docker build -t gcr.io/broad-singlecellportal-staging/ingest-pipeline:test-candidate .
+```
+### 2. Set up environment variables
+Run the following to pull database-specific secrets out of vault (passing in the path to your vault token):
+```
+source scripts/setup-mongo-dev.sh ~/.your-vault-token
+```
+Now run `env` to make sure you've set the following values:
+```
+MONGODB_USERNAME=single_cell
+DATABASE_NAME=single_cell_portal_development
+MONGODB_PASSWORD=<password>
+DATABASE_HOST=<ip address>
+```
+### 3. Print out your service account keyfile
+Run the following to export out your default service account JSON keyfile:
+```
+vault read -format=json secret/kdux/scp/development/$(whoami)/scp_service_account.json | jq .data > /tmp/keyfile.json
+```
+### 4. Start the Docker container
+Run the container, passing in the proper environment variables:
+```
+docker run --name scp-ingest-test -e MONGODB_USERNAME="$MONGODB_USERNAME" -e DATABASE_NAME="$DATABASE_NAME" \
+           -e MONGODB_PASSWORD="$MONGODB_PASSWORD" -e DATABASE_HOST="$DATABASE_HOST" \
+           -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/keyfile.json --rm -it \
+           gcr.io/broad-singlecellportal-staging/ingest-pipeline:test-candidate bash
+```
+### 5. Copy keyfile to running container
+In a separate terminal window, copy the JSON keyfile from above to the expected location:
+```
+docker cp /tmp/keyfile.json scp-ingest-test:/tmp
+```
+You can now run any `ingest_pipeline.py` command you wish inside the container.
 # Use
 
 Run this every time you start a new terminal to work on this project:

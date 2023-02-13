@@ -13,29 +13,32 @@
 
 * copy scp_bq_inputs.json from previous snapshot directory, update with new SCP-internal terms if appropriate
 
-* In the scripts `scp-ingest-pipeline` directory, run
+* In the scripts `scp-ingest-pipeline/schema` directory, run
+
   ```
-  python serialize_convention.py <project> <version>
+  python ../scripts/serialize_convention.py <project> <version>
   ```
   
 * Copy the new convention JSON and TSV files to the * &lt;project&gt;_convention directory  
   
-
 Notes:
+
 * Tests in test_validate_metadata.py use current metadata convention (except for invalid metadata convention test)
 
-* Specifically test_bigquery_json_content is expected to fail when the metadata convention is updated. The reference file, bq_test.json, must be updated (replace existing file with the generated addedfeed000000000000000.json file)
+* Specifically `test_bigquery_json_content` is expected to fail when the metadata convention is updated. The reference file, bq_test.json, must be updated (replace existing file with the generated addedfeed000000000000000.json file)
+
 ```
-python validate_metadata.py --bq-json <path to metadata file>
+python metadata_validation.py --bq-json <path to metadata file>
 ```
 
 * To create updated issues.json files to update reference files for tests, in the ingest/validation directory, run
+
 ```
-python validate_metadata.py --issues-json <path to metadata file>
+python metadata_validation.py --issues-json <path to metadata file>
 ```
 
-* To run validate_metadata.py against a different convention file:
-```
-python validate_metadata.py --convention <path to convention file> <path to metadata file>
-```
+* To run metadata_validation.py against a different convention file:
 
+```
+python metadata_validation.py --convention <path to convention file> <path to metadata file>
+```

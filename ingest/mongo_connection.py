@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import functools
 import time
@@ -76,40 +77,46 @@ def graceful_auto_reconnect(mongo_op_func):
                 else:
                     raise e
             except BulkWriteError as bwe:
-
                 if attempt < MAX_ATTEMPTS - 1:
                     dev_logger.warning(
                         "Batch ops error occurred. Reinsert attempt %s.", str(attempt)
                     )
-                    error_docs = bwe.details["writeErrors"]
+                    error = bwe.details["writeErrors"]
                     # Check error code to see if any failures are due to violating a unique index (error code 11000)
                     # and discard those documents before retrying
-                    filtered_docs = discard_inserted_documents(error_docs, args[0])
+                    filtered_docs = discard_inserted_documents(error, args[0])
                     if len(filtered_docs) > 0:
                         args[0] = filtered_docs
                         retry(attempt)
                     else:
                         return args[0]
                 else:
-                    dev_logger.debug(str(bwe.details))
+                    log_error_without_values(bwe)
                     raise bwe
 
     return wrapper
 
+def log_error_without_values(error):
+    """Remove 'values' array from log messages as this is usually very long and makes logs difficult to read
 
-def discard_inserted_documents(error_documents, original_documents):
-    """Discard any documents that have already been inserted which are violating index constraints
-       such documents will have an error code of 11000 for a DuplicateKey error
-       from https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml#L467
-
-       Parameters:
-           error_documents (List[Dict]): list of documents that failed to insert in original transaction
-           original_documents (List[Dict]): list of documents from original transaction that failed
-           error_code (Int): error status code to filter on
-
-       Returns:
-           List[Dict]: list of documents with matching error code entries removed
+    :param error: BulkWriteError from failed transaction
     """
-    # doc['op'] returns the actual document from the previous transaction
-    errors = list(doc['op'] for doc in error_documents if doc['code'] == 11000)
-    return list(doc for doc in original_documents if doc not in errors)
+    for entry in error.details["writeErrors"]:
+        if 'values' in entry['op']:
+            entry['op']['values'] = '<filtered>'
+    dev_logger.debug(str(error.details))
+
+def discard_inserted_documents(errors, original_documents) -> list[dict]:
+    """Discard any documents that have already been inserted which are violating index constraints
+    such documents will have an error code of 11000 for a DuplicateKey error
+    from https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml#L467
+
+    :param errors: (list[dict]) Documents that failed to insert from transaction
+    :param original_documents: (list[dict]) list of documents from original transaction that failed
+    :returns list[dict]: list of documents with existing entries removed
+    """
+    error_docs = []
+    for doc in errors:
+        if doc['code'] == 11000:
+            error_docs.append({'name': doc['op']['name'], 'array_index': doc['op']['array_index']})
+    return list(d for d in original_documents if {'name': d['name'], 'array_index': d['array_index']} not in error_docs)

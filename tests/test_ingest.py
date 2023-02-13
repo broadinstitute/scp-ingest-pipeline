@@ -675,6 +675,45 @@ class IngestTestCase(unittest.TestCase):
             exit_pipeline(ingest, status, status_cell_metadata, arguments)
         self.assertEqual(cm.exception.code, 1)
 
+    def test_extract_cluster_file_from_anndata(self):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_anndata",
+            "--ingest-anndata",
+            "--extract",
+            "['cluster']",
+            "--anndata-file",
+            "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad",
+            "--obsm-keys",
+            "['X_tsne']",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], 0)
+        filename = 'h5ad_frag.cluster.X_tsne.tsv'
+        self.assertTrue(os.path.isfile(filename))
+
+    def test_extract_metadata_file_from_anndata(self):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_anndata",
+            "--ingest-anndata",
+            "--extract",
+            "['metadata']",
+            "--anndata-file",
+            "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], 0)
+        filename = 'h5ad_frag.metadata.tsv'
+        self.assertTrue(os.path.isfile(filename))
 
 if __name__ == "__main__":
     unittest.main()

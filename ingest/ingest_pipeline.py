@@ -8,39 +8,40 @@ a remote MongoDB instance.
 PREREQUISITES
 See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
 
-DEVELOPER SETUP (see README.md#Install and ../scripts/setup_mongo_dev.sh)
+DEVELOPER SETUP (see README.md#Install and ../scripts/setup-mongo-dev.sh)
 
 EXAMPLES
 # Takes expression file and stores it into MongoDB
 
 # Ingest cluster file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cluster --cluster-file ../tests/data/test_1k_cluster_Data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cluster --cluster-file ../tests/data/test_1k_cluster_data.csv --ingest-cluster --name cluster1 --domain-ranges "{'x':[-1, 1], 'y':[-1, 1], 'z':[-1, 1]}"
 
 # Ingest Cell Metadata file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v2.0.0.txt --study-accession SCP123 --ingest-cell-metadata
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/annotation/metadata/convention/valid_no_array_v2.0.0.txt --study-accession SCP123 --ingest-cell-metadata
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have a pre-configured BigQuery table available
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/valid_no_array_v2.0.0.txt --study-accession SCP123 --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/annotation/metadata/convention/valid_no_array_v2.0.0.txt --study-accession SCP123 --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
 
 # Ingest dense file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_1000_cells.txt --matrix-file-type dense
 
-# Ingest AnnData file
-python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --anndata-file ../tests/data/anndata/test.h5ad
+# Ingest AnnData file basic "does it open in Scanpy" validation
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/test.h5ad
+
+# Ingest AnnData file - cluster extraction
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --extract "['cluster']" --ingest-anndata --anndata-file ../tests/data/anndata/test.h5ad --obsm-keys "['X_tsne']"
 
 # Subsample cluster and metadata file
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_Data.csv --name custer1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_data.csv --name cluster1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
 # Ingest mtx files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --matrix-file ../tests/data/mtx/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 
 # Differential Expression analysis (dense matrix)
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_integration.tsv --matrix-file-type dense --annotation-file ../tests/data/differential_expression/de_integration_unordered_metadata.tsv --cluster-file ../tests/data/differential_expression/de_integration_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
-
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_dense_matrix.tsv --matrix-file-type dense --annotation-file ../tests/data/differential_expression/de_dense_metadata.tsv --cluster-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
 # Differential Expression analysis (sparse matrix)
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --matrix-file-type mtx --cell-metadata-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --cluster-name de_sparse_integration --study-accession SCPsparsemini --differential-expression
-
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --matrix-file-type mtx --annotation-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --cluster-name de_sparse_integration --study-accession SCPsparsemini --differential-expression
 """
 import json
 import logging
@@ -80,6 +81,7 @@ try:
     from expression_files.dense_ingestor import DenseIngestor
     from monitor import setup_logger, log_exception
     from de import DifferentialExpression
+    from expression_writer import ExpressionWriter
 
     # scanpy uses anndata python package, disamibguate local anndata
     # using underscore https://peps.python.org/pep-0008/#naming-conventions
@@ -102,9 +104,10 @@ except ImportError:
     from .clusters import Clusters
     from .expression_files.dense_ingestor import DenseIngestor
     from .expression_files.mtx import MTXIngestor
-    from .anndata import AnnDataIngestor
+    from .anndata_ import AnnDataIngestor
     from .cli_parser import create_parser, validate_arguments
     from .de import DifferentialExpression
+    from .expression_writer import ExpressionWriter
 
 
 class IngestPipeline:
@@ -478,13 +481,27 @@ class IngestPipeline:
         return 0
 
     @custom_metric(config.get_metric_properties)
-    def ingest_anndata(self):
-        """Ingests anndata files."""
+    def extract_from_anndata(self):
+        """Extract data subsets from anndata file per SCP filetypes."""
         self.anndata = AnnDataIngestor(
             self.anndata_file, self.study_id, self.study_file_id, **self.kwargs
         )
         if self.anndata.validate():
             self.report_validation("success")
+            if self.kwargs.get("extract") and "cluster" in self.kwargs.get("extract"):
+                if not self.kwargs["obsm_keys"]:
+                    self.kwargs["obsm_keys"] = ['X_tsne']
+                for key in self.kwargs["obsm_keys"]:
+                    AnnDataIngestor.generate_cluster_header(self.anndata.adata, key)
+                    AnnDataIngestor.generate_cluster_type_declaration(
+                        self.anndata.adata, key
+                    )
+                    AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
+            if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
+                metadata_filename = f"h5ad_frag.metadata.tsv"
+                AnnDataIngestor.generate_metadata_file(
+                    self.anndata.adata, metadata_filename
+                )
             return 0
         # scanpy unable to open AnnData file
         else:
@@ -506,6 +523,20 @@ class IngestPipeline:
             log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
             return 1
         # ToDo: surface failed DE for analytics (SCP-4206)
+        return 0
+
+    def render_expression_arrays(self):
+        try:
+            exp_writer = ExpressionWriter(
+                matrix_file_path=self.matrix_file_path,
+                matrix_file_type=self.matrix_file_type,
+                cluster_file_path=self.cluster_file,
+                **self.kwargs,
+            )
+            exp_writer.render_artifacts()
+        except Exception as e:
+            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+            return 1
         return 0
 
     def report_validation(self, status):
@@ -543,13 +574,17 @@ def run_ingest(ingest, arguments, parsed_args):
     elif "ingest_anndata" in arguments:
         if arguments["ingest_anndata"]:
             config.set_parent_event_name("ingest-pipeline:anndata:ingest")
-            status_anndata = ingest.ingest_anndata()
+            status_anndata = ingest.extract_from_anndata()
             status.append(status_anndata)
     elif "differential_expression" in arguments:
         config.set_parent_event_name("ingest-pipeline:differential-expression")
         status_de = ingest.calculate_de()
         status.append(status_de)
         print(f'STATUS post-DE {status}')
+    elif "render_expression_arrays" in arguments:
+        config.set_parent_event_name("image-pipeline:render_expression_arrays")
+        status_exp_writer = ingest.render_expression_arrays()
+        status.append(status_exp_writer)
 
     return status, status_cell_metadata
 
@@ -585,7 +620,23 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                 DifferentialExpression.delocalize_de_files(
                     file_path, study_file_id, files_to_match
                 )
-        # all non-DE ingest jobs can exit on success
+        # for successful anndata jobs, need to delocalize intermediate ingest files
+        elif arguments.get("extract") and all(i < 1 for i in status):
+            file_path, study_file_id = get_delocalization_info(arguments)
+            # append status?
+            files_to_delocalize = []
+            if IngestFiles.is_remote_file(file_path):
+                if "cluster" in arguments.get("extract"):
+                    files_to_delocalize.extend(
+                        AnnDataIngestor.clusterings_to_delocalize(arguments)
+                    )
+                if "metadata" in arguments.get("extract"):
+                    metadata_filename = f"h5ad_frag.metadata.tsv"
+                    files_to_delocalize.append(metadata_filename)
+                AnnDataIngestor.delocalize_extracted_files(
+                    file_path, study_file_id, files_to_delocalize
+                )
+        # all non-DE, non-anndata ingest jobs can exit on success
         elif all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:
