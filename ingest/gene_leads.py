@@ -13,15 +13,20 @@ engage users with relevant information, and prime the study gene search UX.
 
 EXAMPLES
 
-python3 ingest/gene_leads.py --study-accession SCP138 --bucket-name fc-65379b91-5ded-4d28-8e51-ada209542117 --taxon-name="Homo sapiens" --clustering="All Cells UMAP" --annotation-name="General Celltype" --annotation-groups '["B cells", "CSN1S1 macrophages", "dendritic cells", "eosinophils", "fibroblasts", "GPMNB macrophages", "LC1", "LC2", "neutrophils", "T cells"]'
+python3 ingest/gene_leads.py --study-accession SCP138 --bucket-name fc-65379b91-5ded-4d28-8e51-ada209542117 --taxon-name="Homo sapiens" --clustering="All Cells UMAP" --annotation-name="General Celltype" --annotation-groups '["B cells", "CSN1S1 macrophages", "dendritic cells", "eosinophils", "fibroblasts", "GPMNB macrophages", "LC1", "LC2", "neutrophils", "T cells"]' --publication-url https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1
 """
 
 import argparse
 import ast
+import glob
 import gzip
+import tarfile
+import json
 import urllib
-import urllib.request as request
+import urllib.request
 import csv
+from io import BytesIO
+import xml.etree.ElementTree as ET
 
 # Temporarily duplicated from SCP UI code.
 #
@@ -41,31 +46,90 @@ def download_gzip(url, output_path, cache=0):
     development scenarios (e.g. on a train or otherwise without an Internet
     connection) can be impossible without it.
     """
-    headers={"Accept-Encoding": "gzip"}
+    is_targz = url.endswith("tar.gz")
+    headers = {"Accept-Encoding": "gzip"} if is_targz else {}
     print(f"Requesting {url}")
     request = urllib.request.Request(url, headers=headers)
     response = urllib.request.urlopen(request)
-    content = gzip.decompress(response.read()).decode()
+    if is_targz:
+        tar = tarfile.open(name=None, fileobj=BytesIO(response.read()))
+        tar.extractall(output_path)
+        tar.close()
+    else:
+        content = gzip.decompress(response.read()).decode()
+        with open(output_path, "w") as f:
+            f.write(content)
 
-    with open(output_path, "w") as f:
-        f.write(content)
+def fetch_pmcid(doi):
+    """Convert Digital Object Identifier (DOI) into PubMed Central ID (PMCID)
+    """
+    idconv_base = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
+    params = "?" + "&".join([
+        "tool=scp-fetch-pmcid",
+        "email=scp-dev@broadinstitute.org",
+        "format=json",
+        f"ids={doi}"
+    ])
+    idconv_url = idconv_base + params
+    with urllib.request.urlopen(idconv_url) as response:
+        data = response.read().decode("utf-8")
+    idconv_json = json.loads(data)
+    record = idconv_json["records"][0]
+    if "pmcid" not in record:
+        error = f"PubMed Central ID (PMCID) not found for DOI \"{doi}\""
+        print(error)
+        return
+    pmcid = record["pmcid"]
+    return pmcid
 
-def extract(meta, all_groups):
-    [accession, organism, bucket, clustering, annotation] = list(meta.values())
-    # Example URL:
-    # https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1.full.txt
-    #
-    # TODO (pre-GA, story): Resolve publication IDs to text.   This would take in
-    # any URL to a public (not-needing-authorization) publication in any major
-    # venue (e.g. Nature, Science, bioRxiv, etc.) and resolve it a URL that will
-    # return an easily machine-parseable (e.g. plaintext) file containing the
-    # publication's entire prose content (excluding e.g. supplementary files).
-    #
-    # If it fails, log an error to Sentry and/or Mixpanel and exit PAPI
-    url = f'https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1.full.txt'
-    with request.urlopen(url) as response:
-        publication_text = response.read().decode('utf-8')
+def fetch_pmcid_text(pmcid):
+    """Get full text for publication given its in PMC ID
+    """
+    oa_url = f"https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi?id={pmcid}"
+    with urllib.request.urlopen(oa_url) as response:
+        data = response.read().decode("utf-8")
+    oa_xml = ET.fromstring(data)
+    oa_package = oa_xml.find(".//link[@format='tgz']")
+    if oa_package == None:
+        msg = f"This PMCID is not open access: {pmcid}"
+        raise ValueError(msg)
+    package_url = oa_package.attrib["href"].replace("ftp://", "https://")
+    download_gzip(package_url, ".")
+    nxml_path = glob.glob(f"{pmcid}/*.nxml")[0]
+    article = ET.parse(nxml_path).getroot()
+    text = ET.tostring(article.find("body"), method="text")
+    return text
 
+def fetch_publication_text(publication_url):
+    """Get full text for publication given its URL
+    """
+    # Examples:
+    # <Is open access> -- <publication URL> -- <Study accession>
+    # 0. Yes -- https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1 -- SCP1671
+    # ---
+    # 1. Not really, but abstract mentions genes -- https://doi.org/10.1210/en.2018-00750 -- SCP2058
+    # 2. Yes -- https://www.biorxiv.org/content/10.1101/2022.07.01.498017v1 -- SCP2053
+    # 3. Yes -- https://www.biorxiv.org/content/10.1101/2022.09.27.509354v1 -- SCP2046
+    # 4. Yes -- https://www.biorxiv.org/content/10.1101/2022.09.27.509354v1 -- SCP2045
+    # 5. Yes -- https://www.biorxiv.org/content/10.1101/2022.09.27.509354v1 -- SCP2011 (summary body)
+    # 6. Yes (via PMC) -- https://doi.org/10.1038/s41467-022-28372-y -- SCP1985
+    # 7. Yes (via biorxiv) -- https://doi.org/10.1101/2022.01.09.475571 -- SCP1921
+    # 8. Yes -- https://www.biorxiv.org/content/10.1101/2022.06.29.496888v1 -- SCP1905
+    # 9. Yes -- https://www.biorxiv.org/content/10.1101/2022.06.29.496888v1 -- SCP1903
+    # 10. Not really, but abstract mentions genes -- https://doi.org/10.1016/j.immuni.2023.01.002 -- SCP1884
+    # 11. Not really, not until 2023-10-12, but abstract mentions genes, and full text available in biorxiv -- https://doi.org/10.1093/toxsci/kfac109 -- SCP1875
+    doi_split = publication_url.split("https://doi.org/")
+    if len(doi_split) > 1:
+        doi = doi_split[1]
+        pmcid = fetch_pmcid(doi)
+        text = fetch_pmcid_text(pmcid)
+    elif publication_url.startswith("https://www.biorxiv.org"):
+        full_text_url = f"{publication_url}.full.txt"
+        with urllib.request.urlopen(full_text_url) as response:
+            text = response.read().decode('utf-8')
+    return text
+
+def fetch_gene_cache(organism):
     genes_filename = f"{organism}-genes.tsv" # e.g. homo-sapiens-genes.tsv
     base_url = "https://cdn.jsdelivr.net/npm/"
     genes_url = f"{base_url}ideogram@1.41.0/dist/data/cache/genes/{genes_filename}.gz"
@@ -94,6 +158,24 @@ def extract(meta, all_groups):
             # Genes in upstream file are ordered by global popularity
             interest_rank_by_gene[gene] = i
             i += 1
+
+    return [
+        interest_rank_by_gene,
+        counts_by_gene,
+        loci_by_gene,
+        full_names_by_gene
+    ]
+
+def extract(meta, all_groups, publication_url):
+    [accession, organism, bucket, clustering, annotation] = list(meta.values())
+    [
+        interest_rank_by_gene,
+        counts_by_gene,
+        loci_by_gene,
+        full_names_by_gene
+    ] = fetch_gene_cache(organism)
+
+    publication_text = fetch_publication_text(publication_url)
 
     publication_words = publication_text.split(' ')
     for word in publication_words:
@@ -298,7 +380,7 @@ def load(tsv_content):
     print('Wrote content')
     print(tsv_content)
 
-def gene_leads(accession, bucket, organism, clustering, annotation, all_groups):
+def gene_leads(accession, bucket, organism, clustering, annotation, all_groups, publication_url):
     """Extract, transform, and load data into TSV files for gene leads ideogram
     """
     organism = organism.lower().replace(' ', '-')
@@ -311,7 +393,7 @@ def gene_leads(accession, bucket, organism, clustering, annotation, all_groups):
         "clustering": clustering,
         "annotation": annotation
     }
-    gene_dicts = extract(meta, all_groups)
+    gene_dicts = extract(meta, all_groups, publication_url)
     tsv_content = transform(gene_dicts, meta)
     load(tsv_content)
 
@@ -362,6 +444,13 @@ if __name__ == '__main__':
             "List of annotation groups, e.g. ['B cells', 'CSN1S1 macrophages']"
         )
     )
+    parser.add_argument(
+        "--publication-url",
+        required=True,
+        help=(
+            "URL of the study's publicly-accessible research article"
+        )
+    )
 
     args = parser.parse_args()
 
@@ -371,5 +460,6 @@ if __name__ == '__main__':
     clustering = args.clustering
     annotation = args.annotation_name
     all_groups = args.annotation_groups
+    publication_url = args.publication_url
 
-    gene_leads(accession, bucket, organism, clustering, annotation, all_groups)
+    gene_leads(accession, bucket, organism, clustering, annotation, all_groups, publication_url)
