@@ -76,9 +76,8 @@ def fetch_pmcid(doi):
     idconv_json = json.loads(data)
     record = idconv_json["records"][0]
     if "pmcid" not in record:
-        error = f"PubMed Central ID (PMCID) not found for DOI \"{doi}\""
-        print(error)
-        return
+        msg = f"PubMed Central ID (PMCID) not found for DOI \"{doi}\""
+        raise ValueError(msg)
     pmcid = record["pmcid"]
     return pmcid
 
@@ -90,7 +89,7 @@ def fetch_pmcid_text(pmcid):
         data = response.read().decode("utf-8")
     oa_xml = ET.fromstring(data)
     oa_package = oa_xml.find(".//link[@format='tgz']")
-    if oa_package == None:
+    if oa_package is None:
         msg = f"This PMCID is not open access: {pmcid}"
         raise ValueError(msg)
     package_url = oa_package.attrib["href"].replace("ftp://", "https://")
@@ -101,7 +100,7 @@ def fetch_pmcid_text(pmcid):
     return text
 
 def fetch_publication_text(publication_url):
-    """Get full text for publication given its URL
+    """Get full text for a publicly-accessible article given its URL
     """
     # Examples:
     # <Is open access> -- <publication URL> -- <Study accession>
@@ -167,7 +166,7 @@ def fetch_gene_cache(organism):
     ]
 
 def extract(meta, all_groups, publication_url):
-    [accession, organism, bucket, clustering, annotation] = list(meta.values())
+    [accssion, organism, bucket, clustering, annotation] = list(meta.values())
     [
         interest_rank_by_gene,
         counts_by_gene,
