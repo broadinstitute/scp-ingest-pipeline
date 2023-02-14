@@ -40,7 +40,8 @@ adata_file = sc.read_h5ad(h5ad_file)
 
 adata_file.var_names_make_unique()
 
-#print(adata_file.obs["louvain"])
+print(adata_file.obs["louvain"])
+
 
 test = de.test.pairwise(
     data=adata_file,
