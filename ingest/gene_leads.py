@@ -206,7 +206,7 @@ def extract_de(bucket, clustering, annotation, all_groups):
     de_by_gene = {}
 
     origin = "https://storage.googleapis.com"
-    directory = "_scp_internal%2Fdifferential_expression%2F"
+    directory = "tests/data/gene_leads/_scp_internal%2Fdifferential_expression%2F"
     de_url_stem = f"{origin}/download/storage/v1/b/{bucket}/o/{directory}"
     leaf = "--study--wilcoxon.tsv"
     params = "?alt=media"
