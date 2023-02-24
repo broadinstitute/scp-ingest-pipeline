@@ -241,17 +241,21 @@ class TestDense(unittest.TestCase):
             DenseIngestor.check_valid(["foo", "nan"], ["foo2", "foo3"], query_params)
         expected_msg = 'Required "GENE" header is not present.; "nan" is not allowed as a header value.'
         self.assertEqual(expected_msg, str(cm.exception))
-
-    @patch("expression_files.expression_files.GeneExpression.load")
+    
     @patch(
-        "expression_files.dense_ingestor.DenseIngestor.transform",
-        return_value=[("foo1", "foo2")],
+        "expression_files.expression_files.GeneExpression.is_raw_count_file",
+        return_value=False,
     )
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",
         return_value=True,
     )
-    def test_execute_ingest(self, mock_load, mock_transform, mock_has_unique_cells):
+    @patch(
+        "expression_files.dense_ingestor.DenseIngestor.transform",
+        return_value=[("foo1", "foo2")], 
+    )
+    @patch("expression_files.expression_files.GeneExpression.load")
+    def test_execute_ingest(self, mock_load, mock_transform, mock_has_unique_cells, mock_is_raw_count_file):
         """
         Integration test for execute_ingest()
         """
