@@ -12,7 +12,6 @@ import os
 
 import batchglm.api as glm
 
-#install with pip install diffxpy -- NOT using github repo
 import diffxpy.api as de
 
 #check that batchglm and diffpy were installed correctly
