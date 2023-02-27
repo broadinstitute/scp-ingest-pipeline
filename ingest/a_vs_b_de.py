@@ -10,7 +10,6 @@ import scanpy as sc
 import os
 
 
-#install with pip install batchglm -- NOT using github repo
 import batchglm.api as glm
 
 #install with pip install diffxpy -- NOT using github repo
