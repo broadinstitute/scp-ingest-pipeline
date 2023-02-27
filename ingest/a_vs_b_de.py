@@ -14,9 +14,6 @@ import batchglm.api as glm
 
 import diffxpy.api as de
 
-#check that batchglm and diffpy were installed correctly
-#print("batchglm version "+glm.__version__)
-#print("diffpy version "+de.__version__)
 
 #Pairwise tests between groups
 #answers whether a given pair of groups shows differential expression for each gene
