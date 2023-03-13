@@ -14,18 +14,18 @@ FROM marketplace.gcr.io/google/ubuntu1804:latest
 
 # RUN echo "Uncomment to clear cached layers below this statement (2020-01-07-0947)"
 
-# Install Python 3.8
+# Install Python 3.10
 RUN apt-get -y update && \
   apt-get -y install software-properties-common && \
   add-apt-repository ppa:deadsnakes/ppa && \
   apt-get -y install python3-pip && \
-  apt-get -y install python3.8 && \
-  apt-get -y install python3.8-dev
+  apt-get -y install python3.10 && \
+  apt-get -y install python3.10-dev
 
-RUN python3.8 -m pip install --upgrade pip
+RUN python3.10 -m pip install --upgrade pip
 
 # Set cleaner defaults (`alias` fails)
-RUN ln -s /usr/bin/python3.8 /usr/bin/python && \
+RUN ln -s /usr/bin/python3.10 /usr/bin/python && \
   ln -s /usr/bin/pip3 /usr/bin/pip
 
 # Copy contents of this repo into the Docker image
@@ -35,7 +35,7 @@ COPY . scp-ingest-pipeline
 WORKDIR /scp-ingest-pipeline
 
 # Install Python dependencies
-RUN python3.8 -m pip install -r requirements.txt
+RUN python3.10 -m pip install -r requirements.txt
 
 WORKDIR /scp-ingest-pipeline/ingest
 CMD ["python", "ingest_pipeline.py", "--help"]
