@@ -12,7 +12,7 @@
 # https://github.com/GoogleContainerTools/base-images-docker/tree/master/ubuntu
 FROM marketplace.gcr.io/google/ubuntu1804:latest
 
-RUN echo "Uncomment to clear cached layers below this statement (2022-03-14-1134)"
+# RUN echo "Uncomment to clear cached layers below this statement (2022-03-14-1441)"
 
 # Install Python 3.10
 RUN apt-get -y update && \
@@ -20,11 +20,17 @@ RUN apt-get -y update && \
   add-apt-repository ppa:deadsnakes/ppa && \
   apt-get -y install python3-pip && \
   apt-get -y install python3.10 && \
-  git clone https://github.com/pypa/setuptools.git && cd setuptools && sudo python3.10 setup.py install \
-  apt install python3.10-distutils \
-  apt-get -y install python3.10-dev
+  apt-get -y install python3.10-dev && \
+  # workaround for linux Python 3.10 AttributeError: module
+  # 'collections' has no attribute 'MutableMapping' issue;
+  # needs re-build of setuptools
+  # https://stackoverflow.com/questions/69512672
+  apt-get -y install git && \
+  git clone https://github.com/pypa/setuptools.git && \
+  cd setuptools && \
+  python3.10 setup.py install
 
-RUN python3.10 -m pip install --upgrade pip
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
 
 # Set cleaner defaults (`alias` fails)
 RUN ln -s /usr/bin/python3.10 /usr/bin/python && \

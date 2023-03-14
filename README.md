@@ -100,12 +100,9 @@ pytest --cov=../ingest/
 
 For more, see <https://docs.pytest.org/en/stable/usage.html>.
 
-## Testing in Docker
+## Testing in Docker locally
 <!--
-Answer in PR 290 and remove this comment:
-Since the "Docker compose" approach described in PR 290 seems more convenient than that
-described in this "Testing in Docker" section, can I remove this "Testing in Docker" section?
-Or would it be better to scope as part of SCP-4941?
+Step 1 is also useful for troubleshooting when Dockerfile updates fail to build
 -->
 If you have difficulties installing and configuring `scp-ingest-pipeline` due to hardware issues (e.g. Mac M1 chips),
 you can alternatively test locally by building the Docker image and then running any commands inside the container.
@@ -113,11 +110,19 @@ There are some extra steps required, but this sidesteps the need to install pack
 
 ### 1. Build the image
 
-Run the following command to build the testing Docker image locally (make sure Docker is running first):
+Run the following command to build the testing Docker image locally (make sure Docker is running first). This build command will incorporate any changes in the local instance of your repo, committed or not:
 
 ```
 docker build -t gcr.io/broad-singlecellportal-staging/ingest-pipeline:test-candidate .
 ```
+
+Note - if this is your first time doing `docker build` you may need to configure Docker to use the Google Cloud CLI to authenticate requests to Container Registry:
+
+```
+gcloud auth configure-docker
+```
+
+Pro-Tip: For local builds, you can try adding docker build options `--progress=plain` `--no-cache`
 
 ### 2. Set up environment variables
 
@@ -154,6 +159,8 @@ docker run --name scp-ingest-test -e MONGODB_USERNAME="$MONGODB_USERNAME" -e DAT
            -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/keyfile.json --rm -it \
            gcr.io/broad-singlecellportal-staging/ingest-pipeline:test-candidate bash
 ```
+
+Note: on an M1 machine, you may see this message "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested"
 
 ### 5. Copy keyfile to running container
 
