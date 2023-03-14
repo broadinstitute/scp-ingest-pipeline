@@ -12,7 +12,7 @@
 # https://github.com/GoogleContainerTools/base-images-docker/tree/master/ubuntu
 FROM marketplace.gcr.io/google/ubuntu1804:latest
 
-RUN echo "Uncomment to clear cached layers below this statement (2022-03-14-1117)"
+RUN echo "Uncomment to clear cached layers below this statement (2022-03-14-1134)"
 
 # Install Python 3.10
 RUN apt-get -y update && \
@@ -20,6 +20,8 @@ RUN apt-get -y update && \
   add-apt-repository ppa:deadsnakes/ppa && \
   apt-get -y install python3-pip && \
   apt-get -y install python3.10 && \
+  git clone https://github.com/pypa/setuptools.git && cd setuptools && sudo python3.10 setup.py install \
+  apt install python3.10-distutils \
   apt-get -y install python3.10-dev
 
 RUN python3.10 -m pip install --upgrade pip
