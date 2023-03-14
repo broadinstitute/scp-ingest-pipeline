@@ -12,7 +12,7 @@
 # https://github.com/GoogleContainerTools/base-images-docker/tree/master/ubuntu
 FROM marketplace.gcr.io/google/ubuntu1804:latest
 
-# RUN echo "Uncomment to clear cached layers below this statement (2020-01-07-0947)"
+RUN echo "Uncomment to clear cached layers below this statement (2022-03-14-1117)"
 
 # Install Python 3.10
 RUN apt-get -y update && \
