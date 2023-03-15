@@ -160,7 +160,9 @@ docker run --name scp-ingest-test -e MONGODB_USERNAME="$MONGODB_USERNAME" -e DAT
            gcr.io/broad-singlecellportal-staging/ingest-pipeline:test-candidate bash
 ```
 
-Note: on an M1 machine, you may see this message "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested"
+Note: on an M1 machine, you may see this message:
+
+> WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
 
 ### 5. Copy keyfile to running container
 

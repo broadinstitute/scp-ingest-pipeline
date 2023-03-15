@@ -10,7 +10,7 @@
 # Use a managed base image from Google.  It is continually updated for
 # security fixes (thus the "latest" tag).
 # https://github.com/GoogleContainerTools/base-images-docker/tree/master/ubuntu
-FROM marketplace.gcr.io/google/ubuntu1804:latest
+FROM marketplace.gcr.io/google/ubuntu2004:latest
 
 # RUN echo "Uncomment to clear cached layers below this statement (2022-03-14-1441)"
 
@@ -21,20 +21,13 @@ RUN apt-get -y update && \
   apt-get -y install python3-pip && \
   apt-get -y install python3.10 && \
   apt-get -y install python3.10-dev && \
-  # workaround for linux Python 3.10 AttributeError: module
-  # 'collections' has no attribute 'MutableMapping' issue;
-  # needs re-build of setuptools
-  # https://stackoverflow.com/questions/69512672
-  apt-get -y install git && \
-  git clone https://github.com/pypa/setuptools.git && \
-  cd setuptools && \
-  python3.10 setup.py install
+  apt-get -y install python3.10-distutils
 
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
 
-# Set cleaner defaults (`alias` fails)
-RUN ln -s /usr/bin/python3.10 /usr/bin/python && \
-  ln -s /usr/bin/pip3 /usr/bin/pip
+# # Set cleaner defaults (`alias` fails)
+# RUN ln -s /usr/bin/python3.10 /usr/bin/python && \
+#   ln -s /usr/bin/pip3 /usr/bin/pip
 
 # Copy contents of this repo into the Docker image
 # (See .Dockerignore for omitted files)
