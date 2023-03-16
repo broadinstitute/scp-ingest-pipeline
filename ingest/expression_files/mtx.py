@@ -156,7 +156,6 @@ class MTXIngestor(GeneExpression, IngestFiles):
         actual_barcodes = len(barcodes)
 
         if (actual_barcodes == expected_barcodes) and (actual_genes == expected_genes):
-
             return True
         else:
             msg = (
@@ -191,7 +190,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
     @staticmethod
     def get_data_start_line_number(file_handler: IO) -> int:
-        """ Determines what line number data starts.
+        """Determines what line number data starts.
 
         Parameters:
         ___________
@@ -244,7 +243,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
     @staticmethod
     def get_features(feature_row: str):
         """Determines gene id and gene name from a given row:str in a feature
-            file
+        file
         """
         feature_data = feature_row.split("\t")
         gene_id = feature_data[0]
@@ -283,6 +282,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             # Use compress program gzip to compress temporary files (--compress-program=gzip).
             subprocess.run(
                 [
+                    "LC_ALL=C",
                     "sort",
                     "--compress-program=gzip",
                     "-S",
