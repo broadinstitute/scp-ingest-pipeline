@@ -280,9 +280,12 @@ class MTXIngestor(GeneExpression, IngestFiles):
             # using 20G for the memory buffer (-S 20G) with a max maximum number of 320 temporary files (--batch-size=320)
             # that can be merged at once (instead of default 16). The data being sorted is numeric (-n).
             # Use compress program gzip to compress temporary files (--compress-program=gzip).
+            # ensure sort isn't affected by locale - pass in modified env "C" (aka. simplest locale)
+            # https://stackoverflow.com/questions/2231227/python-subprocess-popen-with-a-modified-environment
+            myenv = os.environ.copy()
+            myenv['LC_ALL'] = 'C'
             subprocess.run(
                 [
-                    "LC_ALL=C",
                     "sort",
                     "--compress-program=gzip",
                     "-S",
@@ -292,6 +295,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     "-k",
                     "1,1",
                 ],
+                env=myenv
                 stdin=p1.stdout,
                 stdout=f,
             )
