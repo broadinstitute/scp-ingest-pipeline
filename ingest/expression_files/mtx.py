@@ -283,7 +283,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
             # ensure sort isn't affected by locale - pass in modified env "C" (aka. simplest locale)
             # https://stackoverflow.com/questions/2231227/python-subprocess-popen-with-a-modified-environment
             myenv = os.environ.copy()
-            myenv['LC_ALL'] = 'C'
+            myenv["LC_ALL"] = "C"
             subprocess.run(
                 [
                     "sort",
@@ -295,7 +295,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
                     "-k",
                     "1,1",
                 ],
-                env=myenv
+                env=myenv,
                 stdin=p1.stdout,
                 stdout=f,
             )
