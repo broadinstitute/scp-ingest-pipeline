@@ -245,7 +245,7 @@ class TestDense(unittest.TestCase):
     # Commenting out "bad_execute_ingest" validation due to change in mock with
     # Python >= 3.8 (accessing attributes on the mock object before patching
     # mock object, causing error not seen with Python 3.7)
-    # Deferring resolution for this test to SCP-5032
+    # TODO (SCP-5032): Resolve this test
     #
     # @patch(
     #     "expression_files.expression_files.GeneExpression.is_raw_count_file",
@@ -299,7 +299,7 @@ class TestDense(unittest.TestCase):
         # Commenting out this "good_execute_ingest" assertion due to change in
         # mock with Python >= 3.8 (accessing attributes on the mock object
         # before patching mock object, causing error not seen with Python 3.7)
-        # Deferring resolution for this assertion to SCP-5032
+        # TODO (SCP-5032): Resolve this test
         #
         # self.assertTrue(mock_load.called)
 

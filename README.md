@@ -17,21 +17,9 @@ The SCP Ingest Pipeline is an ETL pipeline for single-cell RNA-seq data.
 
 # Install
 
-### Docker
-
-If on Apple silicon Mac (e.g. M1), do:
-
-```
-scripts/docker-compose-setup.sh <PATH_TO_YOUR_VAULT_TOKEN> # E.g. ~/.github-token
-```
-
-To update dependencies when in Docker, you can pip install from within the Docker Bash shell after adjusting your requirements.txt.
-If you close your shell after that, your newly installed dependencies will be lost.  Dependencies only persist after merging your
-new requirements.txt into `development`.  TODO (SCP-4941): Add entry-point script to run `pip install`.
-
 ### Native
 
-If on Intel Mac, fetch the code, boot your virtualenv, install dependencies:
+Fetch the code, boot your virtualenv, install dependencies:
 
 ```
 git clone git@github.com:broadinstitute/scp-ingest-pipeline.git
@@ -41,6 +29,24 @@ source env/bin/activate
 pip install -r requirements.txt
 scripts/setup-mongo-dev.sh <PATH_TO_YOUR_VAULT_TOKEN> # E.g. ~/.github-token
 ```
+
+### Docker
+
+With Docker running and Vault active on your local machine, run:
+
+```
+scripts/docker-compose-setup.sh -t <PATH_TO_YOUR_VAULT_TOKEN> # E.g. ~/.github-token
+```
+
+If on Apple silicon Mac (e.g. M1), and performance seems poor, consider generating a docker image using the arm64 base. Example test image: gcr.io/broad-singlecellportal-staging/single-cell-portal:development-2.2.0-arm64, usage:
+
+```
+scripts/docker-compose-setup.sh -i development-2.2.0-arm64 -t <PATH_TO_YOUR_VAULT_TOKEN>
+```
+
+To update dependencies when in Docker, you can pip install from within the Docker Bash shell after adjusting your requirements.txt.
+If you close your shell after that, your newly installed dependencies will be lost.  Dependencies only persist after merging your
+new requirements.txt into `development`.  TODO (SCP-4941): Add entry-point script to run `pip install`.
 
 ### Optional
 
@@ -122,7 +128,7 @@ Note - if this is your first time doing `docker build` you may need to configure
 gcloud auth configure-docker
 ```
 
-Pro-Tip: For local builds, you can try adding docker build options `--progress=plain` `--no-cache`
+Pro-Tip: For local builds, you can try adding docker build options `--progress=plain` (for more verbose build info) and/or `--no-cache` (when you want to ensure a build with NO cached layers)
 
 ### 2. Set up environment variables
 
