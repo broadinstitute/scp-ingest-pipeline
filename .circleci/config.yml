@@ -10,7 +10,7 @@ orbs:
 jobs:
   build:
     docker:
-      - image: circleci/python:3.7.5-stretch
+      - image: cimg/python:3.10.9
     resource_class: large
 
     working_directory: ~/scp-ingest-pipeline
@@ -21,19 +21,14 @@ jobs:
       # Download and cache dependencies
       - restore_cache:
           keys:
-            - v3-dependencies-{{ checksum "requirements.txt" }}
+            - v6-dependencies-{{ checksum "requirements.txt" }}
             # fallback to using the latest cache if no exact match is found
-            - v3-dependencies-
-
-      - run:
-          name: Install system dependencies for Genomes Pipeline
-          command: |
-            sudo apt-get install -y tabix
+            - v6-dependencies-
 
       - run:
           name: Install Python dependencies
           command: |
-            python3 -m venv venv
+            python -m venv venv
             . venv/bin/activate
             pip install --upgrade pip
             pip install -r requirements.txt
@@ -41,14 +36,14 @@ jobs:
       - save_cache:
           paths:
             - ./venv
-          key: v3-dependencies-{{ checksum "requirements.txt" }}
+          key: v6-dependencies-{{ checksum "requirements.txt" }}
 
       - run:
           name: Run tests
           command: |
             . venv/bin/activate
             cd tests
-            pytest -k 'not test_genomes and not test_make_toy and not test_delocalize_file' --cov-report=xml --cov=../ingest/
+            pytest -k 'not test_genomes and not test_make_toy and not test_delocalize_file' -p no:warnings --cov-report=xml --cov=../ingest/
 
       - codecov/upload:
           file: tests/coverage.xml
