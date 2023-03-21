@@ -46,7 +46,7 @@ test = de.test.pairwise(
     noise_model=None
  )
 
-#Accessing results
+# Accessing results
 
 #outputs shape of p values
 np.set_printoptions(precision=3)
