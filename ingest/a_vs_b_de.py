@@ -14,6 +14,7 @@ import batchglm.api as glm
 
 import diffxpy.api as de
 
+# TODO (SCP-5041): Extract these to CLI arguments
 
 #Pairwise tests between groups
 #answers whether a given pair of groups shows differential expression for each gene
