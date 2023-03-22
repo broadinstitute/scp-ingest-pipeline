@@ -22,7 +22,11 @@ pre-commit==1.18.1
 black==19.3b0
 flake8==3.7.8
 pytest-cov==2.8.1
+diffxpy==0.7.4
+batchglm==0.7.4
+anndata==0.7.8
 matplotlib==3.6.3
+seaborn==0.11.2
 
 # Don't add this until we actually support Zarr
 #zarr==2.2.0
