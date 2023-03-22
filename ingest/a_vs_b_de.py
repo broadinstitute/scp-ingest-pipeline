@@ -8,22 +8,12 @@ import pandas as pd
 import scipy.stats
 import scanpy as sc
 import os
-
-
-#install with pip install batchglm -- NOT using github repo
 import batchglm.api as glm
-
-#install with pip install diffxpy -- NOT using github repo
 import diffxpy.api as de
 
-from diffxpy.enrichment.enrich import RefSets
 
-import tensorflow as tf
-from batchglm.api.models.tf1.glm_nb import Simulator
 
-#check that batchglm and diffpy were installed correctly
-#print("batchglm version "+glm.__version__)
-#print("diffpy version "+de.__version__)
+# TODO (SCP-5041): Extract to CLI arguments
 
 #Pairwise tests between groups
 #answers whether a given pair of groups shows differential expression for each gene
@@ -127,4 +117,17 @@ Plasmablasts array
 #create output file
 with open("ingest/output_a_vs_b_de", "w") as external_file:
     print(new_df.to_string(), file = external_file)
+=======
+# Accessing results
+
+#outputs shape of p values
+np.set_printoptions(precision=3)
+print("shape of p-values: %s" % str(test.pval.shape))
+
+
+#brings up pvalue
+print(test.pval[:,:,0])
+
+#brings up plot 
+test.plot_volcano()
 
