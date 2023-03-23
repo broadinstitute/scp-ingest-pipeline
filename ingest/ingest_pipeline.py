@@ -8,7 +8,7 @@ a remote MongoDB instance.
 PREREQUISITES
 See https://github.com/broadinstitute/scp-ingest-pipeline#prerequisites
 
-DEVELOPER SETUP (see README.md#Install and ../scripts/setup_mongo_dev.sh)
+DEVELOPER SETUP (see README.md#Install and ../scripts/setup-mongo-dev.sh)
 
 EXAMPLES
 # Takes expression file and stores it into MongoDB
@@ -39,11 +39,9 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --matrix-file ../tests/data/mtx/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 
 # Differential Expression analysis (dense matrix)
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_integration.tsv --matrix-file-type dense --annotation-file ../tests/data/differential_expression/de_integration_unordered_metadata.tsv --cluster-file ../tests/data/differential_expression/de_integration_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
-
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_dense_matrix.tsv --matrix-file-type dense --annotation-file ../tests/data/differential_expression/de_dense_metadata.tsv --cluster-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
 # Differential Expression analysis (sparse matrix)
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --matrix-file-type mtx --cell-metadata-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --cluster-name de_sparse_integration --study-accession SCPsparsemini --differential-expression
-
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --matrix-file-type mtx --annotation-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --cluster-name de_sparse_integration --study-accession SCPsparsemini --differential-expression
 """
 import json
 import logging
@@ -490,10 +488,6 @@ class IngestPipeline:
         )
         if self.anndata.validate():
             self.report_validation("success")
-            study_info = config.get_metric_properties()
-            accession = study_info.get_properties()['studyAccession']
-            file_id = study_info.get_properties()['fileName']
-            outfile_prefix = f"{file_id}.{accession}"
             if self.kwargs.get("extract") and "cluster" in self.kwargs.get("extract"):
                 if not self.kwargs["obsm_keys"]:
                     self.kwargs["obsm_keys"] = ['X_tsne']
@@ -632,11 +626,6 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
             # append status?
             files_to_delocalize = []
             if IngestFiles.is_remote_file(file_path):
-                # the next 3 lines are copied from 493-495, suggestions
-                # welcomed for how to DRY this up
-                study_info = config.get_metric_properties()
-                accession = study_info.get_properties()['studyAccession']
-                file_id = study_info.get_properties()['fileName']
                 if "cluster" in arguments.get("extract"):
                     files_to_delocalize.extend(
                         AnnDataIngestor.clusterings_to_delocalize(arguments)
