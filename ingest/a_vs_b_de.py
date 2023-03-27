@@ -12,12 +12,8 @@ import batchglm.api as glm
 import diffxpy.api as de
 
 
-<<<<<<< HEAD
-=======
 
 # TODO (SCP-5041): Extract to CLI arguments
->>>>>>> 807f281e1e268d785437ab114ec2a00fd1c6ee7b
-
 #Pairwise tests between groups
 #answers whether a given pair of groups shows differential expression for each gene
 
@@ -96,8 +92,6 @@ for j, i in zip(pval_clusters, lfc_clusters):
                 dict_results["log2FC"].append(t)
                 count += 1
 
-#dict_results["log2FC"] = lfc_list
-#print(dict_results)
 new_df = pd.DataFrame.from_dict(dict_results)
 
 '''
@@ -136,17 +130,4 @@ Plasmablasts array
 #create output file
 with open("ingest/output_a_vs_b_de", "w") as external_file:
     print(new_df.to_string(), file = external_file)
-=======
-# Accessing results
-
-#outputs shape of p values
-np.set_printoptions(precision=3)
-print("shape of p-values: %s" % str(test.pval.shape))
-
-
-#brings up pvalue
-print(test.pval[:,:,0])
-
-#brings up plot 
-test.plot_volcano()
 
