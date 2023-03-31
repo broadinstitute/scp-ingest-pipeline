@@ -119,10 +119,10 @@ There are some extra steps required, but this sidesteps the need to install pack
 Run the following command to build the testing Docker image locally (make sure Docker is running first). This build command will incorporate any changes in the local instance of your repo, committed or not:
 
 ```
-docker build -t gcr.io/broad-singlecellportal-staging/ingest-pipeline:test-candidate .
+docker build -t ingest-pipeline:test-candidate .
 ```
 
-Note - if this is your first time doing `docker build` you may need to configure Docker to use the Google Cloud CLI to authenticate requests to Container Registry:
+Note - the base Ubuntu image used in the Dockerfile comes from Google Container Registry (GCR, aka gcr.io), if this is your first time doing `docker build` you may need to configure Docker to use the Google Cloud CLI to authenticate requests to Container Registry:
 
 ```
 gcloud auth configure-docker
@@ -163,7 +163,7 @@ Run the container, passing in the proper environment variables:
 docker run --name scp-ingest-test -e MONGODB_USERNAME="$MONGODB_USERNAME" -e DATABASE_NAME="$DATABASE_NAME" \
            -e MONGODB_PASSWORD="$MONGODB_PASSWORD" -e DATABASE_HOST="$DATABASE_HOST" \
            -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/keyfile.json --rm -it \
-           gcr.io/broad-singlecellportal-staging/ingest-pipeline:test-candidate bash
+           ingest-pipeline:test-candidate bash
 ```
 
 Note: on an M1 machine, you may see this message:
