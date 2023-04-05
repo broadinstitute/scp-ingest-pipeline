@@ -126,4 +126,49 @@ Plasmablasts array
 
 '''
 
+#CODE FOR RESULTS ALL IN ONE FILE
+""" 
+dict_results["cell_type"] = []
+dict_results["compared_cell_type"] = []
+dict_results["pvals"] = []
+dict_results["log2FC"] = []
 
+pval_clusters = {}
+for i in range (len(pval)):
+    pval_clusters[cell_type[i]] = pval[i]
+
+lfc_clusters = {}
+for i in range (len(lfc)):
+    lfc_clusters[cell_type[i]] = lfc[i]
+
+#unfold log fold change value array
+lfc_list = []
+for i in lfc:
+    for j in i:
+        for l in j:
+            lfc_list.append(l)
+
+total_loop = 0
+for j, i in zip(pval_clusters, lfc_clusters):
+    inner = pval_clusters[j]
+    inner_lfc = lfc_clusters[i]
+    count_inner = 0
+    for k, p in zip(inner, inner_lfc) :
+        current_name = cell_type[count_inner]
+        count_inner +=1
+        count = 0
+        for l, t in zip(k, p):
+            if (j != current_name):
+                #print(j + "not equal to" + current_name)
+                #total_loop +=1
+                dict_results["names"].append(names[count])
+                dict_results["cell_type"].append(j)
+                dict_results["compared_cell_type"].append(current_name)
+                dict_results["pvals"].append(l)
+                dict_results["log2FC"].append(t)
+                count += 1
+
+#dict_results["log2FC"] = lfc_list
+new_df = pd.DataFrame.from_dict(dict_results)
+
+"""
