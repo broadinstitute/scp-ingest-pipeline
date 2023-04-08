@@ -10,23 +10,23 @@
 # Use a managed base image from Google.  It is continually updated for
 # security fixes (thus the "latest" tag).
 # https://github.com/GoogleContainerTools/base-images-docker/tree/master/ubuntu
-FROM marketplace.gcr.io/google/ubuntu1804:latest
+FROM marketplace.gcr.io/google/ubuntu2004:latest
 
-# RUN echo "Uncomment to clear cached layers below this statement (2020-01-07-0947)"
+# RUN echo "Uncomment to clear cached layers below this statement (2022-03-14-1441)"
 
-# Install Python 3.7
+# Install Python 3.10
 RUN apt-get -y update && \
   apt-get -y install software-properties-common && \
   add-apt-repository ppa:deadsnakes/ppa && \
   apt-get -y install python3-pip && \
-  apt-get -y install python3.7 && \
-  apt-get -y install python3.7-dev
+  apt-get -y install python3.10 && \
+  apt-get -y install python3.10-dev && \
+  apt-get -y install python3.10-distutils
 
-RUN python3.7 -m pip install --upgrade pip
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
 
-# Set cleaner defaults (`alias` fails)
-RUN ln -s /usr/bin/python3.7 /usr/bin/python && \
-  ln -s /usr/bin/pip3 /usr/bin/pip
+# symlink python3.10 to python
+RUN ln -s /usr/bin/python3.10 /usr/bin/python
 
 # Copy contents of this repo into the Docker image
 # (See .Dockerignore for omitted files)
@@ -35,7 +35,7 @@ COPY . scp-ingest-pipeline
 WORKDIR /scp-ingest-pipeline
 
 # Install Python dependencies
-RUN python3.7 -m pip install -r requirements.txt
+RUN python -m pip install -r requirements.txt
 
 WORKDIR /scp-ingest-pipeline/ingest
 CMD ["python", "ingest_pipeline.py", "--help"]
