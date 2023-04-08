@@ -33,12 +33,35 @@ import xml.etree.ElementTree as ET
 # TODO (pre-GA): Expose related genes kit internals via Ideogram.js
 # so the end client UI (i.e., SCP UI) can handle color, etc.
 color_brewer_list = [
-  '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#a65628',
-  '#f781bf', '#999999', '#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3',
-  '#a6d854', '#ffd92f', '#e5c494', '#b3b3b3', '#8dd3c7', '#bebada',
-  '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9',
-  '#bc80bd', '#ccebc5', '#ffed6f'
+    '#e41a1c',
+    '#377eb8',
+    '#4daf4a',
+    '#984ea3',
+    '#ff7f00',
+    '#a65628',
+    '#f781bf',
+    '#999999',
+    '#66c2a5',
+    '#fc8d62',
+    '#8da0cb',
+    '#e78ac3',
+    '#a6d854',
+    '#ffd92f',
+    '#e5c494',
+    '#b3b3b3',
+    '#8dd3c7',
+    '#bebada',
+    '#fb8072',
+    '#80b1d3',
+    '#fdb462',
+    '#b3de69',
+    '#fccde5',
+    '#d9d9d9',
+    '#bc80bd',
+    '#ccebc5',
+    '#ffed6f',
 ]
+
 
 def download_gzip(url, output_path, cache=0):
     """Download gzip file, decompress, write to output path; use optional cache
@@ -60,16 +83,18 @@ def download_gzip(url, output_path, cache=0):
         with open(output_path, "w") as f:
             f.write(content)
 
+
 def fetch_pmcid(doi):
-    """Convert Digital Object Identifier (DOI) into PubMed Central ID (PMCID)
-    """
+    """Convert Digital Object Identifier (DOI) into PubMed Central ID (PMCID)"""
     idconv_base = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
-    params = "?" + "&".join([
-        "tool=scp-fetch-pmcid",
-        "email=scp-dev@broadinstitute.org",
-        "format=json",
-        f"ids={doi}"
-    ])
+    params = "?" + "&".join(
+        [
+            "tool=scp-fetch-pmcid",
+            "email=scp-dev@broadinstitute.org",
+            "format=json",
+            f"ids={doi}",
+        ]
+    )
     idconv_url = idconv_base + params
     with urllib.request.urlopen(idconv_url) as response:
         data = response.read().decode("utf-8")
@@ -81,9 +106,9 @@ def fetch_pmcid(doi):
     pmcid = record["pmcid"]
     return pmcid
 
+
 def fetch_pmcid_text(pmcid):
-    """Get full text for publication given its in PMC ID
-    """
+    """Get full text for publication given its in PMC ID"""
     oa_url = f"https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi?id={pmcid}"
     with urllib.request.urlopen(oa_url) as response:
         data = response.read().decode("utf-8")
@@ -99,9 +124,9 @@ def fetch_pmcid_text(pmcid):
     text = ET.tostring(article.find("body"), method="text")
     return text
 
+
 def fetch_publication_text(publication_url):
-    """Get full text for a publicly-accessible article given its URL
-    """
+    """Get full text for a publicly-accessible article given its URL"""
     # Examples:
     # <Is open access> -- <publication URL> -- <Study accession>
     # 0. Yes -- https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1 -- SCP1671
@@ -128,8 +153,9 @@ def fetch_publication_text(publication_url):
             text = response.read().decode('utf-8')
     return text
 
+
 def fetch_gene_cache(organism):
-    genes_filename = f"{organism}-genes.tsv" # e.g. homo-sapiens-genes.tsv
+    genes_filename = f"{organism}-genes.tsv"  # e.g. homo-sapiens-genes.tsv
     base_url = "https://cdn.jsdelivr.net/npm/"
     genes_url = f"{base_url}ideogram@1.41.0/dist/data/cache/genes/{genes_filename}.gz"
     download_gzip(genes_url, genes_filename)
@@ -144,26 +170,23 @@ def fetch_gene_cache(organism):
     with open(genes_filename) as file:
         reader = csv.reader(file, delimiter="\t")
         for row in reader:
-            if row[0] == '#' or len(row) < 2: continue
+            if row[0] == '#' or len(row) < 2:
+                continue
             gene = row[4]
             full_name = row[5]
             counts_by_gene[gene] = 0
             loci_by_gene[gene] = {
                 "chromosome": row[0],
                 "start": row[1],
-                "length": row[2]
+                "length": row[2],
             }
             full_names_by_gene[gene] = full_name
             # Genes in upstream file are ordered by global popularity
             interest_rank_by_gene[gene] = i
             i += 1
 
-    return [
-        interest_rank_by_gene,
-        counts_by_gene,
-        loci_by_gene,
-        full_names_by_gene
-    ]
+    return [interest_rank_by_gene, counts_by_gene, loci_by_gene, full_names_by_gene]
+
 
 def extract(meta, all_groups, publication_url):
     [accssion, organism, bucket, clustering, annotation] = list(meta.values())
@@ -171,7 +194,7 @@ def extract(meta, all_groups, publication_url):
         interest_rank_by_gene,
         counts_by_gene,
         loci_by_gene,
-        full_names_by_gene
+        full_names_by_gene,
     ] = fetch_gene_cache(organism)
 
     publication_text = fetch_publication_text(publication_url)
@@ -197,12 +220,12 @@ def extract(meta, all_groups, publication_url):
         mentions_by_gene,
         de_by_gene,
         loci_by_gene,
-        full_names_by_gene
+        full_names_by_gene,
     ]
 
+
 def extract_de(bucket, clustering, annotation, all_groups):
-    """Fetch differential expression (DE) files, return DE fields by gene
-    """
+    """Fetch differential expression (DE) files, return DE fields by gene"""
     de_by_gene = {}
 
     origin = "https://storage.googleapis.com"
@@ -240,9 +263,9 @@ def extract_de(bucket, clustering, annotation, all_groups):
                     gene = row[1]
                     de_entry = {
                         "group": group,
-                        "log2fc": row[3], # Scanpy `logfoldchanges`
-                        "adjusted_pval": row[5], # Scanpy `pvals_adj`
-                        "scores_rank": str(i) # per Scanpy `scores`
+                        "log2fc": row[3],  # Scanpy `logfoldchanges`
+                        "adjusted_pval": row[5],  # Scanpy `pvals_adj`
+                        "scores_rank": str(i),  # per Scanpy `scores`
                     }
                     if gene in de_by_gene:
                         de_by_gene[gene].append(de_entry)
@@ -259,14 +282,13 @@ def extract_de(bucket, clustering, annotation, all_groups):
 
     return sorted_de_by_gene
 
+
 def get_de_and_color_columns(de_entries, de_meta_keys):
     # Collapse DE props for each group, delimit inner fields with "!"
     de_grouped_props = []
     for de in de_entries:
         props = [de[key] for key in de_meta_keys]
-        de_grouped_props.append(
-            "!".join(props)
-        )
+        de_grouped_props.append("!".join(props))
 
     # Collapse grouped props, all DE data for each gene is in one TSV column
     de_column = ";".join(de_grouped_props)
@@ -278,6 +300,7 @@ def get_de_and_color_columns(de_entries, de_meta_keys):
 
     return [de_column, color]
 
+
 def get_metainformation(meta, de_meta_keys):
     """Get headers about entire content, and inner column formats
 
@@ -285,23 +308,25 @@ def get_metainformation(meta, de_meta_keys):
     """
     content_meta = ";".join([f"{k}={v}" for (k, v) in meta.items()])
     de_meta = "differential_expression keys: " + ";".join(de_meta_keys)
-    metainformation = "## " + "\n## ".join([
-        "Gene leads ideogram data - Single Cell Portal",
-        content_meta,
-        de_meta
-    ]) + "\n"
+    metainformation = (
+        "## "
+        + "\n## ".join(
+            ["Gene leads ideogram data - Single Cell Portal", content_meta, de_meta]
+        )
+        + "\n"
+    )
 
     return metainformation
 
+
 def sort_genes_by_relevance(gene_dicts):
-    """ Sort genes by DE score rank, then # mentions, then global interest rank
-    """
+    """Sort genes by DE score rank, then # mentions, then global interest rank"""
     [
         interest_rank_by_gene,
         mentions_by_gene,
         de_by_gene,
         loci_by_gene,
-        full_names_by_gene
+        full_names_by_gene,
     ] = gene_dicts
 
     # print('de_by_gene')
@@ -312,15 +337,17 @@ def sort_genes_by_relevance(gene_dicts):
         if gene not in interest_rank_by_gene:
             # TODO: Handle synonyms, e.g. CECR1 for ADA2
             continue
-        genes.append({
-            "top_de_rank": de_by_gene[gene][0]["scores_rank"],
-            "de": de_by_gene[gene],
-            "mentions": mentions_by_gene.get(gene, 0),
-            "interest_rank": interest_rank_by_gene[gene],
-            "locus": loci_by_gene[gene],
-            "full_name": full_names_by_gene[gene],
-            "symbol": gene
-        })
+        genes.append(
+            {
+                "top_de_rank": de_by_gene[gene][0]["scores_rank"],
+                "de": de_by_gene[gene],
+                "mentions": mentions_by_gene.get(gene, 0),
+                "interest_rank": interest_rank_by_gene[gene],
+                "locus": loci_by_gene[gene],
+                "full_name": full_names_by_gene[gene],
+                "symbol": gene,
+            }
+        )
 
     genes = sorted(genes, key=lambda gene: int(gene["interest_rank"]))
     genes = sorted(genes, key=lambda gene: -int(gene["mentions"]))
@@ -328,9 +355,9 @@ def sort_genes_by_relevance(gene_dicts):
 
     return genes
 
+
 def transform(gene_dicts, meta):
-    """Transform extracted dicts into TSV content
-    """
+    """Transform extracted dicts into TSV content"""
 
     de_meta_keys = ["group", "log2fc", "adjusted_pval", "scores_rank"]
 
@@ -348,30 +375,50 @@ def transform(gene_dicts, meta):
         mentions = str(gene["mentions"])
         interest_rank = str(gene["interest_rank"])
         row = [
-            gene["symbol"], chromosome, start, length, color, full_name,
-            de, mentions, interest_rank
+            gene["symbol"],
+            chromosome,
+            start,
+            length,
+            color,
+            full_name,
+            de,
+            mentions,
+            interest_rank,
         ]
         rows.append("\t".join(row))
         i += 1
 
     rows = "\n".join(rows[:30])
     metainformation = get_metainformation(meta, de_meta_keys)
-    header = "# " + "\t".join([
-        'name', 'chromosome', 'start', 'length', 'color', 'full_name',
-        'differential_expression', 'publication_mentions', 'interest_rank'
-    ]) + "\n"
+    header = (
+        "# "
+        + "\t".join(
+            [
+                'name',
+                'chromosome',
+                'start',
+                'length',
+                'color',
+                'full_name',
+                'differential_expression',
+                'publication_mentions',
+                'interest_rank',
+            ]
+        )
+        + "\n"
+    )
 
     tsv_content = metainformation + header + rows
 
     return tsv_content
 
+
 def load(tsv_content):
-    """Load TSV content into file, write to disk
-    """
+    """Load TSV content into file, write to disk"""
     # TODO (pre-GA): Write output files to whichever bucket we write DE to.
     # The # of gene leads files will be many fewer than DE in Q2 '22,
     # i.e. << A-vs-all DE.
-    cache_buster = "_v5" # TODO (pre-GA): Improve handling if needed beyond dev
+    cache_buster = "_v5"  # TODO (pre-GA): Improve handling if needed beyond dev
     output_path = f"gene_leads_{clustering}--{annotation}{cache_buster}.tsv"
     with open(output_path, "w") as f:
         f.write(tsv_content)
@@ -379,9 +426,11 @@ def load(tsv_content):
     print('Wrote content')
     print(tsv_content)
 
-def gene_leads(accession, bucket, organism, clustering, annotation, all_groups, publication_url):
-    """Extract, transform, and load data into TSV files for gene leads ideogram
-    """
+
+def gene_leads(
+    accession, bucket, organism, clustering, annotation, all_groups, publication_url
+):
+    """Extract, transform, and load data into TSV files for gene leads ideogram"""
     organism = organism.lower().replace(' ', '-')
     clustering = clustering.replace(' ', '_')
     annotation = annotation.replace(' ', '_')
@@ -390,16 +439,16 @@ def gene_leads(accession, bucket, organism, clustering, annotation, all_groups, 
         "organism": organism,
         "bucket": bucket,
         "clustering": clustering,
-        "annotation": annotation
+        "annotation": annotation,
     }
     gene_dicts = extract(meta, all_groups, publication_url)
     tsv_content = transform(gene_dicts, meta)
     load(tsv_content)
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
     parser.add_argument(
@@ -410,45 +459,25 @@ if __name__ == '__main__':
     parser.add_argument(
         "--bucket-name",
         required=True,
-        help=(
-            "Name of GCS bucket, e.g. fc-65379b91-5ded-4d28-8e51-ada209541234"
-        )
+        help=("Name of GCS bucket, e.g. fc-65379b91-5ded-4d28-8e51-ada209541234"),
     )
     parser.add_argument(
         "--taxon-name",
         required=True,
-        help=(
-            "Scientific name of organism, e.g. \"Homo sapiens\""
-        )
+        help=("Scientific name of organism, e.g. \"Homo sapiens\""),
     )
-    parser.add_argument(
-        "--clustering",
-        required=True,
-        help=(
-            "Name of clustering"
-        )
-    )
-    parser.add_argument(
-        "--annotation-name",
-        required=True,
-        help=(
-            "Name of annotation"
-        )
-    )
+    parser.add_argument("--clustering", required=True, help=("Name of clustering"))
+    parser.add_argument("--annotation-name", required=True, help=("Name of annotation"))
     parser.add_argument(
         "--annotation-groups",
         required=True,
         type=ast.literal_eval,
-        help=(
-            "List of annotation groups, e.g. ['B cells', 'CSN1S1 macrophages']"
-        )
+        help=("List of annotation groups, e.g. ['B cells', 'CSN1S1 macrophages']"),
     )
     parser.add_argument(
         "--publication-url",
         required=True,
-        help=(
-            "URL of the study's publicly-accessible research article"
-        )
+        help=("URL of the study's publicly-accessible research article"),
     )
 
     args = parser.parse_args()
@@ -461,4 +490,6 @@ if __name__ == '__main__':
     all_groups = args.annotation_groups
     publication_url = args.publication_url
 
-    gene_leads(accession, bucket, organism, clustering, annotation, all_groups, publication_url)
+    gene_leads(
+        accession, bucket, organism, clustering, annotation, all_groups, publication_url
+    )
