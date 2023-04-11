@@ -65,6 +65,20 @@ class TestMTXIngestor(unittest.TestCase):
         )
         self.assertEqual(str(cm.exception), expected_msg)
 
+        genes_as_barcodes = [1, 2, 3, 4, 5]
+        barcodes_as_genes = ["cell0", "cell1", "cell3", "cell4"]
+        with self.assertRaises(ValueError) as cm:
+            MTXIngestor.check_bundle(
+                genes_as_barcodes, barcodes_as_genes, mtx_dimensions
+            )
+        expected_msg = (
+            f"Uploaded matrix suggests {len(genes_as_barcodes)} cells and {len(barcodes_as_genes)} genes "
+            f"instead of {expected_barcodes} cells and {expected_genes} genes. "
+            f"Please transpose your sparse matrix and re-upload. "
+            f"Transposition is expected for matrices exported from AnnData objects. "
+        )
+        self.assertEqual(str(cm.exception), expected_msg)
+
     def test_sort_mtx(self):
         import filecmp
         import os

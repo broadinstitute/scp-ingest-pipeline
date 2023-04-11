@@ -157,14 +157,24 @@ class MTXIngestor(GeneExpression, IngestFiles):
 
         if (actual_barcodes == expected_barcodes) and (actual_genes == expected_genes):
             return True
-        else:
+        elif (actual_barcodes == expected_genes) and (
+            actual_genes == expected_barcodes
+        ):
             msg = (
-                f"Expected {expected_barcodes} cells and {expected_genes} genes. "
-                f"Got {actual_barcodes} cells and {actual_genes} genes."
                 f"Uploaded matrix suggests {actual_barcodes} cells and {actual_genes} genes "
                 f"instead of {expected_barcodes} cells and {expected_genes} genes. "
                 f"Please transpose your sparse matrix and re-upload. "
                 f"Transposition is expected for matrices exported from AnnData objects. "
+            )
+            GeneExpression.log_for_mixpanel(
+                "error", "format:cap:mtx-dimension-mismatch", msg
+            )
+            raise ValueError(msg)
+        else:
+            msg = (
+                f"Expected {expected_barcodes} cells and {expected_genes} genes. "
+                f"Got {actual_barcodes} cells and {actual_genes} genes. "
+                f"Please check the files of your mtx bundle (barcode, feature, mtx) for errors."
             )
             GeneExpression.log_for_mixpanel(
                 "error", "format:cap:mtx-dimension-mismatch", msg
