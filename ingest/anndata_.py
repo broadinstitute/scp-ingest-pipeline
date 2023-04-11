@@ -2,10 +2,12 @@ import pandas as pd  # NOqa: F821
 
 try:
     from ingest_files import IngestFiles
+    from expression_files.expression_files import GeneExpression
     from monitor import log_exception
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
+    from .expression_files.expression_files import GeneExpression
     from .monitor import log_exception
 
 
@@ -13,6 +15,7 @@ class AnnDataIngestor(IngestFiles):
     ALLOWED_FILE_TYPES = ['application/x-hdf5']
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
+        GeneExpression.__init__(self, file_path, study_file_id, study_id)
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
@@ -50,10 +53,10 @@ class AnnDataIngestor(IngestFiles):
         elif clustering_dimension == 2:
             headers = dim
         elif clustering_dimension > 3:
-            msg = f"Too many dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
+            msg = f'Too many dimensions for visualization in obsm "{clustering_name}", found {clustering_dimension}, expected 2 or 3.'
             raise ValueError(msg)
         else:
-            msg = f"Too few dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
+            msg = f'Too few dimensions for visualization in obsm "{clustering_name}", found {clustering_dimension}, expected 2 or 3.'
             raise ValueError(msg)
         filename = AnnDataIngestor.set_clustering_filename(clustering_name)
         with open(filename, "w") as f:
@@ -117,8 +120,7 @@ class AnnDataIngestor(IngestFiles):
 
     @staticmethod
     def delocalize_extracted_files(file_path, study_file_id, files_to_delocalize):
-        """ Copy extracted files to study bucket
-        """
+        """Copy extracted files to study bucket"""
 
         for file in files_to_delocalize:
             IngestFiles.delocalize_file(
@@ -128,3 +130,23 @@ class AnnDataIngestor(IngestFiles):
                 file,
                 f"_scp_internal/anndata_ingest/{study_file_id}/{file}",
             )
+
+    def transform(self, clustering_name):
+        """Transforms matrix into gene data model."""
+        file_name = os.path.basename(self.file_path)
+        start_time = datetime.datetime.now()
+        GeneExpression.dev_logger.info("Starting run at " + str(start_time))
+        num_processed = 0
+        gene_models = []
+        data_arrays = []
+        # ???# how to store raw and processed all cells???
+        for all_cell_model in GeneExpression.create_data_arrays(
+            name=f"{file_name} Cells",
+            array_type="cells",
+            values=self.adata.obs,
+            linear_data_type="Study",
+            linear_data_id=self.study_file_id,
+            **self.data_array_kwargs,
+        ):
+            data_arrays.append(all_cell_model)
+        print(length(data_arrays))
