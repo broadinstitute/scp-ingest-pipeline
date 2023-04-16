@@ -1,4 +1,8 @@
 import pandas as pd  # NOqa: F821
+import os
+import datetime
+import scanpy as sc
+import pdb
 
 try:
     from ingest_files import IngestFiles
@@ -11,7 +15,7 @@ except ImportError:
     from .monitor import log_exception
 
 
-class AnnDataIngestor(IngestFiles):
+class AnnDataIngestor(GeneExpression, IngestFiles):
     ALLOWED_FILE_TYPES = ['application/x-hdf5']
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
@@ -131,7 +135,26 @@ class AnnDataIngestor(IngestFiles):
                 f"_scp_internal/anndata_ingest/{study_file_id}/{file}",
             )
 
-    def transform(self, clustering_name):
+    def process_matrix(self):
+        """Perform matrix processing"""
+        if self.feature_names_unique(self.adata.var_names):
+            self.transform()
+
+    @staticmethod
+    def feature_names_unique(features):
+        """Return True if feature names are unique, else false"""
+        if len(features) == len(features.unique()):
+            return True
+        else:
+            # placeholder for function to provide duplicate feature names
+            # non-happy path - option to use gene IDs?
+            msg = f"Duplicate feature name found"
+            GeneExpression.log_for_mixpanel(
+                "error", "content:duplicate:values-within-file", msg
+            )
+            raise ValueError(msg)
+
+    def transform(self):
         """Transforms matrix into gene data model."""
         file_name = os.path.basename(self.file_path)
         start_time = datetime.datetime.now()
@@ -139,14 +162,61 @@ class AnnDataIngestor(IngestFiles):
         num_processed = 0
         gene_models = []
         data_arrays = []
-        # ???# how to store raw and processed all cells???
         for all_cell_model in GeneExpression.create_data_arrays(
             name=f"{file_name} Cells",
             array_type="cells",
-            values=self.adata.obs,
+            values=self.adata.obs.index.tolist(),
             linear_data_type="Study",
             linear_data_id=self.study_file_id,
             **self.data_array_kwargs,
         ):
             data_arrays.append(all_cell_model)
-        print(length(data_arrays))
+
+        # !@# check in database if there is ever more than one stored for this kind of data array
+        # Save all_cell_model once
+        # ASSUMPTION all_cell_model is correct for both raw and processed data
+        # TODO: if raw counts is indicated check that .raw slot is populated
+
+        # Iterate over feature names (for happy path)
+        for feature in self.adata.var_names.tolist():
+            print(f"processing feature: {feature}")
+            feature_expression_series = sc.get.obs_df(self.adata, keys=feature)
+            if feature_expression_series.hasnans:
+                msg = (
+                    f"Expected numeric expression score - "
+                    f"expression data for \'{feature}\' has NAN values"
+                )
+                GeneExpression.log_for_mixpanel(
+                    "error", "content:type:not-numeric", msg
+                )
+                raise ValueError(msg)
+            # capture sparse (only non zero values and their cell IDs)
+            # check mtx.py for all zero gene handling
+            filtered_expression_series = feature_expression_series[
+                feature_expression_series.values > 0
+            ]
+
+            exp_cells = filtered_expression_series.index.tolist()
+
+            untrimmed_exp_scores = filtered_expression_series.values.tolist()
+
+            # trim expression data to three significant digits
+            exp_scores = [round(float(value), 3) for value in untrimmed_exp_scores]
+            # for None value below, consider replacing with gene ID (string)
+            # only creates models where scores exist
+            data_arrays, gene_models, num_processed = self.create_models(
+                exp_cells,
+                exp_scores,
+                feature,
+                None,
+                gene_models,
+                data_arrays,
+                num_processed,
+                False,
+            )
+        # Load any remaining models. This is necessary because the amount of
+        # models may be less than the batch size.
+        if len(gene_models) > 0 or len(data_arrays) > 0:
+            self.create_models(
+                [], [], None, None, gene_models, data_arrays, num_processed, True
+            )

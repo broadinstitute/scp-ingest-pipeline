@@ -17,10 +17,18 @@ class TestAnnDataIngestor(unittest.TestCase):
     def setup_class(self):
         filepath_valid = "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad"
         filepath_invalid = "../tests/data/anndata/bad.h5"
+        filepath_dup_feature = "../tests/data/anndata/dup_feature.h5ad"
+        filepath_nan = "../tests/data/anndata/nan_value.h5ad"
         self.study_id = "addedfeed000000000000000"
         self.study_file_id = "dec0dedfeed0000000000000"
         self.valid_args = [filepath_valid, self.study_id, self.study_file_id]
         self.invalid_args = [filepath_invalid, self.study_id, self.study_file_id]
+        self.dup_feature_args = [
+            filepath_dup_feature,
+            self.study_id,
+            self.study_file_id,
+        ]
+        self.nan_value_args = [filepath_nan, self.study_id, self.study_file_id]
         self.cluster_name = 'X_tsne'
         self.valid_kwargs = {'obsm_keys': [self.cluster_name]}
         self.anndata_ingest = AnnDataIngestor(*self.valid_args, **self.valid_kwargs)
@@ -111,16 +119,28 @@ class TestAnnDataIngestor(unittest.TestCase):
         with open(self.metadata_filename) as metadata_body:
             line = metadata_body.readline().split("\t")
             expected_line = [
-                'NAME', 'n_genes', 'percent_mito', 'n_counts', 'louvain', 'donor_id', 'biosample_id', 'sex', 'species',
-                'species__ontology_label', 'disease', 'disease__ontology_label', 'organ', 'organ__ontology_label',
-                'library_preparation_protocol', "library_preparation_protocol__ontology_label\n"
+                'NAME',
+                'n_genes',
+                'percent_mito',
+                'n_counts',
+                'louvain',
+                'donor_id',
+                'biosample_id',
+                'sex',
+                'species',
+                'species__ontology_label',
+                'disease',
+                'disease__ontology_label',
+                'organ',
+                'organ__ontology_label',
+                'library_preparation_protocol',
+                "library_preparation_protocol__ontology_label\n",
             ]
             self.assertEqual(
                 expected_line,
                 line,
                 'did not get expected headers from metadata body',
             )
-
 
     def test_get_files_to_delocalize(self):
         files = AnnDataIngestor.clusterings_to_delocalize(self.valid_kwargs)
@@ -143,3 +163,23 @@ class TestAnnDataIngestor(unittest.TestCase):
                 1,
                 "expected 1 call to delocalize output files",
             )
+
+    def test_feature_names_unique(self):
+        dup_feature_input = AnnDataIngestor(*self.dup_feature_args)
+        adata = dup_feature_input.obtain_adata()
+
+        self.assertRaisesRegex(
+            ValueError,
+            "Duplicate feature name found",
+            lambda: AnnDataIngestor.feature_names_unique(adata.var_names),
+        )
+
+    def test_check_nan_values(self):
+        nan_value_input = AnnDataIngestor(*self.nan_value_args)
+        nan_value_input.validate()
+
+        self.assertRaisesRegex(
+            ValueError,
+            "Expected numeric expression score - expression data for \'Bar\' has NAN values",
+            lambda: nan_value_input.transform(),
+        )
