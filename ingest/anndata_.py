@@ -154,6 +154,37 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
             )
             raise ValueError(msg)
 
+    @staticmethod
+    def find_nan_values(matrix):
+        """Return True if NaN values in matrix, else false"""
+        matrix_type = type(matrix)
+        found_nan = False
+        # dense matrix check
+        if matrix_type == "numpy.ndarray":
+            found_nan = np.isnan(adata_nan.X).any()
+        elif matrix_type == "scipy.sparse._csr.csr_matrix":
+            found_nan = np.isnan(adata_csr_nan.X.data).any()
+        else:
+            # Possibly more than two matrix data types are valid for Anndata
+            # more data handling needed if additional data types found.
+            msg = (
+                f"Unexpected datatype for AnnData matrix - {matrix_type}"
+                f"Please contact scp-support@broadinstitute.zendesk.com"
+            )
+            # TODO - determine error type (ie. replace "foo")
+            GeneExpression.log_for_mixpanel("error", "content:type:foo", msg)
+            raise TypeError(msg)
+
+        if found_nan:
+            msg = (
+                f"Expected numeric expression scores - "
+                f"matrix data contains NaN values"
+            )
+            GeneExpression.log_for_mixpanel("error", "content:type:not-numeric", msg)
+            raise ValueError(msg)
+        else:
+            return found_nan
+
     def transform(self):
         """Transforms matrix into gene data model."""
         file_name = os.path.basename(self.file_path)
@@ -181,17 +212,8 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         for feature in self.adata.var_names.tolist():
             print(f"processing feature: {feature}")
             feature_expression_series = sc.get.obs_df(self.adata, keys=feature)
-            if feature_expression_series.hasnans:
-                msg = (
-                    f"Expected numeric expression score - "
-                    f"expression data for \'{feature}\' has NAN values"
-                )
-                GeneExpression.log_for_mixpanel(
-                    "error", "content:type:not-numeric", msg
-                )
-                raise ValueError(msg)
-            # capture sparse (only non zero values and their cell IDs)
-            # check mtx.py for all zero gene handling
+
+            # when underlying matrix is dense, restricts ingest to non-zero data
             filtered_expression_series = feature_expression_series[
                 feature_expression_series.values > 0
             ]
