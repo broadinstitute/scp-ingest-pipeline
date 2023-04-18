@@ -21,6 +21,7 @@ GZIP_MAGIC_NUM = b'\x1f\x8b'
 
 ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
+
 def is_gz_file(filepath) -> bool:
     """
     Determine if a file is gzipped by checking first two bytes against GZIP_MAGIC_NUM
@@ -30,6 +31,7 @@ def is_gz_file(filepath) -> bool:
     """
     with open(filepath, 'rb') as test_f:
         return test_f.read(2) == GZIP_MAGIC_NUM
+
 
 def round_exp(val, precision) -> float:
     """
@@ -41,6 +43,7 @@ def round_exp(val, precision) -> float:
     """
     return round(float(val), precision)
 
+
 def encode_cluster_name(name) -> str:
     """
     Encodes a cluster name to be used in a HTTP request
@@ -50,6 +53,7 @@ def encode_cluster_name(name) -> str:
     """
     plus_converted_string = name.replace('+', 'pos')
     return re.sub(r'\W', '_', plus_converted_string)
+
 
 def open_file(filepath) -> list[TextIO, str]:
     """
@@ -62,6 +66,7 @@ def open_file(filepath) -> list[TextIO, str]:
     file_io, local_path = ingest_file.resolve_path(filepath)
     return file_io, local_path
 
+
 def make_data_dir(name):
     """
     Make a directory to put output/work files in
@@ -69,7 +74,8 @@ def make_data_dir(name):
     :param name: (str) name of directory
     """
     os.mkdir(name)
-    os.mkdir(f"{name}/gene_entries") # for slicing sparse matrix files
+    os.mkdir(f"{name}/gene_entries")  # for slicing sparse matrix files
+
 
 def get_matrix_size(matrix_file_path) -> int:
     """
@@ -89,6 +95,7 @@ def get_matrix_size(matrix_file_path) -> int:
     else:
         return os.stat(local_path).st_size
 
+
 def get_cluster_cells(file_path) -> list:
     """
     Return a list of cell names from a cluster file (1st column, starting line 3)
@@ -105,6 +112,7 @@ def get_cluster_cells(file_path) -> list:
             cells.append(cell)
     return cells
 
+
 def load_entities_as_list(file) -> list:
     """
     Read an entire 10X feature/barcode file into a list for parsing sparse data
@@ -115,6 +123,7 @@ def load_entities_as_list(file) -> list:
     column = get_entity_index(file)
     return list(re.split(ALL_DELIM, line.strip())[column] for line in file)
 
+
 def get_entity_index(file) -> int:
     """
     Determine which column from a 10X entity file contains valid data
@@ -122,9 +131,10 @@ def get_entity_index(file) -> int:
     :param file: (TextIO) open file object
     """
     first_line = file.readline().strip()
-    file.seek(0) # gotcha to reset pointer to beginning
+    file.seek(0)  # gotcha to reset pointer to beginning
     entities = re.split(ALL_DELIM, first_line)
     return 0 if len(entities) == 1 else 1
+
 
 def process_sparse_fragment(fragment_name, barcodes, cluster_cells, data_dir):
     """
@@ -148,6 +158,7 @@ def process_sparse_fragment(fragment_name, barcodes, cluster_cells, data_dir):
     )
     write_gene_scores(gene_name, filtered_expression, data_dir)
 
+
 def extract_sparse_line(line) -> list:
     """
     Process a single line from a sparse matrix and extract values as integers
@@ -157,6 +168,7 @@ def extract_sparse_line(line) -> list:
     """
     gene_idx, barcode_idx, raw_exp = line.rstrip().split(' ')
     return [int(gene_idx), int(barcode_idx), round_exp(raw_exp, 3)]
+
 
 def process_dense_line(line, matrix_cells, cluster_cells, data_dir):
     """
@@ -177,6 +189,7 @@ def process_dense_line(line, matrix_cells, cluster_cells, data_dir):
     if gene_name:
         write_gene_scores(gene_name, filtered_expression, data_dir)
 
+
 def filter_expression_for_cluster(cluster_cells, exp_cells, exp_scores) -> list:
     """
     Assemble a List of expression scores, filtered & ordered from a List of cluster cells
@@ -189,6 +202,7 @@ def filter_expression_for_cluster(cluster_cells, exp_cells, exp_scores) -> list:
     """
     observed_exp = dict(zip(exp_cells, exp_scores))
     return (observed_exp.get(cell, 0) for cell in cluster_cells)
+
 
 def write_gene_scores(gene_name, exp_values, data_dir):
     """

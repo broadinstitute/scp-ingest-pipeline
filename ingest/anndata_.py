@@ -117,8 +117,7 @@ class AnnDataIngestor(IngestFiles):
 
     @staticmethod
     def delocalize_extracted_files(file_path, study_file_id, files_to_delocalize):
-        """ Copy extracted files to study bucket
-        """
+        """Copy extracted files to study bucket"""
 
         for file in files_to_delocalize:
             IngestFiles.delocalize_file(

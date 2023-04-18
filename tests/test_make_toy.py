@@ -20,8 +20,7 @@ output_dir = f'tmp/test_make_toy_{randrange(100_000)}/'
 
 class MakeToyTestCase(unittest.TestCase):
     def execute_make_toy(self, args):
-        """Matches main() in make_toy_data.py, but called as module
-        """
+        """Matches main() in make_toy_data.py, but called as module"""
         parsed_args = create_parser().parse_args(args)
         make_toy_data(parsed_args)
         return

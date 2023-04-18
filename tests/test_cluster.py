@@ -8,7 +8,7 @@ from clusters import Clusters
 class TestCellMetadata(unittest.TestCase):
     def test_validate_header_for_coordinate_values_false(self):
         """Ensures validate_header_for_coordinate_values returns false when
-         coordinate is missing in header
+        coordinate is missing in header
         """
         cluster = Clusters(
             "../tests/data/cluster_bad_missing_coordinate.txt",
@@ -21,7 +21,7 @@ class TestCellMetadata(unittest.TestCase):
     def test_validate_header_for_coordinate_values_true(self):
         """Ensures validate_header_for_coordinate_values returns true when
         coordintate value is in cluster file
-         """
+        """
         cluster = Clusters(
             "../tests/data/cluster_example.txt",
             "5d276a50421aa9117c982845",
@@ -105,8 +105,7 @@ class TestCellMetadata(unittest.TestCase):
         self.assertFalse(cluster.require_X_Y_not_nan())
 
     def test_missing_coordinate_column_values_false(self):
-        """Ensures coordinate values for X Y Z are all populated
-        """
+        """Ensures coordinate values for X Y Z are all populated"""
         cluster = Clusters(
             "../tests/data/cluster_bad_missing_coordinate_values.txt",
             "dec0dedfeed1111111111111",
@@ -116,8 +115,7 @@ class TestCellMetadata(unittest.TestCase):
         self.assertFalse(cluster.require_X_Y_not_nan())
 
     def test_numeric_false(self):
-        """Ensures numeric annotations have numeric values
-        """
+        """Ensures numeric annotations have numeric values"""
         with self.assertRaises(ValueError):
             cluster = Clusters(
                 "../tests/data/cluster_non-numeric.txt",

@@ -78,8 +78,8 @@ class GeneExpression:
         *ignore, name: str, study_file_id, study_id, _id: int, gene_id: str = None
     ):
         """Creates a gene model for a single gene.
-            This function accepts keyword arguments only. An error will be raised
-                if positional or additional keyword arguments are passed in.
+        This function accepts keyword arguments only. An error will be raised
+            if positional or additional keyword arguments are passed in.
         """
         if ignore:
             raise TypeError("Position arguments are not accepted.")
@@ -139,7 +139,7 @@ class GeneExpression:
     @staticmethod
     def get_cell_names_from_study_file_id(study_id, study_file_id, client):
         """Returns cell names of study files of the same type. However, the cell names
-            from study file id that's passed into the function are not included."""
+        from study file id that's passed into the function are not included."""
 
         additional_query_kwargs = {}
         query_results = []
@@ -178,11 +178,11 @@ class GeneExpression:
         """Method checks for unique cells  by matrix type
 
 
-         Parameters:
-            cell_names (List[str]): List of cell names in matrix
-            study_id (ObjectId): The study id the cell names belong to
-            study_file_id (ObjectId): The file id the cell names belong to
-            client: MongoDB client
+        Parameters:
+           cell_names (List[str]): List of cell names in matrix
+           study_id (ObjectId): The study id the cell names belong to
+           study_file_id (ObjectId): The file id the cell names belong to
+           client: MongoDB client
         """
         # raise error if there are no cell names present
         if not cell_names:
@@ -213,7 +213,7 @@ class GeneExpression:
     def get_study_expression_file_ids(
         study_id, current_study_file_id, client
     ) -> List[Dict]:
-        """Returns study file ids that are of the same type as 'current_study_file_id' in the study """
+        """Returns study file ids that are of the same type as 'current_study_file_id' in the study"""
 
         COLLECTION_NAME = "study_files"
         field_names = {"_id": 1}
@@ -305,7 +305,7 @@ class GeneExpression:
             gene_models: List[str]
             num_processed: int
                 Amount of gene models created.
-            """
+        """
         current_data_arrays = []
         start_time = datetime.datetime.now()
         model_id = ObjectId()

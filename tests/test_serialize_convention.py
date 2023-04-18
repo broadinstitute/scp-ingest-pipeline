@@ -35,8 +35,7 @@ class TestValidateMetadata(unittest.TestCase):
         return (project, version)
 
     def test_serialize_convention(self):
-        """Verify known good input generates the expected metadata convention json
-        """
+        """Verify known good input generates the expected metadata convention json"""
 
         args = 'test 1.0.0'
         project, version = self.setup_metadata(args)

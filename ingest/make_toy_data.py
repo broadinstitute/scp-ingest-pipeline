@@ -91,7 +91,6 @@ def fetch_genes(preloaded_genes, num_rows, output_dir):
             print('Preloaded', '{:,}'.format(len(genes)), 'genes')
             return genes, ids, num_rows
     else:
-
         # To consider: Add --species as a CLI argument
         scp_species = [['Homo sapiens', 'human', '9606']]
 
@@ -250,7 +249,6 @@ def get_signature_content(
 
     # Return a generator so we can use a somewhat constant amount of RAM
     def row_generator():
-
         if raw_count:
             # integer values for raw count files
             exp_values = list(range(0, 2000))
@@ -402,8 +400,7 @@ def pool_processing(
     raw_count,
     prefix,
 ):
-    """ Function called by each CPU core in our pool of available CPUs.
-    """
+    """Function called by each CPU core in our pool of available CPUs."""
 
     # potential file names
     stem = os.path.join(output_dir, f"{prefix}_toy_data_{filename_leaf}")
@@ -550,7 +547,7 @@ def pool_processing(
 
 
 def parse_filesize_string(filesize_string):
-    """ Returns number of bytes specified in a human-readable filesize string
+    """Returns number of bytes specified in a human-readable filesize string
 
     :param filesize_string: Filesize string, e.g. '300_MiB'
     :return: num_bytes: Integer number of bytes, e.g. 307200000
@@ -759,8 +756,7 @@ def make_toy_data(args):
 
 
 def main():
-    """Enables running via module or CLI
-    """
+    """Enables running via module or CLI"""
     args = create_parser().parse_args()
     make_toy_data(args)
 
