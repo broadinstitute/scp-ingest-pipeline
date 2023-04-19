@@ -28,40 +28,6 @@ import csv
 from io import BytesIO
 import xml.etree.ElementTree as ET
 
-# Temporarily duplicated from SCP UI code.
-#
-# TODO (pre-GA): Expose related genes kit internals via Ideogram.js
-# so the end client UI (i.e., SCP UI) can handle color, etc.
-color_brewer_list = [
-    '#e41a1c',
-    '#377eb8',
-    '#4daf4a',
-    '#984ea3',
-    '#ff7f00',
-    '#a65628',
-    '#f781bf',
-    '#999999',
-    '#66c2a5',
-    '#fc8d62',
-    '#8da0cb',
-    '#e78ac3',
-    '#a6d854',
-    '#ffd92f',
-    '#e5c494',
-    '#b3b3b3',
-    '#8dd3c7',
-    '#bebada',
-    '#fb8072',
-    '#80b1d3',
-    '#fdb462',
-    '#b3de69',
-    '#fccde5',
-    '#d9d9d9',
-    '#bc80bd',
-    '#ccebc5',
-    '#ffed6f',
-]
-
 
 def download_gzip(url, output_path, cache=0):
     """Download gzip file, decompress, write to output path; use optional cache
@@ -189,7 +155,8 @@ def fetch_gene_cache(organism):
 
 
 def extract(meta, all_groups, publication_url):
-    [accssion, organism, bucket, clustering, annotation] = list(meta.values())
+    """Data mine genes from publication"""
+    [accession, organism, bucket, clustering, annotation] = list(meta.values())
     [
         interest_rank_by_gene,
         counts_by_gene,
@@ -222,7 +189,6 @@ def extract(meta, all_groups, publication_url):
         loci_by_gene,
         full_names_by_gene,
     ]
-
 
 def extract_de(bucket, clustering, annotation, all_groups):
     """Fetch differential expression (DE) files, return DE fields by gene"""
@@ -283,7 +249,7 @@ def extract_de(bucket, clustering, annotation, all_groups):
     return sorted_de_by_gene
 
 
-def get_de_and_color_columns(de_entries, de_meta_keys):
+def get_de_column(de_entries, de_meta_keys):
     # Collapse DE props for each group, delimit inner fields with "!"
     de_grouped_props = []
     for de in de_entries:
@@ -293,12 +259,7 @@ def get_de_and_color_columns(de_entries, de_meta_keys):
     # Collapse grouped props, all DE data for each gene is in one TSV column
     de_column = ";".join(de_grouped_props)
 
-    # Set color to that of the highest scores-ranked group
-    # TODO (SCP-4061): Move color handling to SCP UI
-    first_group_index = all_groups.index(de_entries[0]["group"])
-    color = color_brewer_list[first_group_index]
-
-    return [de_column, color]
+    return de_column
 
 
 def get_metainformation(meta, de_meta_keys):
@@ -329,8 +290,10 @@ def sort_genes_by_relevance(gene_dicts):
         full_names_by_gene,
     ] = gene_dicts
 
-    # print('de_by_gene')
-    # print(de_by_gene)
+    print('de_by_gene')
+    print(de_by_gene)
+    print('mentions_by_gene')
+    print(mentions_by_gene)
 
     genes = []
     for gene in de_by_gene:
@@ -350,8 +313,8 @@ def sort_genes_by_relevance(gene_dicts):
         )
 
     genes = sorted(genes, key=lambda gene: int(gene["interest_rank"]))
-    genes = sorted(genes, key=lambda gene: -int(gene["mentions"]))
     genes = sorted(genes, key=lambda gene: int(gene["top_de_rank"]))
+    genes = sorted(genes, key=lambda gene: -int(gene["mentions"]))
 
     return genes
 
@@ -371,7 +334,7 @@ def transform(gene_dicts, meta):
         start = locus["start"]
         length = locus["length"]
         full_name = gene["full_name"]
-        [de, color] = get_de_and_color_columns(gene["de"], de_meta_keys)
+        de = get_de_column(gene["de"], de_meta_keys)
         mentions = str(gene["mentions"])
         interest_rank = str(gene["interest_rank"])
         row = [
@@ -379,7 +342,6 @@ def transform(gene_dicts, meta):
             chromosome,
             start,
             length,
-            color,
             full_name,
             de,
             mentions,
@@ -398,7 +360,6 @@ def transform(gene_dicts, meta):
                 'chromosome',
                 'start',
                 'length',
-                'color',
                 'full_name',
                 'differential_expression',
                 'publication_mentions',
@@ -413,12 +374,12 @@ def transform(gene_dicts, meta):
     return tsv_content
 
 
-def load(tsv_content):
+def load(clustering, annotation, tsv_content):
     """Load TSV content into file, write to disk"""
     # TODO (pre-GA): Write output files to whichever bucket we write DE to.
     # The # of gene leads files will be many fewer than DE in Q2 '22,
-    # i.e. << A-vs-all DE.
-    cache_buster = "_v5"  # TODO (pre-GA): Improve handling if needed beyond dev
+    # i.e. << one-vs-rest DE.
+    cache_buster = "_v11"  # TODO (pre-GA): Improve handling if needed beyond dev
     output_path = f"gene_leads_{clustering}--{annotation}{cache_buster}.tsv"
     with open(output_path, "w") as f:
         f.write(tsv_content)
@@ -443,7 +404,7 @@ def gene_leads(
     }
     gene_dicts = extract(meta, all_groups, publication_url)
     tsv_content = transform(gene_dicts, meta)
-    load(tsv_content)
+    load(clustering, annotation, tsv_content)
 
 
 if __name__ == '__main__':
