@@ -118,8 +118,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
     def test_convention_content(self):
-        """Metadata convention should be valid jsonschema
-        """
+        """Metadata convention should be valid jsonschema"""
 
         args = "--convention ../tests/data/AMC_invalid.json ../tests/data/annotation/metadata/convention/valid_no_array_v2.0.0.txt"
         metadata, convention = self.setup_metadata(args)
@@ -470,8 +469,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
 
     def test_valid_nonontology_content(self):
-        """Non-ontology metadata should conform to convention requirements
-        """
+        """Non-ontology metadata should conform to convention requirements"""
         # def set
         # Note: this input metadata file does not have array-based metadata
         args = (
@@ -538,8 +536,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
     def test_valid_ontology_content(self):
-        """Ontology metadata should conform to convention requirements
-        """
+        """Ontology metadata should conform to convention requirements"""
         # Note: this input metadata file does not have array-based metadata
         args = (
             "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
@@ -557,7 +554,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_valid_multiple_ontologies_content(self):
         """Ontology metadata should conform to convention requirements
-           Specifically tests that a term can be found in one of two accepted ontologies (e.g. disease in MONDO or PATO)
+        Specifically tests that a term can be found in one of two accepted ontologies (e.g. disease in MONDO or PATO)
         """
         # Note: this input metadata file does not have array-based metadata
         args = (
@@ -575,8 +572,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
     def test_invalid_ontology_content(self):
-        """Ontology metadata should conform to convention requirements
-        """
+        """Ontology metadata should conform to convention requirements"""
         # Note: this input metadata file does not have array-based metadata
         args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_ontology_v2.0.0.tsv"
         metadata, convention = self.setup_metadata(args)
@@ -635,8 +631,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
     def test_content(self):
-        """Array-based metadata should conform to convention requirements
-        """
+        """Array-based metadata should conform to convention requirements"""
 
         def set_up_test(test_file_name, bq=None):
             test_file_path = "data/annotation/metadata/convention/" + test_file_name
@@ -799,8 +794,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
     def test_bigquery_json_content(self):
-        """generated newline delimited JSON for BigQuery upload should match expected output
-        """
+        """generated newline delimited JSON for BigQuery upload should match expected output"""
         args = (
             "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
             "../tests/data/annotation/metadata/convention/valid_array_v2.1.2.txt"
@@ -825,8 +819,7 @@ class TestValidateMetadata(unittest.TestCase):
             print("no file to remove")
 
     def test_invalid_mba_content(self):
-        """Mouse Brain Atlas metadata should validate against MBA ontology file
-        """
+        """Mouse Brain Atlas metadata should validate against MBA ontology file"""
         args = (
             "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
             "../tests/data/annotation/metadata/convention/invalid_mba_v2.1.2.tsv"
@@ -876,8 +869,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     @patch("requests.get", side_effect=mocked_requests_get)
     def test_request_backoff_handling(self, mocked_requests_get):
-        """errors in retrieving data from external resources should attempt MAX_HTTP_ATTEMPTS times and throw an exception
-        """
+        """errors in retrieving data from external resources should attempt MAX_HTTP_ATTEMPTS times and throw an exception"""
         request_url = "https://www.ebi.ac.uk/ols/api/ontologies/"
         self.assertRaises(
             requests.exceptions.RequestException, request_json_with_backoff, request_url
@@ -958,8 +950,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
 
     def test_validate_nonconventional_numeric_content(self):
-        """Nonconventional numeric metadata values should all validate as numeric
-        """
+        """Nonconventional numeric metadata values should all validate as numeric"""
 
         args = (
             "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
@@ -982,7 +973,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_excel_drag_check(self):
         """Evidence of an "Excel drag" event should generate errors
-           Successful detection avoids EBI OLS queries when input data is faulty
+        Successful detection avoids EBI OLS queries when input data is faulty
         """
 
         args = (

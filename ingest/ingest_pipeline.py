@@ -191,8 +191,8 @@ class IngestPipeline:
     def initialize_file_connection(self, file_type, file_path):
         """Initializes connection to file.
 
-            Returns:
-                File object.
+        Returns:
+            File object.
         """
         file_connections = {"cell_metadata": CellMetadata, "cluster": Clusters}
         try:
@@ -425,7 +425,6 @@ class IngestPipeline:
 
     @custom_metric(config.get_metric_properties)
     def subsample(self):
-
         """Method for subsampling cluster and metadata files"""
         subsample = SubSample(
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
@@ -509,7 +508,7 @@ class IngestPipeline:
             return 1
 
     def calculate_de(self):
-        """ Run differential expression analysis """
+        """Run differential expression analysis"""
         try:
             de = DifferentialExpression(
                 cluster=self.cluster,
@@ -546,8 +545,7 @@ class IngestPipeline:
 
 
 def run_ingest(ingest, arguments, parsed_args):
-    """Runs Ingest Pipeline as indicated by CLI or importing (test) module
-    """
+    """Runs Ingest Pipeline as indicated by CLI or importing (test) module"""
     status = []
     status_cell_metadata = None
     # TODO: Add validation for gene file types
@@ -590,8 +588,7 @@ def run_ingest(ingest, arguments, parsed_args):
 
 
 def get_delocalization_info(arguments):
-    """ extract info on study file for delocalization decision-making
-    """
+    """extract info on study file for delocalization decision-making"""
     for argument in list(arguments.keys()):
         captured_argument = re.match("(\w*file)$", argument)
         if captured_argument is not None:
@@ -606,8 +603,7 @@ def get_delocalization_info(arguments):
 
 
 def exit_pipeline(ingest, status, status_cell_metadata, arguments):
-    """Logs any errors, then exits Ingest Pipeline with standard OS code
-    """
+    """Logs any errors, then exits Ingest Pipeline with standard OS code"""
     if len(status) > 0:
         # for successful DE jobs, need to delocalize results
         if "differential_expression" in arguments and all(i < 1 for i in status):

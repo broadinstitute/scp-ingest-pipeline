@@ -49,7 +49,6 @@ class CellMetadata(Annotations):
         *args,
         **kwargs,
     ):
-
         self.study_accession = kwargs.pop("study_accession")
         Annotations.__init__(
             self, file_path, self.ALLOWED_FILE_TYPES, study_id, study_file_id
@@ -77,7 +76,7 @@ class CellMetadata(Annotations):
     # More work needs to be done to fully remove ingest from IngestPipeline
     # Tracked in SCP-3023
     def execute_ingest(self):
-        """ Method for ingesting cell metadata files."""
+        """Method for ingesting cell metadata files."""
         for metadata_model in self.transform():
             yield metadata_model
 
@@ -87,7 +86,7 @@ class CellMetadata(Annotations):
 
     # Will evolve to do cross file validation
     def validate(self, validate_against_convention=False):
-        """ Runs all validation checks """
+        """Runs all validation checks"""
         if validate_against_convention:
             return self.is_valid_format()
         else:
@@ -117,7 +116,7 @@ class CellMetadata(Annotations):
             return False
 
     def conforms_to_metadata_convention(self):
-        """ Determines if cell metadata file follows metadata convention"""
+        """Determines if cell metadata file follows metadata convention"""
         convention_file_object = IngestFiles(self.JSON_CONVENTION, ["application/json"])
         json_file = convention_file_object.open_file(self.JSON_CONVENTION)
         convention = json.load(json_file)
@@ -129,7 +128,7 @@ class CellMetadata(Annotations):
         return not report_issues(self)
 
     def transform(self):
-        """ Builds cell metadata model"""
+        """Builds cell metadata model"""
         AnnotationModel = collections.namedtuple(
             "AnnotationModel", ["annot_header", "model"]
         )
@@ -170,7 +169,6 @@ class CellMetadata(Annotations):
             )
 
     def set_data_array(self, linear_data_id: str, annot_header: str):
-
         data_array_attrs = copy.copy(locals())
         del data_array_attrs["annot_header"]
         del data_array_attrs["self"]
@@ -203,7 +201,7 @@ class CellMetadata(Annotations):
         return DataArray(**base_data_array_model, **data_array_attrs).get_data_arrays()
 
     def yield_by_row(self) -> None:
-        """ Yield row from cell metadata file"""
+        """Yield row from cell metadata file"""
         for row in self.file.itertuples(index=False):
             dict_row = row._asdict()
             yield dict_row.values()

@@ -34,7 +34,7 @@ class SubSample(Annotations):
         return set(cluster_cells).issubset(set(metadata_cells))
 
     def prepare_cell_metadata(self):
-        """ Does an inner join on cell and cluster file """
+        """Does an inner join on cell and cluster file"""
         if self.cell_metadata is not None:
             self.cell_metadata.preprocess()
             self.merge_df(
@@ -56,7 +56,7 @@ class SubSample(Annotations):
                 annotation. It would look like {'unique_value1': filtered dataframe where rows=unique_value1}
                 for group values and there can be up to 20 bins for numeric columns.
                 The second value in the tuple is structured exactly like the input value.
-            """
+        """
         bin = {}
         # sample the annotation along with coordinates and cell names
         columns_to_sample = copy.copy(self.coordinates_and_cell_headers)
@@ -90,7 +90,6 @@ class SubSample(Annotations):
             if sample_size < len(self.file.index)
         ]
         for bins in [self.bin(col, scope) for col in self.annot_column_headers]:
-
             amount_of_bins = len(bins[0].keys())
             # (name of current column)
             annotation_name = bins[1]
@@ -140,7 +139,7 @@ class SubSample(Annotations):
                 yield (points, annotation_name, sample_size)
 
     def return_sorted_bin(self, bin, annot_name):
-        """Sorts binned groups in order of size from smallest to largest for group annotations """
+        """Sorts binned groups in order of size from smallest to largest for group annotations"""
 
         if "group" in annot_name:
             return sorted(bin.items(), key=lambda x: len(x[1]))

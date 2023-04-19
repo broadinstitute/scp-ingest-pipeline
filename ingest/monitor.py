@@ -31,7 +31,7 @@ def default_configs(log_file):
 
 
 def setup_logger(logger_name, log_file, level=logging.DEBUG, format="default"):
-    """"Sets up logging configurations and formatting"""
+    """Sets up logging configurations and formatting"""
     logger = logging.getLogger(logger_name)
     if format == "support_configs":
         handler = support_configs(log_file)
@@ -46,7 +46,7 @@ def setup_logger(logger_name, log_file, level=logging.DEBUG, format="default"):
 
 def bypass_mongo_writes():
     """Check if developer has set environment variable to bypass writing data to MongoDB
-        BYPASS_MONGO_WRITES='yes'
+    BYPASS_MONGO_WRITES='yes'
     """
     if os.environ.get("BYPASS_MONGO_WRITES") is not None:
         skip = os.environ["BYPASS_MONGO_WRITES"]

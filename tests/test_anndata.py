@@ -111,16 +111,28 @@ class TestAnnDataIngestor(unittest.TestCase):
         with open(self.metadata_filename) as metadata_body:
             line = metadata_body.readline().split("\t")
             expected_line = [
-                'NAME', 'n_genes', 'percent_mito', 'n_counts', 'louvain', 'donor_id', 'biosample_id', 'sex', 'species',
-                'species__ontology_label', 'disease', 'disease__ontology_label', 'organ', 'organ__ontology_label',
-                'library_preparation_protocol', "library_preparation_protocol__ontology_label\n"
+                'NAME',
+                'n_genes',
+                'percent_mito',
+                'n_counts',
+                'louvain',
+                'donor_id',
+                'biosample_id',
+                'sex',
+                'species',
+                'species__ontology_label',
+                'disease',
+                'disease__ontology_label',
+                'organ',
+                'organ__ontology_label',
+                'library_preparation_protocol',
+                "library_preparation_protocol__ontology_label\n",
             ]
             self.assertEqual(
                 expected_line,
                 line,
                 'did not get expected headers from metadata body',
             )
-
 
     def test_get_files_to_delocalize(self):
         files = AnnDataIngestor.clusterings_to_delocalize(self.valid_kwargs)

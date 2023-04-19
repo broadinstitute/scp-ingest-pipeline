@@ -46,7 +46,7 @@ class MongoConnection:
 # -graceful_auto_reconnect-py
 def graceful_auto_reconnect(mongo_op_func):
     """Gracefully handles a reconnection event as well as other exceptions
-        for mongo.
+    for mongo.
     """
     import random
     import math
@@ -96,6 +96,7 @@ def graceful_auto_reconnect(mongo_op_func):
 
     return wrapper
 
+
 def log_error_without_values(error):
     """Remove 'values' array from log messages as this is usually very long and makes logs difficult to read
 
@@ -105,6 +106,7 @@ def log_error_without_values(error):
         if 'values' in entry['op']:
             entry['op']['values'] = '<filtered>'
     dev_logger.debug(str(error.details))
+
 
 def discard_inserted_documents(errors, original_documents) -> list[dict]:
     """Discard any documents that have already been inserted which are violating index constraints
@@ -118,5 +120,11 @@ def discard_inserted_documents(errors, original_documents) -> list[dict]:
     error_docs = []
     for doc in errors:
         if doc['code'] == 11000:
-            error_docs.append({'name': doc['op']['name'], 'array_index': doc['op']['array_index']})
-    return list(d for d in original_documents if {'name': d['name'], 'array_index': d['array_index']} not in error_docs)
+            error_docs.append(
+                {'name': doc['op']['name'], 'array_index': doc['op']['array_index']}
+            )
+    return list(
+        d
+        for d in original_documents
+        if {'name': d['name'], 'array_index': d['array_index']} not in error_docs
+    )

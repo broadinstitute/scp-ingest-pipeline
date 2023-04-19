@@ -85,7 +85,6 @@ class IngestTestCase(unittest.TestCase):
     @patch("google.cloud.storage.Blob", side_effect=mock_storage_blob)
     @patch("google.cloud.storage.Client", side_effect=mock_storage_client)
     def execute_ingest(args, mock_storage_client, mock_storage_blob):
-
         parsed_args = create_parser().parse_args(args)
         validate_arguments(parsed_args)
         arguments = vars(parsed_args)
@@ -101,8 +100,7 @@ class IngestTestCase(unittest.TestCase):
         return_value=True,
     )
     def test_ingest_dense_matrix(self, mock_check_unique_cells):
-        """Ingest Pipeline should extract, transform, and load dense matrices
-        """
+        """Ingest Pipeline should extract, transform, and load dense matrices"""
         args = [
             "--study-id",
             "5d276a50421aa9117c982845",
@@ -131,8 +129,7 @@ class IngestTestCase(unittest.TestCase):
         return_value=True,
     )
     def test_ingest_local_dense_matrix(self, mock_check_unique_cells):
-        """Ingest Pipeline should extract and transform local dense matrices
-        """
+        """Ingest Pipeline should extract and transform local dense matrices"""
 
         args = [
             "--study-id",
@@ -163,7 +160,7 @@ class IngestTestCase(unittest.TestCase):
     )
     def test_ingest_local_compressed_dense_matrix(self, mock_check_unique_cells):
         """Ingest Pipeline should extract and transform local dense matrices
-            from compressed file in the same manner as uncompressed file
+        from compressed file in the same manner as uncompressed file
         """
 
         args = [
@@ -190,8 +187,7 @@ class IngestTestCase(unittest.TestCase):
         self.execute_ingest(args)
 
     def test_empty_dense_file(self):
-        """Ingest Pipeline should fail gracefully when an empty file is given
-        """
+        """Ingest Pipeline should fail gracefully when an empty file is given"""
 
         args = [
             "--study-id",
@@ -221,8 +217,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
 
     def test_empty_mtx_file(self):
-        """Ingest Pipeline should fail gracefully when an empty file is given
-        """
+        """Ingest Pipeline should fail gracefully when an empty file is given"""
 
         args = [
             "--study-id",
@@ -260,8 +255,7 @@ class IngestTestCase(unittest.TestCase):
         return_value=True,
     )
     def test_ingest_mtx_matrix(self, mock_check_unique_cells):
-        """Ingest Pipeline should extract and transform MTX matrix bundles
-        """
+        """Ingest Pipeline should extract and transform MTX matrix bundles"""
 
         args = [
             "--study-id",
@@ -295,8 +289,7 @@ class IngestTestCase(unittest.TestCase):
         return_value=True,
     )
     def test_ingest_unsorted_mtx_matrix(self, mock_check_unique_cells):
-        """Ingest Pipeline should extract and transform unsorted MTX matrix bundles
-        """
+        """Ingest Pipeline should extract and transform unsorted MTX matrix bundles"""
 
         args = [
             "--study-id",
@@ -330,8 +323,7 @@ class IngestTestCase(unittest.TestCase):
         return_value=True,
     )
     def test_ingest_zipped_mtx_matrix(self, mock_check_unique_cells):
-        """Ingest Pipeline should extract and transform MTX matrix bundles
-        """
+        """Ingest Pipeline should extract and transform MTX matrix bundles"""
 
         args = [
             "--study-id",
@@ -365,8 +357,7 @@ class IngestTestCase(unittest.TestCase):
         return_value=True,
     )
     def test_remote_mtx_bundles(self, mock_check_unique_cells):
-        """Ingest Pipeline should handle MTX matrix files fetched from bucket
-        """
+        """Ingest Pipeline should handle MTX matrix files fetched from bucket"""
 
         args = [
             "--study-id",
@@ -401,8 +392,7 @@ class IngestTestCase(unittest.TestCase):
         return_value=True,
     )
     def test_mtx_bundle_argument_validation(self, mock_check_unique_cells):
-        """Omitting --gene-file and --barcode-file in MTX ingest should error
-        """
+        """Omitting --gene-file and --barcode-file in MTX ingest should error"""
 
         args = [
             "--study-id",
@@ -451,8 +441,7 @@ class IngestTestCase(unittest.TestCase):
         self.execute_ingest(args)
 
     def test_good_metadata_file(self):
-        """Ingest Pipeline should succeed for properly formatted metadata file
-        """
+        """Ingest Pipeline should succeed for properly formatted metadata file"""
         args = [
             "--study-id",
             "5d276a50421aa9117c982845",
@@ -487,7 +476,7 @@ class IngestTestCase(unittest.TestCase):
         self, mock_check_unique_cells, mock_load
     ):
         """Ingest Pipeline should not succeed if mongo cannot connect after 5
-            reconnection tries.
+        reconnection tries.
         """
         args = [
             "--study-id",
@@ -521,8 +510,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
 
     def test_bad_metadata_file(self):
-        """Ingest Pipeline should not succeed for misformatted metadata file
-        """
+        """Ingest Pipeline should not succeed for misformatted metadata file"""
 
         args = [
             "--study-id",
@@ -564,8 +552,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
 
     def test_good_cluster_file(self):
-        """Ingest Pipeline should succeed for properly formatted cluster file
-        """
+        """Ingest Pipeline should succeed for properly formatted cluster file"""
         args = [
             "--study-id",
             "5d276a50421aa9117c982845",
@@ -589,8 +576,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(status[0], None)
 
     def test_bad_cluster_file(self):
-        """Ingest Pipeline should fail for misformatted cluster file
-        """
+        """Ingest Pipeline should fail for misformatted cluster file"""
         args = [
             "--study-id",
             "5d276a50421aa9117c982845",
@@ -610,8 +596,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
 
     def test_bad_cluster_missing_coordinate_file(self):
-        """Ingest Pipeline should fail for missing coordinate in cluster file
-        """
+        """Ingest Pipeline should fail for missing coordinate in cluster file"""
         args = [
             "--study-id",
             "5d276a50421aa9117c982845",
@@ -632,8 +617,7 @@ class IngestTestCase(unittest.TestCase):
 
     @patch("ingest_pipeline.IngestPipeline.load_subsample", return_value=0)
     def test_subsample(self, mock_load_subsample):
-        """When cell values in cluster are present in cell metadata file ingest should succeed.
-        """
+        """When cell values in cluster are present in cell metadata file ingest should succeed."""
         args = [
             "--study-id",
             "5d276a50421aa9117c982845",
@@ -654,8 +638,7 @@ class IngestTestCase(unittest.TestCase):
 
     @patch("ingest_pipeline.IngestPipeline.load_subsample", return_value=0)
     def test_subsample_no_cell_intersection(self, mock_load_subsample):
-        """When cell values in cluster are not present in cell metadata file ingest should fail.
-        """
+        """When cell values in cluster are not present in cell metadata file ingest should fail."""
         args = [
             "--study-id",
             "5d276a50421aa9117c982845",
@@ -714,6 +697,7 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(status[0], 0)
         filename = 'h5ad_frag.metadata.tsv'
         self.assertTrue(os.path.isfile(filename))
+
 
 if __name__ == "__main__":
     unittest.main()
