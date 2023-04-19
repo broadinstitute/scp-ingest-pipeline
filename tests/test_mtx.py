@@ -76,7 +76,7 @@ class TestMTXIngestor(unittest.TestCase):
             )
         expected_msg = (
             f"Uploaded matrix suggests {len(genes_as_barcodes)} columns and {len(barcodes_as_genes)} rows "
-            f"instead of {expected_barcodes} cells and {expected_genes} genes. "
+            f"instead of {expected_barcodes} cells and {expected_genes} features/genes. "
             f"Please transpose your sparse matrix and re-upload. "
             f"Matrices exported from AnnData objects must be transposed."
         )

@@ -162,7 +162,7 @@ class MTXIngestor(GeneExpression, IngestFiles):
         ):
             msg = (
                 f"Uploaded matrix suggests {actual_barcodes} columns and {actual_genes} rows "
-                f"instead of {expected_barcodes} cells and {expected_genes} genes. "
+                f"instead of {expected_barcodes} cells and {expected_genes} features/genes. "
                 f"Please transpose your sparse matrix and re-upload. "
                 f"Matrices exported from AnnData objects must be transposed."
             )
