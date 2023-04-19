@@ -2,8 +2,6 @@ import pandas as pd  # NOqa: F821
 import os
 import datetime
 import scanpy as sc
-import h5py
-import numpy as np
 import pdb
 
 try:
@@ -139,25 +137,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
 
     def process_matrix(self):
         """Perform matrix processing"""
-
-        matrix_type = self.determine_matrix_type(self.file_path)
-
-        if matrix_type == "dense":
-            matrix = self.adata.X
-        elif matrix_type == "sparse":
-            matrix = self.adata.X.data
-        else:
-            msg = (
-                f"Unexpected datatype for AnnData matrix - {matrix_type}"
-                f"Please contact scp-support@broadinstitute.zendesk.com"
-            )
-            # TODO - determine error type (ie. replace "foo")
-            GeneExpression.log_for_mixpanel("error", "content:type:foo", msg)
-            raise TypeError(msg)
-
-        if self.feature_names_unique(
-            self.adata.var_names
-        ) and not self.detect_nan_values(matrix):
+        if self.feature_names_unique(self.adata.var_names):
             self.transform()
 
     @staticmethod
@@ -173,36 +153,6 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
                 "error", "content:duplicate:values-within-file", msg
             )
             raise ValueError(msg)
-
-    @staticmethod
-    def determine_matrix_type(filepath):
-        f = h5py.File(filepath, "r")
-        try:
-            matrix_info = dict(f["X"].attrs)
-        except:
-            msg = "unable to determine matrix attributes"
-            raise TypeError(msg)
-        if matrix_info["encoding-type"] == "array":
-            return "dense"
-        elif matrix_info["encoding-type"] == "csr_matrix":
-            return "sparse"
-        else:
-            return matrix_info["encoding-type"]
-
-    @staticmethod
-    def detect_nan_values(matrix):
-        """Return True if NaN values in matrix, else false"""
-
-        found_nan = np.isnan(matrix).any()
-        if found_nan:
-            msg = (
-                f"Expected numeric expression scores - "
-                f"matrix data contains NaN values"
-            )
-            GeneExpression.log_for_mixpanel("error", "content:type:not-numeric", msg)
-            raise ValueError(msg)
-        else:
-            return found_nan
 
     def transform(self):
         """Transforms matrix into gene data model."""
@@ -231,8 +181,17 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         for feature in self.adata.var_names.tolist():
             print(f"processing feature: {feature}")
             feature_expression_series = sc.get.obs_df(self.adata, keys=feature)
-
-            # when underlying matrix is dense, restricts ingest to non-zero data
+            if feature_expression_series.hasnans:
+                msg = (
+                    f"Expected numeric expression score - "
+                    f"expression data for \'{feature}\' has NAN values"
+                )
+                GeneExpression.log_for_mixpanel(
+                    "error", "content:type:not-numeric", msg
+                )
+                raise ValueError(msg)
+            # capture sparse (only non zero values and their cell IDs)
+            # check mtx.py for all zero gene handling
             filtered_expression_series = feature_expression_series[
                 feature_expression_series.values > 0
             ]

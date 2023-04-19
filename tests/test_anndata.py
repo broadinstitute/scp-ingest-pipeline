@@ -174,12 +174,12 @@ class TestAnnDataIngestor(unittest.TestCase):
             lambda: AnnDataIngestor.feature_names_unique(adata.var_names),
         )
 
-    def test_detect_nan_values(self):
+    def test_check_nan_values(self):
         nan_value_input = AnnDataIngestor(*self.nan_value_args)
-        adata = nan_value_input.obtain_adata()
+        nan_value_input.validate()
 
         self.assertRaisesRegex(
             ValueError,
-            "Expected numeric expression scores - matrix data contains NaN values",
-            lambda: nan_value_input.detect_nan_values(adata.X),
+            "Expected numeric expression score - expression data for \'Bar\' has NAN values",
+            lambda: nan_value_input.transform(),
         )
