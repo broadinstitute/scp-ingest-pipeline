@@ -47,6 +47,9 @@ python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id de
 # Ingest AnnData - happy path metadata-only extraction
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['metadata']"
 
+# Ingest AnnData - happy path processed expression data only extraction
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['processed_expression']"
+
 # Ingest AnnData - happy path cluster and metadata extraction
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['cluster', 'metadata']" --obsm-keys "['X_umap','X_tsne']"
 
@@ -500,12 +503,11 @@ class IngestPipeline:
         if self.anndata.validate():
             self.report_validation("success")
             # process matrix data
-            ### TODO: TBD whether matrix uses "extract". for now happy path
-            # will assume just processed matrix ingest
-            # if self.kwargs.get("extract") and "raw" in self.kwargs.get("extract"):
-            #     self.anndata.transform()
-            # if self.kwargs.get("extract") and "processed" in self.kwargs.get("extract"):
-            self.anndata.process_matrix()
+            ### TODO: how to associate "raw_count" cells to anndata file
+            if self.kwargs.get("extract") and "processed_expression" in self.kwargs.get(
+                "extract"
+            ):
+                self.anndata.process_matrix()
             # Get cluster extraction parameters and perform extraction
             if self.kwargs.get("extract") and "cluster" in self.kwargs.get("extract"):
                 if not self.kwargs["obsm_keys"]:
