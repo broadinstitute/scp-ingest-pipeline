@@ -161,10 +161,10 @@ class MTXIngestor(GeneExpression, IngestFiles):
             actual_genes == expected_barcodes
         ):
             msg = (
-                f"Uploaded matrix suggests {actual_barcodes} cells and {actual_genes} genes "
+                f"Uploaded matrix suggests {actual_barcodes} columns and {actual_genes} rows "
                 f"instead of {expected_barcodes} cells and {expected_genes} genes. "
                 f"Please transpose your sparse matrix and re-upload. "
-                f"Transposition is expected for matrices exported from AnnData objects. "
+                f"Matrices exported from AnnData objects must be transposed."
             )
             GeneExpression.log_for_mixpanel(
                 "error", "format:cap:mtx-dimension-mismatch", msg
