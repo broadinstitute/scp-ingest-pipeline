@@ -7,18 +7,24 @@ import sys
 import os
 from unittest.mock import patch
 
+from test_expression_files import mock_expression_load
+
 sys.path.append("../ingest")
 from anndata_ import AnnDataIngestor
 from ingest_files import IngestFiles
+from expression_files.expression_files import GeneExpression
 
 
 class TestAnnDataIngestor(unittest.TestCase):
+    GeneExpression.load = mock_expression_load
+
     @staticmethod
     def setup_class(self):
         filepath_valid = "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad"
         filepath_invalid = "../tests/data/anndata/bad.h5"
         filepath_dup_feature = "../tests/data/anndata/dup_feature.h5ad"
         filepath_nan = "../tests/data/anndata/nan_value.h5ad"
+        filepath_synthetic = "../tests/data/anndata/anndata_test.h5ad"
         self.study_id = "addedfeed000000000000000"
         self.study_file_id = "dec0dedfeed0000000000000"
         self.valid_args = [filepath_valid, self.study_id, self.study_file_id]
@@ -29,6 +35,11 @@ class TestAnnDataIngestor(unittest.TestCase):
             self.study_file_id,
         ]
         self.nan_value_args = [filepath_nan, self.study_id, self.study_file_id]
+        self.synthetic_args = [
+            filepath_synthetic,
+            "5d276a50421aa9117c982845",
+            "5dd5ae25421aa910a723a337",
+        ]
         self.cluster_name = 'X_tsne'
         self.valid_kwargs = {'obsm_keys': [self.cluster_name]}
         self.anndata_ingest = AnnDataIngestor(*self.valid_args, **self.valid_kwargs)
@@ -137,9 +148,7 @@ class TestAnnDataIngestor(unittest.TestCase):
                 "library_preparation_protocol__ontology_label\n",
             ]
             self.assertEqual(
-                expected_line,
-                line,
-                'did not get expected headers from metadata body',
+                expected_line, line, 'did not get expected headers from metadata body'
             )
 
     def test_get_files_to_delocalize(self):
@@ -176,10 +185,38 @@ class TestAnnDataIngestor(unittest.TestCase):
 
     def test_check_nan_values(self):
         nan_value_input = AnnDataIngestor(*self.nan_value_args)
-        nan_value_input.validate()
+        nan_value_input.adata = nan_value_input.obtain_adata()
 
         self.assertRaisesRegex(
             ValueError,
             "Expected numeric expression score - expression data for \'Bar\' has NaN values",
             lambda: nan_value_input.transform(),
         )
+
+    @patch("anndata_.AnnDataIngestor.transform")
+    def test_ingest_synthetic(self, mock_transform):
+        """
+        process_matrix() integration test, dense/mtx execute_ingest() analogue
+        """
+        ingest_sythetic_input = AnnDataIngestor(*self.synthetic_args)
+        ingest_sythetic_input.adata = ingest_sythetic_input.obtain_adata()
+
+        ingest_sythetic_input.process_matrix()
+        self.assertTrue(mock_transform.called)
+
+    def test_transform_fn(self):
+        """
+        Assures transform function creates data models correctly.
+        """
+        ingest_sythetic_input = AnnDataIngestor(*self.synthetic_args)
+        ingest_sythetic_input.validate()
+
+        ingest_sythetic_input.process_matrix()
+
+        ingest_sythetic_input.test_models = None
+        ingest_sythetic_input.models_processed = 0
+        ingest_sythetic_input.transform()
+        amount_of_models = len(
+            ingest_sythetic_input.test_models["data_arrays"].keys()
+        ) + len(ingest_sythetic_input.test_models["gene_models"].keys())
+        self.assertEqual(ingest_sythetic_input.models_processed, amount_of_models)
