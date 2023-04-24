@@ -3,7 +3,7 @@
 # docker-compose-setup.sh
 # bring up local development environment via docker-compose
 #
-# More context: 
+# More context:
 # See https://github.com/broadinstitute/scp-ingest-pipeline#docker
 
 usage=$(
@@ -55,6 +55,6 @@ echo "### SETTING UP ENVIRONMENT ###"
 
 docker pull $GCR_IMAGE
 
-# Run the "ingest" service (define in docker-compose-dev.yaml), 
+# Run the "ingest" service (define in docker-compose-dev.yaml),
 # then enter the Bash shell
 docker-compose -f docker-compose-dev.yaml run ingest bash

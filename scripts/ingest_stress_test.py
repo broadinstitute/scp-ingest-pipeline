@@ -48,8 +48,7 @@ DATA = {
 
 
 def create_parser():
-    """Parse command line values
-    """
+    """Parse command line values"""
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -116,7 +115,6 @@ class ManageStudyAction:
         ]
 
     def send_request(self, study, action):
-
         study_actions = {
             "study_exists": [
                 'get-study-attribute',

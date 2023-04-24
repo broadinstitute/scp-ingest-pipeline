@@ -145,7 +145,6 @@ class TestMTXIngestor(unittest.TestCase):
         self.assertEqual("MTX file did not contain expression data.", str(cm.exception))
 
     def test_check_duplicates(self):
-
         values = ["2", "4", "5", "7"]
         self.assertTrue(MTXIngestor.check_duplicates(values, "scores"))
         dup_values = ["foo1", "f002", "foo1", "foo3"]
@@ -209,7 +208,7 @@ class TestMTXIngestor(unittest.TestCase):
         self, mock_load, mock_transform, mock_has_unique_cells, mock_is_raw_count_file
     ):
         """
-            Integration test for execute_ingest()
+        Integration test for execute_ingest()
         """
 
         expression_matrix = MTXIngestor(

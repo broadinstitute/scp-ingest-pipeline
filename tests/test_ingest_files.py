@@ -29,10 +29,10 @@ class TestIngestFiles(unittest.TestCase):
             self.assertRaises(ValueError, IngestFiles.is_gzipped, zipped_path)
 
     def test_delocalize_file(self):
-        """ Tests writing a small file to a GCP bucket
-            Checks the test location doesn't already have the test file
-            writes the file, checks it now exists, then deletes the test file
-            Due to auth issues, this test does not run in CI
+        """Tests writing a small file to a GCP bucket
+        Checks the test location doesn't already have the test file
+        writes the file, checks it now exists, then deletes the test file
+        Due to auth issues, this test does not run in CI
         """
         dev_reference_bucket = "gs://fc-2f8ef4c0-b7eb-44b1-96fe-a07f0ea9a982"
         file_to_delocalize = (

@@ -25,11 +25,11 @@ def gunzip_shutil(source_filepath, dest_filepath, block_size=65536):
 
 def sort_sparse_matrix(matrix_file, sorted_matrix_file=None):
     """Sort the sparse matrix file by gene, barcode
-        Arguments:
-        matrix_file- sparse matrix file to sort
-        sorted_matrix_file- optional output path of sorted file
-        Outputs-
-        output_name- gene, barcode sorted sparse matrix file, name is either sorted_matrix_file if provided, or "gene_sorted-" + matrix_file
+    Arguments:
+    matrix_file- sparse matrix file to sort
+    sorted_matrix_file- optional output path of sorted file
+    Outputs-
+    output_name- gene, barcode sorted sparse matrix file, name is either sorted_matrix_file if provided, or "gene_sorted-" + matrix_file
     """
     if '.mtx.gz' in matrix_file:
         unzipped_file = matrix_file.split('.gz')[0]
