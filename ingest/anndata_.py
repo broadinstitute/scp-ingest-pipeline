@@ -2,7 +2,6 @@ import pandas as pd  # NOqa: F821
 import os
 import datetime
 import scanpy as sc
-import pdb
 
 try:
     from ingest_files import IngestFiles
@@ -156,6 +155,11 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
 
     def transform(self):
         """Transforms matrix into gene data model."""
+        # initialize settings for mock data loads in tests
+        self.test_models = None
+        self.models_processed = 0
+
+        # derive file name from file path
         file_name = os.path.basename(self.file_path)
         start_time = datetime.datetime.now()
         GeneExpression.dev_logger.info("Starting run at " + str(start_time))
@@ -172,9 +176,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         ):
             data_arrays.append(all_cell_model)
 
-        # !@# check in database if there is ever more than one stored for this kind of data array
-        # Save all_cell_model once
-        # ASSUMPTION all_cell_model is correct for both raw and processed data
+        # ASSUMPTION all_cell_model same for raw_count and processed_expression
         # TODO: if raw counts is indicated check that .raw slot is populated
 
         # Iterate over feature names (for happy path)
@@ -184,7 +186,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
             if feature_expression_series.hasnans:
                 msg = (
                     f"Expected numeric expression score - "
-                    f"expression data for \'{feature}\' has NAN values"
+                    f"expression data for \'{feature}\' has NaN values"
                 )
                 GeneExpression.log_for_mixpanel(
                     "error", "content:type:not-numeric", msg

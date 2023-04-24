@@ -180,6 +180,6 @@ class TestAnnDataIngestor(unittest.TestCase):
 
         self.assertRaisesRegex(
             ValueError,
-            "Expected numeric expression score - expression data for \'Bar\' has NAN values",
+            "Expected numeric expression score - expression data for \'Bar\' has NaN values",
             lambda: nan_value_input.transform(),
         )
