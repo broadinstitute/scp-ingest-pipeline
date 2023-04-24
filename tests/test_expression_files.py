@@ -25,6 +25,9 @@ from mock_data.expression.matrix_mtx.AB_toy_data_toy_unsorted_mtx_models import 
 )
 from mock_data.expression.matrix_mtx.raw_count_mtx import raw_count_mtx
 
+# AnnData models
+from mock_data.expression.anndata.anndata_test_models import anndata_test_models
+
 sys.path.append("../ingest")
 from expression_files.expression_files import GeneExpression
 from ingest_files import DataArray
@@ -60,6 +63,8 @@ def mock_expression_load(self, *args):
                 self.test_models = one_column_feature_file_data_models
             if model_name in nineteen_genes_100k_cell_models["gene_models"][model_name]:
                 self.test_models = nineteen_genes_100k_cell_models
+            if model_name in anndata_test_models["gene_models"]:
+                self.test_models = anndata_test_models
         if collection_name == DataArray.COLLECTION_NAME:
             if model_name in AB_toy_data_toy_data_models["data_arrays"]:
                 self.test_models = AB_toy_data_toy_data_models
@@ -73,6 +78,8 @@ def mock_expression_load(self, *args):
                 self.test_models = raw_count_dense
             if model_name in raw_count_mtx["data_arrays"]:
                 self.test_models = raw_count_mtx
+            if model_name in anndata_test_models["data_arrays"]:
+                self.test_models = anndata_test_models
     # _id and linear_data_id are unique identifiers and can not be predicted
     # so we exclude it from the comparison
     for document in documents:
@@ -122,9 +129,9 @@ class TestExpressionFiles(unittest.TestCase):
         TestExpressionFiles.client_mock.keys.return_value.__iter__.return_value = (
             client_values.keys()
         )
-        TestExpressionFiles.client_mock.__getitem__.side_effect = (
-            lambda k: client_values[k]
-        )
+        TestExpressionFiles.client_mock.__getitem__.side_effect = lambda k: client_values[
+            k
+        ]
 
     def test_check_unique_cells(self):
         with patch(
