@@ -35,11 +35,7 @@ class TestAnnDataIngestor(unittest.TestCase):
             self.study_file_id,
         ]
         self.nan_value_args = [filepath_nan, self.study_id, self.study_file_id]
-        self.synthetic_args = [
-            filepath_synthetic,
-            "5d276a50421aa9117c982845",
-            "5dd5ae25421aa910a723a337",
-        ]
+        self.synthetic_args = [filepath_synthetic, self.study_id, self.study_file_id]
         self.cluster_name = 'X_tsne'
         self.valid_kwargs = {'obsm_keys': [self.cluster_name]}
         self.anndata_ingest = AnnDataIngestor(*self.valid_args, **self.valid_kwargs)

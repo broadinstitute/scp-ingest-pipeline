@@ -718,9 +718,9 @@ class IngestTestCase(unittest.TestCase):
     def test_extract_expression_file_from_anndata(self):
         args = [
             "--study-id",
-            "5d276a50421aa9117c982845",
+            "addedfeed000000000000000",
             "--study-file-id",
-            "5dd5ae25421aa910a723a337",
+            "dec0dedfeed0000000000000",
             "ingest_anndata",
             "--ingest-anndata",
             "--extract",
