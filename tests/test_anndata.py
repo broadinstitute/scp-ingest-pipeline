@@ -23,6 +23,7 @@ class TestAnnDataIngestor(unittest.TestCase):
         filepath_valid = "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad"
         filepath_invalid = "../tests/data/anndata/bad.h5"
         filepath_dup_feature = "../tests/data/anndata/dup_feature.h5ad"
+        filepath_dup_cell = "../tests/data/anndata/dup_cell.h5ad"
         filepath_nan = "../tests/data/anndata/nan_value.h5ad"
         filepath_synthetic = "../tests/data/anndata/anndata_test.h5ad"
         self.study_id = "addedfeed000000000000000"
@@ -34,6 +35,7 @@ class TestAnnDataIngestor(unittest.TestCase):
             self.study_id,
             self.study_file_id,
         ]
+        self.dup_cell_args = [filepath_dup_cell, self.study_id, self.study_file_id]
         self.nan_value_args = [filepath_nan, self.study_id, self.study_file_id]
         self.synthetic_args = [filepath_synthetic, self.study_id, self.study_file_id]
         self.cluster_name = 'X_tsne'
@@ -169,14 +171,23 @@ class TestAnnDataIngestor(unittest.TestCase):
                 "expected 1 call to delocalize output files",
             )
 
-    def test_feature_names_unique(self):
+    def test_check_names_unique(self):
         dup_feature_input = AnnDataIngestor(*self.dup_feature_args)
         adata = dup_feature_input.obtain_adata()
 
         self.assertRaisesRegex(
             ValueError,
-            "Duplicate feature name found",
-            lambda: AnnDataIngestor.feature_names_unique(adata.var_names),
+            "Feature names must be unique within a file. 1 duplicates found, including: Baz",
+            lambda: AnnDataIngestor.check_names_unique(adata.var_names, "Feature"),
+        )
+
+        dup_cell_input = AnnDataIngestor(*self.dup_cell_args)
+        adata = dup_cell_input.obtain_adata()
+
+        self.assertRaisesRegex(
+            ValueError,
+            "Obs names must be unique within a file. 1 duplicates found, including: AA",
+            lambda: AnnDataIngestor.check_names_unique(adata.obs_names, "Obs"),
         )
 
     def test_check_nan_values(self):
@@ -185,7 +196,7 @@ class TestAnnDataIngestor(unittest.TestCase):
 
         self.assertRaisesRegex(
             ValueError,
-            "Expected numeric expression score - expression data for \'Bar\' has NaN values",
+            f'Expected numeric expression score - expression data has NaN values for feature "Bar"',
             lambda: nan_value_input.transform(),
         )
 

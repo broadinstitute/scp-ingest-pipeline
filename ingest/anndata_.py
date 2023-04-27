@@ -7,11 +7,13 @@ try:
     from ingest_files import IngestFiles
     from expression_files.expression_files import GeneExpression
     from monitor import log_exception
+    from validation.validate_metadata import list_duplicates
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
     from .expression_files.expression_files import GeneExpression
     from .monitor import log_exception
+    from .validation.validate_metadata import list_duplicates
 
 
 class AnnDataIngestor(GeneExpression, IngestFiles):
@@ -134,20 +136,48 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
                 f"_scp_internal/anndata_ingest/{study_file_id}/{file}",
             )
 
+    @staticmethod
+    def check_valid(adata):
+        error_messages = []
+
+        try:
+            AnnDataIngestor.check_names_unique(adata.var_names, "Feature")
+        except ValueError as v:
+            error_messages.append(str(v))
+        try:
+            AnnDataIngestor.check_names_unique(adata.obs_names, "Obs")
+        except ValueError as v:
+            error_messages.append(str(v))
+        if len(error_messages) > 0:
+            raise ValueError("; ".join(error_messages))
+
+        return True
+
     def process_matrix(self):
         """Perform matrix processing"""
-        if self.feature_names_unique(self.adata.var_names):
+        if self.check_valid(self.adata):
             self.transform()
 
     @staticmethod
-    def feature_names_unique(features):
-        """Return True if feature names are unique, else false"""
-        if len(features) == len(features.unique()):
+    def check_names_unique(names, name_type):
+        """Return True if names are unique, else false
+        Expected name_types: ["Feature", "Obs"]
+        """
+        # check feature_name and obs names, feature_id logic not included
+        # TODO (SCP-5105) non-happy path - add feature_id assessment
+        if len(names) == len(names.unique()):
             return True
         else:
-            # placeholder for function to provide duplicate feature names
-            # non-happy path - option to use gene IDs?
-            msg = f"Duplicate feature name found"
+            dups = list_duplicates(names)
+            features_for_msg = 2
+            end = features_for_msg if len(dups) > features_for_msg else len(dups)
+            dup_list = dups[:end]
+            dup_string = " ".join(dup_list)
+
+            msg = (
+                f"{name_type} names must be unique within a file. "
+                f"{len(dups)} duplicates found, including: {dup_string}"
+            )
             GeneExpression.log_for_mixpanel(
                 "error", "content:duplicate:values-within-file", msg
             )
@@ -177,7 +207,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
             data_arrays.append(all_cell_model)
 
         # ASSUMPTION all_cell_model same for raw_count and processed_expression
-        # TODO: if raw counts is indicated check that .raw slot is populated
+        # TODO (SCP-5103): if raw counts is indicated check that .raw slot is populated
 
         # Iterate over feature names (for happy path)
         for feature in self.adata.var_names.tolist():
@@ -185,8 +215,8 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
             feature_expression_series = sc.get.obs_df(self.adata, keys=feature)
             if feature_expression_series.hasnans:
                 msg = (
-                    f"Expected numeric expression score - "
-                    f"expression data for \'{feature}\' has NaN values"
+                    f'Expected numeric expression score - '
+                    f'expression data has NaN values for feature "{feature}"'
                 )
                 GeneExpression.log_for_mixpanel(
                     "error", "content:type:not-numeric", msg
@@ -204,8 +234,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
 
             # trim expression data to three significant digits
             exp_scores = [round(float(value), 3) for value in untrimmed_exp_scores]
-            # for None value below, consider replacing with gene ID (string)
-            # only creates models where scores exist
+            # TODO (SCP-5105) for None value below, replace with feature ID (string)
             data_arrays, gene_models, num_processed = self.create_models(
                 exp_cells,
                 exp_scores,

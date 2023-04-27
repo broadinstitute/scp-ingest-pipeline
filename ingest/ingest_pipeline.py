@@ -503,7 +503,7 @@ class IngestPipeline:
         if self.anndata.validate():
             self.report_validation("success")
             # process matrix data
-            ### TODO: how to associate "raw_count" cells to anndata file
+            ### TODO (SCP-5102, SCP-5103): how to associate "raw_count" cells to anndata file
             if self.kwargs.get("extract") and "processed_expression" in self.kwargs.get(
                 "extract"
             ):
@@ -512,7 +512,7 @@ class IngestPipeline:
             if self.kwargs.get("extract") and "cluster" in self.kwargs.get("extract"):
                 if not self.kwargs["obsm_keys"]:
                     self.kwargs["obsm_keys"] = ["X_tsne"]
-                # TODO: perform check for successful extraction or report failure and exit
+                # TODO (SCP-5104): perform check for successful extraction or report failure and exit
                 for key in self.kwargs["obsm_keys"]:
                     AnnDataIngestor.generate_cluster_header(self.anndata.adata, key)
                     AnnDataIngestor.generate_cluster_type_declaration(
@@ -522,7 +522,7 @@ class IngestPipeline:
             # Get metadata extraction parameters and perform extraction
             if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
                 metadata_filename = f"h5ad_frag.metadata.tsv"
-                # TODO: perform check for successful extraction or report failure and exit
+                # TODO (SCP-5104): perform check for successful extraction or report failure and exit
                 AnnDataIngestor.generate_metadata_file(
                     self.anndata.adata, metadata_filename
                 )
