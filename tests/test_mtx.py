@@ -44,7 +44,8 @@ class TestMTXIngestor(unittest.TestCase):
             MTXIngestor.check_bundle(barcodes, gene_short, mtx_dimensions)
         expected_msg = (
             f"Expected {expected_barcodes} cells and {expected_genes} genes. "
-            f"Got {len(barcodes)} cells and {len(gene_short)} genes."
+            f"Got {len(barcodes)} cells and {len(gene_short)} genes. "
+            f"Please check the files of your mtx bundle (barcode, feature, mtx) for errors."
         )
         self.assertEqual(str(cm.exception), expected_msg)
 
@@ -53,7 +54,8 @@ class TestMTXIngestor(unittest.TestCase):
             MTXIngestor.check_bundle(barcodes_bad, genes, mtx_dimensions)
         expected_msg = (
             f"Expected {expected_barcodes} cells and {expected_genes} genes. "
-            f"Got {len(barcodes_bad)} cells and {len(genes)} genes."
+            f"Got {len(barcodes_bad)} cells and {len(genes)} genes. "
+            f"Please check the files of your mtx bundle (barcode, feature, mtx) for errors."
         )
         self.assertEqual(str(cm.exception), expected_msg)
 
@@ -61,7 +63,22 @@ class TestMTXIngestor(unittest.TestCase):
             MTXIngestor.check_bundle(barcodes_bad, gene_short, mtx_dimensions)
         expected_msg = (
             f"Expected {expected_barcodes} cells and {expected_genes} genes. "
-            f"Got {len(barcodes_bad)} cells and {len(gene_short)} genes."
+            f"Got {len(barcodes_bad)} cells and {len(gene_short)} genes. "
+            f"Please check the files of your mtx bundle (barcode, feature, mtx) for errors."
+        )
+        self.assertEqual(str(cm.exception), expected_msg)
+
+        genes_as_barcodes = [1, 2, 3, 4, 5]
+        barcodes_as_genes = ["cell0", "cell1", "cell3", "cell4"]
+        with self.assertRaises(ValueError) as cm:
+            MTXIngestor.check_bundle(
+                genes_as_barcodes, barcodes_as_genes, mtx_dimensions
+            )
+        expected_msg = (
+            f"Uploaded matrix suggests {len(genes_as_barcodes)} columns and {len(barcodes_as_genes)} rows "
+            f"instead of {expected_barcodes} cells and {expected_genes} features/genes. "
+            f"Please transpose your sparse matrix and re-upload. "
+            f"Matrices exported from AnnData objects must be transposed."
         )
         self.assertEqual(str(cm.exception), expected_msg)
 
@@ -186,7 +203,8 @@ class TestMTXIngestor(unittest.TestCase):
                 duplicate_barcodes, short_genes, [3, 3, 25], query_params
             )
         expected_msg = (
-            "Expected 3 cells and 3 genes. Got 3 cells and 2 genes.;"
+            f"Expected 3 cells and 3 genes. Got 3 cells and 2 genes. "
+            f"Please check the files of your mtx bundle (barcode, feature, mtx) for errors.;"
             f" {expected_dup_msg}"
         )
         self.assertEqual(expected_msg, str(cm.exception))
@@ -223,7 +241,8 @@ class TestMTXIngestor(unittest.TestCase):
             expression_matrix.execute_ingest()
         self.assertEqual(
             str(error.exception),
-            "Expected 25 cells and 33694 genes. Got 272 cells and 80 genes.",
+            f"Expected 25 cells and 33694 genes. Got 272 cells and 80 genes. "
+            f"Please check the files of your mtx bundle (barcode, feature, mtx) for errors.",
         )
         expression_matrix = MTXIngestor(
             "../tests/data/mtx/AB_toy_data_toy.matrix.mtx",
