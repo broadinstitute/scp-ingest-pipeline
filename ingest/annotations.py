@@ -90,11 +90,11 @@ class Annotations(IngestFiles):
         return cell_names
 
     def merge_df(self, first_df, second_df):
-        """ Does an inner join on a dataframe """
+        """Does an inner join on a dataframe"""
         self.file = pd.merge(second_df, first_df, on=[("NAME", "TYPE")])
 
     def preprocess(self, is_metadata_convention=False):
-        """ Prepares file for ingest
+        """Prepares file for ingest
         Ensures that:
             - 'NAME' in first header row is capitalized
             - 'TYPE' in second header row is capitalized
@@ -133,7 +133,7 @@ class Annotations(IngestFiles):
 
     @staticmethod
     def convert_header_to_multi_index(df, header_names: List[Tuple]):
-        """ Create a multiindex based on the first two row of the annotation files
+        """Create a multiindex based on the first two row of the annotation files
         Parameters
         ----------
             df (pandas dataframe) : Dataframe
@@ -170,7 +170,7 @@ class Annotations(IngestFiles):
         Returns
         ----------
         new_column_names (List[Tuples]): Columns names. E.g. [(NAME, TYPE), (biosample_id, GROUP)]
-            """
+        """
         new_column_names: List[Tuple] = []
         for annotation, annot_type in zip(headers, annot_types):
             new_column_names.append((annotation, annot_type))
@@ -201,7 +201,7 @@ class Annotations(IngestFiles):
 
     def create_data_frame(self):
         """Create dataframe with proper dtypes for group annotations. Numeric annotations require special handling
-            and are addressed in functions presented in preprocess() and preprocess_numeric_annot().
+        and are addressed in functions presented in preprocess() and preprocess_numeric_annot().
         """
         column_names = Annotations.create_columns(self.headers, self.annot_types)
         dtypes = Annotations.get_dtypes_for_group_annots(self.headers, self.annot_types)
@@ -268,7 +268,7 @@ class Annotations(IngestFiles):
     def validate_header_keyword(self):
         """Check header row starts with NAME (case-insensitive).
 
-            return: boolean   True if valid, False otherwise
+        return: boolean   True if valid, False otherwise
         """
 
         valid = False
@@ -284,7 +284,7 @@ class Annotations(IngestFiles):
 
     def validate_unique_header(self):
         """Check all header names are unique and not empty.
-            :return: boolean   True if valid, False otherwise
+        :return: boolean   True if valid, False otherwise
         """
         valid = False
         unique_headers = set(self.headers)
@@ -383,8 +383,7 @@ class Annotations(IngestFiles):
         return valid
 
     def validate_format(self):
-        """Check common format criteria for annotation files
-        """
+        """Check common format criteria for annotation files"""
         return all(
             [
                 self.validate_header_keyword(),
@@ -396,8 +395,7 @@ class Annotations(IngestFiles):
         )
 
     def validate_numeric_annots(self):
-        """Check numeric annotations are not string dtype
-        """
+        """Check numeric annotations are not string dtype"""
         valid = True
         for annot_header in self.file.columns[1:]:
             annot_name = annot_header[0]
@@ -410,4 +408,3 @@ class Annotations(IngestFiles):
                     "error", msg, "content:invalid-type:not-numeric"
                 )
         return valid
-

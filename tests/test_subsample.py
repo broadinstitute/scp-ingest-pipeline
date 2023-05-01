@@ -53,10 +53,9 @@ class TestSubsample(unittest.TestCase):
                 subsampled_values = key_value[1]
                 subsampled_vals_lists = np.array_split(key_value[1], amount_of_bins)
 
-                for (orig_val_list, subsampled_val_list) in zip(
+                for orig_val_list, subsampled_val_list in zip(
                     orig_vals_lists, subsampled_vals_lists
                 ):
-
                     result = np.isin(subsampled_val_list, orig_val_list)
 
                     bad_values = np.isin(
