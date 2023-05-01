@@ -38,6 +38,21 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 # Ingest mtx files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --matrix-file ../tests/data/mtx/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 
+# Ingest AnnData as reference file
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/test.h5ad
+
+# Ingest AnnData - happy path cluster-only extraction
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad --extract "['cluster']" --obsm-keys "['X_umap','X_tsne']"
+
+# Ingest AnnData - happy path metadata-only extraction
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['metadata']"
+
+# Ingest AnnData - happy path processed expression data only extraction
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['processed_expression']"
+
+# Ingest AnnData - happy path cluster and metadata extraction
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['cluster', 'metadata']" --obsm-keys "['X_umap','X_tsne']"
+
 # Differential Expression analysis (dense matrix)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_dense_matrix.tsv --matrix-file-type dense --annotation-file ../tests/data/differential_expression/de_dense_metadata.tsv --cluster-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
 # Differential Expression analysis (sparse matrix)
@@ -487,17 +502,27 @@ class IngestPipeline:
         )
         if self.anndata.validate():
             self.report_validation("success")
+            # process matrix data
+            ### TODO (SCP-5102, SCP-5103): how to associate "raw_count" cells to anndata file
+            if self.kwargs.get("extract") and "processed_expression" in self.kwargs.get(
+                "extract"
+            ):
+                self.anndata.process_matrix()
+            # Get cluster extraction parameters and perform extraction
             if self.kwargs.get("extract") and "cluster" in self.kwargs.get("extract"):
                 if not self.kwargs["obsm_keys"]:
-                    self.kwargs["obsm_keys"] = ['X_tsne']
+                    self.kwargs["obsm_keys"] = ["X_tsne"]
+                # TODO (SCP-5104): perform check for successful extraction or report failure and exit
                 for key in self.kwargs["obsm_keys"]:
                     AnnDataIngestor.generate_cluster_header(self.anndata.adata, key)
                     AnnDataIngestor.generate_cluster_type_declaration(
                         self.anndata.adata, key
                     )
                     AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
+            # Get metadata extraction parameters and perform extraction
             if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
                 metadata_filename = f"h5ad_frag.metadata.tsv"
+                # TODO (SCP-5104): perform check for successful extraction or report failure and exit
                 AnnDataIngestor.generate_metadata_file(
                     self.anndata.adata, metadata_filename
                 )
@@ -578,7 +603,7 @@ def run_ingest(ingest, arguments, parsed_args):
         config.set_parent_event_name("ingest-pipeline:differential-expression")
         status_de = ingest.calculate_de()
         status.append(status_de)
-        print(f'STATUS post-DE {status}')
+        print(f"STATUS post-DE {status}")
     elif "render_expression_arrays" in arguments:
         config.set_parent_event_name("image-pipeline:render_expression_arrays")
         status_exp_writer = ingest.render_expression_arrays()
@@ -696,7 +721,7 @@ def main() -> None:
     # Print metrics properties
     metrics_dump = config.get_metric_properties().get_properties()
     for key in metrics_dump.keys():
-        print(f'{key}: {metrics_dump[key]}')
+        print(f"{key}: {metrics_dump[key]}")
 
     # Log Mixpanel events
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
