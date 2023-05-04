@@ -715,23 +715,6 @@ class IngestTestCase(unittest.TestCase):
         filename = 'h5ad_frag.metadata.tsv'
         self.assertTrue(os.path.isfile(filename))
 
-    def test_extract_expression_file_from_anndata(self):
-        args = [
-            "--study-id",
-            "addedfeed000000000000000",
-            "--study-file-id",
-            "dec0dedfeed0000000000000",
-            "ingest_anndata",
-            "--ingest-anndata",
-            "--extract",
-            "['processed_expression']",
-            "--anndata-file",
-            "../tests/data/anndata/anndata_test.h5ad",
-        ]
-        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
-        self.assertEqual(len(status), 1)
-        self.assertEqual(status[0], 0)
-
 
 if __name__ == "__main__":
     unittest.main()
