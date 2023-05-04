@@ -500,7 +500,7 @@ class IngestPipeline:
         self.anndata = AnnDataIngestor(
             self.anndata_file, self.study_id, self.study_file_id, **self.kwargs
         )
-        if self.anndata.validate():
+        if self.anndata.basic_validation():
             self.report_validation("success")
             # process matrix data
             ### TODO (SCP-5102, SCP-5103): how to associate "raw_count" cells to anndata file

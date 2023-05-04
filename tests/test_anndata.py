@@ -50,7 +50,8 @@ class TestAnnDataIngestor(unittest.TestCase):
 
     def test_minimal_valid_anndata(self):
         self.assertTrue(
-            self.anndata_ingest.validate(), "expect known good file to open with scanpy"
+            self.anndata_ingest.basic_validation(),
+            "expect known good file to open with scanpy",
         )
 
     def test_truncated_anndata(self):
@@ -63,7 +64,7 @@ class TestAnnDataIngestor(unittest.TestCase):
             "Scanpy cannot read file, \"../tests/data/anndata/bad.h5\".",
             lambda: truncated_input.obtain_adata(),
         )
-        self.assertFalse(truncated_input.validate())
+        self.assertFalse(truncated_input.basic_validation())
 
     def test_input_bad_suffix(self):
         bad_input = AnnDataIngestor(
@@ -77,7 +78,7 @@ class TestAnnDataIngestor(unittest.TestCase):
             "File type not detected for ../tests/data/anndata/bad.foo, expected file endings are: .h5ad .h5 .hdf5",
             lambda: bad_input.obtain_adata(),
         )
-        self.assertFalse(bad_input.validate())
+        self.assertFalse(bad_input.basic_validation())
 
     def test_set_output_filename(self):
         cluster_name = "X_Umap"
@@ -216,7 +217,7 @@ class TestAnnDataIngestor(unittest.TestCase):
         Assures transform function creates data models correctly.
         """
         ingest_sythetic_input = AnnDataIngestor(*self.synthetic_args)
-        ingest_sythetic_input.validate()
+        ingest_sythetic_input.basic_validation()
 
         ingest_sythetic_input.process_matrix()
 

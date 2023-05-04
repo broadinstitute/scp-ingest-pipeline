@@ -35,7 +35,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         except ValueError as e:
             raise ValueError(e)
 
-    def validate(self):
+    def basic_validation(self):
         """
         Currently, file passes "basic validation" if file
         can be opened by scanpy
