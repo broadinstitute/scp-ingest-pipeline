@@ -341,7 +341,7 @@ class IngestFiles:
     def open_anndata(self, file_path, **kwargs):
         """Opens file as AnnData object"""
         try:
-            return sc.read_h5ad(file_path, backed='r')
+            return sc.read_h5ad(file_path)
         except OSError as e:
             msg = f"Scanpy cannot read file, \"{file_path}\"."
             log_exception(IngestFiles.dev_logger, IngestFiles.user_logger, msg)

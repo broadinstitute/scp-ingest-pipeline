@@ -1,7 +1,16 @@
 import pandas as pd  # NOqa: F821
-import os
-import datetime
+import os, gzip, shutil
 import scanpy as sc
+import scipy
+from scipy.io.mmio import MMFile
+
+# scipy.io.mmwrite uses scientific notation by default
+# https://stackoverflow.com/questions/64748513
+class MMFileFixedFormat(MMFile):
+    def _field_template(self, field, precision):
+        # Override MMFile._field_template.
+        return f'%.{precision}f\n'
+
 
 try:
     from ingest_files import IngestFiles
@@ -124,6 +133,39 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         return cluster_file_names
 
     @staticmethod
+    def generate_processed_matrix(adata):
+        """
+        Generate matrix files with the following file names:
+        h5ad_frag.matrix.processed.mtx
+        h5ad_frag.barcodes.processed.tsv
+        h5ad_frag.features.processed.tsv
+        Gzip files for faster delocalization
+        """
+        pd.DataFrame(adata.var.index).to_csv(
+            "h5ad_frag.features.processed.tsv.gz",
+            sep="\t",
+            index=False,
+            header=False,
+            compression="gzip",
+        )
+        pd.DataFrame(adata.obs.index).to_csv(
+            "h5ad_frag.barcodes.processed.tsv.gz",
+            sep="\t",
+            index=False,
+            header=False,
+            compression="gzip",
+        )
+        mtx_filename = "h5ad_frag.matrix.processed.mtx"
+        MMFileFixedFormat().write(
+            mtx_filename, a=scipy.sparse.csr_matrix(adata.X.T), precision=4
+        )
+        mtx_compressed = mtx_filename + '.gz'
+        with open(mtx_filename, 'rb') as mtx_in:
+            with gzip.open(mtx_compressed, 'wb') as mtx_gz:
+                shutil.copyfileobj(mtx_in, mtx_gz)
+        os.remove(mtx_filename)
+
+    @staticmethod
     def delocalize_extracted_files(file_path, study_file_id, files_to_delocalize):
         """Copy extracted files to study bucket"""
 
@@ -134,120 +176,4 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
                 file_path,
                 file,
                 f"_scp_internal/anndata_ingest/{study_file_id}/{file}",
-            )
-
-    @staticmethod
-    def check_valid(adata):
-        error_messages = []
-
-        try:
-            AnnDataIngestor.check_names_unique(adata.var_names, "Feature")
-        except ValueError as v:
-            error_messages.append(str(v))
-        try:
-            AnnDataIngestor.check_names_unique(adata.obs_names, "Obs")
-        except ValueError as v:
-            error_messages.append(str(v))
-        if len(error_messages) > 0:
-            raise ValueError("; ".join(error_messages))
-
-        return True
-
-    def process_matrix(self):
-        """Perform matrix processing"""
-        if self.check_valid(self.adata):
-            self.transform()
-
-    @staticmethod
-    def check_names_unique(names, name_type):
-        """Return True if names are unique, else false
-        Expected name_types: ["Feature", "Obs"]
-        """
-        # check feature_name and obs names, feature_id logic not included
-        # TODO (SCP-5105) non-happy path - add feature_id assessment
-        if len(names) == len(names.unique()):
-            return True
-        else:
-            dups = list_duplicates(names)
-            features_for_msg = 2
-            end = features_for_msg if len(dups) > features_for_msg else len(dups)
-            dup_list = dups[:end]
-            dup_string = " ".join(dup_list)
-
-            msg = (
-                f"{name_type} names must be unique within a file. "
-                f"{len(dups)} duplicates found, including: {dup_string}"
-            )
-            GeneExpression.log_for_mixpanel(
-                "error", "content:duplicate:values-within-file", msg
-            )
-            raise ValueError(msg)
-
-    def transform(self):
-        """Transforms matrix into gene data model."""
-        # initialize settings for mock data loads in tests
-        self.test_models = None
-        self.models_processed = 0
-
-        # derive file name from file path
-        file_name = os.path.basename(self.file_path)
-        start_time = datetime.datetime.now()
-        GeneExpression.dev_logger.info("Starting run at " + str(start_time))
-        num_processed = 0
-        gene_models = []
-        data_arrays = []
-        for all_cell_model in GeneExpression.create_data_arrays(
-            name=f"{file_name} Cells",
-            array_type="cells",
-            values=self.adata.obs.index.tolist(),
-            linear_data_type="Study",
-            linear_data_id=self.study_file_id,
-            **self.data_array_kwargs,
-        ):
-            data_arrays.append(all_cell_model)
-
-        # ASSUMPTION all_cell_model same for raw_count and processed_expression
-        # TODO (SCP-5103): if raw counts is indicated check that .raw slot is populated
-
-        # Iterate over feature names (for happy path)
-        for feature in self.adata.var_names.tolist():
-            print(f"processing feature: {feature}")
-            feature_expression_series = sc.get.obs_df(self.adata, keys=feature)
-            if feature_expression_series.hasnans:
-                msg = (
-                    f'Expected numeric expression score - '
-                    f'expression data has NaN values for feature "{feature}"'
-                )
-                GeneExpression.log_for_mixpanel(
-                    "error", "content:type:not-numeric", msg
-                )
-                raise ValueError(msg)
-            # capture sparse (only non zero values and their cell IDs)
-            # check mtx.py for all zero gene handling
-            filtered_expression_series = feature_expression_series[
-                feature_expression_series.values > 0
-            ]
-
-            exp_cells = filtered_expression_series.index.tolist()
-
-            untrimmed_exp_scores = filtered_expression_series.values.tolist()
-
-            # trim expression data to three significant digits
-            exp_scores = [round(float(value), 3) for value in untrimmed_exp_scores]
-            # TODO (SCP-5105) for None value below, replace with feature ID (string)
-            data_arrays, gene_models, num_processed = self.create_models(
-                exp_cells,
-                exp_scores,
-                feature,
-                None,
-                gene_models,
-                data_arrays,
-                num_processed,
-                False,
-            )
-        # Load any remaining models. This is necessary because the amount of
-        # models may be less than the batch size.
-        if len(gene_models) > 0 or len(data_arrays) > 0:
-            self.create_models(
-                [], [], None, None, gene_models, data_arrays, num_processed, True
             )

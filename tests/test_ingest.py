@@ -696,6 +696,12 @@ class IngestTestCase(unittest.TestCase):
         filename = 'h5ad_frag.cluster.X_tsne.tsv'
         self.assertTrue(os.path.isfile(filename))
 
+        # clean up cluster file
+        try:
+            os.remove(filename)
+        except:
+            print(f"Error while deleting file : {filename}")
+
     def test_extract_metadata_file_from_anndata(self):
         args = [
             "--study-id",
@@ -714,6 +720,44 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual(status[0], 0)
         filename = 'h5ad_frag.metadata.tsv'
         self.assertTrue(os.path.isfile(filename))
+
+        # clean up metadata file
+        try:
+            os.remove(filename)
+        except:
+            print(f"Error while deleting file : {filename}")
+
+    def test_extract_processed_matrix_from_anndata(self):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_anndata",
+            "--ingest-anndata",
+            "--extract",
+            "['processed_expression']",
+            "--anndata-file",
+            "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad",
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], 0)
+        mtx_filename = 'h5ad_frag.matrix.processed.mtx.gz'
+        self.assertTrue(os.path.isfile(mtx_filename))
+        barcodes_filename = 'h5ad_frag.barcodes.processed.tsv.gz'
+        self.assertTrue(os.path.isfile(barcodes_filename))
+        features_filename = 'h5ad_frag.features.processed.tsv.gz'
+        self.assertTrue(os.path.isfile(features_filename))
+
+        # clean up mtx files
+        files = [mtx_filename, barcodes_filename, features_filename]
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
 
 
 if __name__ == "__main__":
