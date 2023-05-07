@@ -4,7 +4,7 @@
 
 import unittest
 import sys
-import os
+import os, gzip
 from unittest.mock import patch
 
 from test_expression_files import mock_expression_load
@@ -113,7 +113,8 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.anndata_ingest.generate_cluster_body(
             self.anndata_ingest.obtain_adata(), self.cluster_name
         )
-        with open(self.cluster_filename) as cluster_body:
+        compressed_file = self.cluster_filename + ".gz"
+        with gzip.open(compressed_file, "rt", encoding="utf-8-sig") as cluster_body:
             line = cluster_body.readline().split("\t")
             expected_line = ['AAACATACAACCAC-1', '16.009954', "-21.073845\n"]
             self.assertEqual(
@@ -126,7 +127,8 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.anndata_ingest.generate_metadata_file(
             self.anndata_ingest.obtain_adata(), self.metadata_filename
         )
-        with open(self.metadata_filename) as metadata_body:
+        compressed_file = self.metadata_filename + ".gz"
+        with gzip.open(compressed_file, "rt", encoding="utf-8-sig") as metadata_body:
             line = metadata_body.readline().split("\t")
             expected_line = [
                 'NAME',
@@ -152,7 +154,8 @@ class TestAnnDataIngestor(unittest.TestCase):
 
     def test_get_files_to_delocalize(self):
         files = AnnDataIngestor.clusterings_to_delocalize(self.valid_kwargs)
-        expected_files = [self.cluster_filename]
+        compressed_file = self.cluster_filename + ".gz"
+        expected_files = [compressed_file]
         self.assertEqual(expected_files, files)
 
     def test_delocalize_files(self):

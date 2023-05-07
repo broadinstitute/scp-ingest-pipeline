@@ -693,7 +693,7 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
         self.assertEqual(len(status), 1)
         self.assertEqual(status[0], 0)
-        filename = 'h5ad_frag.cluster.X_tsne.tsv'
+        filename = 'h5ad_frag.cluster.X_tsne.tsv.gz'
         self.assertTrue(os.path.isfile(filename))
 
         # clean up cluster file
@@ -718,7 +718,7 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
         self.assertEqual(len(status), 1)
         self.assertEqual(status[0], 0)
-        filename = 'h5ad_frag.metadata.tsv'
+        filename = 'h5ad_frag.metadata.tsv.gz'
         self.assertTrue(os.path.isfile(filename))
 
         # clean up metadata file

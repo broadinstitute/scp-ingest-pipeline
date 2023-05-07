@@ -100,6 +100,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         pd.DataFrame(cluster_body).to_csv(
             filename, sep="\t", mode="a", header=None, index=False
         )
+        AnnDataIngestor.compress_file(filename)
 
     @staticmethod
     def set_clustering_filename(name):
@@ -123,14 +124,24 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
             f.write('\t'.join(headers) + '\n')
             f.write('\t'.join(types) + '\n')
         adata.obs.to_csv(output_name, sep="\t", mode="a", header=None, index=True)
+        AnnDataIngestor.compress_file(output_name)
 
     @staticmethod
     def clusterings_to_delocalize(arguments):
         # ToDo - check if names using obsm_keys need sanitization
         cluster_file_names = []
         for name in arguments["obsm_keys"]:
-            cluster_file_names.append(AnnDataIngestor.set_clustering_filename(name))
+            compressed_file = AnnDataIngestor.set_clustering_filename(name) + ".gz"
+            cluster_file_names.append(compressed_file)
         return cluster_file_names
+
+    @staticmethod
+    def compress_file(filename):
+        with open(filename, 'rb') as file_in:
+            compressed_file = filename + '.gz'
+            with gzip.open(compressed_file, 'wb') as file_gz:
+                shutil.copyfileobj(file_in, file_gz)
+        os.remove(filename)
 
     @staticmethod
     def generate_processed_matrix(adata):
@@ -159,11 +170,8 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         MMFileFixedFormat().write(
             mtx_filename, a=scipy.sparse.csr_matrix(adata.X.T), precision=4
         )
-        mtx_compressed = mtx_filename + '.gz'
-        with open(mtx_filename, 'rb') as mtx_in:
-            with gzip.open(mtx_compressed, 'wb') as mtx_gz:
-                shutil.copyfileobj(mtx_in, mtx_gz)
-        os.remove(mtx_filename)
+        AnnDataIngestor.compress_file(mtx_filename)
+
 
     @staticmethod
     def delocalize_extracted_files(file_path, study_file_id, files_to_delocalize):
