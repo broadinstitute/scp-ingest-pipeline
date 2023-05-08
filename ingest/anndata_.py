@@ -174,7 +174,9 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
 
 
     @staticmethod
-    def delocalize_extracted_files(file_path, study_file_id, files_to_delocalize):
+    def delocalize_extracted_files(
+        file_path, study_file_id, accession, files_to_delocalize
+    ):
         """Copy extracted files to study bucket"""
 
         for file in files_to_delocalize:
@@ -183,5 +185,5 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
                 None,
                 file_path,
                 file,
-                f"_scp_internal/anndata_ingest/{study_file_id}/{file}",
+                f"_scp_internal/anndata_ingest/{accession}_{study_file_id}/{file}",
             )

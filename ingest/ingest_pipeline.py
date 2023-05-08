@@ -652,7 +652,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                         AnnDataIngestor.clusterings_to_delocalize(arguments)
                     )
                 if "metadata" in arguments.get("extract"):
-                    metadata_filename = f"h5ad_frag.metadata.tsv"
+                    metadata_filename = f"h5ad_frag.metadata.tsv.gz"
                     files_to_delocalize.append(metadata_filename)
                 if "processed_expression" in arguments.get("extract"):
                     mtx = "h5ad_frag.matrix.processed.mtx.gz"
@@ -661,7 +661,10 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     mtx_bundle = [mtx, barcodes, features]
                     files_to_delocalize.extend(mtx_bundle)
                 AnnDataIngestor.delocalize_extracted_files(
-                    file_path, study_file_id, files_to_delocalize
+                    file_path,
+                    study_file_id,
+                    arguments["study_accession"],
+                    files_to_delocalize
                 )
         # all non-DE, non-anndata ingest jobs can exit on success
         elif all(i < 1 for i in status):
@@ -732,6 +735,7 @@ def main() -> None:
     # Log Mixpanel events
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     # Exit pipeline
+    arguments["study_accession"] = metrics_dump["studyAccession"]
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 
