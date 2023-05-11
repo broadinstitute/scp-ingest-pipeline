@@ -1,5 +1,7 @@
 import pandas as pd  # NOqa: F821
-import os, gzip, shutil
+import os
+import gzip
+import shutil
 import scanpy as sc
 import scipy
 from scipy.io.mmio import MMFile
@@ -168,10 +170,9 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         )
         mtx_filename = "h5ad_frag.matrix.processed.mtx"
         MMFileFixedFormat().write(
-            mtx_filename, a=scipy.sparse.csr_matrix(adata.X.T), precision=4
+            mtx_filename, a=scipy.sparse.csr_matrix(adata.X.T), precision=3
         )
         AnnDataIngestor.compress_file(mtx_filename)
-
 
     @staticmethod
     def delocalize_extracted_files(

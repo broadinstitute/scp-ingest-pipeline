@@ -4,7 +4,8 @@
 
 import unittest
 import sys
-import os, gzip
+import os
+import gzip
 from unittest.mock import patch
 
 from test_expression_files import mock_expression_load

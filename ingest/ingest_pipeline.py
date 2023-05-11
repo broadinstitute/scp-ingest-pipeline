@@ -503,7 +503,7 @@ class IngestPipeline:
         if self.anndata.basic_validation():
             # Get metadata extraction parameters and perform extraction
             if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
-                metadata_filename = f"h5ad_frag.metadata.tsv"
+                metadata_filename = "h5ad_frag.metadata.tsv"
                 # TODO (SCP-5104): perform check for successful extraction or report failure and exit
                 AnnDataIngestor.generate_metadata_file(
                     self.anndata.adata, metadata_filename
@@ -664,7 +664,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     file_path,
                     study_file_id,
                     arguments["study_accession"],
-                    files_to_delocalize
+                    files_to_delocalize,
                 )
         # all non-DE, non-anndata ingest jobs can exit on success
         elif all(i < 1 for i in status):
