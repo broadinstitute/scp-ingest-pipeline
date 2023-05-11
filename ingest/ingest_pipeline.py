@@ -500,14 +500,14 @@ class IngestPipeline:
         self.anndata = AnnDataIngestor(
             self.anndata_file, self.study_id, self.study_file_id, **self.kwargs
         )
-        if self.anndata.validate():
-            self.report_validation("success")
-            # process matrix data
-            ### TODO (SCP-5102, SCP-5103): how to associate "raw_count" cells to anndata file
-            if self.kwargs.get("extract") and "processed_expression" in self.kwargs.get(
-                "extract"
-            ):
-                self.anndata.process_matrix()
+        if self.anndata.basic_validation():
+            # Get metadata extraction parameters and perform extraction
+            if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
+                metadata_filename = "h5ad_frag.metadata.tsv"
+                # TODO (SCP-5104): perform check for successful extraction or report failure and exit
+                AnnDataIngestor.generate_metadata_file(
+                    self.anndata.adata, metadata_filename
+                )
             # Get cluster extraction parameters and perform extraction
             if self.kwargs.get("extract") and "cluster" in self.kwargs.get("extract"):
                 if not self.kwargs["obsm_keys"]:
@@ -519,13 +519,13 @@ class IngestPipeline:
                         self.anndata.adata, key
                     )
                     AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
-            # Get metadata extraction parameters and perform extraction
-            if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
-                metadata_filename = f"h5ad_frag.metadata.tsv"
-                # TODO (SCP-5104): perform check for successful extraction or report failure and exit
-                AnnDataIngestor.generate_metadata_file(
-                    self.anndata.adata, metadata_filename
-                )
+            # process matrix data
+            ### TODO (SCP-5102, SCP-5103): how to associate "raw_count" cells to anndata file
+            if self.kwargs.get("extract") and "processed_expression" in self.kwargs.get(
+                "extract"
+            ):
+                self.anndata.generate_processed_matrix(self.anndata.adata)
+            self.report_validation("success")
             return 0
         # scanpy unable to open AnnData file
         else:
@@ -652,10 +652,19 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                         AnnDataIngestor.clusterings_to_delocalize(arguments)
                     )
                 if "metadata" in arguments.get("extract"):
-                    metadata_filename = f"h5ad_frag.metadata.tsv"
+                    metadata_filename = f"h5ad_frag.metadata.tsv.gz"
                     files_to_delocalize.append(metadata_filename)
+                if "processed_expression" in arguments.get("extract"):
+                    mtx = "h5ad_frag.matrix.processed.mtx.gz"
+                    barcodes = "h5ad_frag.barcodes.processed.tsv.gz"
+                    features = "h5ad_frag.features.processed.tsv.gz"
+                    mtx_bundle = [mtx, barcodes, features]
+                    files_to_delocalize.extend(mtx_bundle)
                 AnnDataIngestor.delocalize_extracted_files(
-                    file_path, study_file_id, files_to_delocalize
+                    file_path,
+                    study_file_id,
+                    arguments["study_accession"],
+                    files_to_delocalize,
                 )
         # all non-DE, non-anndata ingest jobs can exit on success
         elif all(i < 1 for i in status):
@@ -726,6 +735,7 @@ def main() -> None:
     # Log Mixpanel events
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     # Exit pipeline
+    arguments["study_accession"] = metrics_dump["studyAccession"]
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 
