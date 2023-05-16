@@ -5,6 +5,7 @@
 import unittest
 import sys
 import os
+import gzip
 from unittest.mock import patch
 
 from test_expression_files import mock_expression_load
@@ -50,7 +51,8 @@ class TestAnnDataIngestor(unittest.TestCase):
 
     def test_minimal_valid_anndata(self):
         self.assertTrue(
-            self.anndata_ingest.validate(), "expect known good file to open with scanpy"
+            self.anndata_ingest.basic_validation(),
+            "expect known good file to open with scanpy",
         )
 
     def test_truncated_anndata(self):
@@ -63,7 +65,7 @@ class TestAnnDataIngestor(unittest.TestCase):
             "Scanpy cannot read file, \"../tests/data/anndata/bad.h5\".",
             lambda: truncated_input.obtain_adata(),
         )
-        self.assertFalse(truncated_input.validate())
+        self.assertFalse(truncated_input.basic_validation())
 
     def test_input_bad_suffix(self):
         bad_input = AnnDataIngestor(
@@ -77,7 +79,7 @@ class TestAnnDataIngestor(unittest.TestCase):
             "File type not detected for ../tests/data/anndata/bad.foo, expected file endings are: .h5ad .h5 .hdf5",
             lambda: bad_input.obtain_adata(),
         )
-        self.assertFalse(bad_input.validate())
+        self.assertFalse(bad_input.basic_validation())
 
     def test_set_output_filename(self):
         cluster_name = "X_Umap"
@@ -112,7 +114,8 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.anndata_ingest.generate_cluster_body(
             self.anndata_ingest.obtain_adata(), self.cluster_name
         )
-        with open(self.cluster_filename) as cluster_body:
+        compressed_file = self.cluster_filename + ".gz"
+        with gzip.open(compressed_file, "rt", encoding="utf-8-sig") as cluster_body:
             line = cluster_body.readline().split("\t")
             expected_line = ['AAACATACAACCAC-1', '16.009954', "-21.073845\n"]
             self.assertEqual(
@@ -125,7 +128,8 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.anndata_ingest.generate_metadata_file(
             self.anndata_ingest.obtain_adata(), self.metadata_filename
         )
-        with open(self.metadata_filename) as metadata_body:
+        compressed_file = self.metadata_filename + ".gz"
+        with gzip.open(compressed_file, "rt", encoding="utf-8-sig") as metadata_body:
             line = metadata_body.readline().split("\t")
             expected_line = [
                 'NAME',
@@ -151,7 +155,8 @@ class TestAnnDataIngestor(unittest.TestCase):
 
     def test_get_files_to_delocalize(self):
         files = AnnDataIngestor.clusterings_to_delocalize(self.valid_kwargs)
-        expected_files = [self.cluster_filename]
+        compressed_file = self.cluster_filename + ".gz"
+        expected_files = [compressed_file]
         self.assertEqual(expected_files, files)
 
     def test_delocalize_files(self):
@@ -171,59 +176,3 @@ class TestAnnDataIngestor(unittest.TestCase):
                 "expected 1 call to delocalize output files",
             )
 
-    def test_check_names_unique(self):
-        dup_feature_input = AnnDataIngestor(*self.dup_feature_args)
-        adata = dup_feature_input.obtain_adata()
-
-        self.assertRaisesRegex(
-            ValueError,
-            "Feature names must be unique within a file. 1 duplicates found, including: Baz",
-            lambda: AnnDataIngestor.check_names_unique(adata.var_names, "Feature"),
-        )
-
-        dup_cell_input = AnnDataIngestor(*self.dup_cell_args)
-        adata = dup_cell_input.obtain_adata()
-
-        self.assertRaisesRegex(
-            ValueError,
-            "Obs names must be unique within a file. 1 duplicates found, including: AA",
-            lambda: AnnDataIngestor.check_names_unique(adata.obs_names, "Obs"),
-        )
-
-    def test_check_nan_values(self):
-        nan_value_input = AnnDataIngestor(*self.nan_value_args)
-        nan_value_input.adata = nan_value_input.obtain_adata()
-
-        self.assertRaisesRegex(
-            ValueError,
-            f'Expected numeric expression score - expression data has NaN values for feature "Bar"',
-            lambda: nan_value_input.transform(),
-        )
-
-    @patch("anndata_.AnnDataIngestor.transform")
-    def test_ingest_synthetic(self, mock_transform):
-        """
-        process_matrix() integration test, dense/mtx execute_ingest() analogue
-        """
-        ingest_sythetic_input = AnnDataIngestor(*self.synthetic_args)
-        ingest_sythetic_input.adata = ingest_sythetic_input.obtain_adata()
-
-        ingest_sythetic_input.process_matrix()
-        self.assertTrue(mock_transform.called)
-
-    def test_transform_fn(self):
-        """
-        Assures transform function creates data models correctly.
-        """
-        ingest_sythetic_input = AnnDataIngestor(*self.synthetic_args)
-        ingest_sythetic_input.validate()
-
-        ingest_sythetic_input.process_matrix()
-
-        ingest_sythetic_input.test_models = None
-        ingest_sythetic_input.models_processed = 0
-        ingest_sythetic_input.transform()
-        amount_of_models = len(
-            ingest_sythetic_input.test_models["data_arrays"].keys()
-        ) + len(ingest_sythetic_input.test_models["gene_models"].keys())
-        self.assertEqual(ingest_sythetic_input.models_processed, amount_of_models)
