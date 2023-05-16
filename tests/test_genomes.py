@@ -24,8 +24,7 @@ from genomes_pipeline import create_parser, parse_assemblies, parse_genome_annot
 
 
 def mock_upload_ensembl_gtf_products(ensembl_metadata, scp_species, config):
-    """Avoids call that requires credentials and long-running upload
-    """
+    """Avoids call that requires credentials and long-running upload"""
     return
 
 
@@ -54,8 +53,7 @@ class GenomesTestCase(unittest.TestCase):
     def execute_genomes_pipeline(
         self, args, mock_record_annotation_metadata, mock_upload_ensembl_gtf_products
     ):
-        """Matches main() in genomes_pipeline.py, but called as module
-        """
+        """Matches main() in genomes_pipeline.py, but called as module"""
         parsed_args = create_parser().parse_args(args)
         parse_assemblies(parsed_args)
         parse_genome_annotations(parsed_args)
@@ -69,8 +67,7 @@ class GenomesTestCase(unittest.TestCase):
             print('no files to remove')
 
     def test_genomes_default(self):
-        """Genomes Pipeline should extract and transform reference data
-        """
+        """Genomes Pipeline should extract and transform reference data"""
         args = ['--input-dir', 'mock_data/genomes/', '--local-output-dir', output_dir]
         self.execute_genomes_pipeline(args)
 

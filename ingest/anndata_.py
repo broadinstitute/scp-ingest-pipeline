@@ -1,18 +1,37 @@
 import pandas as pd  # NOqa: F821
+import os
+import gzip
+import shutil
+import scanpy as sc
+import scipy
+from scipy.io.mmio import MMFile
+
+# scipy.io.mmwrite uses scientific notation by default
+# https://stackoverflow.com/questions/64748513
+class MMFileFixedFormat(MMFile):
+    def _field_template(self, field, precision):
+        # Override MMFile._field_template.
+        return f'%.{precision}f\n'
+
 
 try:
     from ingest_files import IngestFiles
+    from expression_files.expression_files import GeneExpression
     from monitor import log_exception
+    from validation.validate_metadata import list_duplicates
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import IngestFiles
+    from .expression_files.expression_files import GeneExpression
     from .monitor import log_exception
+    from .validation.validate_metadata import list_duplicates
 
 
-class AnnDataIngestor(IngestFiles):
+class AnnDataIngestor(GeneExpression, IngestFiles):
     ALLOWED_FILE_TYPES = ['application/x-hdf5']
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
+        GeneExpression.__init__(self, file_path, study_file_id, study_id)
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
@@ -27,7 +46,7 @@ class AnnDataIngestor(IngestFiles):
         except ValueError as e:
             raise ValueError(e)
 
-    def validate(self):
+    def basic_validation(self):
         """
         Currently, file passes "basic validation" if file
         can be opened by scanpy
@@ -50,10 +69,10 @@ class AnnDataIngestor(IngestFiles):
         elif clustering_dimension == 2:
             headers = dim
         elif clustering_dimension > 3:
-            msg = f"Too many dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
+            msg = f'Too many dimensions for visualization in obsm "{clustering_name}", found {clustering_dimension}, expected 2 or 3.'
             raise ValueError(msg)
         else:
-            msg = f"Too few dimensions for visualization in obsm \"{clustering_name}\", found {clustering_dimension}, expected 2 or 3."
+            msg = f'Too few dimensions for visualization in obsm "{clustering_name}", found {clustering_dimension}, expected 2 or 3.'
             raise ValueError(msg)
         filename = AnnDataIngestor.set_clustering_filename(clustering_name)
         with open(filename, "w") as f:
@@ -83,6 +102,7 @@ class AnnDataIngestor(IngestFiles):
         pd.DataFrame(cluster_body).to_csv(
             filename, sep="\t", mode="a", header=None, index=False
         )
+        AnnDataIngestor.compress_file(filename)
 
     @staticmethod
     def set_clustering_filename(name):
@@ -106,19 +126,59 @@ class AnnDataIngestor(IngestFiles):
             f.write('\t'.join(headers) + '\n')
             f.write('\t'.join(types) + '\n')
         adata.obs.to_csv(output_name, sep="\t", mode="a", header=None, index=True)
+        AnnDataIngestor.compress_file(output_name)
 
     @staticmethod
     def clusterings_to_delocalize(arguments):
         # ToDo - check if names using obsm_keys need sanitization
         cluster_file_names = []
         for name in arguments["obsm_keys"]:
-            cluster_file_names.append(AnnDataIngestor.set_clustering_filename(name))
+            compressed_file = AnnDataIngestor.set_clustering_filename(name) + ".gz"
+            cluster_file_names.append(compressed_file)
         return cluster_file_names
 
     @staticmethod
-    def delocalize_extracted_files(file_path, study_file_id, files_to_delocalize):
-        """ Copy extracted files to study bucket
+    def compress_file(filename):
+        with open(filename, 'rb') as file_in:
+            compressed_file = filename + '.gz'
+            with gzip.open(compressed_file, 'wb') as file_gz:
+                shutil.copyfileobj(file_in, file_gz)
+        os.remove(filename)
+
+    @staticmethod
+    def generate_processed_matrix(adata):
         """
+        Generate matrix files with the following file names:
+        h5ad_frag.matrix.processed.mtx
+        h5ad_frag.barcodes.processed.tsv
+        h5ad_frag.features.processed.tsv
+        Gzip files for faster delocalization
+        """
+        pd.DataFrame(adata.var.index).to_csv(
+            "h5ad_frag.features.processed.tsv.gz",
+            sep="\t",
+            index=False,
+            header=False,
+            compression="gzip",
+        )
+        pd.DataFrame(adata.obs.index).to_csv(
+            "h5ad_frag.barcodes.processed.tsv.gz",
+            sep="\t",
+            index=False,
+            header=False,
+            compression="gzip",
+        )
+        mtx_filename = "h5ad_frag.matrix.processed.mtx"
+        MMFileFixedFormat().write(
+            mtx_filename, a=scipy.sparse.csr_matrix(adata.X.T), precision=3
+        )
+        AnnDataIngestor.compress_file(mtx_filename)
+
+    @staticmethod
+    def delocalize_extracted_files(
+        file_path, study_file_id, accession, files_to_delocalize
+    ):
+        """Copy extracted files to study bucket"""
 
         for file in files_to_delocalize:
             IngestFiles.delocalize_file(
@@ -126,5 +186,5 @@ class AnnDataIngestor(IngestFiles):
                 None,
                 file_path,
                 file,
-                f"_scp_internal/anndata_ingest/{study_file_id}/{file}",
+                f"_scp_internal/anndata_ingest/{accession}_{study_file_id}/{file}",
             )

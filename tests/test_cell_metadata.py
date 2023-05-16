@@ -17,7 +17,7 @@ class TestCellMetadata(unittest.TestCase):
         """Ensures validate_header_for_coordinate_values returns false when
         coordinate value is in metadata file
         Note: cluster has similar set of tests
-         """
+        """
         cm = CellMetadata(
             "../tests/data/metadata_has_coordinate_header.txt",
             "5d276a50421aa9117c982845",
@@ -30,7 +30,7 @@ class TestCellMetadata(unittest.TestCase):
     def test_validate_header_for_coordinate_values_true(self):
         """Ensures validate_header_for_coordinate_values returns true when
         coordinate value is not in metadata file
-         """
+        """
         cm = CellMetadata(
             "../tests/data/metadata_example.txt",
             "5d276a50421aa9117c982845",
@@ -84,7 +84,6 @@ class TestCellMetadata(unittest.TestCase):
         ), "empty cell -> NaN that remains float (not coerced)"
 
     def test_transform(self):
-
         # Numeric columns that have array convention data are stored as a group in Mongo
         cm = CellMetadata(
             "../tests/data/annotation/metadata/convention/valid_array_v2.1.2.txt",

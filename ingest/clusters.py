@@ -75,8 +75,7 @@ class Clusters(Annotations):
 
     # Will evolve to do cross file validation
     def validate(self):
-        """ Runs all validation checks
-        """
+        """Runs all validation checks"""
         return all(
             [
                 self.is_valid_format(),
@@ -124,7 +123,7 @@ class Clusters(Annotations):
         return True
 
     def transform(self):
-        """ Builds cluster data model"""
+        """Builds cluster data model"""
         # Array of Hash objects that describe all extra "annotation" columns
         cell_annotations = []
         # Iterate through all extra "annotation" column headers

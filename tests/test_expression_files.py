@@ -25,6 +25,9 @@ from mock_data.expression.matrix_mtx.AB_toy_data_toy_unsorted_mtx_models import 
 )
 from mock_data.expression.matrix_mtx.raw_count_mtx import raw_count_mtx
 
+# AnnData models
+from mock_data.expression.anndata.anndata_test_models import anndata_test_models
+
 sys.path.append("../ingest")
 from expression_files.expression_files import GeneExpression
 from ingest_files import DataArray
@@ -366,12 +369,25 @@ class TestExpressionFiles(unittest.TestCase):
         self.assertEqual(actual_gene_model, expected_gene_model)
 
     def test_insert(self):
-
         client_mock = MagicMock()
 
         docs = [
-            {'id': 1, 'name': 'foo', 'study_id': 1, 'study_file_id': 1, 'array_index': 0, 'linear_data_type': 'Gene'},
-            {'id': 2, 'name': 'bar', 'study_id': 1, 'study_file_id': 1, 'array_index': 0, 'linear_data_type': 'Gene'}
+            {
+                'id': 1,
+                'name': 'foo',
+                'study_id': 1,
+                'study_file_id': 1,
+                'array_index': 0,
+                'linear_data_type': 'Gene',
+            },
+            {
+                'id': 2,
+                'name': 'bar',
+                'study_id': 1,
+                'study_file_id': 1,
+                'array_index': 0,
+                'linear_data_type': 'Gene',
+            },
         ]
         GeneExpression.insert(docs, "collection", client_mock)
         client_mock["collection"].insert_many.assert_called_with(docs, ordered=False)
@@ -393,9 +409,16 @@ class TestExpressionFiles(unittest.TestCase):
         def raiseError(*args, **kwargs):
             details = {
                 "writeErrors": [
-                    { "code": 11000, "op": {
-                        'id': 1, 'name': 'foo', 'study_id': 1, 'study_file_id': 1,
-                        'array_index': 0, 'linear_data_type': 'Gene'}
+                    {
+                        "code": 11000,
+                        "op": {
+                            'id': 1,
+                            'name': 'foo',
+                            'study_id': 1,
+                            'study_file_id': 1,
+                            'array_index': 0,
+                            'linear_data_type': 'Gene',
+                        },
                     }
                 ]
             }

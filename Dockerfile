@@ -25,9 +25,8 @@ RUN apt-get -y update && \
 
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
 
-# # Set cleaner defaults (`alias` fails)
-# RUN ln -s /usr/bin/python3.10 /usr/bin/python && \
-#   ln -s /usr/bin/pip3 /usr/bin/pip
+# symlink python3.10 to python
+RUN ln -s /usr/bin/python3.10 /usr/bin/python
 
 # Copy contents of this repo into the Docker image
 # (See .Dockerignore for omitted files)
@@ -36,7 +35,7 @@ COPY . scp-ingest-pipeline
 WORKDIR /scp-ingest-pipeline
 
 # Install Python dependencies
-RUN python3.10 -m pip install -r requirements.txt
+RUN python -m pip install -r requirements.txt
 
 WORKDIR /scp-ingest-pipeline/ingest
 CMD ["python", "ingest_pipeline.py", "--help"]

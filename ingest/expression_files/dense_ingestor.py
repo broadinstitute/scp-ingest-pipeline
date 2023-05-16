@@ -16,14 +16,12 @@ sys.path.append("..")
 try:
     from expression_files import GeneExpression
     from ingest_files import IngestFiles
-    import config
 
 except ImportError:
     # Used when importing as external package, e.g. imports in
     # single_cell_portal code
     from .expression_files import GeneExpression
     from ..ingest_files import IngestFiles
-    from .. import config
 
 
 class DenseIngestor(GeneExpression, IngestFiles):
@@ -268,7 +266,6 @@ class DenseIngestor(GeneExpression, IngestFiles):
             linear_data_id=ObjectId(),
             **self.data_array_kwargs,
         ):
-
             data_arrays.append(all_cell_model)
         # Expression values of raw counts are not stored. However, cell names are.
         if not GeneExpression.is_raw_count_file(
