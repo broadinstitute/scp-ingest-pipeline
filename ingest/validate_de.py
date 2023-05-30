@@ -105,7 +105,7 @@ def generate_individual_files(col, genes, rest, types, clean_val):
             comp_val = clean_val[j][1]
 
         #CHANGE- check it works
-            file_naming = "'" + curr_val + "'" + "_" + "'" + comp_val + "'"
+            file_naming = f"{curr_val}_{comp_val}"
             names_dict[file_naming] = []
             real_title = col[j]
             if curr_type == curr_val:
@@ -125,9 +125,10 @@ def generate_individual_files(col, genes, rest, types, clean_val):
     for i in names_dict:
         for j in grouped_lists:
             for k in j:
+                k = k.replace("'", "")
                 if i in k:
                     names_dict[i].append(k)
-
+    
 #Now we have all the columns grouped in lists by pairwise comparison, with qval, log2fc, mean
 #have to pair with corresponding gene for that row
 #dictionary format:
@@ -138,7 +139,8 @@ def generate_individual_files(col, genes, rest, types, clean_val):
     for i in grouped_lists:
         list_i = []
         for j in i:        
-            f_name = check_type(names_dict, j)
+            new_j = j.replace("'", "")
+            f_name = check_type(names_dict, new_j)
             col_v = rest[j].tolist()
             list_i.append(col_v)
 
