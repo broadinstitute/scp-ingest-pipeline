@@ -182,7 +182,4 @@ if __name__ == '__main__':
     groups_and_props = get_groups_and_properties(col)
     groups, clean_val, qual = groups_and_props
 
-    files_for_bucket = generate_individual_files(col, genes, rest, groups, clean_val, qual)
-    for i in files_for_bucket:
-        DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", i)
     
