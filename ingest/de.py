@@ -423,7 +423,7 @@ class DifferentialExpression:
         return files_to_match
 
     @staticmethod
-    def delocalize_de_files(file_path, study_file_id, files_to_match):
+    def delocalize_de_files(destination_file_path, study_file_id, files_to_match):
         """Copy DE output files to study bucket"""
 
         files = glob.glob(files_to_match)
@@ -431,7 +431,7 @@ class DifferentialExpression:
             IngestFiles.delocalize_file(
                 study_file_id,
                 None,
-                file_path,
+                destination_file_path,
                 file,
                 f"_scp_internal/differential_expression/{file}",
             )
