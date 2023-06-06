@@ -1,15 +1,18 @@
 import pandas as pd
 import numpy as np
 import sys
+import csv
 
 # input file name as CLI
 # example:
-# python ingest/validate_de.py /Users/mvelyuns/scp-ingest-pipeline/ingest/pairwise.csv
+# python ingest/user_de.py /Users/mvelyuns/scp-ingest-pipeline/ingest/pairwise.csv
 
 if len(sys.argv) > 1:
     file_path = sys.argv[1]
 else:
     file_path = "ingest/pairwise.csv"   
+    #file_path = "ingest/one_vs_rest.csv"   
+
 
 # only necessary for this specific example since we plan to accept all other files in long format to begin with 
 def convert_wide_to_long(data):
@@ -41,8 +44,8 @@ def get_data_by_col(data):
     col_values = {}
     for i in col:
         col_values[i] = rest[i].tolist()
-    return col, genes, rest
 
+    return col, genes, rest
 # note: my initial files had pval, qval, log2fc. David's files have qval, mean, log2fc. For the purposes of this validation I will be using his column values/formatting.
 
 def get_groups_and_properties(col):
@@ -170,15 +173,31 @@ def generate_individual_files(col, genes, rest, groups, clean_val, qual):
 
 # final result: individual files for each comparison
 
+def generate_manifest(clean_val, qual):
+    """
+    create manifest file of each comparison in the initial data
+    if the comparison is with rest, rest is omitted and just the type is written
+    """
+    file_names = []
+    for i in clean_val:
+        cleaned_list = [ x for x in i if x != "rest" and x not in qual]
+        file_name = '_'.join(cleaned_list)
+        if file_name not in file_names:
+            file_names.append(file_name)
+
+    with open('ingest/manifest.tsv', 'w', newline='') as f:
+        tsv_output = csv.writer(f, delimiter='\t')
+        tsv_output.writerow(file_names)
+
 if __name__ == '__main__':
     data = pd.read_csv(file_path)
     long_format = convert_wide_to_long(data)
     wide_format = convert_long_to_wide(long_format)
-
     data_by_col = get_data_by_col(data)
     col, genes, rest = data_by_col
-
     groups_and_props = get_groups_and_properties(col)
     groups, clean_val, qual = groups_and_props
+    generate_manifest(clean_val, qual)
+    generate_individual_files(col, genes, rest, groups, clean_val, qual)
 
     
