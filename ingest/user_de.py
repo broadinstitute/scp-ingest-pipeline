@@ -85,6 +85,10 @@ def get_groups_and_properties(col):
             groups.append(i[1])
         if i[2] not in qual:
             qual.append(i[2])
+
+    if ("log2fc" not in qual) or ("qval" not in qual):
+        raise Exception("Comparisons must include at least log2fc and qval to be valid")
+
     return groups, clean_val, qual
 
 def check_group(names_dict, name):
