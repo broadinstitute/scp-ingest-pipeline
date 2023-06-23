@@ -4,8 +4,9 @@ import sys
 import csv
 import argparse
 import logging
-from monitor import setup_logger, log_exception
 
+from monitor import setup_logger, log_exception
+from de import DifferentialExpression
 
 # cluster_name = "All_Cells_UMAP"
 # clean_annotation = "General_Celltype"
@@ -60,12 +61,18 @@ class AuthorDifferentialExpression:
         if len(one_vs_rest) != 0:
             groups_and_props = get_groups_and_properties(one_vs_rest)
             groups, clean_val, qual = groups_and_props
-            self.generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
+            files_for_bucket = self.generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
+            # TODO: don't use a loop for delocalization after getting this working end to end
+            for file in files_for_bucket:
+                DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
+
                 
         if len(pairwise) != 0:
             groups_and_props_p = get_groups_and_properties(pairwise)
             groups_p, clean_val_p, qual = groups_and_props_p
-            self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
+            files_for_bucket = self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
+            for file in files_for_bucket:
+                DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
 
         generate_manifest(clean_val, clean_val_p, qual)
 
@@ -145,8 +152,9 @@ class AuthorDifferentialExpression:
                 i = i.split("--")[0]
 
             tsv_name = f'{self.cluster_name}--{self.annotation}--{i}--{self.annot_scope}--{self.method}.tsv'
-
+            final_files_to_find.append(tsv_name)
             inner_df.to_csv(tsv_name, sep ='\t')
+        return final_files_to_find
 
 
 
