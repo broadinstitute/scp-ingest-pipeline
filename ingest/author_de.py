@@ -52,8 +52,12 @@ class AuthorDifferentialExpression:
         file_path = self.author_de_file
         
         data = pd.read_csv(file_path)
-        #wide_format = convert_long_to_wide(data)
-        data_by_col = get_data_by_col(data)
+        first_cols = data.columns
+        if first_cols[0] == "genes" and first_cols[1] == "group" and first_cols[2] == "comparison_group":
+            wide_format = convert_long_to_wide(data)
+            data_by_col = get_data_by_col(wide_format)
+        else:
+            data_by_col = get_data_by_col(data)
         col, genes, rest, split_values = data_by_col
         pairwise = split_values["pairwise"]
         one_vs_rest = split_values["one_vs_rest"]
@@ -177,7 +181,7 @@ def convert_long_to_wide(data):
     """
     TYPICAL USE: convert from long format (intended input) to wide format, since parsing is easier with wide format in this case
     """
-    data["combined"] = f"{data['group']}--{data['comparison_group']}"
+    data["combined"] = data['group'] +"--"+ data["comparison_group"]
     frames = []
     metrics = ["qval", "mean", "log2fc"]
     for metric in metrics:
