@@ -2,23 +2,70 @@ import pandas as pd
 import numpy as np
 import sys
 import csv
+import argparse
 
-cluster_name = "All_Cells_UMAP"
-clean_annotation = "General_Celltype"
-annot_scope = "study"
-method = "wilcoxon"
+
+# cluster_name = "All_Cells_UMAP"
+# clean_annotation = "General_Celltype"
+# annot_scope = "study"
+# method = "wilcoxon"
 
 # input file name as CLI
 # example:
 # python ingest/user_de.py /Users/mvelyuns/scp-ingest-pipeline/ingest/pairwise.csv
 
-if len(sys.argv) > 1:
-    file_path = sys.argv[1]
-else:
-    # file_path = "ingest/pairwise.csv"   
-    file_path = "ingest/pairwise_and_rest.csv"   
-    # file_path = "ingest/test_one_vs_rest.csv"  
-    #file_path = "ingest/test_long_format.csv"
+class AuthorDifferentialExpression:
+    # TODO: add name sanitization
+    def __init__(
+        self,
+        cluster,
+        annotation_name,
+        **kwargs,
+    ):
+        #AuthorDifferentialExpression.de_logger.info(
+        #    "Initializing DifferentialExpression instance"
+        #)
+        self.cluster = cluster
+        self.annotation = annotation_name
+        self.kwargs = kwargs
+        self.accession = self.kwargs["study_accession"]
+        self.annot_scope = self.kwargs["annotation_scope"]
+        self.method = self.kwargs["method"]
+        self.author_de_file = self.kwargs["author_de_file"]
+
+    def execute_author_de(self):
+        clean_val = []
+        clean_val_p = []
+        qual = []
+        file_path = self.author_de_filename
+        
+        data = pd.read_csv(file_path)
+        #wide_format = convert_long_to_wide(data)
+        data_by_col = get_data_by_col(data)
+        col, genes, rest, split_values = data_by_col
+        pairwise = split_values["pairwise"]
+        one_vs_rest = split_values["one_vs_rest"]
+
+        if len(one_vs_rest) != 0:
+            groups_and_props = get_groups_and_properties(one_vs_rest)
+            groups, clean_val, qual = groups_and_props
+            generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
+                
+        if len(pairwise) != 0:
+            groups_and_props_p = get_groups_and_properties(pairwise)
+            groups_p, clean_val_p, qual = groups_and_props_p
+            generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
+
+        generate_manifest(clean_val, clean_val_p, qual)
+
+
+# if len(sys.argv) > 1:
+#     file_path = sys.argv[1]
+# else:
+#     # file_path = "ingest/pairwise.csv"   
+#     file_path = "ingest/pairwise_and_rest.csv"   
+#     # file_path = "ingest/test_one_vs_rest.csv"  
+#     #file_path = "ingest/test_long_format.csv"
 
 # only necessary for this specific example since we plan to accept all other files in long format to begin with 
 def convert_wide_to_long(data):
@@ -141,7 +188,7 @@ def sort_comparison(ls):
     else:
         return sorted(ls)    
 
-def generate_individual_files(col, genes, rest, groups, clean_val, qual):
+def generate_individual_files(self, col, genes, rest, groups, clean_val, qual):
     """
     create individual files for each comparison, pairwise or rest, with all the metrics being used (ex qval, log2fc, mean)
     desired format:
@@ -215,7 +262,7 @@ def generate_individual_files(col, genes, rest, groups, clean_val, qual):
         if "rest" in i:
             i = i.split("--")[0]
 
-        tsv_name = f'ingest/{cluster_name}--{clean_annotation}--{i}--{annot_scope}--{method}.tsv'
+        tsv_name = f'ingest/{self.cluster_name}--{self.clean_annotation}--{i}--{self.annot_scope}--{self.method}.tsv'
 
         inner_df.to_csv(tsv_name, sep ='\t')
         #final_files_to_find.append("ingest/{}.tsv".format(i))
@@ -255,30 +302,30 @@ def generate_manifest(clean_val, clean_val_p, qual):
 
 # put into class init method 
 
-if __name__ == '__main__':
-    clean_val = []
-    clean_val_p = []
-    qual = []
-    qual_p = []
+# if __name__ == '__main__':
+#     clean_val = []
+#     clean_val_p = []
+#     qual = []
+#     qual_p = []
 
-    data = pd.read_csv(file_path)
-    #wide_format = convert_long_to_wide(data)
-    data_by_col = get_data_by_col(data)
-    col, genes, rest, split_values = data_by_col
-    pairwise = split_values["pairwise"]
-    one_vs_rest = split_values["one_vs_rest"]
+#     data = pd.read_csv(file_path)
+#     #wide_format = convert_long_to_wide(data)
+#     data_by_col = get_data_by_col(data)
+#     col, genes, rest, split_values = data_by_col
+#     pairwise = split_values["pairwise"]
+#     one_vs_rest = split_values["one_vs_rest"]
 
-    if len(one_vs_rest) != 0:
-        groups_and_props = get_groups_and_properties(one_vs_rest)
-        groups, clean_val, qual = groups_and_props
-        generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
+#     if len(one_vs_rest) != 0:
+#         groups_and_props = get_groups_and_properties(one_vs_rest)
+#         groups, clean_val, qual = groups_and_props
+#         generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
             
-    if len(pairwise) != 0:
-        groups_and_props_p = get_groups_and_properties(pairwise)
-        groups_p, clean_val_p, qual = groups_and_props_p
-        generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
+#     if len(pairwise) != 0:
+#         groups_and_props_p = get_groups_and_properties(pairwise)
+#         groups_p, clean_val_p, qual = groups_and_props_p
+#         generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
 
-    generate_manifest(clean_val, clean_val_p, qual)
+#     generate_manifest(clean_val, clean_val_p, qual)
 
     
     

@@ -96,6 +96,7 @@ try:
     from expression_files.dense_ingestor import DenseIngestor
     from monitor import setup_logger, log_exception
     from de import DifferentialExpression
+    from author_de import AuthorDifferentialExpression
     from expression_writer import ExpressionWriter
 
     # scanpy uses anndata python package, disamibguate local anndata
@@ -548,6 +549,24 @@ class IngestPipeline:
             return 1
         # ToDo: surface failed DE for analytics (SCP-4206)
         return 0
+    
+    def calculate_author_de(self):
+        """Run differential expression analysis"""
+        try:
+            author_de = AuthorDifferentialExpression(
+                cluster=self.cluster,
+                cell_metadata=self.cell_metadata,
+                **self.kwargs,
+            )
+            author_de.execute_de()
+
+            # execute function as MAIN then create method to search for the files created, delocalize them to bucket as with de.py. adjust other places it needs to be called
+        except Exception as e:
+        #    log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+            return 1
+        # ToDo: surface failed DE for analytics (SCP-4206)
+        return 0
+
 
     def render_expression_arrays(self):
         try:
@@ -604,6 +623,13 @@ def run_ingest(ingest, arguments, parsed_args):
         status_de = ingest.calculate_de()
         status.append(status_de)
         print(f"STATUS post-DE {status}")
+
+    elif "author_differential_expression" in arguments:
+        config.set_parent_event_name("ingest-pipeline:author-differential-expression")
+        status_de = ingest.calculate_author_de()
+        status.append(status_de)
+        print(f"STATUS post-author-DE {status}")
+
     elif "render_expression_arrays" in arguments:
         config.set_parent_event_name("image-pipeline:render_expression_arrays")
         status_exp_writer = ingest.render_expression_arrays()
@@ -719,6 +745,17 @@ def main() -> None:
         arguments["cell_metadata_file"] = arguments["annotation_file"]
         # IngestPipeline initialization expects "name" and not "cluster_name"
         arguments["name"] = arguments["cluster_name"]
+
+
+    if "author_differential_expression" in arguments:
+        # DE may use metadata or cluster file for annots BUT
+        # IngestPipeline initialization assumes a "cell_metadata_file"
+        arguments["cell_metadata_file"] = arguments["annotation_file"]
+        # IngestPipeline initialization expects "name" and not "cluster_name"
+        arguments["name"] = arguments["cluster_name"]
+        
+
+
     # Initialize global variables for current ingest job
     config.init(
         arguments["study_id"],
