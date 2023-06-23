@@ -3,11 +3,10 @@ import numpy as np
 import sys
 import csv
 
-cluster_name = "cluster_name"
-clean_annotation = "clean_annotation"
-clean_group = "clean_group"
-annot_scope = "annot_scope"
-method = "method"
+cluster_name = "All_Cells_UMAP"
+clean_annotation = "General_Celltype"
+annot_scope = "study"
+method = "wilcoxon"
 
 # input file name as CLI
 # example:
@@ -16,9 +15,9 @@ method = "method"
 if len(sys.argv) > 1:
     file_path = sys.argv[1]
 else:
-    #file_path = "ingest/pairwise.csv"   
-    #file_path = "ingest/pairwise_and_rest.csv"   
-    #file_path = "ingest/test_one_vs_rest.csv"  
+    # file_path = "ingest/pairwise.csv"   
+    # file_path = "ingest/pairwise_and_rest.csv"   
+    # file_path = "ingest/test_one_vs_rest.csv"  
     file_path = "ingest/test_long_format.csv"
 
 # only necessary for this specific example since we plan to accept all other files in long format to begin with 
@@ -28,22 +27,18 @@ def convert_wide_to_long(data):
     long = pd.melt(data, id_vars='genes', var_name = "comparisons", value_vars= ls)
     return long
 
-def get_long(data):
+def convert_long_to_wide(data):
     """
     TYPICAL USE: convert from long format (intended input) to wide format, since parsing is easier with wide format in this case
     """
-    data["combined"] = data['group'] +"--"+ data["comparison_group"]
+    data["combined"] = f"{data['group']}--{data['comparison_group']}"
+    frames = []
+    metrics = ["qval", "mean", "log2fc"]
+    for metric in metrics:
+        wide_metric = pd.pivot(data, index="genes", columns="combined", values=metric)
+        wide_metric = wide_metric.add_suffix(f"--{metric}")
+        frames.append(wide_metric)
 
-    wide_qval = pd.pivot(data, index="genes", columns="combined", values="qval")
-    wide_qval = wide_qval.add_suffix('--qval')
-
-    wide_mean = pd.pivot(data, index="genes", columns="combined", values="mean")
-    wide_mean = wide_mean.add_suffix('--mean')
-
-    wide_lfc = pd.pivot(data, index="genes", columns="combined", values="log2fc")
-    wide_lfc = wide_lfc.add_suffix('--log2fc')
-
-    frames = [wide_qval, wide_mean, wide_lfc]
     result = pd.concat(frames, axis=1, join='inner')
     result.columns.name = ' ' 
     result = result.reset_index()
@@ -60,8 +55,8 @@ def get_data_by_col(data):
     rest = data[data.columns[1:]]
     col = list(rest.columns)
 
-    #split col into two lists: pairwise, one_vs_rest
-    split_values = dict(one_vs_rest = [], pairwise = [])
+    # split col into two lists: pairwise, one_vs_rest
+    split_values = {"one_vs_rest": [], "pairwise": []}
     for i in col:
         if "rest" in i:
             split_values["one_vs_rest"].append(i)
@@ -126,11 +121,15 @@ def check_group(names_dict, name):
     for i in names_dict:
         if name in names_dict[i]:
             return i
+        
 
-def verify_sorting(ls):
+def sort_comparison(ls):
     """
-    helper function to sort either alphabetically or by the numbers in the list
+    Naturally sort groups in a pairwise comparison; specially handle one-vs-rest 
     this should take in only a list of two, ex (type1 type2)
+    
+    https://en.wikipedia.org/wiki/Natural_sort_order
+
     """
     if any(i.isdigit() for i in ls):
         sorted_arr = sorted(ls, key=lambda x: int("".join([i for i in x if i.isdigit()])))
@@ -144,17 +143,17 @@ def verify_sorting(ls):
 
 def generate_individual_files(col, genes, rest, groups, clean_val, qual):
     """
-    create individual files
+    create individual files for each comparison, pairwise or rest, with all the metrics being used (ex qval, log2fc, mean)
     desired format:
     for ex, if we have 
-    'type_0'_'type_1'_qval
-    type_0'_'type_1'_log2fc
-    'type_0'_'type_1'_mean
+    'type_0'--'type_1'--qval
+    type_0'--'type_1'--log2fc
+    'type_0'--'type_1'--mean
     final format should have type 0 type 1 in the title, and genes, qval, log2fc, mean as columns
     """
     for i in clean_val:
         val_to_sort = [i[0], i[1]]
-        sorted_list = verify_sorting(val_to_sort)
+        sorted_list = sort_comparison(val_to_sort)
         i[0], i[1] = sorted_list
 
     names_dict = {}
@@ -213,13 +212,15 @@ def generate_individual_files(col, genes, rest, groups, clean_val, qual):
         t_arr = arr.transpose()
         inner_df = pd.DataFrame(data = t_arr, columns = qual)
 
-        #inner_df.to_csv(f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'.format(cluster_name, clean_annotation, clean_group, annot_scope,i), sep ='\t')
-        inner_df.to_csv(f"ingest/{i}.tsv".format(i), sep ='\t')
+        if "rest" in i:
+            i = i.split("--")[0]
 
-        final_files_to_find.append("ingest/{}.tsv".format(i))
-        print(final_files_to_find)
+        tsv_name = f'ingest/{cluster_name}--{clean_annotation}--{i}--{annot_scope}--{method}.tsv'
 
-    return final_files_to_find
+        inner_df.to_csv(tsv_name, sep ='\t')
+        #final_files_to_find.append("ingest/{}.tsv".format(i))
+
+    #return final_files_to_find
 
 # final result: individual files for each comparison
 
@@ -230,10 +231,9 @@ def generate_manifest(clean_val, clean_val_p, qual):
     """
     file_names_one_vs_rest = []
     for i in clean_val:
-        cleaned_list = [ x for x in i if x != "rest" and x not in qual]
-        file_name_one = '_'.join(cleaned_list)
-        if file_name_one not in file_names_one_vs_rest:
-            file_names_one_vs_rest.append(file_name_one)
+        clean_comparison = '--'.join([ x for x in i if x != "rest" and x not in qual])
+        if clean_comparison not in file_names_one_vs_rest:
+            file_names_one_vs_rest.append(clean_comparison)
 
     file_names_pairwise = []
     for i in clean_val_p:
@@ -259,7 +259,8 @@ if __name__ == '__main__':
     qual_p = []
 
     data = pd.read_csv(file_path)
-    wide_format = get_long(data)
+    wide_format = convert_long_to_wide(data)
+    print(wide_format)
     data_by_col = get_data_by_col(wide_format)
     col, genes, rest, split_values = data_by_col
     pairwise = split_values["pairwise"]
