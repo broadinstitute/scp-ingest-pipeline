@@ -371,6 +371,13 @@ def create_parser():
         "--cluster-name", required=True, help="study owner-specified cluster name"
     )
 
+    # TODO: after end to end support, remove this argument
+    parser_author_differential_expression.add_argument(
+        "--cluster-file",
+        required=True,
+        help="Path to cluster file.",
+    )
+
     parser_author_differential_expression.add_argument(
         "--annotation-file",
         required=True,
@@ -382,6 +389,8 @@ def create_parser():
         required=True,
         help="Path to author DE file.",
     )
+
+
 
 
     # AnnData subparsers

@@ -150,6 +150,7 @@ class IngestPipeline:
         ingest_cell_metadata=False,
         ingest_cluster=False,
         differential_expression=False,
+        author_differential_expression=False,
         **kwargs,
     ):
         """Initializes variables in Ingest Pipeline"""
@@ -178,11 +179,11 @@ class IngestPipeline:
 
         else:
             self.tracer = nullcontext()
-        if ingest_cell_metadata or differential_expression:
+        if ingest_cell_metadata or differential_expression or author_differential_expression:
             self.cell_metadata = self.initialize_file_connection(
                 "cell_metadata", cell_metadata_file
             )
-        if ingest_cluster or differential_expression:
+        if ingest_cluster or differential_expression or author_differential_expression:
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
         if subsample:
             self.cluster_file = cluster_file
@@ -558,11 +559,11 @@ class IngestPipeline:
                 cell_metadata=self.cell_metadata,
                 **self.kwargs,
             )
-            author_de.execute_de()
+            author_de.execute()
 
             # execute function as MAIN then create method to search for the files created, delocalize them to bucket as with de.py. adjust other places it needs to be called
         except Exception as e:
-        #    log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
             return 1
         # ToDo: surface failed DE for analytics (SCP-4206)
         return 0

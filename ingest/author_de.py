@@ -3,6 +3,8 @@ import numpy as np
 import sys
 import csv
 import argparse
+import logging
+from monitor import setup_logger, log_exception
 
 
 # cluster_name = "All_Cells_UMAP"
@@ -16,16 +18,25 @@ import argparse
 
 class AuthorDifferentialExpression:
     # TODO: add name sanitization
+
+    dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
+    author_de_logger = setup_logger(
+        __name__ + ".author_de_logger",
+        "author_de_log.txt",
+        level=logging.INFO,
+        format="support_configs",
+    )
+
     def __init__(
         self,
-        cluster,
+        cluster_name,
         annotation_name,
         **kwargs,
     ):
         #AuthorDifferentialExpression.de_logger.info(
         #    "Initializing DifferentialExpression instance"
         #)
-        self.cluster = cluster
+        self.cluster_name = cluster_name
         self.annotation = annotation_name
         self.kwargs = kwargs
         self.accession = self.kwargs["study_accession"]
@@ -33,11 +44,11 @@ class AuthorDifferentialExpression:
         self.method = self.kwargs["method"]
         self.author_de_file = self.kwargs["author_de_file"]
 
-    def execute_author_de(self):
+    def execute(self):
         clean_val = []
         clean_val_p = []
         qual = []
-        file_path = self.author_de_filename
+        file_path = self.author_de_file
         
         data = pd.read_csv(file_path)
         #wide_format = convert_long_to_wide(data)
@@ -49,14 +60,94 @@ class AuthorDifferentialExpression:
         if len(one_vs_rest) != 0:
             groups_and_props = get_groups_and_properties(one_vs_rest)
             groups, clean_val, qual = groups_and_props
-            generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
+            self.generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
                 
         if len(pairwise) != 0:
             groups_and_props_p = get_groups_and_properties(pairwise)
             groups_p, clean_val_p, qual = groups_and_props_p
-            generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
+            self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
 
         generate_manifest(clean_val, clean_val_p, qual)
+
+
+    def generate_individual_files(self, col, genes, rest, groups, clean_val, qual):
+        """
+        create individual files for each comparison, pairwise or rest, with all the metrics being used (ex qval, log2fc, mean)
+        desired format:
+        for ex, if we have 
+        'type_0'--'type_1'--qval
+        type_0'--'type_1'--log2fc
+        'type_0'--'type_1'--mean
+        final format should have type 0 type 1 in the title, and genes, qval, log2fc, mean as columns
+        """
+        for i in clean_val:
+            val_to_sort = [i[0], i[1]]
+            sorted_list = sort_comparison(val_to_sort)
+            i[0], i[1] = sorted_list
+
+        names_dict = {}
+        all_group = []
+        for i in range(len(groups)):
+            curr_group = groups[i]
+            type_group = []
+
+            for j in range(len(clean_val)):
+                curr_val = clean_val[j][0]
+                comp_val = clean_val[j][1]
+                file_naming = f"{curr_val}--{comp_val}"
+                names_dict[file_naming] = []
+                real_title = col[j]
+                if curr_group == curr_val:
+                    type_group.append(real_title)
+
+            all_group.append(type_group)
+
+        all_group_fin = [ele for ele in all_group if ele != []]
+        
+        grouped_lists = []
+
+        for i in all_group_fin:
+            for j in range(0, len(i), 3):
+                x = j
+                grouped_lists.append(i[x:x+3])
+
+        for i in names_dict:
+            for j in grouped_lists:
+                for k in j:
+                    if i in k:
+                        names_dict[i].append(k)
+
+    # Now we have all the columns grouped in lists by pairwise comparison, with qval, log2fc, mean
+    # have to pair with corresponding gene for that row
+    # dictionary format:
+    # comparison name: [[gene, qval, log2fc, mean] [gene, qval, log2fc, mean] etc...] 
+        keys = names_dict.keys()
+        file_d = dict.fromkeys(keys, [])
+
+        for i in grouped_lists:
+            list_i = []
+            for j in i:        
+                f_name = check_group(names_dict, j)
+                col_v = rest[j].tolist()
+                list_i.append(col_v)
+
+            file_d[f_name] = genes, list_i[0], list_i[1], list_i[2]
+
+        qual.insert(0, "genes")
+
+        final_files_to_find = []
+        for i in file_d: 
+            arr = np.array(file_d[i])
+            t_arr = arr.transpose()
+            inner_df = pd.DataFrame(data = t_arr, columns = qual)
+
+            if "rest" in i:
+                i = i.split("--")[0]
+
+            tsv_name = f'{self.cluster_name}--{self.annotation}--{i}--{self.annot_scope}--{self.method}.tsv'
+
+            inner_df.to_csv(tsv_name, sep ='\t')
+
 
 
 # if len(sys.argv) > 1:
@@ -289,7 +380,7 @@ def generate_manifest(clean_val, clean_val_p, qual):
             file_names_pairwise.append(values)
 
 
-    with open('ingest/manifest.tsv', 'w', newline='') as f:
+    with open('manifest.tsv', 'w', newline='') as f:
         tsv_output = csv.writer(f, delimiter='\t')
         if len(file_names_one_vs_rest) != 0:
             for value in range(len(file_names_one_vs_rest)):
