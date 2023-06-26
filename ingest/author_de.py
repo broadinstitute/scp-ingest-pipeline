@@ -8,12 +8,12 @@ import logging
 from monitor import setup_logger, log_exception
 from de import DifferentialExpression
 
-#python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 author_differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --annotation-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-file gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/global_meta.tsv.gz --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --study-file author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv
+# python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 author_differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --annotation-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-file gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/global_meta.tsv.gz --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --study-file author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv
 
 class AuthorDifferentialExpression:
-    #TODO: add name sanitization
+    # TODO: add name sanitization
 
-    #TODO: reorder author's columns in input file so output is log2foldchanges qval mean
+    # TODO: reorder author's columns in input file so output is log2foldchanges qval mean
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
     author_de_logger = setup_logger(
         __name__ + ".author_de_logger",
@@ -28,9 +28,9 @@ class AuthorDifferentialExpression:
         annotation_name,
         **kwargs,
     ):
-        #AuthorDifferentialExpression.de_logger.info(
+        # AuthorDifferentialExpression.de_logger.info(
         #    "Initializing DifferentialExpression instance"
-        #)
+        # )
         self.cluster_name = cluster_name
         self.annotation = annotation_name
         self.kwargs = kwargs
@@ -62,21 +62,18 @@ class AuthorDifferentialExpression:
             groups, clean_val, qual = groups_and_props
             self.generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
             # TODO: don't use a loop for delocalization after getting this working end to end
-            #for file in files_for_bucket:
-                #DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
-
+            # for file in files_for_bucket:
+                # DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
 
         if len(pairwise) != 0:
             groups_and_props_p = get_groups_and_properties(pairwise)
             groups_p, clean_val_p, qual = groups_and_props_p
             self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
 
-            #for file in files_for_bucket:
-                #DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
-
+            # for file in files_for_bucket:
+                # DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
 
         generate_manifest(clean_val, clean_val_p, qual)
-
 
     def generate_individual_files(self, col, genes, rest, groups, clean_val, qual):
         """
@@ -112,7 +109,7 @@ class AuthorDifferentialExpression:
         all_group_fin = [ele for ele in all_group if ele != []]
         grouped_lists = []
 
-        #TODO: fix sorting error here. if you have comparison set 1 with foo and bar, then you have comparison set 2 with bar and baz, error is triggered. adjust sorting method
+        # TODO: fix sorting error here. if you have comparison set 1 with foo and bar, then you have comparison set 2 with bar and baz, error is triggered. adjust sorting method
         for i in all_group_fin:
             for j in range(0, len(i), 3):
                 x = j
@@ -144,16 +141,15 @@ class AuthorDifferentialExpression:
         for i in file_d:
             arr = np.array(file_d[i])
             t_arr = arr.transpose()
-            inner_df = pd.DataFrame(data = t_arr, columns = qual)
+            inner_df = pd.DataFrame(data=t_arr, columns=qual)
 
             if "rest" in i:
                 i = i.split("--")[0]
 
             tsv_name = f'{self.cluster_name}--{self.annotation}--{i}--{self.annot_scope}--{self.method}.tsv'
             final_files_to_find.append(tsv_name)
-            inner_df.to_csv(tsv_name, sep ='\t')
+            inner_df.to_csv(tsv_name, sep='\t')
         return final_files_to_find
-
 
 
 # if len(sys.argv) > 1:
@@ -164,18 +160,21 @@ class AuthorDifferentialExpression:
 #     # file_path = "ingest/test_one_vs_rest.csv"
 #     #file_path = "ingest/test_long_format.csv"
 
-# only necessary for this specific example since we plan to accept all other files in long format to begin with
 def convert_wide_to_long(data):
-    data.rename(columns={ data.columns[0]: "genes"}, inplace=True)
+    """
+    # only necessary for this specific example since we plan to accept all other files in long format to begin with
+    """
+    data.rename(columns={data.columns[0]: "genes"}, inplace=True)
     ls = list(data.columns)[1:]
-    long = pd.melt(data, id_vars='genes', var_name = "comparisons", value_vars= ls)
+    long = pd.melt(data, id_vars='genes', var_name="comparisons", value_vars=ls)
     return long
+
 
 def convert_long_to_wide(data):
     """
     TYPICAL USE: convert from long format (intended input) to wide format, since parsing is easier with wide format in this case
     """
-    data["combined"] = data['group'] +"--"+ data["comparison_group"]
+    data["combined"] = data['group'] + "--" + data["comparison_group"]
     frames = []
     metrics = ["qval", "mean", "logfoldchanges"]
     for metric in metrics:
@@ -187,6 +186,7 @@ def convert_long_to_wide(data):
     result.columns.name = ' '
     result = result.reset_index()
     return result
+
 
 def get_data_by_col(data):
     """
@@ -209,6 +209,7 @@ def get_data_by_col(data):
 
     return col, genes, rest, split_values
 # note: my initial files had pval, qval, log2fc. David's files have qval, mean, log2fc. For the purposes of this validation I will be using his column values/formatting.
+
 
 def get_groups_and_properties(col):
     """
@@ -249,10 +250,11 @@ def get_groups_and_properties(col):
         if i[2] not in qual:
             qual.append(i[2])
 
-    #TODO: Report this error to Sentry
+    # TODO: Report this error to Sentry
     if ("logfoldchanges" not in qual) or ("qval" not in qual):
         raise Exception("Comparisons must include at least logfoldchanges and qval to be valid")
     return groups, clean_val, qual
+
 
 def check_group(names_dict, name):
     """
@@ -367,6 +369,7 @@ def sort_comparison(ls):
 #     #return final_files_to_find
 
 # final result: individual files for each comparison
+
 
 def generate_manifest(clean_val, clean_val_p, qual):
     """
