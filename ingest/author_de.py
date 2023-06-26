@@ -1,7 +1,7 @@
 """Ingest differential expression uploaded by authors, i.e. study owner / editor
 
 EXAMPLE:
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_differential_expression --annotation-name General_Celltype --annotation-type group --annotation-scope study --annotation-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-file gs://fc-febd4c65-881d-497f-b101-01a7ec427e6a/cluster_umap.txt --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --differential-expression-file author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv --method wilcoxon
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_differential_expression --annotation-name General_Celltype --annotation-type group --annotation-scope study --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --differential-expression-file gs://fc-febd4c65-881d-497f-b101-01a7ec427e6a/author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv --method wilcoxon
 """
 
 import pandas as pd
@@ -11,6 +11,7 @@ import logging
 
 from monitor import setup_logger, log_exception
 from de import DifferentialExpression
+from ingest_files import IngestFiles
 
 
 class AuthorDifferentialExpression:
@@ -22,6 +23,8 @@ class AuthorDifferentialExpression:
         level=logging.INFO,
         format="support_configs",
     )
+
+    ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
 
     def __init__(
         self,
@@ -38,8 +41,16 @@ class AuthorDifferentialExpression:
         self.accession = self.kwargs["study_accession"]
         self.annot_scope = self.kwargs["annotation_scope"]
         self.method = self.kwargs["method"]
-        self.author_de_file = self.kwargs["differential_expression_file"]
         self.stem = f"{self.cluster_name}--{self.annotation}"
+
+        author_de_file_gcs_url = self.kwargs["differential_expression_file"]
+        allowed_file_types = AuthorDifferentialExpression.ALLOWED_FILE_TYPES
+        raw_de_file_obj = IngestFiles(author_de_file_gcs_url, allowed_file_types)
+        author_file_handle, local_file_path = IngestFiles.resolve_path(
+            raw_de_file_obj, author_de_file_gcs_url
+        )
+        self.author_de_file = local_file_path
+
 
     def execute(self):
         clean_val = []

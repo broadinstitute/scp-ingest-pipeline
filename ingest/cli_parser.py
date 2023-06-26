@@ -369,19 +369,6 @@ def create_parser():
         "--cluster-name", required=True, help="study owner-specified cluster name"
     )
 
-    # TODO: after end to end support, remove this argument
-    parser_ingest_differential_expression.add_argument(
-        "--cluster-file",
-        required=True,
-        help="Path to cluster file.",
-    )
-
-    parser_ingest_differential_expression.add_argument(
-        "--annotation-file",
-        required=True,
-        help="Absolute or relative path to cell metadata or cluster file of annotations.",
-    )
-
     parser_ingest_differential_expression.add_argument(
         "--differential-expression-file",
         required=True,

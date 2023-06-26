@@ -179,15 +179,18 @@ class IngestPipeline:
 
         else:
             self.tracer = nullcontext()
-        if ingest_cell_metadata or differential_expression or ingest_differential_expression:
+        if ingest_cell_metadata or differential_expression:
             self.cell_metadata = self.initialize_file_connection(
                 "cell_metadata", cell_metadata_file
             )
-        if ingest_cluster or differential_expression or ingest_differential_expression:
+        if ingest_cluster or differential_expression:
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
         if subsample:
             self.cluster_file = cluster_file
             self.cell_metadata_file = cell_metadata_file
+        if ingest_differential_expression:
+            self.cell_metadata = ""
+            self.cluster = ""
 
     # Will be replaced by MongoConnection as defined in SCP-2629
     def get_mongo_db(self):
@@ -660,6 +663,8 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
         # for successful DE jobs, need to delocalize results
         if ("differential_expression" in arguments or "ingest_differential_expression" in arguments) and all(i < 1 for i in status):
             file_path, study_file_id = get_delocalization_info(arguments)
+            print('file_path', file_path)
+            print('study_file_id', study_file_id)
             # append status?
             if IngestFiles.is_remote_file(file_path):
                 files_to_match = DifferentialExpression.string_for_output_match(
@@ -746,16 +751,6 @@ def main() -> None:
         arguments["cell_metadata_file"] = arguments["annotation_file"]
         # IngestPipeline initialization expects "name" and not "cluster_name"
         arguments["name"] = arguments["cluster_name"]
-
-
-    if "ingest_differential_expression" in arguments:
-        # DE may use metadata or cluster file for annots BUT
-        # IngestPipeline initialization assumes a "cell_metadata_file"
-        arguments["cell_metadata_file"] = arguments["annotation_file"]
-        # IngestPipeline initialization expects "name" and not "cluster_name"
-        arguments["name"] = arguments["cluster_name"]
-
-
 
     # Initialize global variables for current ingest job
     config.init(
