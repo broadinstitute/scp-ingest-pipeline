@@ -33,13 +33,14 @@ class AuthorDifferentialExpression:
         # AuthorDifferentialExpression.de_logger.info(
         #    "Initializing DifferentialExpression instance"
         # )
-        self.cluster_name = cluster_name
-        self.annotation = annotation_name
+        self.cluster_name = DifferentialExpression.sanitize_strings(cluster_name)
+        self.annotation = DifferentialExpression.sanitize_strings(annotation_name)
         self.kwargs = kwargs
         self.accession = self.kwargs["study_accession"]
         self.annot_scope = self.kwargs["annotation_scope"]
         self.method = self.kwargs["method"]
         self.author_de_file = self.kwargs["differential_expression_file"]
+        self.stem = f"{self.cluster_name}--{self.annotation}"
 
     def execute(self):
         clean_val = []
@@ -69,7 +70,7 @@ class AuthorDifferentialExpression:
             groups_p, clean_val_p, qual = groups_and_props_p
             self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
 
-        generate_manifest(clean_val, clean_val_p, qual)
+        generate_manifest(self.stem, clean_val, clean_val_p, qual)
 
     def generate_individual_files(self, col, genes, rest, groups, clean_val, qual):
         """
@@ -142,7 +143,9 @@ class AuthorDifferentialExpression:
             if "rest" in i:
                 i = i.split("--")[0]
 
-            tsv_name = f'{self.cluster_name}--{self.annotation}--{i}--{self.annot_scope}--{self.method}.tsv'
+            comparison = DifferentialExpression.sanitize_strings(i)
+
+            tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
             final_files_to_find.append(tsv_name)
             inner_df.to_csv(tsv_name, sep='\t')
         return final_files_to_find
@@ -367,7 +370,7 @@ def sort_comparison(ls):
 # final result: individual files for each comparison
 
 
-def generate_manifest(clean_val, clean_val_p, qual):
+def generate_manifest(stem, clean_val, clean_val_p, qual):
     """
     create manifest file of each comparison in the initial data
     if the comparison is with rest, rest is omitted and just the type is written
@@ -384,8 +387,8 @@ def generate_manifest(clean_val, clean_val_p, qual):
         if values not in file_names_pairwise:
             file_names_pairwise.append(values)
 
-    with open('manifest.tsv', 'w', newline='') as f:
-        tsv_output = csv.writer(f, delimiter='\t')
+    with open(f"{stem}--manifest.tsv", "w", newline="") as f:
+        tsv_output = csv.writer(f, delimiter="\t")
         if len(file_names_one_vs_rest) != 0:
             for value in range(len(file_names_one_vs_rest)):
                 tsv_output.writerow([file_names_one_vs_rest[value]])
