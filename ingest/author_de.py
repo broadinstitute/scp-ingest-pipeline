@@ -14,7 +14,7 @@ from de import DifferentialExpression
 
 
 class AuthorDifferentialExpression:
-    # TODO: reorder author's columns in input file so output is log2foldchanges qval mean
+    # TODO: reorder author's columns in input file so output is logfoldchanges qval mean
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
     author_de_logger = setup_logger(
         __name__ + ".author_de_logger",
@@ -71,13 +71,15 @@ class AuthorDifferentialExpression:
 
     def generate_result_files(self, col, genes, rest, groups, clean_val, qual):
         """
-        Create an DE result file for each comparison, pairwise or rest, with all the metrics being used (e.g. logfoldchanges, qval, mean)
-        desired format:
-        E.g. if we have:
+        Create an individual DE result file for each comparison, pairwise or rest,
+        with all the metrics being used (e.g. logfoldchanges, qval, mean)
+
+        For the desired format, e.g. if we have:
             type_0--type_1--logfoldchanges
             type_0--type_1--qval
             type_0--type_1--mean
-        final format should have type 0 type 1 in the title, and genes, logfoldchanges, qval, and mean as columns
+
+        Then final format should have type 0 type 1 in the title, and genes, logfoldchanges, qval, and mean as columns
         """
         # for i in clean_val:
         #     val_to_sort = [i[0], i[1]]
@@ -115,10 +117,10 @@ class AuthorDifferentialExpression:
                     if i in k:
                         names_dict[i].append(k)
 
-    # Now we have all the columns grouped in lists by pairwise comparison, with qval, logfoldchanges, mean
-    # have to pair with corresponding gene for that row
-    # dictionary format:
-    # comparison name: [[gene, qval, logfoldchanges, mean] [gene, qval, logfoldchanges, mean] etc...]
+        # Now we have all the columns grouped in lists by pairwise comparison, with qval, logfoldchanges, mean
+        # have to pair with corresponding gene for that row
+        # dictionary format:
+        # comparison name: [[gene, qval, logfoldchanges, mean] [gene, qval, logfoldchanges, mean] etc...]
         keys = names_dict.keys()
         file_d = dict.fromkeys(keys, [])
         for i in grouped_lists:
@@ -158,7 +160,7 @@ class AuthorDifferentialExpression:
 
 def convert_wide_to_long(data):
     """
-    # only necessary for this specific example since we plan to accept all other files in long format to begin with
+    only necessary for this specific example since we plan to accept all other files in long format to begin with
     """
     data.rename(columns={data.columns[0]: "genes"}, inplace=True)
     ls = list(data.columns)[1:]
@@ -172,24 +174,27 @@ def convert_long_to_wide(data):
     """
     data["combined"] = data['group'] + "--" + data["comparison_group"]
     frames = []
-    metrics = ["qval", "mean", "logfoldchanges"]
+    metrics = ["logfoldchanges", "qval", "mean"]
     for metric in metrics:
         wide_metric = pd.pivot(data, index="genes", columns="combined", values=metric)
         wide_metric = wide_metric.add_suffix(f"--{metric}")
         frames.append(wide_metric)
 
-    result = pd.concat(frames, axis=1, join='inner')
-    result.columns.name = ' '
+    result = pd.concat(frames, axis=1, join="inner")
+    result.columns.name = " "
     result = result.reset_index()
     return result
 
 
 def get_data_by_col(data):
     """
-    outputs full list of column names
-    outputs full list of genes
-    outputs "rest" which is columns isolated from genes
-    col_values outputs dict with the comparison characteristic and all the numeric data in an array, for ex 'type_0'_'type_1'_qval: [0, 1, 2]
+    outputs:
+        - full list of column names
+        - full list of genes
+        - "rest" which is columns isolated from genes
+
+    col_values outputs dict with the comparison characteristic and all the
+    numeric data in an array, e.g. 'type_0'_'type_1'_qval: [0, 1, 2]
     """
     genes = data.iloc[:, 0].tolist()
     rest = data[data.columns[1:]]
@@ -204,7 +209,10 @@ def get_data_by_col(data):
             split_values["pairwise"].append(i)
 
     return col, genes, rest, split_values
-# note: my initial files had pval, qval, logfoldchanges. David's files have qval, mean, logfoldchanges. For the purposes of this validation I will be using his column values/formatting.
+
+# note: my initial files had pval, qval, logfoldchanges.
+# David's files have qval, mean, logfoldchanges.
+# For the purposes of this validation I will be using his column values/formatting.
 
 
 def get_groups_and_properties(column_names):
