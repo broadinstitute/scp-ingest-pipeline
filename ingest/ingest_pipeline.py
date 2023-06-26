@@ -150,7 +150,7 @@ class IngestPipeline:
         ingest_cell_metadata=False,
         ingest_cluster=False,
         differential_expression=False,
-        author_differential_expression=False,
+        ingest_differential_expression=False,
         **kwargs,
     ):
         """Initializes variables in Ingest Pipeline"""
@@ -179,11 +179,11 @@ class IngestPipeline:
 
         else:
             self.tracer = nullcontext()
-        if ingest_cell_metadata or differential_expression or author_differential_expression:
+        if ingest_cell_metadata or differential_expression or ingest_differential_expression:
             self.cell_metadata = self.initialize_file_connection(
                 "cell_metadata", cell_metadata_file
             )
-        if ingest_cluster or differential_expression or author_differential_expression:
+        if ingest_cluster or differential_expression or ingest_differential_expression:
             self.cluster = self.initialize_file_connection("cluster", cluster_file)
         if subsample:
             self.cluster_file = cluster_file
@@ -550,7 +550,7 @@ class IngestPipeline:
             return 1
         # ToDo: surface failed DE for analytics (SCP-4206)
         return 0
-    
+
     def calculate_author_de(self):
         """Run differential expression analysis"""
         try:
@@ -623,13 +623,13 @@ def run_ingest(ingest, arguments, parsed_args):
         config.set_parent_event_name("ingest-pipeline:differential-expression")
         status_de = ingest.calculate_de()
         status.append(status_de)
-        print(f"STATUS post-DE {status}")
+        print(f"STATUS after DE {status}")
 
-    elif "author_differential_expression" in arguments:
-        config.set_parent_event_name("ingest-pipeline:author-differential-expression")
+    elif "ingest_differential_expression" in arguments:
+        config.set_parent_event_name("ingest-pipeline:differential-expression:ingest")
         status_de = ingest.calculate_author_de()
         status.append(status_de)
-        print(f"STATUS post-author-DE {status}")
+        print(f"STATUS after ingest author DE: {status}")
 
     elif "render_expression_arrays" in arguments:
         config.set_parent_event_name("image-pipeline:render_expression_arrays")
@@ -658,7 +658,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """Logs any errors, then exits Ingest Pipeline with standard OS code"""
     if len(status) > 0:
         # for successful DE jobs, need to delocalize results
-        if ("differential_expression" in arguments or "author_differential_expression" in arguments) and all(i < 1 for i in status):
+        if ("differential_expression" in arguments or "ingest_differential_expression" in arguments) and all(i < 1 for i in status):
             file_path, study_file_id = get_delocalization_info(arguments)
             # append status?
             if IngestFiles.is_remote_file(file_path):
@@ -748,13 +748,13 @@ def main() -> None:
         arguments["name"] = arguments["cluster_name"]
 
 
-    if "author_differential_expression" in arguments:
+    if "ingest_differential_expression" in arguments:
         # DE may use metadata or cluster file for annots BUT
         # IngestPipeline initialization assumes a "cell_metadata_file"
         arguments["cell_metadata_file"] = arguments["annotation_file"]
         # IngestPipeline initialization expects "name" and not "cluster_name"
         arguments["name"] = arguments["cluster_name"]
-        
+
 
 
     # Initialize global variables for current ingest job
