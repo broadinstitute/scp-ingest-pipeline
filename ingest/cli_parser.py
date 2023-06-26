@@ -338,8 +338,8 @@ def create_parser():
         help="Indicates author differential expression analysis processing",
     )
 
-    parser_author_differential_expression.add_argument(
-        "--author-differential-expression",
+    parser_ingest_differential_expression.add_argument(
+        "--ingest-differential-expression",
         required=True,
         action="store_true",
         help="Indicates that author differential expression analysis should be invoked",
@@ -385,7 +385,7 @@ def create_parser():
     )
 
     parser_author_differential_expression.add_argument(
-        "--author-de-file",
+        "--study-file",
         required=True,
         help="Path to author DE file.",
     )

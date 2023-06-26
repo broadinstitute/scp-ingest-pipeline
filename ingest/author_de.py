@@ -8,17 +8,10 @@ import logging
 from monitor import setup_logger, log_exception
 from de import DifferentialExpression
 
-# cluster_name = "All_Cells_UMAP"
-# clean_annotation = "General_Celltype"
-# annot_scope = "study"
-# method = "wilcoxon"
-
-# input file name as CLI
-# example:
-# python ingest/user_de.py /Users/mvelyuns/scp-ingest-pipeline/ingest/pairwise.csv
+#python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 author_differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --annotation-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-file gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/global_meta.tsv.gz --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --study-file author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv
 
 class AuthorDifferentialExpression:
-    # TODO: add name sanitization
+    #TODO: add name sanitization
 
     #TODO: reorder author's columns in input file so output is log2foldchanges qval mean
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
@@ -67,18 +60,19 @@ class AuthorDifferentialExpression:
         if len(one_vs_rest) != 0:
             groups_and_props = get_groups_and_properties(one_vs_rest)
             groups, clean_val, qual = groups_and_props
-            files_for_bucket = self.generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
+            self.generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
             # TODO: don't use a loop for delocalization after getting this working end to end
-            for file in files_for_bucket:
-                DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
+            #for file in files_for_bucket:
+                #DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
 
                 
         if len(pairwise) != 0:
             groups_and_props_p = get_groups_and_properties(pairwise)
             groups_p, clean_val_p, qual = groups_and_props_p
-            files_for_bucket = self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
-            for file in files_for_bucket:
-                DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
+            self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
+            
+            #for file in files_for_bucket:
+                #DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
 
 
         generate_manifest(clean_val, clean_val_p, qual)

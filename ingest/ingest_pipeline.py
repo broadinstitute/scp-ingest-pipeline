@@ -661,7 +661,6 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
         if ("differential_expression" in arguments or "author_differential_expression" in arguments) and all(i < 1 for i in status):
             file_path, study_file_id = get_delocalization_info(arguments)
             # append status?
-            print(file_path)
             if IngestFiles.is_remote_file(file_path):
                 files_to_match = DifferentialExpression.string_for_output_match(
                     arguments
