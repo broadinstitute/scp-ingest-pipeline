@@ -1,7 +1,7 @@
 """Ingest differential expression uploaded by authors, i.e. study owner / editor
 
 EXAMPLE:
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_differential_expression --annotation-name General_Celltype --annotation-type group --annotation-scope study --annotation-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-file gs://fc-febd4c65-881d-497f-b101-01a7ec427e6a/cluster_umap.txt --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --differential-expression-file author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_differential_expression --annotation-name General_Celltype --annotation-type group --annotation-scope study --annotation-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-file gs://fc-febd4c65-881d-497f-b101-01a7ec427e6a/cluster_umap.txt --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --differential-expression-file author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv --method wilcoxon
 """
 
 import pandas as pd
