@@ -74,13 +74,13 @@ class AuthorDifferentialExpression:
 
     def generate_individual_files(self, col, genes, rest, groups, clean_val, qual):
         """
-        create individual files for each comparison, pairwise or rest, with all the metrics being used (ex qval, log2fc, mean)
+        create individual files for each comparison, pairwise or rest, with all the metrics being used (e.g. logfoldchanges, qval, mean)
         desired format:
-        for ex, if we have
-        'type_0'--'type_1'--qval
-        type_0'--'type_1'--log2fc
-        'type_0'--'type_1'--mean
-        final format should have type 0 type 1 in the title, and genes, qval, log2fc, mean as columns
+        E.g. if we have:
+            type_0--type_1--logfoldchanges
+            type_0--type_1--qval
+            type_0--type_1--mean
+        final format should have type 0 type 1 in the title, and genes, logfoldchanges, qval, and mean as columns
         """
         # for i in clean_val:
         #     val_to_sort = [i[0], i[1]]
@@ -118,10 +118,10 @@ class AuthorDifferentialExpression:
                     if i in k:
                         names_dict[i].append(k)
 
-    # Now we have all the columns grouped in lists by pairwise comparison, with qval, log2fc, mean
+    # Now we have all the columns grouped in lists by pairwise comparison, with qval, logfoldchanges, mean
     # have to pair with corresponding gene for that row
     # dictionary format:
-    # comparison name: [[gene, qval, log2fc, mean] [gene, qval, log2fc, mean] etc...]
+    # comparison name: [[gene, qval, logfoldchanges, mean] [gene, qval, logfoldchanges, mean] etc...]
         keys = names_dict.keys()
         file_d = dict.fromkeys(keys, [])
         for i in grouped_lists:
@@ -207,7 +207,7 @@ def get_data_by_col(data):
             split_values["pairwise"].append(i)
 
     return col, genes, rest, split_values
-# note: my initial files had pval, qval, log2fc. David's files have qval, mean, log2fc. For the purposes of this validation I will be using his column values/formatting.
+# note: my initial files had pval, qval, logfoldchanges. David's files have qval, mean, logfoldchanges. For the purposes of this validation I will be using his column values/formatting.
 
 
 def get_groups_and_properties(col):
@@ -218,7 +218,7 @@ def get_groups_and_properties(col):
 
     cleans column header of unnecessary characters and isolates column name, returns clean_val containing only cleaned values
 
-    qual is the properties to measure by, in the example's case it is ['qval', 'log2fc', 'mean']
+    qual is the properties to measure by, in the example's case it is ['qval', 'logfoldchanges', 'mean']
      -- important note: parse from columns rather than assume these are the three we are using
 
      groups is the group being compared, in this case ['type_0', 'type_1', 'type_2', 'type_3']
@@ -240,7 +240,7 @@ def get_groups_and_properties(col):
 # isolate the groups and values in submitted file
 # expected format:
 # groups: ['group_0', 'group_1', 'group_2', 'group_3']
-# qual: ['qval', 'log2fc', 'mean']
+# qual: ['qval', 'logfoldchanges', 'mean']
     for i in clean_val:
         if i[0] not in groups:
             groups.append(i[0])
@@ -288,13 +288,13 @@ def sort_comparison(ls):
 
 # def generate_individual_files(self, col, genes, rest, groups, clean_val, qual):
 #     """
-#     create individual files for each comparison, pairwise or rest, with all the metrics being used (ex qval, log2fc, mean)
+#     create individual files for each comparison, pairwise or rest, with all the metrics being used (ex qval, logfoldchanges, mean)
 #     desired format:
 #     for ex, if we have
 #     'type_0'--'type_1'--qval
-#     type_0'--'type_1'--log2fc
+#     type_0'--'type_1'--logfoldchanges
 #     'type_0'--'type_1'--mean
-#     final format should have type 0 type 1 in the title, and genes, qval, log2fc, mean as columns
+#     final format should have type 0 type 1 in the title, and genes, qval, logfoldchanges, mean as columns
 #     """
 #     for i in clean_val:
 #         val_to_sort = [i[0], i[1]]
@@ -333,10 +333,10 @@ def sort_comparison(ls):
 #                 if i in k:
 #                     names_dict[i].append(k)
 
-# # Now we have all the columns grouped in lists by pairwise comparison, with qval, log2fc, mean
+# # Now we have all the columns grouped in lists by pairwise comparison, with qval, logfoldchanges, mean
 # # have to pair with corresponding gene for that row
 # # dictionary format:
-# # comparison name: [[gene, qval, log2fc, mean] [gene, qval, log2fc, mean] etc...]
+# # comparison name: [[gene, qval, logfoldchanges, mean] [gene, qval, logfoldchanges, mean] etc...]
 #     keys = names_dict.keys()
 #     file_d = dict.fromkeys(keys, [])
 
