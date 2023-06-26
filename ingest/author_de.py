@@ -142,7 +142,7 @@ class AuthorDifferentialExpression:
             if "rest" in i:
                 i = i.split("--")[0]
 
-            comparison = DifferentialExpression.sanitize_strings(i)
+            comparison = '--'.join([DifferentialExpression.sanitize_strings(group) for group in i.split('--')])
 
             tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
             final_files_to_find.append(tsv_name)
