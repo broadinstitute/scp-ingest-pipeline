@@ -12,9 +12,8 @@ import logging
 from monitor import setup_logger, log_exception
 from de import DifferentialExpression
 
-class AuthorDifferentialExpression:
-    # TODO: add name sanitization
 
+class AuthorDifferentialExpression:
     # TODO: reorder author's columns in input file so output is log2foldchanges qval mean
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
     author_de_logger = setup_logger(
@@ -61,20 +60,18 @@ class AuthorDifferentialExpression:
         one_vs_rest = split_values["one_vs_rest"]
 
         if len(one_vs_rest) != 0:
-            groups_and_props = get_groups_and_properties(one_vs_rest)
-            groups, clean_val, qual = groups_and_props
-            self.generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
+            groups, clean_val, qual = get_groups_and_properties(one_vs_rest)
+            self.generate_result_files(one_vs_rest, genes, rest, groups, clean_val, qual)
 
         if len(pairwise) != 0:
-            groups_and_props_p = get_groups_and_properties(pairwise)
-            groups_p, clean_val_p, qual = groups_and_props_p
-            self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
+            groups_p, clean_val_p, qual = get_groups_and_properties(pairwise)
+            self.generate_result_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
 
         generate_manifest(self.stem, clean_val, clean_val_p, qual)
 
-    def generate_individual_files(self, col, genes, rest, groups, clean_val, qual):
+    def generate_result_files(self, col, genes, rest, groups, clean_val, qual):
         """
-        create individual files for each comparison, pairwise or rest, with all the metrics being used (e.g. logfoldchanges, qval, mean)
+        Create an DE result file for each comparison, pairwise or rest, with all the metrics being used (e.g. logfoldchanges, qval, mean)
         desired format:
         E.g. if we have:
             type_0--type_1--logfoldchanges
@@ -210,7 +207,7 @@ def get_data_by_col(data):
 # note: my initial files had pval, qval, logfoldchanges. David's files have qval, mean, logfoldchanges. For the purposes of this validation I will be using his column values/formatting.
 
 
-def get_groups_and_properties(col):
+def get_groups_and_properties(column_names):
     """
     takes in column names
 
@@ -218,15 +215,15 @@ def get_groups_and_properties(col):
 
     cleans column header of unnecessary characters and isolates column name, returns clean_val containing only cleaned values
 
-    qual is the properties to measure by, in the example's case it is ['qval', 'logfoldchanges', 'mean']
+    qual is the properties to measure by, in the example's case it is ['logfoldchanges', 'qval', 'mean']
      -- important note: parse from columns rather than assume these are the three we are using
 
      groups is the group being compared, in this case ['type_0', 'type_1', 'type_2', 'type_3']
     """
     clean_val = []
 
-    for i in col:
-        str = i.split("--")
+    for column_name in column_names:
+        str = column_name.split("--")
         col_names = []
         for j in str:
             j = j.replace("'", "")
@@ -396,33 +393,5 @@ def generate_manifest(stem, clean_val, clean_val_p, qual):
         if len(file_names_pairwise) != 0:
             for value in range(len(file_names_pairwise)):
                 tsv_output.writerow([file_names_pairwise[value][0], file_names_pairwise[value][1],])
-
-
-# put into class init method
-
-# if __name__ == '__main__':
-#     clean_val = []
-#     clean_val_p = []
-#     qual = []
-#     qual_p = []
-
-#     data = pd.read_csv(file_path)
-#     #wide_format = convert_long_to_wide(data)
-#     data_by_col = get_data_by_col(data)
-#     col, genes, rest, split_values = data_by_col
-#     pairwise = split_values["pairwise"]
-#     one_vs_rest = split_values["one_vs_rest"]
-
-#     if len(one_vs_rest) != 0:
-#         groups_and_props = get_groups_and_properties(one_vs_rest)
-#         groups, clean_val, qual = groups_and_props
-#         generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
-
-#     if len(pairwise) != 0:
-#         groups_and_props_p = get_groups_and_properties(pairwise)
-#         groups_p, clean_val_p, qual = groups_and_props_p
-#         generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
-
-#     generate_manifest(clean_val, clean_val_p, qual)
 
 
