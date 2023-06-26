@@ -20,6 +20,7 @@ from de import DifferentialExpression
 class AuthorDifferentialExpression:
     # TODO: add name sanitization
 
+    #TODO: reorder author's columns in input file so output is log2foldchanges qval mean
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
     author_de_logger = setup_logger(
         __name__ + ".author_de_logger",
@@ -66,20 +67,18 @@ class AuthorDifferentialExpression:
         if len(one_vs_rest) != 0:
             groups_and_props = get_groups_and_properties(one_vs_rest)
             groups, clean_val, qual = groups_and_props
-            self.generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
-            #files_for_bucket = self.generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
+            files_for_bucket = self.generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
             # TODO: don't use a loop for delocalization after getting this working end to end
-            #for file in files_for_bucket:
-                #DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
+            for file in files_for_bucket:
+                DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
 
                 
         if len(pairwise) != 0:
             groups_and_props_p = get_groups_and_properties(pairwise)
             groups_p, clean_val_p, qual = groups_and_props_p
-            #files_for_bucket = self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
-            self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
-            #for file in files_for_bucket:
-                #DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
+            files_for_bucket = self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
+            for file in files_for_bucket:
+                DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
 
 
         generate_manifest(clean_val, clean_val_p, qual)
@@ -119,6 +118,7 @@ class AuthorDifferentialExpression:
         all_group_fin = [ele for ele in all_group if ele != []]
         grouped_lists = []
 
+        #TODO: fix sorting error here. if you have comparison set 1 with foo and bar, then you have comparison set 2 with bar and baz, error is triggered. adjust sorting method
         for i in all_group_fin:
             for j in range(0, len(i), 3):
                 x = j
@@ -138,11 +138,10 @@ class AuthorDifferentialExpression:
         file_d = dict.fromkeys(keys, [])
         for i in grouped_lists:
             list_i = []
-            for j in i:        
+            for j in i:     
                 f_name = check_group(names_dict, j)
                 col_v = rest[j].tolist()
                 list_i.append(col_v)
-
             file_d[f_name] = genes, list_i[0], list_i[1], list_i[2]
 
         qual.insert(0, "genes")
@@ -184,7 +183,7 @@ def convert_long_to_wide(data):
     """
     data["combined"] = data['group'] +"--"+ data["comparison_group"]
     frames = []
-    metrics = ["qval", "mean", "log2fc"]
+    metrics = ["qval", "mean", "logfoldchanges"]
     for metric in metrics:
         wide_metric = pd.pivot(data, index="genes", columns="combined", values=metric)
         wide_metric = wide_metric.add_suffix(f"--{metric}")
@@ -257,8 +256,8 @@ def get_groups_and_properties(col):
             qual.append(i[2])
 
     #TODO: Report this error to Sentry
-    if ("log2fc" not in qual) or ("qval" not in qual):
-        raise Exception("Comparisons must include at least log2fc and qval to be valid")
+    if ("logfoldchanges" not in qual) or ("qval" not in qual):
+        raise Exception("Comparisons must include at least logfoldchanges and qval to be valid")
     return groups, clean_val, qual
 
 def check_group(names_dict, name):
@@ -376,7 +375,6 @@ def sort_comparison(ls):
 # final result: individual files for each comparison
 
 def generate_manifest(clean_val, clean_val_p, qual):
-    print("called manifest")
     """
     create manifest file of each comparison in the initial data
     if the comparison is with rest, rest is omitted and just the type is written
