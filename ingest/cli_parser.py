@@ -331,6 +331,50 @@ def create_parser():
         "--gene-file", help="Path to .genes.tsv file"
     )
 
+    parser_ingest_differential_expression = subparsers.add_parser(
+        "ingest_differential_expression",
+        help="Indicates author differential expression analysis processing",
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--ingest-differential-expression",
+        required=True,
+        action="store_true",
+        help="Indicates that author differential expression analysis should be invoked",
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--study-accession",
+        required=True,
+        help="Single study accession associated with provided DE input files.",
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--annotation-name", required=True, help="Name of annotation for DE analysis"
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--annotation-type", required=True, help="Type of annotation for DE analysis"
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--annotation-scope", required=True, help="Scope of annotation for DE analysis"
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--method", default="wilcoxon", help="method for DE"
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--cluster-name", required=True, help="study owner-specified cluster name"
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--differential-expression-file",
+        required=True,
+        help="Path to DE file uploaded by author.",
+    )
+
     # AnnData subparsers
     parser_anndata = subparsers.add_parser(
         "ingest_anndata", help="Indicates that AnnData file is being ingested"

@@ -96,6 +96,7 @@ try:
     from expression_files.dense_ingestor import DenseIngestor
     from monitor import setup_logger, log_exception
     from de import DifferentialExpression
+    from author_de import AuthorDifferentialExpression
     from expression_writer import ExpressionWriter
 
     # scanpy uses anndata python package, disamibguate local anndata
@@ -149,6 +150,7 @@ class IngestPipeline:
         ingest_cell_metadata=False,
         ingest_cluster=False,
         differential_expression=False,
+        ingest_differential_expression=False,
         **kwargs,
     ):
         """Initializes variables in Ingest Pipeline"""
@@ -186,6 +188,9 @@ class IngestPipeline:
         if subsample:
             self.cluster_file = cluster_file
             self.cell_metadata_file = cell_metadata_file
+        if ingest_differential_expression:
+            self.cell_metadata = ""
+            self.cluster = ""
 
     # Will be replaced by MongoConnection as defined in SCP-2629
     def get_mongo_db(self):
@@ -549,6 +554,24 @@ class IngestPipeline:
         # ToDo: surface failed DE for analytics (SCP-4206)
         return 0
 
+    def calculate_author_de(self):
+        """Run differential expression analysis"""
+        try:
+            author_de = AuthorDifferentialExpression(
+                cluster=self.cluster,
+                cell_metadata=self.cell_metadata,
+                **self.kwargs,
+            )
+            author_de.execute()
+
+            # execute function as MAIN then create method to search for the files created, delocalize them to bucket as with de.py. adjust other places it needs to be called
+        except Exception as e:
+            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+            return 1
+        # ToDo: surface failed DE for analytics (SCP-4206)
+        return 0
+
+
     def render_expression_arrays(self):
         try:
             exp_writer = ExpressionWriter(
@@ -603,7 +626,14 @@ def run_ingest(ingest, arguments, parsed_args):
         config.set_parent_event_name("ingest-pipeline:differential-expression")
         status_de = ingest.calculate_de()
         status.append(status_de)
-        print(f"STATUS post-DE {status}")
+        print(f"STATUS after DE {status}")
+
+    elif "ingest_differential_expression" in arguments:
+        config.set_parent_event_name("ingest-pipeline:differential-expression:ingest")
+        status_de = ingest.calculate_author_de()
+        status.append(status_de)
+        print(f"STATUS after ingest author DE: {status}")
+
     elif "render_expression_arrays" in arguments:
         config.set_parent_event_name("image-pipeline:render_expression_arrays")
         status_exp_writer = ingest.render_expression_arrays()
@@ -631,8 +661,10 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """Logs any errors, then exits Ingest Pipeline with standard OS code"""
     if len(status) > 0:
         # for successful DE jobs, need to delocalize results
-        if "differential_expression" in arguments and all(i < 1 for i in status):
+        if ("differential_expression" in arguments or "ingest_differential_expression" in arguments) and all(i < 1 for i in status):
             file_path, study_file_id = get_delocalization_info(arguments)
+            print('file_path', file_path)
+            print('study_file_id', study_file_id)
             # append status?
             if IngestFiles.is_remote_file(file_path):
                 files_to_match = DifferentialExpression.string_for_output_match(
@@ -719,6 +751,7 @@ def main() -> None:
         arguments["cell_metadata_file"] = arguments["annotation_file"]
         # IngestPipeline initialization expects "name" and not "cluster_name"
         arguments["name"] = arguments["cluster_name"]
+
     # Initialize global variables for current ingest job
     config.init(
         arguments["study_id"],
