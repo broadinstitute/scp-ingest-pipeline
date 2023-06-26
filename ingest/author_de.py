@@ -37,14 +37,14 @@ class AuthorDifferentialExpression:
         self.accession = self.kwargs["study_accession"]
         self.annot_scope = self.kwargs["annotation_scope"]
         self.method = self.kwargs["method"]
-        self.author_de_file = self.kwargs["author_de_file"]
+        self.author_de_file = self.kwargs["differential_expression_file"]
 
     def execute(self):
         clean_val = []
         clean_val_p = []
         qual = []
         file_path = self.author_de_file
-        
+
         data = pd.read_csv(file_path)
         first_cols = data.columns
         if first_cols[0] == "genes" and first_cols[1] == "group" and first_cols[2] == "comparison_group":
@@ -65,12 +65,12 @@ class AuthorDifferentialExpression:
             #for file in files_for_bucket:
                 #DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
 
-                
+
         if len(pairwise) != 0:
             groups_and_props_p = get_groups_and_properties(pairwise)
             groups_p, clean_val_p, qual = groups_and_props_p
             self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
-            
+
             #for file in files_for_bucket:
                 #DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
 
@@ -82,7 +82,7 @@ class AuthorDifferentialExpression:
         """
         create individual files for each comparison, pairwise or rest, with all the metrics being used (ex qval, log2fc, mean)
         desired format:
-        for ex, if we have 
+        for ex, if we have
         'type_0'--'type_1'--qval
         type_0'--'type_1'--log2fc
         'type_0'--'type_1'--mean
@@ -127,12 +127,12 @@ class AuthorDifferentialExpression:
     # Now we have all the columns grouped in lists by pairwise comparison, with qval, log2fc, mean
     # have to pair with corresponding gene for that row
     # dictionary format:
-    # comparison name: [[gene, qval, log2fc, mean] [gene, qval, log2fc, mean] etc...] 
+    # comparison name: [[gene, qval, log2fc, mean] [gene, qval, log2fc, mean] etc...]
         keys = names_dict.keys()
         file_d = dict.fromkeys(keys, [])
         for i in grouped_lists:
             list_i = []
-            for j in i:     
+            for j in i:
                 f_name = check_group(names_dict, j)
                 col_v = rest[j].tolist()
                 list_i.append(col_v)
@@ -141,7 +141,7 @@ class AuthorDifferentialExpression:
         qual.insert(0, "genes")
 
         final_files_to_find = []
-        for i in file_d: 
+        for i in file_d:
             arr = np.array(file_d[i])
             t_arr = arr.transpose()
             inner_df = pd.DataFrame(data = t_arr, columns = qual)
@@ -159,12 +159,12 @@ class AuthorDifferentialExpression:
 # if len(sys.argv) > 1:
 #     file_path = sys.argv[1]
 # else:
-#     # file_path = "ingest/pairwise.csv"   
-#     file_path = "ingest/pairwise_and_rest.csv"   
-#     # file_path = "ingest/test_one_vs_rest.csv"  
+#     # file_path = "ingest/pairwise.csv"
+#     file_path = "ingest/pairwise_and_rest.csv"
+#     # file_path = "ingest/test_one_vs_rest.csv"
 #     #file_path = "ingest/test_long_format.csv"
 
-# only necessary for this specific example since we plan to accept all other files in long format to begin with 
+# only necessary for this specific example since we plan to accept all other files in long format to begin with
 def convert_wide_to_long(data):
     data.rename(columns={ data.columns[0]: "genes"}, inplace=True)
     ls = list(data.columns)[1:]
@@ -184,11 +184,11 @@ def convert_long_to_wide(data):
         frames.append(wide_metric)
 
     result = pd.concat(frames, axis=1, join='inner')
-    result.columns.name = ' ' 
+    result.columns.name = ' '
     result = result.reset_index()
     return result
 
-def get_data_by_col(data):  
+def get_data_by_col(data):
     """
     outputs full list of column names
     outputs full list of genes
@@ -212,7 +212,7 @@ def get_data_by_col(data):
 
 def get_groups_and_properties(col):
     """
-    takes in column names 
+    takes in column names
 
     below parsing relies on this format: 'type_0'_'type_1'_qval - necessary to include quotes
 
@@ -238,7 +238,7 @@ def get_groups_and_properties(col):
     qual = []
 
 # isolate the groups and values in submitted file
-# expected format: 
+# expected format:
 # groups: ['group_0', 'group_1', 'group_2', 'group_3']
 # qual: ['qval', 'log2fc', 'mean']
     for i in clean_val:
@@ -265,13 +265,13 @@ def check_group(names_dict, name):
     for i in names_dict:
         if name in names_dict[i]:
             return i
-        
+
 
 def sort_comparison(ls):
     """
-    Naturally sort groups in a pairwise comparison; specially handle one-vs-rest 
+    Naturally sort groups in a pairwise comparison; specially handle one-vs-rest
     this should take in only a list of two, ex (type1 type2)
-    
+
     https://en.wikipedia.org/wiki/Natural_sort_order
 
     """
@@ -283,13 +283,13 @@ def sort_comparison(ls):
     elif "rest" == ls[0]:
         return [ls[1], ls[0]]
     else:
-        return sorted(ls)    
+        return sorted(ls)
 
 # def generate_individual_files(self, col, genes, rest, groups, clean_val, qual):
 #     """
 #     create individual files for each comparison, pairwise or rest, with all the metrics being used (ex qval, log2fc, mean)
 #     desired format:
-#     for ex, if we have 
+#     for ex, if we have
 #     'type_0'--'type_1'--qval
 #     type_0'--'type_1'--log2fc
 #     'type_0'--'type_1'--mean
@@ -318,7 +318,7 @@ def sort_comparison(ls):
 #         all_group.append(type_group)
 
 #     all_group_fin = [ele for ele in all_group if ele != []]
-    
+
 #     grouped_lists = []
 
 #     for i in all_group_fin:
@@ -335,13 +335,13 @@ def sort_comparison(ls):
 # # Now we have all the columns grouped in lists by pairwise comparison, with qval, log2fc, mean
 # # have to pair with corresponding gene for that row
 # # dictionary format:
-# # comparison name: [[gene, qval, log2fc, mean] [gene, qval, log2fc, mean] etc...] 
+# # comparison name: [[gene, qval, log2fc, mean] [gene, qval, log2fc, mean] etc...]
 #     keys = names_dict.keys()
 #     file_d = dict.fromkeys(keys, [])
 
 #     for i in grouped_lists:
 #         list_i = []
-#         for j in i:        
+#         for j in i:
 #             f_name = check_group(names_dict, j)
 #             col_v = rest[j].tolist()
 #             list_i.append(col_v)
@@ -351,7 +351,7 @@ def sort_comparison(ls):
 #     qual.insert(0, "genes")
 
 #     final_files_to_find = []
-#     for i in file_d: 
+#     for i in file_d:
 #         arr = np.array(file_d[i])
 #         t_arr = arr.transpose()
 #         inner_df = pd.DataFrame(data = t_arr, columns = qual)
@@ -391,13 +391,13 @@ def generate_manifest(clean_val, clean_val_p, qual):
         if len(file_names_one_vs_rest) != 0:
             for value in range(len(file_names_one_vs_rest)):
                 tsv_output.writerow([file_names_one_vs_rest[value]])
-        
+
         if len(file_names_pairwise) != 0:
             for value in range(len(file_names_pairwise)):
                 tsv_output.writerow([file_names_pairwise[value][0], file_names_pairwise[value][1],])
 
 
-# put into class init method 
+# put into class init method
 
 # if __name__ == '__main__':
 #     clean_val = []
@@ -416,7 +416,7 @@ def generate_manifest(clean_val, clean_val_p, qual):
 #         groups_and_props = get_groups_and_properties(one_vs_rest)
 #         groups, clean_val, qual = groups_and_props
 #         generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
-            
+
 #     if len(pairwise) != 0:
 #         groups_and_props_p = get_groups_and_properties(pairwise)
 #         groups_p, clean_val_p, qual = groups_and_props_p
@@ -424,5 +424,4 @@ def generate_manifest(clean_val, clean_val_p, qual):
 
 #     generate_manifest(clean_val, clean_val_p, qual)
 
-    
-    
+
