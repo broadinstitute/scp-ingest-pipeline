@@ -1,14 +1,16 @@
+"""Ingest differential expression uploaded by authors, i.e. study owner / editor
+
+EXAMPLE:
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_differential_expression --annotation-name General_Celltype --annotation-type group --annotation-scope study --annotation-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-file gs://fc-febd4c65-881d-497f-b101-01a7ec427e6a/cluster_umap.txt --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --differential-expression-file author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv
+"""
+
 import pandas as pd
 import numpy as np
-import sys
 import csv
-import argparse
 import logging
 
 from monitor import setup_logger, log_exception
 from de import DifferentialExpression
-
-# python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 author_differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --annotation-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-file gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/global_meta.tsv.gz --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --study-file author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv
 
 class AuthorDifferentialExpression:
     # TODO: add name sanitization
@@ -61,17 +63,11 @@ class AuthorDifferentialExpression:
             groups_and_props = get_groups_and_properties(one_vs_rest)
             groups, clean_val, qual = groups_and_props
             self.generate_individual_files(one_vs_rest, genes, rest, groups, clean_val, qual)
-            # TODO: don't use a loop for delocalization after getting this working end to end
-            # for file in files_for_bucket:
-                # DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
 
         if len(pairwise) != 0:
             groups_and_props_p = get_groups_and_properties(pairwise)
             groups_p, clean_val_p, qual = groups_and_props_p
             self.generate_individual_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
-
-            # for file in files_for_bucket:
-                # DifferentialExpression.delocalize_de_files("gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", "gs://fc-3dab559a-a5ce-42a6-96e7-1e04228c10b8/_scp_internal/differential_expression/", file)
 
         generate_manifest(clean_val, clean_val_p, qual)
 
@@ -85,10 +81,10 @@ class AuthorDifferentialExpression:
         'type_0'--'type_1'--mean
         final format should have type 0 type 1 in the title, and genes, qval, log2fc, mean as columns
         """
-        #for i in clean_val:
-        #    val_to_sort = [i[0], i[1]]
-        #    sorted_list = sort_comparison(val_to_sort)
-        #    i[0], i[1] = sorted_list
+        # for i in clean_val:
+        #     val_to_sort = [i[0], i[1]]
+        #     sorted_list = sort_comparison(val_to_sort)
+        #     i[0], i[1] = sorted_list
 
         names_dict = {}
         all_group = []
@@ -113,7 +109,7 @@ class AuthorDifferentialExpression:
         for i in all_group_fin:
             for j in range(0, len(i), 3):
                 x = j
-                grouped_lists.append(i[x:x+3])
+                grouped_lists.append(i[x: x + 3])
 
         for i in names_dict:
             for j in grouped_lists:
@@ -378,7 +374,7 @@ def generate_manifest(clean_val, clean_val_p, qual):
     """
     file_names_one_vs_rest = []
     for i in clean_val:
-        clean_comparison = '--'.join([ x for x in i if x != "rest" and x not in qual])
+        clean_comparison = '--'.join([x for x in i if x != "rest" and x not in qual])
         if clean_comparison not in file_names_one_vs_rest:
             file_names_one_vs_rest.append(clean_comparison)
 
@@ -387,7 +383,6 @@ def generate_manifest(clean_val, clean_val_p, qual):
         values = [i[0], i[1]]
         if values not in file_names_pairwise:
             file_names_pairwise.append(values)
-
 
     with open('manifest.tsv', 'w', newline='') as f:
         tsv_output = csv.writer(f, delimiter='\t')
