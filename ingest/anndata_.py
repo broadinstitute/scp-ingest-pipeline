@@ -65,7 +65,8 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         dim = ['NAME', 'X', 'Y']
         clustering_dimension = adata.obsm[clustering_name].shape[1]
         if clustering_dimension == 3:
-            headers = dim.append('Z')
+            dim.append('Z') 
+            headers = dim
         elif clustering_dimension == 2:
             headers = dim
         elif clustering_dimension > 3:
