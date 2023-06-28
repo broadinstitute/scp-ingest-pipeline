@@ -282,7 +282,7 @@ def check_group(names_dict, name):
 def sort_comparison(ls):
     """
     Naturally sort groups in a pairwise comparison; specially handle one-vs-rest
-    this should take in a combined name, such as B cells--CSN1S1 macrophages
+    this should take in a list of groups, such as ['B cells', 'CSN1S1 macrophages']
 
     https://en.wikipedia.org/wiki/Natural_sort_order
 
