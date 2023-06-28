@@ -81,10 +81,6 @@ class AuthorDifferentialExpression:
 
         Then final format should have type 0 type 1 in the title, and genes, logfoldchanges, qval, and mean as columns
         """
-        #for i in clean_val:
-        #    val_to_sort = [i[0], i[1]]
-        #    sorted_list = sort_comparison(val_to_sort)
-        #   i[0], i[1] = sorted_list
 
         names_dict = {}
         all_group = []
