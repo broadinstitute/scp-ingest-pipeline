@@ -92,10 +92,6 @@ class AuthorDifferentialExpression:
 
         Then final format should have type 0 type 1 in the title, and genes, logfoldchanges, qval, and mean as columns
         """
-        # for i in clean_val:
-        #     val_to_sort = [i[0], i[1]]
-        #     sorted_list = sort_comparison(val_to_sort)
-        #     i[0], i[1] = sorted_list
 
         names_dict = {}
         all_group = []
@@ -152,6 +148,12 @@ class AuthorDifferentialExpression:
 
             if "rest" in i:
                 i = i.split("--")[0]
+
+            else:
+                first_group = i.split("--")[0]
+                second_group = i.split("--")[1]
+                sorted_list = sort_comparison([first_group, second_group])
+                i = f'{sorted_list[0]}--{sorted_list[1]}'
 
             comparison = '--'.join([DifferentialExpression.sanitize_strings(group) for group in i.split('--')])
 
@@ -287,11 +289,12 @@ def check_group(names_dict, name):
 def sort_comparison(ls):
     """
     Naturally sort groups in a pairwise comparison; specially handle one-vs-rest
-    this should take in only a list of two, ex (type1 type2)
+    this should take in a list of groups, such as ['B cells', 'CSN1S1 macrophages']
 
     https://en.wikipedia.org/wiki/Natural_sort_order
 
     """
+
     if any(i.isdigit() for i in ls):
         sorted_arr = sorted(ls, key=lambda x: int("".join([i for i in x if i.isdigit()])))
         return sorted_arr
