@@ -197,8 +197,8 @@ class AuthorDifferentialExpression:
         # AuthorDifferentialExpression.de_logger.info(
         #    "Initializing DifferentialExpression instance"
         # )
-        self.cluster_name = DifferentialExpression.sanitize_strings(cluster_name)
-        self.annotation = DifferentialExpression.sanitize_strings(annotation_name)
+        self.cluster_name = DifferentialExpression.sanitize_string(cluster_name)
+        self.annotation = DifferentialExpression.sanitize_string(annotation_name)
         self.kwargs = kwargs
         self.accession = self.kwargs["study_accession"]
         self.annot_scope = self.kwargs["annotation_scope"]
@@ -324,7 +324,7 @@ class AuthorDifferentialExpression:
                 sorted_list = sort_comparison([group, comparison_group])
                 comparison = f'{sorted_list[0]}--{sorted_list[1]}'
 
-            comparison = '--'.join([DifferentialExpression.sanitize_strings(group) for group in comparison.split('--')])
+            comparison = '--'.join([DifferentialExpression.sanitize_string(group) for group in comparison.split('--')])
 
             tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
             final_files_to_find.append(tsv_name)

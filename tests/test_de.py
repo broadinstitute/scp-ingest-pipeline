@@ -34,10 +34,10 @@ def get_annotation_labels(metadata, annotation, de_cells):
 def find_expected_files(labels, cluster_name, annotation, scope, method):
     """Check that files were created for all expected annotation labels"""
     found = []
-    sanitized_cluster_name = DifferentialExpression.sanitize_strings(cluster_name)
-    sanitized_annotation = DifferentialExpression.sanitize_strings(annotation)
+    sanitized_cluster_name = DifferentialExpression.sanitize_string(cluster_name)
+    sanitized_annotation = DifferentialExpression.sanitize_string(annotation)
     for label in labels:
-        sanitized_label = DifferentialExpression.sanitize_strings(label)
+        sanitized_label = DifferentialExpression.sanitize_string(label)
         expected_file = f"{sanitized_cluster_name}--{sanitized_annotation}--{sanitized_label}--{scope}--{method}.tsv"
         assert os.path.exists(expected_file)
         found.append(expected_file)
@@ -189,11 +189,11 @@ class TestDifferentialExpression(unittest.TestCase):
         do not clobber and cause display of incorrect results for one of the labels.
         """
         test_string = "foo++)"
-        plus_converted_result = DifferentialExpression.sanitize_strings(test_string)
+        plus_converted_result = DifferentialExpression.sanitize_string(test_string)
         self.assertEqual(
             plus_converted_result,
             "foopospos_",
-            "unexpected result from sanitation sanitize_strings function",
+            "unexpected result from sanitation sanitize_string function",
         )
 
         arguments = {
