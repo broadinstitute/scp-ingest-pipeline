@@ -13,6 +13,7 @@ from monitor import setup_logger, log_exception
 from de import DifferentialExpression
 from ingest_files import IngestFiles
 
+sanitize_string = DifferentialExpression.sanitize_string
 
 def check_group(names_dict, name):
     """Helper function to return the comparison based on the comparison with the value
@@ -197,8 +198,8 @@ class AuthorDifferentialExpression:
         # AuthorDifferentialExpression.de_logger.info(
         #    "Initializing DifferentialExpression instance"
         # )
-        self.cluster_name = DifferentialExpression.sanitize_string(cluster_name)
-        self.annotation = DifferentialExpression.sanitize_string(annotation_name)
+        self.cluster_name = sanitize_string(cluster_name)
+        self.annotation = sanitize_string(annotation_name)
         self.kwargs = kwargs
         self.accession = self.kwargs["study_accession"]
         self.annot_scope = self.kwargs["annotation_scope"]
@@ -324,7 +325,7 @@ class AuthorDifferentialExpression:
                 sorted_list = sort_comparison([group, comparison_group])
                 comparison = f'{sorted_list[0]}--{sorted_list[1]}'
 
-            comparison = '--'.join([DifferentialExpression.sanitize_string(group) for group in comparison.split('--')])
+            comparison = '--'.join([sanitize_string(group) for group in comparison.split('--')])
 
             tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
             final_files_to_find.append(tsv_name)
