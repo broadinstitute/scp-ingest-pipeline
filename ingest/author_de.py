@@ -281,14 +281,14 @@ class AuthorDifferentialExpression:
 
         for comparison in comparisons_dict:
             for comparison_metrics in grouped_comparison_metrics:
-                for k in comparison_metrics:
-                    if comparison in k:
-                        comparisons_dict[comparison].append(k)
+                for comparison_metric in comparison_metrics:
+                    if comparison in comparison_metric:
+                        comparisons_dict[comparison].append(comparison_metric)
 
-        # Now we have all the columns grouped in lists by comparison name, with qval, logfoldchanges, mean
+        # Now we have all the columns grouped in lists by comparison name, with logfoldchanges, qval, mean
         # have to pair with corresponding gene for that row
         # dictionary format:
-        # comparison name: [[gene, qval, logfoldchanges, mean], [gene, qval, logfoldchanges, mean] etc...]
+        # comparison name: [[gene, logfoldchanges, qval, mean], [gene, logfoldchanges, qval, mean], ...]
         comparisons = comparisons_dict.keys()
         rows_by_comparison = dict.fromkeys(comparisons, [])
         for comparison_metrics in grouped_comparison_metrics:
@@ -302,28 +302,29 @@ class AuthorDifferentialExpression:
                 values = rest[comparison_metric].tolist()
 
                 metric_values.append(values)
-            rows = genes, metric_values[0], metric_values[1], metric_values[2]
+            logfoldchanges, qvals, means = metric_values[0], metric_values[1], metric_values[2]
+            rows = genes, logfoldchanges, qvals, means
             rows_by_comparison[comparison] = rows
 
         headers = metrics
         headers.insert(0, "genes")
 
         final_files_to_find = []
-        for i in rows_by_comparison:
-            arr = np.array(rows_by_comparison[i])
+        for comparison in rows_by_comparison:
+            arr = np.array(rows_by_comparison[comparison])
             t_arr = arr.transpose()
             inner_df = pd.DataFrame(data=t_arr, columns=headers)
 
-            if "rest" in i:
-                i = i.split("--")[0]
+            if "rest" in comparison:
+                comparison = comparison.split("--")[0]
 
             else:
-                group = i.split("--")[0]
-                comparison_group = i.split("--")[1]
+                group = comparison.split("--")[0]
+                comparison_group = comparison.split("--")[1]
                 sorted_list = sort_comparison([group, comparison_group])
-                i = f'{sorted_list[0]}--{sorted_list[1]}'
+                comparison = f'{sorted_list[0]}--{sorted_list[1]}'
 
-            comparison = '--'.join([DifferentialExpression.sanitize_strings(group) for group in i.split('--')])
+            comparison = '--'.join([DifferentialExpression.sanitize_strings(group) for group in comparison.split('--')])
 
             tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
             final_files_to_find.append(tsv_name)
