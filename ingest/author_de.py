@@ -30,7 +30,7 @@ class AuthorDifferentialExpression:
         self,
         cluster_name,
         annotation_name,
-        **kwargs,
+        **kwargs
     ):
         # AuthorDifferentialExpression.de_logger.info(
         #    "Initializing DifferentialExpression instance"
@@ -51,11 +51,10 @@ class AuthorDifferentialExpression:
         )
         self.author_de_file = local_file_path
 
-
     def execute(self):
         clean_val = []
         clean_val_p = []
-        qual = []
+        metrics = []
         file_path = self.author_de_file
 
         data = pd.read_csv(file_path)
@@ -71,16 +70,16 @@ class AuthorDifferentialExpression:
         one_vs_rest = split_values["one_vs_rest"]
 
         if len(one_vs_rest) != 0:
-            groups, clean_val, qual = get_groups_and_properties(one_vs_rest)
-            self.generate_result_files(one_vs_rest, genes, rest, groups, clean_val, qual)
+            groups, clean_val, metrics = get_groups_and_metrics(one_vs_rest)
+            self.generate_result_files(one_vs_rest, genes, rest, groups, clean_val, metrics)
 
         if len(pairwise) != 0:
-            groups_p, clean_val_p, qual = get_groups_and_properties(pairwise)
-            self.generate_result_files(pairwise, genes, rest, groups_p, clean_val_p, qual)
+            groups_p, clean_val_p, metrics = get_groups_and_metrics(pairwise)
+            self.generate_result_files(pairwise, genes, rest, groups_p, clean_val_p, metrics)
 
-        generate_manifest(self.stem, clean_val, clean_val_p, qual)
+        generate_manifest(self.stem, clean_val, clean_val_p, metrics)
 
-    def generate_result_files(self, col, genes, rest, groups, clean_val, qual):
+    def generate_result_files(self, col, genes, rest, groups, clean_val, metrics):
         """
         Create an individual DE result file for each comparison, pairwise or rest,
         with all the metrics being used (e.g. logfoldchanges, qval, mean)
@@ -112,7 +111,8 @@ class AuthorDifferentialExpression:
         all_group_fin = [ele for ele in all_group if ele != []]
         grouped_lists = []
 
-        # TODO: fix sorting error here. if you have comparison set 1 with foo and bar, then you have comparison set 2 with bar and baz, error is triggered. adjust sorting method
+        # TODO: fix sorting error here. if you have comparison set 1 with foo and bar,
+        # then you have comparison set 2 with bar and baz, error is triggered. adjust sorting method
         for i in all_group_fin:
             for j in range(0, len(i), 3):
                 x = j
@@ -138,13 +138,14 @@ class AuthorDifferentialExpression:
                 list_i.append(col_v)
             file_d[f_name] = genes, list_i[0], list_i[1], list_i[2]
 
-        qual.insert(0, "genes")
+        headers = metrics
+        headers.insert(0, "genes")
 
         final_files_to_find = []
         for i in file_d:
             arr = np.array(file_d[i])
             t_arr = arr.transpose()
-            inner_df = pd.DataFrame(data=t_arr, columns=qual)
+            inner_df = pd.DataFrame(data=t_arr, columns=headers)
 
             if "rest" in i:
                 i = i.split("--")[0]
@@ -228,7 +229,7 @@ def get_data_by_col(data):
 # For the purposes of this validation I will be using his column values/formatting.
 
 
-def get_groups_and_properties(column_names):
+def get_groups_and_metrics(column_names):
     """
     takes in column names
 
@@ -236,7 +237,7 @@ def get_groups_and_properties(column_names):
 
     cleans column header of unnecessary characters and isolates column name, returns clean_val containing only cleaned values
 
-    qual is the properties to measure by, in the example's case it is ['logfoldchanges', 'qval', 'mean']
+    metrics is the properties to measure by, in the example's case it is ['logfoldchanges', 'qval', 'mean']
      -- important note: parse from columns rather than assume these are the three we are using
 
      groups is the group being compared, in this case ['type_0', 'type_1', 'type_2', 'type_3']
@@ -253,24 +254,24 @@ def get_groups_and_properties(column_names):
         clean_val.append(col_names)
 
     groups = []
-    qual = []
+    metrics = []
 
-# isolate the groups and values in submitted file
-# expected format:
-# groups: ['group_0', 'group_1', 'group_2', 'group_3']
-# qual: ['qval', 'logfoldchanges', 'mean']
+    # isolate the groups and values in submitted file
+    # expected format:
+    # groups: ['group_0', 'group_1', 'group_2', 'group_3']
+    # metrics: ['qval', 'logfoldchanges', 'mean']
     for i in clean_val:
         if i[0] not in groups:
             groups.append(i[0])
         if i[1] not in groups:
             groups.append(i[1])
-        if i[2] not in qual:
-            qual.append(i[2])
+        if i[2] not in metrics:
+            metrics.append(i[2])
 
     # TODO: Report this error to Sentry
-    if ("logfoldchanges" not in qual) or ("qval" not in qual):
+    if ("logfoldchanges" not in metrics) or ("qval" not in metrics):
         raise Exception("Comparisons must include at least logfoldchanges and qval to be valid")
-    return groups, clean_val, qual
+    return groups, clean_val, metrics
 
 
 def check_group(names_dict, name):
