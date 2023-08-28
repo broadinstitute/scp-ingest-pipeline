@@ -254,19 +254,18 @@ class AuthorDifferentialExpression:
         Then final format should have type 0 type 1 in the title, and genes, logfoldchanges, qval, and mean as columns
         """
 
-        names_dict = {}
+        comparisons_dict = {}
         all_group = []
         for i in range(len(groups)):
             curr_group = groups[i]
             type_group = []
-
             for j in range(len(clean_val)):
-                curr_val = clean_val[j][0]
-                comp_val = clean_val[j][1]
-                file_naming = f"{curr_val}--{comp_val}"
-                names_dict[file_naming] = []
+                group = clean_val[j][0]
+                comparison_group = clean_val[j][1]
+                comparison = f"{group}--{comparison_group}"
+                comparisons_dict[comparison] = []
                 real_title = col[j]
-                if curr_group == curr_val:
+                if curr_group == group:
                     type_group.append(real_title)
 
             all_group.append(type_group)
@@ -280,22 +279,22 @@ class AuthorDifferentialExpression:
                 x = j
                 grouped_lists.append(i[x: x + 3])
 
-        for i in names_dict:
-            for j in grouped_lists:
-                for k in j:
-                    if i in k:
-                        names_dict[i].append(k)
+        for comparison in comparisons_dict:
+            for grouped_list in grouped_lists:
+                for k in grouped_list:
+                    if comparison in k:
+                        comparisons_dict[comparison].append(k)
 
         # Now we have all the columns grouped in lists by pairwise comparison, with qval, logfoldchanges, mean
         # have to pair with corresponding gene for that row
         # dictionary format:
-        # comparison name: [[gene, qval, logfoldchanges, mean] [gene, qval, logfoldchanges, mean] etc...]
-        keys = names_dict.keys()
+        # comparison name: [[gene, qval, logfoldchanges, mean], [gene, qval, logfoldchanges, mean] etc...]
+        keys = comparisons_dict.keys()
         file_d = dict.fromkeys(keys, [])
-        for i in grouped_lists:
+        for grouped_list in grouped_lists:
             list_i = []
-            for j in i:
-                f_name = check_group(names_dict, j)
+            for j in grouped_list:
+                f_name = check_group(comparisons_dict, j)
                 col_v = rest[j].tolist()
                 list_i.append(col_v)
             file_d[f_name] = genes, list_i[0], list_i[1], list_i[2]
@@ -323,4 +322,6 @@ class AuthorDifferentialExpression:
             tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
             final_files_to_find.append(tsv_name)
             inner_df.to_csv(tsv_name, sep='\t')
+            print(f"Wrote TSV: {tsv_name}")
+
         return final_files_to_find
