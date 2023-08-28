@@ -310,7 +310,6 @@ class AuthorDifferentialExpression:
         headers = metrics
         headers.insert(0, "genes")
 
-        final_files_to_find = []
         for comparison in rows_by_comparison:
             arr = np.array(rows_by_comparison[comparison])
             t_arr = arr.transpose()
@@ -328,8 +327,5 @@ class AuthorDifferentialExpression:
             comparison = '--'.join([sanitize_string(group) for group in comparison.split('--')])
 
             tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
-            final_files_to_find.append(tsv_name)
             inner_df.to_csv(tsv_name, sep='\t')
             print(f"Wrote TSV: {tsv_name}")
-
-        return final_files_to_find
