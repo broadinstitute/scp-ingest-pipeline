@@ -270,41 +270,47 @@ class AuthorDifferentialExpression:
 
             all_group.append(type_group)
         all_group_fin = [ele for ele in all_group if ele != []]
-        grouped_lists = []
+        grouped_comparison_metrics = []
 
         # TODO: fix sorting error here. if you have comparison set 1 with foo and bar,
         # then you have comparison set 2 with bar and baz, error is triggered. adjust sorting method
         for i in all_group_fin:
             for j in range(0, len(i), 3):
                 x = j
-                grouped_lists.append(i[x: x + 3])
+                grouped_comparison_metrics.append(i[x: x + 3])
 
         for comparison in comparisons_dict:
-            for grouped_list in grouped_lists:
-                for k in grouped_list:
+            for comparison_metrics in grouped_comparison_metrics:
+                for k in comparison_metrics:
                     if comparison in k:
                         comparisons_dict[comparison].append(k)
 
-        # Now we have all the columns grouped in lists by pairwise comparison, with qval, logfoldchanges, mean
+        # Now we have all the columns grouped in lists by comparison name, with qval, logfoldchanges, mean
         # have to pair with corresponding gene for that row
         # dictionary format:
         # comparison name: [[gene, qval, logfoldchanges, mean], [gene, qval, logfoldchanges, mean] etc...]
-        keys = comparisons_dict.keys()
-        file_d = dict.fromkeys(keys, [])
-        for grouped_list in grouped_lists:
-            list_i = []
-            for j in grouped_list:
-                f_name = check_group(comparisons_dict, j)
-                col_v = rest[j].tolist()
-                list_i.append(col_v)
-            file_d[f_name] = genes, list_i[0], list_i[1], list_i[2]
+        comparisons = comparisons_dict.keys()
+        rows_by_comparison = dict.fromkeys(comparisons, [])
+        for comparison_metrics in grouped_comparison_metrics:
+            metric_values = []
+            for comparison_metric in comparison_metrics:
+
+                # E.g. "B cells--CSN1S1 macrophages"
+                comparison = check_group(comparisons_dict, comparison_metric)
+
+                # Numerical values for metric in this comparison
+                values = rest[comparison_metric].tolist()
+
+                metric_values.append(values)
+            rows = genes, metric_values[0], metric_values[1], metric_values[2]
+            rows_by_comparison[comparison] = rows
 
         headers = metrics
         headers.insert(0, "genes")
 
         final_files_to_find = []
-        for i in file_d:
-            arr = np.array(file_d[i])
+        for i in rows_by_comparison:
+            arr = np.array(rows_by_comparison[i])
             t_arr = arr.transpose()
             inner_df = pd.DataFrame(data=t_arr, columns=headers)
 
@@ -312,9 +318,9 @@ class AuthorDifferentialExpression:
                 i = i.split("--")[0]
 
             else:
-                first_group = i.split("--")[0]
-                second_group = i.split("--")[1]
-                sorted_list = sort_comparison([first_group, second_group])
+                group = i.split("--")[0]
+                comparison_group = i.split("--")[1]
+                sorted_list = sort_comparison([group, comparison_group])
                 i = f'{sorted_list[0]}--{sorted_list[1]}'
 
             comparison = '--'.join([DifferentialExpression.sanitize_strings(group) for group in i.split('--')])
