@@ -229,29 +229,36 @@ def get_data_by_col(data):
 # For the purposes of this validation I will be using his column values/formatting.
 
 
-def get_groups_and_metrics(column_names):
+def get_groups_and_metrics(raw_column_names):
+    """Cleans column names, splits them into compared groups and metrics
+
+    A "metric" here is a measured property, like "logfoldchanges",
+    "qval", "mean", or others provided by authors.
+
+    A "group" either of the groups being compared, e.g. "B cells",
+    "macrophages", "rest", or others provided by authors.  Note that "rest" is
+    a special group that means "all other groups in this annotation".
+
+    ---
+
+    :param raw_column_names (list<str>) A list of raw column names, where
+        each of the 3 items / parts of the raw column name elements is
+        delimited by a double-hyphen.
+        Element format: "<group>--<comparison group>--<metric>"
+        Element example: "B cells--rest--logfoldchanges'"
+
+    :return list<groups, split_headers, metrics>
     """
-    takes in column names
+    split_headers = []
 
-    below parsing relies on this format: 'type_0'_'type_1'_qval - necessary to include quotes
-
-    cleans column header of unnecessary characters and isolates column name, returns clean_val containing only cleaned values
-
-    metrics is the properties to measure by, in the example's case it is ['logfoldchanges', 'qval', 'mean']
-     -- important note: parse from columns rather than assume these are the three we are using
-
-     groups is the group being compared, in this case ['type_0', 'type_1', 'type_2', 'type_3']
-    """
-    clean_val = []
-
-    for column_name in column_names:
-        str = column_name.split("--")
-        col_names = []
-        for j in str:
-            j = j.replace("'", "")
-            if (j != '') and (j != "_"):
-                col_names.append(j.strip("_"))
-        clean_val.append(col_names)
+    for raw_column_name in raw_column_names:
+        column_items = raw_column_name.split("--")
+        split_header = []
+        for item in column_items:
+            item = item.replace("'", "")  # Remove quotes in e.g. 'type_0'--'type_1'--qval
+            if (item != "") and (item != "_"):
+                split_header.append(item.strip("_"))
+        split_headers.append(split_header)
 
     groups = []
     metrics = []
@@ -260,18 +267,20 @@ def get_groups_and_metrics(column_names):
     # expected format:
     # groups: ['group_0', 'group_1', 'group_2', 'group_3']
     # metrics: ['qval', 'logfoldchanges', 'mean']
-    for i in clean_val:
-        if i[0] not in groups:
-            groups.append(i[0])
-        if i[1] not in groups:
-            groups.append(i[1])
-        if i[2] not in metrics:
-            metrics.append(i[2])
+    for split_header in split_headers:
+        [group, comparison_group, metric] = split_header
+        if group not in groups:
+            groups.append(group)
+        if comparison_group not in groups:
+            groups.append(comparison_group)
+        if metric not in metrics:
+            metrics.append(metric)
 
     # TODO: Report this error to Sentry
     if ("logfoldchanges" not in metrics) or ("qval" not in metrics):
         raise Exception("Comparisons must include at least logfoldchanges and qval to be valid")
-    return groups, clean_val, metrics
+
+    return groups, split_headers, metrics
 
 
 def check_group(names_dict, name):
