@@ -14,6 +14,168 @@ from de import DifferentialExpression
 from ingest_files import IngestFiles
 
 
+def check_group(names_dict, name):
+    """Helper function to return the comparison based on the comparison with the value
+
+    Takes in dictionary that stores all names, and given name
+
+    E.g. input type_2_type_3_mean returns type_2_type_3
+    """
+    for i in names_dict:
+        if name in names_dict[i]:
+            return i
+
+
+def sort_comparison(groups):
+    """Naturally sort groups in a pairwise comparison; specially handle one-vs-rest
+
+    https://en.wikipedia.org/wiki/Natural_sort_order
+
+    :param groups (list<str>) A list of groups, e.g. ["B cells", "CSN1S1 macrophages"]
+    """
+
+    if any(i.isdigit() for i in groups):
+        sorted_arr = sorted(groups, key=lambda x: int("".join([i for i in x if i.isdigit()])))
+        return sorted_arr
+    elif "rest" == groups[1]:
+        return groups
+    elif "rest" == groups[0]:
+        return [groups[1], groups[0]]
+    else:
+        return sorted(groups)
+
+
+def convert_long_to_wide(data):
+    """Convert from long format to wide format
+
+    (Long format is typical uploaded, but this module internally uses wide.)
+    """
+    data["combined"] = data['group'] + "--" + data["comparison_group"]
+    frames = []
+    metrics = ["logfoldchanges", "qval", "mean"]
+    for metric in metrics:
+        wide_metric = pd.pivot(data, index="genes", columns="combined", values=metric)
+        wide_metric = wide_metric.add_suffix(f"--{metric}")
+        frames.append(wide_metric)
+
+    result = pd.concat(frames, axis=1, join="inner")
+    result.columns.name = " "
+    result = result.reset_index()
+    return result
+
+
+def get_data_by_column(data):
+    """
+    outputs:
+        - full list of column names
+        - full list of genes
+        - "rest" which is columns isolated from genes
+
+    col_values outputs dict with the comparison characteristic and all the
+    numeric data in an array, e.g. 'type_0'_'type_1'_qval: [0, 1, 2]
+    """
+    genes = data.iloc[:, 0].tolist()
+    rest = data[data.columns[1:]]
+    columns = list(rest.columns)
+
+    # split col into two lists: pairwise, one_vs_rest
+    split_values = {"one_vs_rest": [], "pairwise": []}
+    for column in columns:
+        if "rest" in column:
+            split_values["one_vs_rest"].append(column)
+        else:
+            split_values["pairwise"].append(column)
+
+    return columns, genes, rest, split_values
+
+
+def generate_manifest(stem, clean_val, clean_val_p, qual):
+    """
+    create manifest file of each comparison in the initial data
+    if the comparison is with rest, rest is omitted and just the type is written
+    """
+    file_names_one_vs_rest = []
+    for i in clean_val:
+        clean_comparison = '--'.join([x for x in i if x != "rest" and x not in qual])
+        if clean_comparison not in file_names_one_vs_rest:
+            file_names_one_vs_rest.append(clean_comparison)
+
+    file_names_pairwise = []
+    for i in clean_val_p:
+        values = [i[0], i[1]]
+        if values not in file_names_pairwise:
+            file_names_pairwise.append(values)
+
+    with open(f"{stem}--manifest.tsv", "w", newline="") as f:
+        tsv_output = csv.writer(f, delimiter="\t")
+        if len(file_names_one_vs_rest) != 0:
+            for value in range(len(file_names_one_vs_rest)):
+                tsv_output.writerow([file_names_one_vs_rest[value]])
+
+        if len(file_names_pairwise) != 0:
+            for value in range(len(file_names_pairwise)):
+                tsv_output.writerow([file_names_pairwise[value][0], file_names_pairwise[value][1],])
+
+
+# note: my initial files had pval, qval, logfoldchanges.
+# David's files have qval, mean, logfoldchanges.
+# For the purposes of this validation I will be using his column values/formatting.
+
+
+def get_groups_and_metrics(raw_column_names):
+    """Cleans column names, splits them into compared groups and metrics
+
+    A "metric" here is a statistical measure, like "logfoldchanges", "qval",
+    "mean", or others provided by authors.
+
+    A "group" either of the groups being compared, e.g. "B cells",
+    "macrophages", "rest", or others provided by authors.  Note that "rest" is
+    a special group that means "all other groups in this annotation".
+
+    ---
+
+    :param raw_column_names (list<str>) A list of raw column names, where
+        each of the 3 items / parts of the raw column name elements is
+        delimited by a double-hyphen.
+        Element format: "<group>--<comparison group>--<metric>"
+        Element example: "B cells--rest--logfoldchanges'"
+
+    :return list<groups, split_headers, metrics>
+    """
+    split_headers = []
+
+    for raw_column_name in raw_column_names:
+        column_items = raw_column_name.split("--")
+        split_header = []
+        for item in column_items:
+            item = item.replace("'", "")  # Remove quotes in e.g. 'type_0'--'type_1'--qval
+            if (item != "") and (item != "_"):
+                split_header.append(item.strip("_"))
+        split_headers.append(split_header)
+
+    groups = []
+    metrics = []
+
+    # isolate the groups and values in submitted file
+    # expected format:
+    # groups: ['group_0', 'group_1', 'group_2', 'group_3']
+    # metrics: ['qval', 'logfoldchanges', 'mean']
+    for split_header in split_headers:
+        [group, comparison_group, metric] = split_header
+        if group not in groups:
+            groups.append(group)
+        if comparison_group not in groups:
+            groups.append(comparison_group)
+        if metric not in metrics:
+            metrics.append(metric)
+
+    # TODO: Report this error to Sentry
+    if ("logfoldchanges" not in metrics) or ("qval" not in metrics):
+        raise Exception("Comparisons must include at least logfoldchanges and qval to be valid")
+
+    return groups, split_headers, metrics
+
+
 class AuthorDifferentialExpression:
     # TODO: reorder author's columns in input file so output is logfoldchanges qval mean
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
@@ -162,166 +324,3 @@ class AuthorDifferentialExpression:
             final_files_to_find.append(tsv_name)
             inner_df.to_csv(tsv_name, sep='\t')
         return final_files_to_find
-
-
-def convert_long_to_wide(data):
-    """Convert from long format to wide format
-
-    (Long format is typical uploaded, but this module internally uses wide.)
-    """
-    data["combined"] = data['group'] + "--" + data["comparison_group"]
-    frames = []
-    metrics = ["logfoldchanges", "qval", "mean"]
-    for metric in metrics:
-        wide_metric = pd.pivot(data, index="genes", columns="combined", values=metric)
-        wide_metric = wide_metric.add_suffix(f"--{metric}")
-        frames.append(wide_metric)
-
-    result = pd.concat(frames, axis=1, join="inner")
-    result.columns.name = " "
-    result = result.reset_index()
-    return result
-
-
-def get_data_by_column(data):
-    """
-    outputs:
-        - full list of column names
-        - full list of genes
-        - "rest" which is columns isolated from genes
-
-    col_values outputs dict with the comparison characteristic and all the
-    numeric data in an array, e.g. 'type_0'_'type_1'_qval: [0, 1, 2]
-    """
-    genes = data.iloc[:, 0].tolist()
-    rest = data[data.columns[1:]]
-    columns = list(rest.columns)
-
-    # split col into two lists: pairwise, one_vs_rest
-    split_values = {"one_vs_rest": [], "pairwise": []}
-    for column in columns:
-        if "rest" in column:
-            split_values["one_vs_rest"].append(column)
-        else:
-            split_values["pairwise"].append(column)
-
-    return columns, genes, rest, split_values
-
-# note: my initial files had pval, qval, logfoldchanges.
-# David's files have qval, mean, logfoldchanges.
-# For the purposes of this validation I will be using his column values/formatting.
-
-
-def get_groups_and_metrics(raw_column_names):
-    """Cleans column names, splits them into compared groups and metrics
-
-    A "metric" here is a statistical measure, like "logfoldchanges", "qval",
-    "mean", or others provided by authors.
-
-    A "group" either of the groups being compared, e.g. "B cells",
-    "macrophages", "rest", or others provided by authors.  Note that "rest" is
-    a special group that means "all other groups in this annotation".
-
-    ---
-
-    :param raw_column_names (list<str>) A list of raw column names, where
-        each of the 3 items / parts of the raw column name elements is
-        delimited by a double-hyphen.
-        Element format: "<group>--<comparison group>--<metric>"
-        Element example: "B cells--rest--logfoldchanges'"
-
-    :return list<groups, split_headers, metrics>
-    """
-    split_headers = []
-
-    for raw_column_name in raw_column_names:
-        column_items = raw_column_name.split("--")
-        split_header = []
-        for item in column_items:
-            item = item.replace("'", "")  # Remove quotes in e.g. 'type_0'--'type_1'--qval
-            if (item != "") and (item != "_"):
-                split_header.append(item.strip("_"))
-        split_headers.append(split_header)
-
-    groups = []
-    metrics = []
-
-    # isolate the groups and values in submitted file
-    # expected format:
-    # groups: ['group_0', 'group_1', 'group_2', 'group_3']
-    # metrics: ['qval', 'logfoldchanges', 'mean']
-    for split_header in split_headers:
-        [group, comparison_group, metric] = split_header
-        if group not in groups:
-            groups.append(group)
-        if comparison_group not in groups:
-            groups.append(comparison_group)
-        if metric not in metrics:
-            metrics.append(metric)
-
-    # TODO: Report this error to Sentry
-    if ("logfoldchanges" not in metrics) or ("qval" not in metrics):
-        raise Exception("Comparisons must include at least logfoldchanges and qval to be valid")
-
-    return groups, split_headers, metrics
-
-
-def check_group(names_dict, name):
-    """Helper function to return the comparison based on the comparison with the value
-
-    Takes in dictionary that stores all names, and given name
-
-    E.g. input type_2_type_3_mean returns type_2_type_3
-    """
-    for i in names_dict:
-        if name in names_dict[i]:
-            return i
-
-
-def sort_comparison(groups):
-    """Naturally sort groups in a pairwise comparison; specially handle one-vs-rest
-
-    https://en.wikipedia.org/wiki/Natural_sort_order
-
-    :param groups (list<str>) A list of groups, e.g. ["B cells", "CSN1S1 macrophages"]
-    """
-
-    if any(i.isdigit() for i in groups):
-        sorted_arr = sorted(groups, key=lambda x: int("".join([i for i in x if i.isdigit()])))
-        return sorted_arr
-    elif "rest" == groups[1]:
-        return groups
-    elif "rest" == groups[0]:
-        return [groups[1], groups[0]]
-    else:
-        return sorted(groups)
-
-
-def generate_manifest(stem, clean_val, clean_val_p, qual):
-    """
-    create manifest file of each comparison in the initial data
-    if the comparison is with rest, rest is omitted and just the type is written
-    """
-    file_names_one_vs_rest = []
-    for i in clean_val:
-        clean_comparison = '--'.join([x for x in i if x != "rest" and x not in qual])
-        if clean_comparison not in file_names_one_vs_rest:
-            file_names_one_vs_rest.append(clean_comparison)
-
-    file_names_pairwise = []
-    for i in clean_val_p:
-        values = [i[0], i[1]]
-        if values not in file_names_pairwise:
-            file_names_pairwise.append(values)
-
-    with open(f"{stem}--manifest.tsv", "w", newline="") as f:
-        tsv_output = csv.writer(f, delimiter="\t")
-        if len(file_names_one_vs_rest) != 0:
-            for value in range(len(file_names_one_vs_rest)):
-                tsv_output.writerow([file_names_one_vs_rest[value]])
-
-        if len(file_names_pairwise) != 0:
-            for value in range(len(file_names_pairwise)):
-                tsv_output.writerow([file_names_pairwise[value][0], file_names_pairwise[value][1],])
-
-
