@@ -1,4 +1,4 @@
-"""Ingest differential expression uploaded by authors, i.e. study owner / editor
+"""Ingest differential expression uploaded by study owner or editor
 
 EXAMPLE:
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_differential_expression --annotation-name General_Celltype --annotation-type group --annotation-scope study --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --differential-expression-file gs://fc-febd4c65-881d-497f-b101-01a7ec427e6a/author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv --method wilcoxon
@@ -61,9 +61,9 @@ class AuthorDifferentialExpression:
         first_cols = data.columns
         if first_cols[0] == "genes" and first_cols[1] == "group" and first_cols[2] == "comparison_group":
             wide_format = convert_long_to_wide(data)
-            data_by_col = get_data_by_col(wide_format)
+            data_by_col = get_data_by_column(wide_format)
         else:
-            data_by_col = get_data_by_col(data)
+            data_by_col = get_data_by_column(data)
 
         col, genes, rest, split_values = data_by_col
         pairwise = split_values["pairwise"]
@@ -164,27 +164,10 @@ class AuthorDifferentialExpression:
         return final_files_to_find
 
 
-# if len(sys.argv) > 1:
-#     file_path = sys.argv[1]
-# else:
-#     # file_path = "ingest/pairwise.csv"
-#     file_path = "ingest/pairwise_and_rest.csv"
-#     # file_path = "ingest/test_one_vs_rest.csv"
-#     #file_path = "ingest/test_long_format.csv"
-
-def convert_wide_to_long(data):
-    """
-    only necessary for this specific example since we plan to accept all other files in long format to begin with
-    """
-    data.rename(columns={data.columns[0]: "genes"}, inplace=True)
-    ls = list(data.columns)[1:]
-    long = pd.melt(data, id_vars='genes', var_name="comparisons", value_vars=ls)
-    return long
-
-
 def convert_long_to_wide(data):
-    """
-    TYPICAL USE: convert from long format (intended input) to wide format, since parsing is easier with wide format in this case
+    """Convert from long format to wide format
+
+    (Long format is typical uploaded, but this module internally uses wide.)
     """
     data["combined"] = data['group'] + "--" + data["comparison_group"]
     frames = []
@@ -200,7 +183,7 @@ def convert_long_to_wide(data):
     return result
 
 
-def get_data_by_col(data):
+def get_data_by_column(data):
     """
     outputs:
         - full list of column names
@@ -212,17 +195,17 @@ def get_data_by_col(data):
     """
     genes = data.iloc[:, 0].tolist()
     rest = data[data.columns[1:]]
-    col = list(rest.columns)
+    columns = list(rest.columns)
 
     # split col into two lists: pairwise, one_vs_rest
     split_values = {"one_vs_rest": [], "pairwise": []}
-    for i in col:
-        if "rest" in i:
-            split_values["one_vs_rest"].append(i)
+    for column in columns:
+        if "rest" in column:
+            split_values["one_vs_rest"].append(column)
         else:
-            split_values["pairwise"].append(i)
+            split_values["pairwise"].append(column)
 
-    return col, genes, rest, split_values
+    return columns, genes, rest, split_values
 
 # note: my initial files had pval, qval, logfoldchanges.
 # David's files have qval, mean, logfoldchanges.
@@ -232,8 +215,8 @@ def get_data_by_col(data):
 def get_groups_and_metrics(raw_column_names):
     """Cleans column names, splits them into compared groups and metrics
 
-    A "metric" here is a measured property, like "logfoldchanges",
-    "qval", "mean", or others provided by authors.
+    A "metric" here is a statistical measure, like "logfoldchanges", "qval",
+    "mean", or others provided by authors.
 
     A "group" either of the groups being compared, e.g. "B cells",
     "macrophages", "rest", or others provided by authors.  Note that "rest" is
@@ -284,119 +267,34 @@ def get_groups_and_metrics(raw_column_names):
 
 
 def check_group(names_dict, name):
-    """
-    helper function to return the comparison based on the comparison with the value
+    """Helper function to return the comparison based on the comparison with the value
 
-    takes in dictionary that stores all names, and given name
+    Takes in dictionary that stores all names, and given name
 
-    for example, input type_2_type_3_mean returns type_2_type_3
+    E.g. input type_2_type_3_mean returns type_2_type_3
     """
     for i in names_dict:
         if name in names_dict[i]:
             return i
 
 
-def sort_comparison(ls):
-    """
-    Naturally sort groups in a pairwise comparison; specially handle one-vs-rest
-    this should take in a list of groups, such as ['B cells', 'CSN1S1 macrophages']
+def sort_comparison(groups):
+    """Naturally sort groups in a pairwise comparison; specially handle one-vs-rest
 
     https://en.wikipedia.org/wiki/Natural_sort_order
 
+    :param groups (list<str>) A list of groups, e.g. ["B cells", "CSN1S1 macrophages"]
     """
 
-    if any(i.isdigit() for i in ls):
-        sorted_arr = sorted(ls, key=lambda x: int("".join([i for i in x if i.isdigit()])))
+    if any(i.isdigit() for i in groups):
+        sorted_arr = sorted(groups, key=lambda x: int("".join([i for i in x if i.isdigit()])))
         return sorted_arr
-    elif "rest" == ls[1]:
-        return ls
-    elif "rest" == ls[0]:
-        return [ls[1], ls[0]]
+    elif "rest" == groups[1]:
+        return groups
+    elif "rest" == groups[0]:
+        return [groups[1], groups[0]]
     else:
-        return sorted(ls)
-
-# def generate_individual_files(self, col, genes, rest, groups, clean_val, qual):
-#     """
-#     create individual files for each comparison, pairwise or rest, with all the metrics being used (ex qval, logfoldchanges, mean)
-#     desired format:
-#     for ex, if we have
-#     'type_0'--'type_1'--qval
-#     type_0'--'type_1'--logfoldchanges
-#     'type_0'--'type_1'--mean
-#     final format should have type 0 type 1 in the title, and genes, qval, logfoldchanges, mean as columns
-#     """
-#     for i in clean_val:
-#         val_to_sort = [i[0], i[1]]
-#         sorted_list = sort_comparison(val_to_sort)
-#         i[0], i[1] = sorted_list
-
-#     names_dict = {}
-#     all_group = []
-#     for i in range(len(groups)):
-#         curr_group = groups[i]
-#         type_group = []
-
-#         for j in range(len(clean_val)):
-#             curr_val = clean_val[j][0]
-#             comp_val = clean_val[j][1]
-#             file_naming = f"{curr_val}--{comp_val}"
-#             names_dict[file_naming] = []
-#             real_title = col[j]
-#             if curr_group == curr_val:
-#                 type_group.append(real_title)
-
-#         all_group.append(type_group)
-
-#     all_group_fin = [ele for ele in all_group if ele != []]
-
-#     grouped_lists = []
-
-#     for i in all_group_fin:
-#         for j in range(0, len(i), 3):
-#             x = j
-#             grouped_lists.append(i[x:x+3])
-
-#     for i in names_dict:
-#         for j in grouped_lists:
-#             for k in j:
-#                 if i in k:
-#                     names_dict[i].append(k)
-
-# # Now we have all the columns grouped in lists by pairwise comparison, with qval, logfoldchanges, mean
-# # have to pair with corresponding gene for that row
-# # dictionary format:
-# # comparison name: [[gene, qval, logfoldchanges, mean] [gene, qval, logfoldchanges, mean] etc...]
-#     keys = names_dict.keys()
-#     file_d = dict.fromkeys(keys, [])
-
-#     for i in grouped_lists:
-#         list_i = []
-#         for j in i:
-#             f_name = check_group(names_dict, j)
-#             col_v = rest[j].tolist()
-#             list_i.append(col_v)
-
-#         file_d[f_name] = genes, list_i[0], list_i[1], list_i[2]
-
-#     qual.insert(0, "genes")
-
-#     final_files_to_find = []
-#     for i in file_d:
-#         arr = np.array(file_d[i])
-#         t_arr = arr.transpose()
-#         inner_df = pd.DataFrame(data = t_arr, columns = qual)
-
-#         if "rest" in i:
-#             i = i.split("--")[0]
-
-#         tsv_name = f'ingest/{self.cluster_name}--{self.clean_annotation}--{i}--{self.annot_scope}--{self.method}.tsv'
-
-#         inner_df.to_csv(tsv_name, sep ='\t')
-#         #final_files_to_find.append("ingest/{}.tsv".format(i))
-
-#     #return final_files_to_find
-
-# final result: individual files for each comparison
+        return sorted(groups)
 
 
 def generate_manifest(stem, clean_val, clean_val_p, qual):
