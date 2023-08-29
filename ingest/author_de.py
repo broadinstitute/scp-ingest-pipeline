@@ -12,8 +12,10 @@ import logging
 from monitor import setup_logger, log_exception
 from de import DifferentialExpression
 from ingest_files import IngestFiles
+import de_utils
 
 sanitize_string = DifferentialExpression.sanitize_string
+
 
 def check_group(names_dict, name):
     """Helper function to return the comparison based on the comparison with the value
@@ -46,14 +48,18 @@ def sort_comparison(groups):
         return sorted(groups)
 
 
-def convert_long_to_wide(data):
+def convert_long_to_wide(data, metrics):
     """Convert from long format to wide format
 
     (Long format is typical uploaded, but this module internally uses wide.)
     """
+    metrics = list(data.columns[3:])
+
     data["combined"] = data['group'] + "--" + data["comparison_group"]
     frames = []
-    metrics = ["logfoldchanges", "qval", "mean"]
+    # E.g.
+    # gene  group   comparison_group    log2foldchange  pvals_adj   qvals   mean    cat dog
+    # metrics = ["log2foldchange", "pvals_adj", "qvals", "mean", "cat", "dog"]
     for metric in metrics:
         wide_metric = pd.pivot(data, index="genes", columns="combined", values=metric)
         wide_metric = wide_metric.add_suffix(f"--{metric}")
@@ -117,13 +123,27 @@ def generate_manifest(stem, clean_val, clean_val_p, qual):
             for value in range(len(file_names_pairwise)):
                 tsv_output.writerow([file_names_pairwise[value][0], file_names_pairwise[value][1],])
 
-
 # note: my initial files had pval, qval, logfoldchanges.
 # David's files have qval, mean, logfoldchanges.
 # For the purposes of this validation I will be using his column values/formatting.
 
 
-def get_groups_and_metrics(raw_column_names):
+def inspect_size_and_significance(metrics, logger):
+    """Locally log whether size and/or significance are detected among metrics
+    """
+    size, significance = de_utils.get_size_and_significance(metrics)
+    in_headers = f"in headers: {metrics}"
+    if not size and not significance:
+        logger.warn(f"No size or significance metrics found {in_headers}")
+    elif not size:
+        logger.warn(f"No size metrics found {in_headers}")
+    elif not significance:
+        logger.warn(f"No significance metrics found {in_headers}")
+    elif size and significance:
+        logger.info(f'Found size ("{size}") and significance ("{significance}") metrics {in_headers}')
+
+
+def get_groups_and_metrics(raw_column_names, logger):
     """Cleans column names, splits them into compared groups and metrics
 
     A "metric" here is a statistical measure, like "logfoldchanges", "qval",
@@ -160,7 +180,7 @@ def get_groups_and_metrics(raw_column_names):
     # isolate the groups and values in submitted file
     # expected format:
     # groups: ['group_0', 'group_1', 'group_2', 'group_3']
-    # metrics: ['qval', 'logfoldchanges', 'mean']
+    # Example metrics: ['logfoldchanges', 'qval', 'mean']
     for split_header in split_headers:
         [group, comparison_group, metric] = split_header
         if group not in groups:
@@ -170,9 +190,7 @@ def get_groups_and_metrics(raw_column_names):
         if metric not in metrics:
             metrics.append(metric)
 
-    # TODO: Report this error to Sentry
-    if ("logfoldchanges" not in metrics) or ("qval" not in metrics):
-        raise Exception("Comparisons must include at least logfoldchanges and qval to be valid")
+    inspect_size_and_significance(metrics, logger)
 
     return groups, split_headers, metrics
 
@@ -222,22 +240,28 @@ class AuthorDifferentialExpression:
 
         data = pd.read_csv(file_path)
         first_cols = data.columns
+
         if first_cols[0] == "genes" and first_cols[1] == "group" and first_cols[2] == "comparison_group":
+            # Raw data is in long format
             wide_format = convert_long_to_wide(data)
             data_by_col = get_data_by_column(wide_format)
         else:
+            # Raw data is in wide format
             data_by_col = get_data_by_column(data)
+
+        print('data_by_col', data_by_col)
 
         col, genes, rest, split_values = data_by_col
         pairwise = split_values["pairwise"]
         one_vs_rest = split_values["one_vs_rest"]
 
+        logger = AuthorDifferentialExpression.dev_logger
         if len(one_vs_rest) != 0:
-            groups, clean_val, metrics = get_groups_and_metrics(one_vs_rest)
+            groups, clean_val, metrics = get_groups_and_metrics(one_vs_rest, logger)
             self.generate_result_files(one_vs_rest, genes, rest, groups, clean_val, metrics)
 
         if len(pairwise) != 0:
-            groups_p, clean_val_p, metrics = get_groups_and_metrics(pairwise)
+            groups_p, clean_val_p, metrics = get_groups_and_metrics(pairwise, logger)
             self.generate_result_files(pairwise, genes, rest, groups_p, clean_val_p, metrics)
 
         generate_manifest(self.stem, clean_val, clean_val_p, metrics)
@@ -273,12 +297,14 @@ class AuthorDifferentialExpression:
         all_group_fin = [ele for ele in all_group if ele != []]
         grouped_comparison_metrics = []
 
+        num_metrics = len(metrics)
+
         # TODO: fix sorting error here. if you have comparison set 1 with foo and bar,
         # then you have comparison set 2 with bar and baz, error is triggered. adjust sorting method
         for i in all_group_fin:
-            for j in range(0, len(i), 3):
+            for j in range(0, len(i), num_metrics):
                 x = j
-                grouped_comparison_metrics.append(i[x: x + 3])
+                grouped_comparison_metrics.append(i[x: x + num_metrics])
 
         for comparison in comparisons_dict:
             for comparison_metrics in grouped_comparison_metrics:
