@@ -23,7 +23,7 @@ class TestDifferentialExpression(unittest.TestCase):
             'annotation_scope': 'study',
             'method': 'wilcoxon',
             'cluster_name': 'cluster_umap_txt',
-            'differential_expression_file': '../tests/data/author_de/author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv'
+            'differential_expression_file': '../tests/data/author_de/lfc_qval_scanpy-like.csv'
         }
         author_de = AuthorDifferentialExpression(
             cluster=None,

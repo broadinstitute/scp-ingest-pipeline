@@ -16,7 +16,6 @@ import de_utils
 
 sanitize_string = DifferentialExpression.sanitize_string
 
-
 def check_group(names_dict, name):
     """Helper function to return the comparison based on the comparison with the value
 
@@ -48,7 +47,7 @@ def sort_comparison(groups):
         return sorted(groups)
 
 
-def convert_long_to_wide(data, metrics):
+def convert_long_to_wide(data):
     """Convert from long format to wide format
 
     (Long format is typical uploaded, but this module internally uses wide.)
@@ -238,7 +237,16 @@ class AuthorDifferentialExpression:
         metrics = []
         file_path = self.author_de_file
 
-        data = pd.read_csv(file_path)
+        # TODO:
+        #   - Throw well-formatted error if file type not in ALLOWED_FILE_TYPES
+        #   - Consider if / how this merges with centralized handling in ingest_files.py
+        file_type = IngestFiles.get_file_type(file_path)[0]
+        if file_type == 'text/tab-separated-values':
+            delimiter = '\t'
+        else:
+            delimiter = ','
+        data = pd.read_csv(file_path, delimiter)
+
         first_cols = data.columns
 
         if first_cols[0] == "genes" and first_cols[1] == "group" and first_cols[2] == "comparison_group":
