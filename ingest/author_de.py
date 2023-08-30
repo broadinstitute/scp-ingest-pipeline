@@ -164,6 +164,7 @@ def get_groups_and_metrics(raw_column_names, logger):
     """
     split_headers = []
 
+    print('get_groups_and_metrics 1')
     for raw_column_name in raw_column_names:
         column_items = raw_column_name.split("--")
         split_header = []
@@ -173,6 +174,7 @@ def get_groups_and_metrics(raw_column_names, logger):
                 split_header.append(item.strip("_"))
         split_headers.append(split_header)
 
+    print('get_groups_and_metrics 2')
     groups = []
     metrics = []
 
@@ -189,7 +191,11 @@ def get_groups_and_metrics(raw_column_names, logger):
         if metric not in metrics:
             metrics.append(metric)
 
+    print('get_groups_and_metrics 3')
+
     inspect_size_and_significance(metrics, logger)
+
+    print('get_groups_and_metrics 4')
 
     return groups, split_headers, metrics
 
@@ -263,15 +269,18 @@ class AuthorDifferentialExpression:
         pairwise = split_values["pairwise"]
         one_vs_rest = split_values["one_vs_rest"]
 
+        print('\n**** 1\n')
         logger = AuthorDifferentialExpression.dev_logger
         if len(one_vs_rest) != 0:
             groups, clean_val, metrics = get_groups_and_metrics(one_vs_rest, logger)
+            print('\n**** 1A\n')
             self.generate_result_files(one_vs_rest, genes, rest, groups, clean_val, metrics)
 
+        print('\n**** 2\n')
         if len(pairwise) != 0:
             groups_p, clean_val_p, metrics = get_groups_and_metrics(pairwise, logger)
             self.generate_result_files(pairwise, genes, rest, groups_p, clean_val_p, metrics)
-
+        print('\n**** 3\n')
         generate_manifest(self.stem, clean_val, clean_val_p, metrics)
 
     def generate_result_files(self, col, genes, rest, groups, clean_val, metrics):
@@ -286,7 +295,7 @@ class AuthorDifferentialExpression:
 
         Then final format should have type 0 type 1 in the title, and genes, logfoldchanges, qval, and mean as columns
         """
-
+        print('generate_result_files 1')
         comparisons_dict = {}
         all_group = []
         for i in range(len(groups)):
@@ -305,7 +314,11 @@ class AuthorDifferentialExpression:
         all_group_fin = [ele for ele in all_group if ele != []]
         grouped_comparison_metrics = []
 
+        print('generate_result_files 2')
+
         num_metrics = len(metrics)
+
+        print('num_metrics', num_metrics)
 
         # TODO: fix sorting error here. if you have comparison set 1 with foo and bar,
         # then you have comparison set 2 with bar and baz, error is triggered. adjust sorting method
@@ -314,11 +327,17 @@ class AuthorDifferentialExpression:
                 x = j
                 grouped_comparison_metrics.append(i[x: x + num_metrics])
 
+        print('grouped_comparison_metrics', grouped_comparison_metrics)
+
+        print('generate_result_files 3')
+
         for comparison in comparisons_dict:
             for comparison_metrics in grouped_comparison_metrics:
                 for comparison_metric in comparison_metrics:
                     if comparison in comparison_metric:
                         comparisons_dict[comparison].append(comparison_metric)
+
+        print('generate_result_files 4')
 
         # Now we have all the columns grouped in lists by comparison name, with logfoldchanges, qval, mean
         # have to pair with corresponding gene for that row
@@ -337,17 +356,35 @@ class AuthorDifferentialExpression:
                 values = rest[comparison_metric].tolist()
 
                 metric_values.append(values)
-            logfoldchanges, qvals, means = metric_values[0], metric_values[1], metric_values[2]
-            rows = genes, logfoldchanges, qvals, means
+
+            rows = metric_values
+            rows.insert(0, genes)
+            # print('comparison', comparison)
+            # print('rows', rows)
             rows_by_comparison[comparison] = rows
+
+        print('generate_result_files 5')
 
         headers = metrics
         headers.insert(0, "genes")
 
+        print()
+        # print('rows_by_comparison', rows_by_comparison)
+        print()
+
+        print('rows_by_comparison.keys()', rows_by_comparison.keys())
         for comparison in rows_by_comparison:
+            print('generate_result_files 6')
+            # print('rows_by_comparison[comparison]', rows_by_comparison[comparison])
             arr = np.array(rows_by_comparison[comparison])
+            # print('arr', arr)
+            print('generate_result_files 7')
             t_arr = arr.transpose()
+            print('generate_result_files 8')
+            # print('t_arr', t_arr)
+            # print('headers', headers)
             inner_df = pd.DataFrame(data=t_arr, columns=headers)
+            print('generate_result_files 9')
 
             if "rest" in comparison:
                 comparison = comparison.split("--")[0]
@@ -358,8 +395,15 @@ class AuthorDifferentialExpression:
                 sorted_list = sort_comparison([group, comparison_group])
                 comparison = f'{sorted_list[0]}--{sorted_list[1]}'
 
+            print('generate_result_files 10')
+
             comparison = '--'.join([sanitize_string(group) for group in comparison.split('--')])
 
             tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
+
+            print('generate_result_files 11')
             inner_df.to_csv(tsv_name, sep='\t')
+            print('generate_result_files 12')
             print(f"Wrote TSV: {tsv_name}")
+
+        print('generate_result_files end')
