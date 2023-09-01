@@ -1,7 +1,7 @@
 """Ingest differential expression uploaded by study owner or editor
 
 EXAMPLE:
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_differential_expression --annotation-name General_Celltype --annotation-type group --annotation-scope study --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --differential-expression-file gs://fc-febd4c65-881d-497f-b101-01a7ec427e6a/author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv --method wilcoxon
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_differential_expression --annotation-name General_Celltype --annotation-type group --annotation-scope study --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --differential-expression-file gs://fc-febd4c65-881d-497f-b101-01a7ec427e6a/author_de_test/lfc_qval_scanpy-like.csv --method wilcoxon
 """
 
 import pandas as pd
@@ -132,8 +132,7 @@ def sort_all_group(all_group):
     ['A--B--logfoldchanges', 'A--B--mean', 'A--B--qval', 'A--C--logfoldchanges', 'A--C--mean', 'A--C--qval']
 
     This way, elements are sorted by 1st ***and 2nd group*** names,
-    enabling grouped_comparison to rearrange with a simple stride
-    length in the next block.
+    enabling grouped_comparison to rearrange with a simple stride length.
     """
     all_group_fin = []
     for inner_array in all_group:
@@ -146,7 +145,7 @@ def sort_all_group(all_group):
 
 
 def sort_comparison_metrics(comparison_metrics):
-    """Ensure comparison_metrics has the order expected in the frontend
+    """Ensure comparison_metrics has the order expected in the UI
 
     E.g., sort raw input:
     ['A--B--logfoldchanges', 'A--B--mean', 'A--B--qval']
@@ -190,17 +189,28 @@ def sort_comparison_metrics(comparison_metrics):
 # For the purposes of this validation I will be using his column values/formatting.
 
 
-def inspect_size_and_significance(metrics, logger):
+def validate_size_and_significance(metrics, logger):
     """Locally log whether size and/or significance are detected among metrics
+
+    TODO:
+        - When UI is more robust, convert to logger.warn and don't throw errors
+        - Log to Sentry / Mixpanel
     """
     size, significance = de_utils.get_size_and_significance(metrics)
     in_headers = f"in headers: {metrics}"
     if not size and not significance:
-        logger.warn(f"No size or significance metrics found {in_headers}")
+        msg = f"No size or significance metrics found {in_headers}"
+        logger.error(msg)
+        raise ValueError(msg)
     elif not size:
-        logger.warn(f"No size metrics found {in_headers}")
+        # TODO: When UI is more robust, convert to logger.warn and don't throw
+        msg = f"No size metrics found {in_headers}"
+        logger.error(msg)
+        raise ValueError(msg)
     elif not significance:
-        logger.warn(f"No significance metrics found {in_headers}")
+        msg = f"No significance metrics found {in_headers}"
+        logger.error(msg)
+        raise ValueError(msg)
     elif size and significance:
         logger.info(f'Found size ("{size}") and significance ("{significance}") metrics {in_headers}')
 
@@ -252,7 +262,7 @@ def get_groups_and_metrics(raw_column_names, logger):
         if metric not in metrics:
             metrics.append(metric)
 
-    inspect_size_and_significance(metrics, logger)
+    validate_size_and_significance(metrics, logger)
 
     return groups, split_headers, metrics
 

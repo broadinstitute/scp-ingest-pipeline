@@ -12,6 +12,11 @@ def get_size(metric):
     return size
 
 
+# TODO: Delete this function once UI can handle flexible metrics
+def get_size_basic(metric):
+    return metric == "logfoldchanges"
+
+
 ### Significance parsers ###
 ### TODO (SCP-): Custom tooltips for custom metrics
 def get_pval_adj(metric):
@@ -54,13 +59,27 @@ def get_significance(metric):
                 return qval
             else:
                 return None
+
+
+# TODO: Delete this function once UI can handle flexible metrics
+def get_significance_basic(metric):
+    return metric == "qval"
+
 ### End significance parsers ###
 
 
 def get_size_and_significance(metrics):
-    sig_list = list(filter(get_size, metrics))
+
+    # TODO: Delete this "basic" block and uncomment next block
+    # once UI supports flexible metrics
+    sig_list = list(filter(get_size_basic, metrics))
     significance = sig_list[0] if len(sig_list) > 0 else None
-    size_list = list(filter(get_significance, metrics))
+    size_list = list(filter(get_significance_basic, metrics))
     size = size_list[0] if len(size_list) > 0 else None
 
-    return {size, significance}
+    # sig_list = list(filter(get_size, metrics))
+    # significance = sig_list[0] if len(sig_list) > 0 else None
+    # size_list = list(filter(get_significance, metrics))
+    # size = size_list[0] if len(size_list) > 0 else None
+
+    return [size, significance]

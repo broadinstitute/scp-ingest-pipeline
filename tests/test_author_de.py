@@ -54,6 +54,33 @@ class TestDifferentialExpression(unittest.TestCase):
         expected_line_1 = '0	ACE2	0.685269917070053	0.446924681159184	0.727719408271226'
         self.assertEqual(lines[1].strip(), expected_line_1)
 
+    def test_basic_size_and_significance(self):
+        """Tests validation that file has "logfoldchanges" and "qval" columns
+
+        TODO: Revamp this test once UI supports flexible columns
+        """
+        test_kwargs = {
+            'study_accession': 'SCPdev',
+            'annotation_name': 'General_Celltype',
+            'annotation_type': 'group',
+            'annotation_scope': 'study',
+            'method': 'wilcoxon',
+            'cluster_name': 'cluster_umap_txt',
+            'differential_expression_file': '../tests/data/author_de/pval_lfc_pvaladj_seurat-like.tsv'
+        }
+        author_de = AuthorDifferentialExpression(
+            cluster=None,
+            cell_metadata=None,
+            **test_kwargs,
+        )
+
+        try:
+            author_de.execute()
+        except ValueError as e:
+            expected_msg = "No size or significance metrics found in headers: ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster']"
+            self.assertEqual(str(e), expected_msg)
+
+
     @classmethod
     def teardown_class(cls):
         files = glob.glob('cluster_umap_txt--General_Celltype*.tsv')
