@@ -35,14 +35,23 @@ class TestDifferentialExpression(unittest.TestCase):
         files = glob.glob('cluster_umap_txt--General_Celltype*.tsv')
         self.assertEqual(len(files), 7, 'Expected 7 files')
 
-        pairwise_de_file = "cluster_umap_txt--General_Celltype--B_cells--CSN1S1_macrophages--study--wilcoxon.tsv"
-        with open(pairwise_de_file) as f:
+        # Test transformation of one-vs-rest author DE
+        one_vs_rest_de_output_file = "cluster_umap_txt--General_Celltype--B_cells--study--wilcoxon.tsv"
+        with open(one_vs_rest_de_output_file) as f:
             lines = f.readlines()
-
-        self.assertEqual(len(lines), 41, f"Expected 41 files in: {pairwise_de_file}")
+        self.assertEqual(len(lines), 41, f"Expected 41 files in: {one_vs_rest_de_output_file}")
         expected_line_0 = 'genes	logfoldchanges	qval	mean'
         self.assertEqual(lines[0].strip(), expected_line_0)
-        expected_line_1 = '0	ACE2	0.685269917070053	0.727719408271226	0.446924681159184'
+        expected_line_1 = '0	ACE2	0.9852699170700532	0.146924681159184	0.2277194082712261'
+
+        # Test transformation of pairwise author DE
+        pairwise_de_output_file = "cluster_umap_txt--General_Celltype--B_cells--CSN1S1_macrophages--study--wilcoxon.tsv"
+        with open(pairwise_de_output_file) as f:
+            lines = f.readlines()
+        self.assertEqual(len(lines), 41, f"Expected 41 files in: {pairwise_de_output_file}")
+        expected_line_0 = 'genes	logfoldchanges	qval	mean'
+        self.assertEqual(lines[0].strip(), expected_line_0)
+        expected_line_1 = '0	ACE2	0.685269917070053	0.446924681159184	0.727719408271226'
         self.assertEqual(lines[1].strip(), expected_line_1)
 
     @classmethod
