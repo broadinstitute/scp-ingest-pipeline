@@ -300,15 +300,26 @@ class AuthorDifferentialExpression:
 
             all_group.append(type_group)
 
-        all_group_fin = [ele for ele in all_group if ele != []]
+        # An array of arrays of comparison-metrics, where each inner array has
+        # elements with the same 1st-group name
+        all_group_fin = []
+        for inner_array in all_group:
+            if inner_array == []:
+                continue  # Skip empty arrays
+
+            # inner_array can have raw, unsorted values like
+            # ['A--B--logfoldchanges', 'A--C--logfoldchanges', 'A--B--qval', 'A--C--qval', 'A--B--mean', 'A--C--mean']
+            # this sorts those like:
+            # ['A--B--logfoldchanges', 'A--B--qval', 'A--B--mean', 'A--C--logfoldchanges', 'A--C--qval', 'A--C--mean']
+            #
+            # This way, elements are sorted by 1st ***and 2nd group*** names,
+            # enabling grouped_comparison to rearrange with a simple stride
+            # length in the next block.
+            sorted_column_names = sorted(inner_array)
+            all_group_fin.append(sorted_column_names)
+
         grouped_comparison_metrics = []
-
-        num_metrics = len(metrics)
-
-        all_group_fin[0] = sorted(all_group_fin[0])
-
-        # TODO: fix sorting error here. if you have comparison set 1 with foo and bar,
-        # then you have comparison set 2 with bar and baz, error is triggered. adjust sorting method
+        num_metrics = len(metrics)  # Stride length
         for i in all_group_fin:
             for j in range(0, len(i), num_metrics):
                 x = j
