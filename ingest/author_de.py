@@ -122,6 +122,69 @@ def generate_manifest(stem, clean_val, clean_val_p, qual):
             for value in range(len(file_names_pairwise)):
                 tsv_output.writerow([file_names_pairwise[value][0], file_names_pairwise[value][1],])
 
+
+def sort_all_group(all_group):
+    """Filter and sort all_group so it can be later rearranged by a stride range
+
+    Each inner_array in all_group can have raw, unsorted values like
+    ['A--B--logfoldchanges', 'A--C--logfoldchanges', 'A--B--qval', 'A--C--qval', 'A--B--mean', 'A--C--mean']
+    this sorts those like:
+    ['A--B--logfoldchanges', 'A--B--mean', 'A--B--qval', 'A--C--logfoldchanges', 'A--C--mean', 'A--C--qval']
+
+    This way, elements are sorted by 1st ***and 2nd group*** names,
+    enabling grouped_comparison to rearrange with a simple stride
+    length in the next block.
+    """
+    all_group_fin = []
+    for inner_array in all_group:
+        if inner_array == []:
+            continue  # Filter out / skip empty arrays
+        sorted_column_names = sorted(inner_array)
+        all_group_fin.append(sorted_column_names)
+
+    return all_group_fin
+
+
+def sort_comparison_metrics(comparison_metrics):
+    """Ensure comparison_metrics has the order expected in the frontend
+
+    E.g., sort raw input:
+    ['A--B--logfoldchanges', 'A--B--mean', 'A--B--qval']
+
+    to output:
+    ['A--B--logfoldchanges', 'A--B--qval', 'A--B--mean']
+
+    (Gene, log2(fold change), q-value are the columns in the UI's DE table.)
+
+    TODO: Generalize to output
+    ['A--B--<size_metric>', 'A--B--<significance_metric>', <other metric identifiers>]
+
+    Here `logfoldchanges` and `qval` are _particular_ size and significance
+    metrics, but you can imagine how the author might provide `pvals_adj`
+    instead of `qvals`, and we'd want to cleanly display `pvals_adj` (with a
+    polished label, of course) in the UI.
+    """
+
+    # Sort alphabetically
+    comparison_metrics = sorted(comparison_metrics)
+
+    # Put qval first
+    comparison_metrics = sorted(
+        comparison_metrics,
+        key=lambda x: x.split('--')[-1] == 'qval',
+        reverse=True
+    )
+
+    # Put logfoldchanges first
+    comparison_metrics = sorted(
+        comparison_metrics,
+        key=lambda x: x.split('--')[-1] == 'logfoldchanges',
+        reverse=True
+    )
+
+    return comparison_metrics
+
+
 # note: my initial files had pval, qval, logfoldchanges.
 # David's files have qval, mean, logfoldchanges.
 # For the purposes of this validation I will be using his column values/formatting.
@@ -302,28 +365,16 @@ class AuthorDifferentialExpression:
 
         # An array of arrays of comparison-metrics, where each inner array has
         # elements with the same 1st-group name
-        all_group_fin = []
-        for inner_array in all_group:
-            if inner_array == []:
-                continue  # Skip empty arrays
-
-            # inner_array can have raw, unsorted values like
-            # ['A--B--logfoldchanges', 'A--C--logfoldchanges', 'A--B--qval', 'A--C--qval', 'A--B--mean', 'A--C--mean']
-            # this sorts those like:
-            # ['A--B--logfoldchanges', 'A--B--qval', 'A--B--mean', 'A--C--logfoldchanges', 'A--C--qval', 'A--C--mean']
-            #
-            # This way, elements are sorted by 1st ***and 2nd group*** names,
-            # enabling grouped_comparison to rearrange with a simple stride
-            # length in the next block.
-            sorted_column_names = sorted(inner_array)
-            all_group_fin.append(sorted_column_names)
+        all_group_fin = sort_all_group(all_group)
 
         grouped_comparison_metrics = []
         num_metrics = len(metrics)  # Stride length
         for i in all_group_fin:
             for j in range(0, len(i), num_metrics):
                 x = j
-                grouped_comparison_metrics.append(i[x: x + num_metrics])
+                comparison_metrics = i[x: x + num_metrics]
+                sorted_comparison_metrics = sort_comparison_metrics(comparison_metrics)
+                grouped_comparison_metrics.append(sorted_comparison_metrics)
 
         for comparison in comparisons_dict:
             for comparison_metrics in grouped_comparison_metrics:
