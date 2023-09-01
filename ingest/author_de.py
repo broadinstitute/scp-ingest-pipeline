@@ -345,6 +345,8 @@ class AuthorDifferentialExpression:
             self.generate_result_files(pairwise, genes, rest, groups_p, clean_val_p, metrics)
         generate_manifest(self.stem, clean_val, clean_val_p, metrics)
 
+        print("Author DE transformation succeeded")
+
     def generate_result_files(self, col, genes, rest, groups, clean_val, metrics):
         """
         Create an individual DE result file for each comparison, pairwise or rest,
@@ -436,6 +438,5 @@ class AuthorDifferentialExpression:
 
             tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
             inner_df.to_csv(tsv_name, sep='\t')
-            print(f"Wrote TSV: {tsv_name}")
 
-        print('generate_result_files end')
+            print(f"Wrote TSV: {tsv_name}")
