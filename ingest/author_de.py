@@ -198,17 +198,18 @@ def validate_size_and_significance(metrics, logger):
     """
     size, significance = de_utils.get_size_and_significance(metrics)
     in_headers = f"in headers: {metrics}"
+    instruction = 'Column headers must include "logfoldchanges" and "qval".'
     if not size and not significance:
-        msg = f"No size or significance metrics found {in_headers}"
+        msg = f"{instruction}  No size or significance metrics found {in_headers}"
         logger.error(msg)
         raise ValueError(msg)
     elif not size:
         # TODO: When UI is more robust, convert to logger.warn and don't throw
-        msg = f"No size metrics found {in_headers}"
+        msg = f"{instruction}  No size metrics found {in_headers}"
         logger.error(msg)
         raise ValueError(msg)
     elif not significance:
-        msg = f"No significance metrics found {in_headers}"
+        msg = f"{instruction}  No significance metrics found {in_headers}"
         logger.error(msg)
         raise ValueError(msg)
     elif size and significance:

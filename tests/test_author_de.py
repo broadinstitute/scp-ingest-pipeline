@@ -77,7 +77,7 @@ class TestDifferentialExpression(unittest.TestCase):
         try:
             author_de.execute()
         except ValueError as e:
-            expected_msg = "No size or significance metrics found in headers: ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster']"
+            expected_msg = "Column headers must include \"logfoldchanges\" and \"qval\".  No size or significance metrics found in headers: ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster']"
             self.assertEqual(str(e), expected_msg)
 
 
