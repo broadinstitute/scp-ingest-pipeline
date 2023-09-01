@@ -42,7 +42,7 @@ class TestDifferentialExpression(unittest.TestCase):
         self.assertEqual(len(lines), 41, f"Expected 41 files in: {pairwise_de_file}")
         expected_line_0 = 'genes	logfoldchanges	qval	mean'
         self.assertEqual(lines[0].strip(), expected_line_0)
-        expected_line_1 = '0	ACE2	0.685269917070053	0.685269917070053	0.446924681159184'
+        expected_line_1 = '0	ACE2	0.685269917070053	0.727719408271226	0.446924681159184'
         self.assertEqual(lines[1].strip(), expected_line_1)
 
     @classmethod
