@@ -179,7 +179,7 @@ class DifferentialExpression:
         try:
             # only used in output filename, replacing non-alphanumeric with underscores
             # except '+' replaced with 'pos'
-            self.cluster_name = DifferentialExpression.sanitize_strings(
+            self.cluster_name = DifferentialExpression.sanitize_string(
                 self.kwargs["name"]
             )
             if self.matrix_file_type == "mtx":
@@ -384,8 +384,8 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info("Gathering DE annotation labels")
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
-            clean_group = DifferentialExpression.sanitize_strings(group)
-            clean_annotation = DifferentialExpression.sanitize_strings(annotation)
+            clean_group = DifferentialExpression.sanitize_string(group)
+            clean_annotation = DifferentialExpression.sanitize_string(annotation)
             DifferentialExpression.de_logger.info(f"Writing DE output for {group}")
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
             if DifferentialExpression.delimiter_in_gene_name(rank):
@@ -403,7 +403,7 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info("DE processing complete")
 
     @staticmethod
-    def sanitize_strings(input_string):
+    def sanitize_string(input_string):
         """
         Replace '+' with 'pos', then replace non-alphanumerics with underscore
         this allows distinct sanitization for "CD16+ monocyte" vs "CD16- monocyte"
@@ -413,10 +413,10 @@ class DifferentialExpression:
 
     @staticmethod
     def string_for_output_match(arguments):
-        cleaned_cluster_name = DifferentialExpression.sanitize_strings(
+        cleaned_cluster_name = DifferentialExpression.sanitize_string(
             arguments["cluster_name"]
         )
-        cleaned_annotation_name = DifferentialExpression.sanitize_strings(
+        cleaned_annotation_name = DifferentialExpression.sanitize_string(
             arguments["annotation_name"]
         )
         files_to_match = f"{cleaned_cluster_name}--{cleaned_annotation_name}*.tsv"
