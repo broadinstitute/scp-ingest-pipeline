@@ -16,6 +16,7 @@ import de_utils
 
 sanitize_string = DifferentialExpression.sanitize_string
 
+
 def check_group(names_dict, name):
     """Helper function to return the comparison based on the comparison with the value
 
@@ -96,8 +97,7 @@ def get_data_by_column(data):
 
 
 def generate_manifest(stem, clean_val, clean_val_p, qual):
-    """
-    create manifest file of each comparison in the initial data
+    """Create manifest file of each comparison in the initial data
     if the comparison is with rest, rest is omitted and just the type is written
     """
     file_names_one_vs_rest = []
@@ -200,18 +200,11 @@ def validate_size_and_significance(metrics, logger):
     in_headers = f"in headers: {metrics}"
     instruction = 'Column headers must include "logfoldchanges" and "qval".'
     if not size and not significance:
-        msg = f"{instruction}  No size or significance metrics found {in_headers}"
-        logger.error(msg)
-        raise ValueError(msg)
+        logger.warn(f"{instruction}  No size or significance metrics found {in_headers}")
     elif not size:
-        # TODO: When UI is more robust, convert to logger.warn and don't throw
-        msg = f"{instruction}  No size metrics found {in_headers}"
-        logger.error(msg)
-        raise ValueError(msg)
+        logger.warn(f"{instruction}  No size metrics found {in_headers}")
     elif not significance:
-        msg = f"{instruction}  No significance metrics found {in_headers}"
-        logger.error(msg)
-        raise ValueError(msg)
+        logger.warn(f"{instruction}  No significance metrics found {in_headers}")
     elif size and significance:
         logger.info(f'Found size ("{size}") and significance ("{significance}") metrics {in_headers}')
 
