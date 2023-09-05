@@ -1,7 +1,7 @@
 """Ingest differential expression uploaded by study owner or editor
 
 EXAMPLE:
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_differential_expression --annotation-name General_Celltype --annotation-type group --annotation-scope study --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --differential-expression-file gs://fc-febd4c65-881d-497f-b101-01a7ec427e6a/author_de_test_data_human_milk_All_Cells_UMAP_General_celltype.csv --method wilcoxon
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_differential_expression --annotation-name General_Celltype --annotation-type group --annotation-scope study --cluster-name cluster_umap_txt --study-accession SCPdev --ingest-differential-expression --differential-expression-file gs://fc-febd4c65-881d-497f-b101-01a7ec427e6a/author_de_test/lfc_qval_scanpy-like.csv --method wilcoxon
 """
 
 import pandas as pd
@@ -12,6 +12,7 @@ import logging
 from monitor import setup_logger, log_exception
 from de import DifferentialExpression
 from ingest_files import IngestFiles
+import de_utils
 
 sanitize_string = DifferentialExpression.sanitize_string
 
@@ -51,9 +52,13 @@ def convert_long_to_wide(data):
 
     (Long format is typical uploaded, but this module internally uses wide.)
     """
+    metrics = list(data.columns[3:])
+
     data["combined"] = data['group'] + "--" + data["comparison_group"]
     frames = []
-    metrics = ["logfoldchanges", "qval", "mean"]
+    # E.g.
+    # gene  group   comparison_group    log2foldchange  pvals_adj   qvals   mean    cat dog
+    # metrics = ["log2foldchange", "pvals_adj", "qvals", "mean", "cat", "dog"]
     for metric in metrics:
         wide_metric = pd.pivot(data, index="genes", columns="combined", values=metric)
         wide_metric = wide_metric.add_suffix(f"--{metric}")
@@ -118,12 +123,100 @@ def generate_manifest(stem, clean_val, clean_val_p, qual):
                 tsv_output.writerow([file_names_pairwise[value][0], file_names_pairwise[value][1],])
 
 
+def sort_all_group(all_group):
+    """Filter and sort all_group so it can be later rearranged by a stride range
+
+    Each inner_array in all_group can have raw, unsorted values like
+    ['A--B--logfoldchanges', 'A--C--logfoldchanges', 'A--B--qval', 'A--C--qval', 'A--B--mean', 'A--C--mean']
+    this sorts those like:
+    ['A--B--logfoldchanges', 'A--B--mean', 'A--B--qval', 'A--C--logfoldchanges', 'A--C--mean', 'A--C--qval']
+
+    This way, elements are sorted by 1st ***and 2nd group*** names,
+    enabling grouped_comparison to rearrange with a simple stride length.
+    """
+    all_group_fin = []
+    for inner_array in all_group:
+        if inner_array == []:
+            continue  # Filter out / skip empty arrays
+        sorted_column_names = sorted(inner_array)
+        all_group_fin.append(sorted_column_names)
+
+    return all_group_fin
+
+
+def sort_comparison_metrics(comparison_metrics):
+    """Ensure comparison_metrics has the order expected in the UI
+
+    E.g., sort raw input:
+    ['A--B--logfoldchanges', 'A--B--mean', 'A--B--qval']
+
+    to output:
+    ['A--B--logfoldchanges', 'A--B--qval', 'A--B--mean']
+
+    (Gene, log2(fold change), q-value are the columns in the UI's DE table.)
+
+    TODO: Generalize to output
+    ['A--B--<size_metric>', 'A--B--<significance_metric>', <other metric identifiers>]
+
+    Here `logfoldchanges` and `qval` are _particular_ size and significance
+    metrics, but you can imagine how the author might provide `pvals_adj`
+    instead of `qvals`, and we'd want to cleanly display `pvals_adj` (with a
+    polished label, of course) in the UI.
+    """
+
+    # Sort alphabetically
+    comparison_metrics = sorted(comparison_metrics)
+
+    # Put qval first
+    comparison_metrics = sorted(
+        comparison_metrics,
+        key=lambda x: x.split('--')[-1] == 'qval',
+        reverse=True
+    )
+
+    # Put logfoldchanges first
+    comparison_metrics = sorted(
+        comparison_metrics,
+        key=lambda x: x.split('--')[-1] == 'logfoldchanges',
+        reverse=True
+    )
+
+    return comparison_metrics
+
+
 # note: my initial files had pval, qval, logfoldchanges.
 # David's files have qval, mean, logfoldchanges.
 # For the purposes of this validation I will be using his column values/formatting.
 
 
-def get_groups_and_metrics(raw_column_names):
+def validate_size_and_significance(metrics, logger):
+    """Locally log whether size and/or significance are detected among metrics
+
+    TODO:
+        - When UI is more robust, convert to logger.warn and don't throw errors
+        - Log to Sentry / Mixpanel
+    """
+    size, significance = de_utils.get_size_and_significance(metrics)
+    in_headers = f"in headers: {metrics}"
+    instruction = 'Column headers must include "logfoldchanges" and "qval".'
+    if not size and not significance:
+        msg = f"{instruction}  No size or significance metrics found {in_headers}"
+        logger.error(msg)
+        raise ValueError(msg)
+    elif not size:
+        # TODO: When UI is more robust, convert to logger.warn and don't throw
+        msg = f"{instruction}  No size metrics found {in_headers}"
+        logger.error(msg)
+        raise ValueError(msg)
+    elif not significance:
+        msg = f"{instruction}  No significance metrics found {in_headers}"
+        logger.error(msg)
+        raise ValueError(msg)
+    elif size and significance:
+        logger.info(f'Found size ("{size}") and significance ("{significance}") metrics {in_headers}')
+
+
+def get_groups_and_metrics(raw_column_names, logger):
     """Cleans column names, splits them into compared groups and metrics
 
     A "metric" here is a statistical measure, like "logfoldchanges", "qval",
@@ -160,7 +253,7 @@ def get_groups_and_metrics(raw_column_names):
     # isolate the groups and values in submitted file
     # expected format:
     # groups: ['group_0', 'group_1', 'group_2', 'group_3']
-    # metrics: ['qval', 'logfoldchanges', 'mean']
+    # Example metrics: ['logfoldchanges', 'qval', 'mean']
     for split_header in split_headers:
         [group, comparison_group, metric] = split_header
         if group not in groups:
@@ -170,9 +263,7 @@ def get_groups_and_metrics(raw_column_names):
         if metric not in metrics:
             metrics.append(metric)
 
-    # TODO: Report this error to Sentry
-    if ("logfoldchanges" not in metrics) or ("qval" not in metrics):
-        raise Exception("Comparisons must include at least logfoldchanges and qval to be valid")
+    validate_size_and_significance(metrics, logger)
 
     return groups, split_headers, metrics
 
@@ -220,27 +311,41 @@ class AuthorDifferentialExpression:
         metrics = []
         file_path = self.author_de_file
 
-        data = pd.read_csv(file_path)
+        # TODO:
+        #   - Throw well-formatted error if file type not in ALLOWED_FILE_TYPES
+        #   - Consider if / how this merges with centralized handling in ingest_files.py
+        file_type = IngestFiles.get_file_type(file_path)[0]
+        if file_type == 'text/tab-separated-values':
+            delimiter = '\t'
+        else:
+            delimiter = ','
+        data = pd.read_csv(file_path, delimiter)
+
         first_cols = data.columns
+
         if first_cols[0] == "genes" and first_cols[1] == "group" and first_cols[2] == "comparison_group":
+            # Raw data is in long format
             wide_format = convert_long_to_wide(data)
             data_by_col = get_data_by_column(wide_format)
         else:
+            # Raw data is in wide format
             data_by_col = get_data_by_column(data)
 
         col, genes, rest, split_values = data_by_col
         pairwise = split_values["pairwise"]
         one_vs_rest = split_values["one_vs_rest"]
 
+        logger = AuthorDifferentialExpression.dev_logger
         if len(one_vs_rest) != 0:
-            groups, clean_val, metrics = get_groups_and_metrics(one_vs_rest)
+            groups, clean_val, metrics = get_groups_and_metrics(one_vs_rest, logger)
             self.generate_result_files(one_vs_rest, genes, rest, groups, clean_val, metrics)
 
         if len(pairwise) != 0:
-            groups_p, clean_val_p, metrics = get_groups_and_metrics(pairwise)
+            groups_p, clean_val_p, metrics = get_groups_and_metrics(pairwise, logger)
             self.generate_result_files(pairwise, genes, rest, groups_p, clean_val_p, metrics)
-
         generate_manifest(self.stem, clean_val, clean_val_p, metrics)
+
+        print("Author DE transformation succeeded")
 
     def generate_result_files(self, col, genes, rest, groups, clean_val, metrics):
         """
@@ -270,15 +375,19 @@ class AuthorDifferentialExpression:
                     type_group.append(real_title)
 
             all_group.append(type_group)
-        all_group_fin = [ele for ele in all_group if ele != []]
-        grouped_comparison_metrics = []
 
-        # TODO: fix sorting error here. if you have comparison set 1 with foo and bar,
-        # then you have comparison set 2 with bar and baz, error is triggered. adjust sorting method
+        # An array of arrays of comparison-metrics, where each inner array has
+        # elements with the same 1st-group name
+        all_group_fin = sort_all_group(all_group)
+
+        grouped_comparison_metrics = []
+        num_metrics = len(metrics)  # Stride length
         for i in all_group_fin:
-            for j in range(0, len(i), 3):
+            for j in range(0, len(i), num_metrics):
                 x = j
-                grouped_comparison_metrics.append(i[x: x + 3])
+                comparison_metrics = i[x: x + num_metrics]
+                sorted_comparison_metrics = sort_comparison_metrics(comparison_metrics)
+                grouped_comparison_metrics.append(sorted_comparison_metrics)
 
         for comparison in comparisons_dict:
             for comparison_metrics in grouped_comparison_metrics:
@@ -303,8 +412,9 @@ class AuthorDifferentialExpression:
                 values = rest[comparison_metric].tolist()
 
                 metric_values.append(values)
-            logfoldchanges, qvals, means = metric_values[0], metric_values[1], metric_values[2]
-            rows = genes, logfoldchanges, qvals, means
+
+            rows = metric_values
+            rows.insert(0, genes)
             rows_by_comparison[comparison] = rows
 
         headers = metrics
@@ -328,4 +438,5 @@ class AuthorDifferentialExpression:
 
             tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
             inner_df.to_csv(tsv_name, sep='\t')
+
             print(f"Wrote TSV: {tsv_name}")
