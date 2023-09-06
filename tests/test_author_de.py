@@ -16,19 +16,13 @@ from author_de import AuthorDifferentialExpression
 class TestDifferentialExpression(unittest.TestCase):
 
     def test_execute(self):
-        test_kwargs = {
-            'study_accession': 'SCPdev',
-            'annotation_name': 'General_Celltype',
-            'annotation_type': 'group',
-            'annotation_scope': 'study',
-            'method': 'wilcoxon',
-            'cluster_name': 'cluster_umap_txt',
-            'differential_expression_file': '../tests/data/author_de/lfc_qval_scanpy-like.csv'
-        }
         author_de = AuthorDifferentialExpression(
-            cluster=None,
-            cell_metadata=None,
-            **test_kwargs,
+            'cluster_umap_txt',
+            'General_Celltype',
+            'SCPdev',
+            'study',
+            'wilcoxon',
+            '../tests/data/author_de/lfc_qval_scanpy-like.csv'
         )
         author_de.execute()
 
@@ -59,19 +53,13 @@ class TestDifferentialExpression(unittest.TestCase):
 
         TODO: Revamp this test once UI supports flexible columns
         """
-        test_kwargs = {
-            'study_accession': 'SCPdev',
-            'annotation_name': 'General_Celltype',
-            'annotation_type': 'group',
-            'annotation_scope': 'study',
-            'method': 'wilcoxon',
-            'cluster_name': 'cluster_umap_txt',
-            'differential_expression_file': '../tests/data/author_de/pval_lfc_pvaladj_seurat-like.tsv'
-        }
         author_de = AuthorDifferentialExpression(
-            cluster=None,
-            cell_metadata=None,
-            **test_kwargs,
+            'cluster_umap_txt',
+            'General_Celltype',
+            'SCPdev',
+            'study',
+            'wilcoxon',
+            '../tests/data/author_de/lfc_qval_scanpy-like.csv'
         )
 
         try:

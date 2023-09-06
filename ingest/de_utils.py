@@ -12,6 +12,15 @@ def get_size(metric):
     return size
 
 
+def get_size_sort_key(metric):
+    """Get a significance-centric sort key for the metric
+    """
+    if get_size(metric):
+        return 0
+    else:
+        return 1
+
+
 ### Significance parsers ###
 ### TODO (SCP-): Custom tooltips for custom metrics
 def get_pval_adj(metric):
@@ -40,18 +49,40 @@ def get_qval(metric):
     return qval
 
 
+def get_significance_sort_key(metric):
+    """Get a significance-centric sort key for the metric
+    """
+    pval_adj = get_pval_adj(metric)
+    if pval_adj:
+        # Rank adjusted p-value 1st
+        return 0
+    else:
+        # Rank q-value 2nd
+        qval = get_qval(metric)
+        if qval:
+            return 1
+        else:
+            # Rank p-value 3nd
+            pval = get_pval(metric)
+            if pval:
+                return 2
+            else:
+                # Rank everything else lower
+                return 3
+
+
 def get_significance(metric):
     pval_adj = get_pval_adj(metric)
     if pval_adj:
         return pval_adj
     else:
-        pval = get_pval(metric)
-        if pval:
-            return pval
+        qval = get_qval(metric)
+        if qval:
+            return qval
         else:
-            qval = get_qval(metric)
-            if qval:
-                return qval
+            pval = get_pval(metric)
+            if pval:
+                return pval
             else:
                 return None
 ### End significance parsers ###

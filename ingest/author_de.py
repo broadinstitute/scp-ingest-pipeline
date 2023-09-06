@@ -167,22 +167,41 @@ def sort_comparison_metrics(comparison_metrics):
     # Sort alphabetically
     comparison_metrics = sorted(comparison_metrics)
 
-    # Put qval first
+    # Rank significance 1st (ultimately ranked 2nd)
     comparison_metrics = sorted(
         comparison_metrics,
-        key=lambda x: x.split('--')[-1] == 'qval',
-        reverse=True
+        key=lambda x: de_utils.get_significance_sort_key(x.split('--')[-1])
     )
 
-    # Put logfoldchanges first
+    # Rank size 1st (ultimately ranked 1st)
     comparison_metrics = sorted(
         comparison_metrics,
-        key=lambda x: x.split('--')[-1] == 'logfoldchanges',
-        reverse=True
+        key=lambda x: de_utils.get_size_sort_key(x.split('--')[-1])
     )
 
     return comparison_metrics
 
+
+def sort_metrics(metrics):
+    """Like `sort_comparison_metrics`, but for bare metrics
+    """
+
+    # Sort alphabetically
+    metrics = sorted(metrics)
+
+    # Rank significance 1st (ultimately ranked 2nd)
+    metrics = sorted(
+        metrics,
+        key=lambda x: de_utils.get_significance_sort_key(x)
+    )
+
+    # Rank size 1st (ultimately ranked 1st)
+    metrics = sorted(
+        metrics,
+        key=lambda x: de_utils.get_size_sort_key(x)
+    )
+
+    return metrics
 
 # note: my initial files had pval, qval, logfoldchanges.
 # David's files have qval, mean, logfoldchanges.
@@ -277,20 +296,24 @@ class AuthorDifferentialExpression:
         self,
         cluster_name,
         annotation_name,
-        **kwargs
+        study_accession,
+        annotation_scope,
+        method,
+        differential_expression_file
+        # size_metric,
+        # significance_metric
     ):
         # AuthorDifferentialExpression.de_logger.info(
         #    "Initializing DifferentialExpression instance"
         # )
         self.cluster_name = sanitize_string(cluster_name)
         self.annotation = sanitize_string(annotation_name)
-        self.kwargs = kwargs
-        self.accession = self.kwargs["study_accession"]
-        self.annot_scope = self.kwargs["annotation_scope"]
-        self.method = self.kwargs["method"]
+        self.accession = study_accession
+        self.annot_scope = annotation_scope
+        self.method = method
         self.stem = f"{self.cluster_name}--{self.annotation}"
 
-        author_de_file_gcs_url = self.kwargs["differential_expression_file"]
+        author_de_file_gcs_url = differential_expression_file
         allowed_file_types = AuthorDifferentialExpression.ALLOWED_FILE_TYPES
         raw_de_file_obj = IngestFiles(author_de_file_gcs_url, allowed_file_types)
         author_file_handle, local_file_path = IngestFiles.resolve_path(
@@ -410,7 +433,7 @@ class AuthorDifferentialExpression:
             rows.insert(0, genes)
             rows_by_comparison[comparison] = rows
 
-        headers = metrics
+        headers = sort_metrics(metrics)
         headers.insert(0, "genes")
 
         for comparison in rows_by_comparison:
