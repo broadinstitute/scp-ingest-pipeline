@@ -22,7 +22,9 @@ class TestDifferentialExpression(unittest.TestCase):
             'SCPdev',
             'study',
             'wilcoxon',
-            '../tests/data/author_de/lfc_qval_scanpy-like.csv'
+            '../tests/data/author_de/lfc_qval_scanpy-like.csv',
+            'logfoldchanges',
+            'qval'
         )
         author_de.execute()
 
@@ -59,7 +61,9 @@ class TestDifferentialExpression(unittest.TestCase):
             'SCPdev',
             'study',
             'wilcoxon',
-            '../tests/data/author_de/lfc_qval_scanpy-like.csv'
+            '../tests/data/author_de/pval_lfc_pvaladj_seurat-like.tsv',
+            'avg_log2FC',
+            'p_val_adj'
         )
 
         try:
@@ -68,9 +72,7 @@ class TestDifferentialExpression(unittest.TestCase):
             expected_msg = "Column headers must include \"logfoldchanges\" and \"qval\".  No size or significance metrics found in headers: ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster']"
             self.assertEqual(str(e), expected_msg)
 
-
-    @classmethod
-    def teardown_class(cls):
+    def teardown_method(self, test_method):
         files = glob.glob('cluster_umap_txt--General_Celltype*.tsv')
         for file in files:
             os.remove(file)

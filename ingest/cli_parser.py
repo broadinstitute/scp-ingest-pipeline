@@ -372,7 +372,19 @@ def create_parser():
     parser_ingest_differential_expression.add_argument(
         "--differential-expression-file",
         required=True,
-        help="Path to DE file uploaded by author.",
+        help="Path to DE file uploaded by author."
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--size-metric",
+        required=True,
+        help="Header used as size metric in DE file"
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--significance-metric",
+        required=True,
+        help="Header used as significance metric in DE file"
     )
 
     # AnnData subparsers

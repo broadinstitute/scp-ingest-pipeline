@@ -144,7 +144,7 @@ def sort_all_group(all_group):
     return all_group_fin
 
 
-def sort_comparison_metrics(comparison_metrics):
+def sort_comparison_metrics(comparison_metrics, size, significance):
     """Ensure comparison_metrics has the order expected in the UI
 
     E.g., sort raw input:
@@ -170,19 +170,21 @@ def sort_comparison_metrics(comparison_metrics):
     # Rank significance 1st (ultimately ranked 2nd)
     comparison_metrics = sorted(
         comparison_metrics,
-        key=lambda x: de_utils.get_significance_sort_key(x.split('--')[-1])
+        key=lambda x: x.split('--')[-1] == significance
     )
 
     # Rank size 1st (ultimately ranked 1st)
     comparison_metrics = sorted(
         comparison_metrics,
-        key=lambda x: de_utils.get_size_sort_key(x.split('--')[-1])
+        key=lambda x: x.split('--')[-1] == size
     )
+
+    comparison_metrics.reverse()
 
     return comparison_metrics
 
 
-def sort_metrics(metrics):
+def sort_metrics(metrics, size, significance):
     """Like `sort_comparison_metrics`, but for bare metrics
     """
 
@@ -192,14 +194,16 @@ def sort_metrics(metrics):
     # Rank significance 1st (ultimately ranked 2nd)
     metrics = sorted(
         metrics,
-        key=lambda x: de_utils.get_significance_sort_key(x)
+        key=lambda x: x == significance
     )
 
     # Rank size 1st (ultimately ranked 1st)
     metrics = sorted(
         metrics,
-        key=lambda x: de_utils.get_size_sort_key(x)
+        key=lambda x: x == size
     )
+
+    metrics.reverse()
 
     return metrics
 
@@ -299,9 +303,9 @@ class AuthorDifferentialExpression:
         study_accession,
         annotation_scope,
         method,
-        differential_expression_file
-        # size_metric,
-        # significance_metric
+        differential_expression_file,
+        size_metric,
+        significance_metric
     ):
         # AuthorDifferentialExpression.de_logger.info(
         #    "Initializing DifferentialExpression instance"
@@ -311,6 +315,8 @@ class AuthorDifferentialExpression:
         self.accession = study_accession
         self.annot_scope = annotation_scope
         self.method = method
+        self.size_metric = size_metric
+        self.significance_metric = significance_metric
         self.stem = f"{self.cluster_name}--{self.annotation}"
 
         author_de_file_gcs_url = differential_expression_file
@@ -402,7 +408,9 @@ class AuthorDifferentialExpression:
             for j in range(0, len(i), num_metrics):
                 x = j
                 comparison_metrics = i[x: x + num_metrics]
-                sorted_comparison_metrics = sort_comparison_metrics(comparison_metrics)
+                sorted_comparison_metrics = sort_comparison_metrics(
+                    comparison_metrics, self.size_metric, self.significance_metric
+                )
                 grouped_comparison_metrics.append(sorted_comparison_metrics)
 
         for comparison in comparisons_dict:
@@ -433,7 +441,7 @@ class AuthorDifferentialExpression:
             rows.insert(0, genes)
             rows_by_comparison[comparison] = rows
 
-        headers = sort_metrics(metrics)
+        headers = sort_metrics(metrics, self.size_metric, self.significance_metric)
         headers.insert(0, "genes")
 
         for comparison in rows_by_comparison:
