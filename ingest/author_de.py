@@ -12,7 +12,6 @@ import logging
 from monitor import setup_logger, log_exception
 from de import DifferentialExpression
 from ingest_files import IngestFiles
-import de_utils
 
 sanitize_string = DifferentialExpression.sanitize_string
 
@@ -212,27 +211,25 @@ def sort_metrics(metrics, size, significance):
 # For the purposes of this validation I will be using his column values/formatting.
 
 
-def validate_size_and_significance(metrics, logger):
+def validate_size_and_significance(metrics, size, significance, logger):
     """Locally log whether size and/or significance are detected among metrics
 
     TODO:
-        - When UI is more robust, convert to logger.warn and don't throw errors
         - Log to Sentry / Mixpanel
     """
-    size, significance = de_utils.get_size_and_significance(metrics)
     in_headers = f"in headers: {metrics}"
     instruction = 'Column headers must include "logfoldchanges" and "qval".'
     if not size and not significance:
-        logger.warn(f"{instruction}  No size or significance metrics found {in_headers}")
+        logger.error(f"{instruction}  No size or significance metrics found {in_headers}")
     elif not size:
-        logger.warn(f"{instruction}  No size metrics found {in_headers}")
+        logger.error(f"{instruction}  No size metrics found {in_headers}")
     elif not significance:
-        logger.warn(f"{instruction}  No significance metrics found {in_headers}")
+        logger.error(f"{instruction}  No significance metrics found {in_headers}")
     elif size and significance:
         logger.info(f'Found size ("{size}") and significance ("{significance}") metrics {in_headers}')
 
 
-def get_groups_and_metrics(raw_column_names, logger):
+def get_groups_and_metrics(raw_column_names, size, significance, logger):
     """Cleans column names, splits them into compared groups and metrics
 
     A "metric" here is a statistical measure, like "logfoldchanges", "qval",
@@ -279,7 +276,7 @@ def get_groups_and_metrics(raw_column_names, logger):
         if metric not in metrics:
             metrics.append(metric)
 
-    validate_size_and_significance(metrics, logger)
+    validate_size_and_significance(metrics, size, significance, logger)
 
     return groups, split_headers, metrics
 
@@ -359,11 +356,15 @@ class AuthorDifferentialExpression:
 
         logger = AuthorDifferentialExpression.dev_logger
         if len(one_vs_rest) != 0:
-            groups, clean_val, metrics = get_groups_and_metrics(one_vs_rest, logger)
+            groups, clean_val, metrics = get_groups_and_metrics(
+                one_vs_rest, self.size_metric, self.significance_metric, logger
+            )
             self.generate_result_files(one_vs_rest, genes, rest, groups, clean_val, metrics)
 
         if len(pairwise) != 0:
-            groups_p, clean_val_p, metrics = get_groups_and_metrics(pairwise, logger)
+            groups_p, clean_val_p, metrics = get_groups_and_metrics(
+                pairwise, self.size_metric, self.significance_metric, logger
+            )
             self.generate_result_files(pairwise, genes, rest, groups_p, clean_val_p, metrics)
         generate_manifest(self.stem, clean_val, clean_val_p, metrics)
 
