@@ -217,15 +217,22 @@ def validate_size_and_significance(metrics, size, significance, logger):
     TODO:
         - Log to Sentry / Mixpanel
     """
+    has_size = any([metric.split('--')[-1] == size for metric in metrics])
+    has_significance = any([metric.split('--')[-1] == significance for metric in metrics])
+
     in_headers = f"in headers: {metrics}"
-    instruction = 'Column headers must include "logfoldchanges" and "qval".'
-    if not size and not significance:
-        logger.error(f"{instruction}  No size or significance metrics found {in_headers}")
-    elif not size:
-        logger.error(f"{instruction}  No size metrics found {in_headers}")
-    elif not significance:
-        logger.error(f"{instruction}  No significance metrics found {in_headers}")
-    elif size and significance:
+
+    if not has_size or not has_significance:
+        instruction = f'Column headers must include "{size}" and "{significance}".'
+        if not has_size and not has_significance:
+            msg = f"{instruction}  No such size or significance metrics found {in_headers}"
+        elif not size:
+            msg = f"{instruction}  No such size metric found {in_headers}"
+        elif not has_significance:
+            msg = f"{instruction}  No such significance metric found {in_headers}"
+        logger.error(msg)
+        raise ValueError(msg)
+    elif has_size and has_significance:
         logger.info(f'Found size ("{size}") and significance ("{significance}") metrics {in_headers}')
 
 

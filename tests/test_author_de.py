@@ -8,6 +8,7 @@ import unittest
 import sys
 import glob
 import os
+import pytest
 
 sys.path.append("../ingest")
 from author_de import AuthorDifferentialExpression
@@ -51,26 +52,27 @@ class TestDifferentialExpression(unittest.TestCase):
         self.assertEqual(lines[1].strip(), expected_line_1)
 
     def test_basic_size_and_significance(self):
-        """Tests validation that file has "logfoldchanges" and "qval" columns
+        """Tests validation that file has specified size and significance headers
 
         TODO: Revamp this test once UI supports flexible columns
         """
-        author_de = AuthorDifferentialExpression(
-            'cluster_umap_txt',
-            'General_Celltype',
-            'SCPdev',
-            'study',
-            'wilcoxon',
-            '../tests/data/author_de/pval_lfc_pvaladj_seurat-like.tsv',
-            'avg_log2FC',
-            'p_val_adj'
-        )
+        with pytest.raises(ValueError) as exc_info:
+            author_de = AuthorDifferentialExpression(
+                'cluster_umap_txt',
+                'General_Celltype',
+                'SCPdev',
+                'study',
+                'wilcoxon',
+                '../tests/data/author_de/pval_lfc_pvaladj_seurat-like.tsv',
+                'OTHER_SIZE',
+                'OTHER_SIGNIFICANCE'
+            )
 
-        try:
             author_de.execute()
-        except ValueError as e:
-            expected_msg = "Column headers must include \"logfoldchanges\" and \"qval\".  No size or significance metrics found in headers: ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster']"
-            self.assertEqual(str(e), expected_msg)
+
+        expected_msg = "Column headers must include \"OTHER_SIZE\" and \"OTHER_SIGNIFICANCE\".  No such size or significance metrics found in headers: ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster']"
+        self.assertEqual(str(exc_info.value), expected_msg)
+
 
     def teardown_method(self, test_method):
         files = glob.glob('cluster_umap_txt--General_Celltype*.tsv')
