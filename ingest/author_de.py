@@ -50,7 +50,7 @@ def sort_comparison(groups):
 def convert_seurat_findallmarkers_to_wide(data):
     """Convert from Seurat FindAllMarkers() format to SCP DE wide format
 
-    TODO: Finish handling
+    TODO (SCP-5296): Finish handling
     """
     data = data.rename(columns={"cluster": "group", "gene": "genes"})
     data = data.astype({"group": "string"})
@@ -68,7 +68,6 @@ def convert_long_to_wide(data):
 
     (Long format is typical uploaded, but this module internally uses wide.)
     """
-    print(data.dtypes)
     metrics = list(data.columns[3:])
     data["combined"] = data["group"] + "--" + data["comparison_group"]
     frames = []
@@ -319,7 +318,6 @@ def detect_seurat_findallmarkers(headers):
 
 
 class AuthorDifferentialExpression:
-    # TODO: reorder author's columns in input file so output is logfoldchanges qval mean
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
     author_de_logger = setup_logger(
         __name__ + ".author_de_logger",
