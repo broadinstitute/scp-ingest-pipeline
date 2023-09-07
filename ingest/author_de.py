@@ -82,6 +82,7 @@ def convert_long_to_wide(data):
     result = pd.concat(frames, axis=1, join="inner")
     result.columns.name = " "
     result = result.reset_index()
+
     return result
 
 
@@ -383,13 +384,6 @@ class AuthorDifferentialExpression:
             # Raw data is in wide format
             data_by_col = get_data_by_column(data)
         elif is_seurat_findallmarkers:
-            problem = "Handling is not yet implemented for Seurat FindAllMarkers() format"
-            solution = "Please use long or wide DE format per docs in SCP Upload Wizard"
-            msg = f"{problem}.  {solution}."
-            logger.error(msg)
-            raise ValueError(msg)
-
-            # TODO: Uncomment when handling is implemented
             wide_format = convert_seurat_findallmarkers_to_wide(data)
             data_by_col = get_data_by_column(wide_format)
 
@@ -487,23 +481,36 @@ class AuthorDifferentialExpression:
         headers = sort_metrics(metrics, self.size_metric, self.significance_metric)
         headers.insert(0, "genes")
 
-        for comparison in rows_by_comparison:
-            arr = np.array(rows_by_comparison[comparison])
-            t_arr = arr.transpose()
-            inner_df = pd.DataFrame(data=t_arr, columns=headers)
+        for comparison_metric in rows_by_comparison:
 
-            if "rest" in comparison:
-                comparison = comparison.split("--")[0]
+            if "rest" in comparison_metric:
+                comparison = comparison_metric.split("--")[0]
 
             else:
-                group = comparison.split("--")[0]
-                comparison_group = comparison.split("--")[1]
+                group = comparison_metric.split("--")[0]
+                comparison_group = comparison_metric.split("--")[1]
                 sorted_list = sort_comparison([group, comparison_group])
                 comparison = f'{sorted_list[0]}--{sorted_list[1]}'
 
-            comparison = '--'.join([sanitize_string(group) for group in comparison.split('--')])
+            clean_comparison_metric = '--'.join([sanitize_string(group) for group in comparison.split('--')])
 
-            tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
+            tsv_name = f'{self.stem}--{clean_comparison_metric}--{self.annot_scope}--{self.method}.tsv'
+
+            rows = rows_by_comparison[comparison_metric]
+
+            arr = np.array(rows)
+
+            t_arr = arr.transpose()
+
+            if len(t_arr) == 0:
+                print(f"No data to output for TSV, skip preparation to write {tsv_name}")
+                continue
+
+            # Drop rows that are all "nan", as seen sometimes in Seurat FindAllMarkers()
+            t_arr = t_arr[~(t_arr == 'nan').any(axis=1)]
+
+            inner_df = pd.DataFrame(data=t_arr, columns=headers)
+
             inner_df.to_csv(tsv_name, sep='\t')
 
             print(f"Wrote TSV: {tsv_name}")
