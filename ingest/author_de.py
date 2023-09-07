@@ -49,24 +49,17 @@ def sort_comparison(groups):
 
 def convert_seurat_findallmarkers_to_wide(data):
     """Convert from Seurat FindAllMarkers() format to SCP DE wide format
+
+    TODO: Finish handling
     """
-    print('0')
     data = data.rename(columns={"cluster": "group", "gene": "genes"})
     data = data.astype({"group": "string"})
-    print('1')
     data = data.assign(comparison_group="rest")
     expected_header_order = [
         "genes", "group", "comparison_group", "avg_log2FC", "p_val_adj", "p_val", "pct.1", "pct.2"
     ]
     data = data[expected_header_order]
-    print('reindexed data')
-    print(data)
-    # print("data.dtypes")
-    # print(data.dtypes)
     wide_df = convert_long_to_wide(data)
-    print("wide_df data.dtypes")
-    print(data.dtypes)
-    print('3')
     return wide_df
 
 
@@ -75,14 +68,10 @@ def convert_long_to_wide(data):
 
     (Long format is typical uploaded, but this module internally uses wide.)
     """
-    print("data data.dtypes")
     print(data.dtypes)
-    print('A 0')
     metrics = list(data.columns[3:])
-    print('A 1')
     data["combined"] = data["group"] + "--" + data["comparison_group"]
     frames = []
-    print('A 2')
     # E.g.
     # gene  group   comparison_group    log2foldchange  pvals_adj   qvals   mean    cat dog
     # metrics = ["log2foldchange", "pvals_adj", "qvals", "mean", "cat", "dog"]
@@ -91,14 +80,9 @@ def convert_long_to_wide(data):
         wide_metric = wide_metric.add_suffix(f"--{metric}")
         frames.append(wide_metric)
 
-    print('A 3')
     result = pd.concat(frames, axis=1, join="inner")
-    print('A 4')
     result.columns.name = " "
-    print('result before', result)
     result = result.reset_index()
-    print('result', result)
-    print('A 5')
     return result
 
 
@@ -378,6 +362,8 @@ class AuthorDifferentialExpression:
         self.author_de_file = local_file_path
 
     def execute(self):
+        logger = AuthorDifferentialExpression.dev_logger
+
         clean_val = []
         clean_val_p = []
         metrics = []
@@ -405,17 +391,20 @@ class AuthorDifferentialExpression:
             # Raw data is in wide format
             data_by_col = get_data_by_column(data)
         elif is_seurat_findallmarkers:
-            print('Data is in Seurat FindAllMarkers() format')
-            # Raw data is a simple plaintext export from Seurat
+            problem = "Handling is not yet implemented for Seurat FindAllMarkers() format"
+            solution = "Please use long or wide DE format per docs in SCP Upload Wizard"
+            msg = f"{problem}.  {solution}."
+            logger.error(msg)
+            raise ValueError(msg)
+
+            # TODO: Uncomment when handling is implemented
             wide_format = convert_seurat_findallmarkers_to_wide(data)
-            print('wide_format', wide_format)
             data_by_col = get_data_by_column(wide_format)
 
         col, genes, rest, split_values = data_by_col
         pairwise = split_values["pairwise"]
         one_vs_rest = split_values["one_vs_rest"]
 
-        logger = AuthorDifferentialExpression.dev_logger
         if len(one_vs_rest) != 0:
             groups, clean_val, metrics = get_groups_and_metrics(
                 one_vs_rest, self.size_metric, self.significance_metric, logger

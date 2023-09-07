@@ -97,6 +97,30 @@ class TestDifferentialExpression(unittest.TestCase):
         expected_msg = "Column headers must include \"OTHER_SIZE\" and \"OTHER_SIGNIFICANCE\".  No such size or significance metrics found in headers: ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster']"
         self.assertEqual(str(exc_info.value), expected_msg)
 
+    def test_seurat_findallmarkers_error(self):
+        """Tests error handling when Seurat FindAllMarkers() format is detected
+
+        TODO: Update to test handling when it's implemented
+        """
+        with pytest.raises(ValueError) as exc_info:
+            author_de = AuthorDifferentialExpression(
+                'cluster_umap_txt',
+                'General_Celltype',
+                'SCPdev',
+                'study',
+                'wilcoxon',
+                '../tests/data/author_de/seurat_findallmarkers_one-vs-rest.csv',
+                'avg_log2FC',
+                'p_val_adj'
+            )
+            author_de.execute()
+
+        expected_msg = (
+            "Handling is not yet implemented for Seurat FindAllMarkers() format.  " +
+            "Please use long or wide DE format per docs in SCP Upload Wizard."
+        )
+        self.assertEqual(str(exc_info.value), expected_msg)
+
     def teardown_method(self, test_method):
         files = glob.glob('cluster_umap_txt--General_Celltype*.tsv')
         for file in files:
