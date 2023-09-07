@@ -15,19 +15,6 @@ from ingest_files import IngestFiles
 
 sanitize_string = DifferentialExpression.sanitize_string
 
-
-def check_group(names_dict, name):
-    """Helper function to return the comparison based on the comparison with the value
-
-    Takes in dictionary that stores all names, and given name
-
-    E.g. input type_2_type_3_mean returns type_2_type_3
-    """
-    for i in names_dict:
-        if name in names_dict[i]:
-            return i
-
-
 def sort_comparison(groups):
     """Naturally sort groups in a pairwise comparison; specially handle one-vs-rest
 
@@ -462,16 +449,16 @@ class AuthorDifferentialExpression:
         # comparison name: [[gene, logfoldchanges, qval, mean], [gene, logfoldchanges, qval, mean], ...]
         comparisons = comparisons_dict.keys()
         rows_by_comparison = dict.fromkeys(comparisons, [])
+
         for comparison_metrics in grouped_comparison_metrics:
             metric_values = []
             for comparison_metric in comparison_metrics:
 
                 # E.g. "B cells--CSN1S1 macrophages"
-                comparison = check_group(comparisons_dict, comparison_metric)
+                comparison = '--'.join(comparison_metric.split('--')[0:2])
 
                 # Numerical values for metric in this comparison
                 values = rest[comparison_metric].tolist()
-
                 metric_values.append(values)
 
             rows = metric_values
