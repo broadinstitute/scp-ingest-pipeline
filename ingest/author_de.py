@@ -369,15 +369,9 @@ class AuthorDifferentialExpression:
         metrics = []
         file_path = self.author_de_file
 
-        # TODO:
-        #   - Throw well-formatted error if file type not in ALLOWED_FILE_TYPES
-        #   - Consider if / how this merges with centralized handling in ingest_files.py
-        file_type = IngestFiles.get_file_type(file_path)[0]
-        if file_type == 'text/tab-separated-values':
-            delimiter = '\t'
-        else:
-            delimiter = ','
-        data = pd.read_csv(file_path, delimiter)
+        # sep=None invokes detecting separator via csv.Sniffer, per
+        # https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html
+        data = pd.read_csv(file_path, sep=None)
 
         first_cols = data.columns
 
