@@ -47,15 +47,42 @@ def sort_comparison(groups):
         return sorted(groups)
 
 
+def convert_seurat_findallmarkers_to_wide(data):
+    """Convert from Seurat FindAllMarkers() format to SCP DE wide format
+    """
+    print('0')
+    data = data.rename(columns={"cluster": "group", "gene": "genes"})
+    data = data.astype({"group": "string"})
+    print('1')
+    data = data.assign(comparison_group="rest")
+    expected_header_order = [
+        "genes", "group", "comparison_group", "avg_log2FC", "p_val_adj", "p_val", "pct.1", "pct.2"
+    ]
+    data = data[expected_header_order]
+    print('reindexed data')
+    print(data)
+    # print("data.dtypes")
+    # print(data.dtypes)
+    wide_df = convert_long_to_wide(data)
+    print("wide_df data.dtypes")
+    print(data.dtypes)
+    print('3')
+    return wide_df
+
+
 def convert_long_to_wide(data):
-    """Convert from long format to wide format
+    """Convert from long format to SCP DE wide format
 
     (Long format is typical uploaded, but this module internally uses wide.)
     """
+    print("data data.dtypes")
+    print(data.dtypes)
+    print('A 0')
     metrics = list(data.columns[3:])
-
-    data["combined"] = data['group'] + "--" + data["comparison_group"]
+    print('A 1')
+    data["combined"] = data["group"] + "--" + data["comparison_group"]
     frames = []
+    print('A 2')
     # E.g.
     # gene  group   comparison_group    log2foldchange  pvals_adj   qvals   mean    cat dog
     # metrics = ["log2foldchange", "pvals_adj", "qvals", "mean", "cat", "dog"]
@@ -64,9 +91,14 @@ def convert_long_to_wide(data):
         wide_metric = wide_metric.add_suffix(f"--{metric}")
         frames.append(wide_metric)
 
+    print('A 3')
     result = pd.concat(frames, axis=1, join="inner")
+    print('A 4')
     result.columns.name = " "
+    print('result before', result)
     result = result.reset_index()
+    print('result', result)
+    print('A 5')
     return result
 
 
@@ -288,6 +320,20 @@ def get_groups_and_metrics(raw_column_names, size, significance, logger):
     return groups, split_headers, metrics
 
 
+def detect_seurat_findallmarkers(headers):
+    """Reports whether headers likely derive from FindAllMarkers() in Seurat
+
+    E.g.: https://satijalab.org/seurat/articles/pbmc3k_tutorial.html#finding-differentially-expressed-features-cluster-biomarkers
+
+    These headers were observed in a real user-uploaded DE file.
+    """
+    findallmarkers_headers = ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster', 'gene']
+    is_seurat_findallmarkers = (
+        len(headers) == len(findallmarkers_headers) and all(headers == findallmarkers_headers)
+    )
+    return is_seurat_findallmarkers
+
+
 class AuthorDifferentialExpression:
     # TODO: reorder author's columns in input file so output is logfoldchanges qval mean
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
@@ -349,13 +395,21 @@ class AuthorDifferentialExpression:
 
         first_cols = data.columns
 
+        is_seurat_findallmarkers = detect_seurat_findallmarkers(first_cols)
+
         if first_cols[0] == "genes" and first_cols[1] == "group" and first_cols[2] == "comparison_group":
             # Raw data is in long format
             wide_format = convert_long_to_wide(data)
             data_by_col = get_data_by_column(wide_format)
-        else:
+        elif '--' in first_cols[1]:
             # Raw data is in wide format
             data_by_col = get_data_by_column(data)
+        elif is_seurat_findallmarkers:
+            print('Data is in Seurat FindAllMarkers() format')
+            # Raw data is a simple plaintext export from Seurat
+            wide_format = convert_seurat_findallmarkers_to_wide(data)
+            print('wide_format', wide_format)
+            data_by_col = get_data_by_column(wide_format)
 
         col, genes, rest, split_values = data_by_col
         pairwise = split_values["pairwise"]
