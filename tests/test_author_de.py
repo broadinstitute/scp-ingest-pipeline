@@ -17,6 +17,14 @@ from author_de import AuthorDifferentialExpression
 class TestDifferentialExpression(unittest.TestCase):
 
     def test_execute(self):
+        header_refmap = {
+            'genes': 'genes',
+            'group': 'group',
+            'comparison_group': 'comparison_group',
+            'size': 'logfoldchanges',
+            'significance': 'qval'
+        }
+
         author_de = AuthorDifferentialExpression(
             'cluster_umap_txt',
             'General_Celltype',
@@ -24,8 +32,7 @@ class TestDifferentialExpression(unittest.TestCase):
             'study',
             'wilcoxon',
             '../tests/data/author_de/lfc_qval_scanpy-like.csv',
-            'logfoldchanges',
-            'qval'
+            header_refmap
         )
         author_de.execute()
 
@@ -56,6 +63,15 @@ class TestDifferentialExpression(unittest.TestCase):
 
         This order of "genes", "<size_metric>", "<significance_metric>" is needed by the UI.
         """
+
+        header_refmap = {
+            'genes': 'genes',
+            'group': 'group',
+            'comparison_group': 'comparison_group',
+            'size': 'avg_log2FC',
+            'significance': 'p_val_adj'
+        }
+
         author_de = AuthorDifferentialExpression(
             'cluster_umap_txt',
             'General_Celltype',
@@ -63,8 +79,7 @@ class TestDifferentialExpression(unittest.TestCase):
             'study',
             'wilcoxon',
             '../tests/data/author_de/pval_lfc_pvaladj_seurat-like.tsv',
-            'avg_log2FC',
-            'p_val_adj'
+            header_refmap
         )
         author_de.execute()
 
@@ -78,10 +93,17 @@ class TestDifferentialExpression(unittest.TestCase):
         expected_line_1 = '0	ACE2	0.04469246812	0.561922816	0.2722805917	0.7277194083	0.561922816	6'
         self.assertEqual(lines[1].strip(), expected_line_1)
 
-    def test_basic_size_and_significance(self):
+    def test_size_and_significance_validation(self):
         """Tests validation that file has specified size and significance headers
         """
         with pytest.raises(ValueError) as exc_info:
+            header_refmap = {
+                'genes': 'genes',
+                'group': 'group',
+                'comparison_group': 'comparison_group',
+                'size': 'OTHER_SIZE',
+                'significance': 'OTHER_SIGNIFICANCE'
+            }
             author_de = AuthorDifferentialExpression(
                 'cluster_umap_txt',
                 'General_Celltype',
@@ -89,12 +111,11 @@ class TestDifferentialExpression(unittest.TestCase):
                 'study',
                 'wilcoxon',
                 '../tests/data/author_de/pval_lfc_pvaladj_seurat-like.tsv',
-                'OTHER_SIZE',
-                'OTHER_SIGNIFICANCE'
+                header_refmap
             )
             author_de.execute()
 
-        expected_msg = "Column headers must include \"OTHER_SIZE\" and \"OTHER_SIGNIFICANCE\".  No such size or significance metrics found in headers: ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster']"
+        expected_msg = "Column headers must include \"OTHER_SIZE\" and \"OTHER_SIGNIFICANCE\".  No such size or significance metrics found in headers: ['pct.2', 'pct.1', 'p_val_adj', 'p_val', 'cluster', 'avg_log2FC']"
         self.assertEqual(str(exc_info.value), expected_msg)
 
     def test_seurat_findallmarkers(self):
@@ -105,6 +126,14 @@ class TestDifferentialExpression(unittest.TestCase):
         # matches the first DE file uploaded to SCP by a real user.
         input_filename = 'seurat_findallmarkers_one-vs-rest.csv'
 
+        header_refmap = {
+            'genes': 'gene',
+            'group': 'cluster',
+            'comparison_group': 'None',
+            'size': 'avg_log2FC',
+            'significance': 'p_val_adj'
+        }
+
         author_de = AuthorDifferentialExpression(
             'cluster_umap_txt',
             'General_Celltype',
@@ -112,8 +141,7 @@ class TestDifferentialExpression(unittest.TestCase):
             'study',
             'wilcoxon',
             f'../tests/data/author_de/{input_filename}',
-            'avg_log2FC',
-            'p_val_adj'
+            header_refmap
         )
         author_de.execute()
 
