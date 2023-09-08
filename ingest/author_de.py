@@ -15,6 +15,7 @@ from ingest_files import IngestFiles
 
 sanitize_string = DifferentialExpression.sanitize_string
 
+
 def sort_comparison(groups):
     """Naturally sort groups in a pairwise comparison; specially handle one-vs-rest
 
@@ -36,9 +37,9 @@ def sort_comparison(groups):
 
 def convert_seurat_findallmarkers_to_wide(data):
     """Convert from Seurat FindAllMarkers() format to SCP DE wide format
-
-    TODO (SCP-5296): Finish handling
     """
+
+    # Update columns to use SCP's expected names and order
     data = data.rename(columns={"cluster": "group", "gene": "genes"})
     data = data.astype({"group": "string"})
     data = data.assign(comparison_group="rest")
@@ -46,6 +47,7 @@ def convert_seurat_findallmarkers_to_wide(data):
         "genes", "group", "comparison_group", "avg_log2FC", "p_val_adj", "p_val", "pct.1", "pct.2"
     ]
     data = data[expected_header_order]
+
     wide_df = convert_long_to_wide(data)
     return wide_df
 
@@ -59,7 +61,7 @@ def convert_long_to_wide(data):
     data["combined"] = data["group"] + "--" + data["comparison_group"]
     frames = []
     # E.g.
-    # gene  group   comparison_group    log2foldchange  pvals_adj   qvals   mean    cat dog
+    # genes  group   comparison_group    log2foldchange  pvals_adj   qvals   mean    cat dog
     # metrics = ["log2foldchange", "pvals_adj", "qvals", "mean", "cat", "dog"]
     for metric in metrics:
         wide_metric = pd.pivot(data, index="genes", columns="combined", values=metric)

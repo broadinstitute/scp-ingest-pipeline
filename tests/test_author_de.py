@@ -97,29 +97,40 @@ class TestDifferentialExpression(unittest.TestCase):
         expected_msg = "Column headers must include \"OTHER_SIZE\" and \"OTHER_SIGNIFICANCE\".  No such size or significance metrics found in headers: ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster']"
         self.assertEqual(str(exc_info.value), expected_msg)
 
-    def test_seurat_findallmarkers_error(self):
-        """Tests error handling when Seurat FindAllMarkers() format is detected
-
-        TODO: Update to test handling when it's implemented
+    def test_seurat_findallmarkers(self):
+        """Tests handling for Seurat FindAllMarkers() format
         """
-        with pytest.raises(ValueError) as exc_info:
-            author_de = AuthorDifferentialExpression(
-                'cluster_umap_txt',
-                'General_Celltype',
-                'SCPdev',
-                'study',
-                'wilcoxon',
-                '../tests/data/author_de/seurat_findallmarkers_one-vs-rest.csv',
-                'avg_log2FC',
-                'p_val_adj'
-            )
-            author_de.execute()
 
-        expected_msg = (
-            "Handling is not yet implemented for Seurat FindAllMarkers() format.  " +
-            "Please use long or wide DE format per docs in SCP Upload Wizard."
+        # The structure (but no specific metric values or genes) of this file
+        # matches the first DE file uploaded to SCP by a real user.
+        input_filename = 'seurat_findallmarkers_one-vs-rest.csv'
+
+        author_de = AuthorDifferentialExpression(
+            'cluster_umap_txt',
+            'General_Celltype',
+            'SCPdev',
+            'study',
+            'wilcoxon',
+            f'../tests/data/author_de/{input_filename}',
+            'avg_log2FC',
+            'p_val_adj'
         )
-        self.assertEqual(str(exc_info.value), expected_msg)
+        author_de.execute()
+
+        output_file = "cluster_umap_txt--General_Celltype--10--study--wilcoxon.tsv"
+        with open(output_file) as f:
+            lines = [line.strip() for line in f.readlines()]
+
+        expected_line_0 = 'genes	avg_log2FC	p_val_adj	pct.2	pct.1	p_val'
+        expected_line_1 = '0	CRP	1.082893128	0.0	0.1364	0.3268	0.0'
+        expected_line_2 = '1	LGALS3	1.399143463	0.0	0.29848	0.4284	0.0'
+        expected_line_3 = '2	PIK3CA	0.7331456728	7.070000000000001e-273	0.34236	0.67932	3.49e-277'
+
+        self.assertEqual(len(lines), 4, f"Expected 4 files in: {output_file}")
+        self.assertEqual(lines[0], expected_line_0)
+        self.assertEqual(lines[1], expected_line_1)
+        self.assertEqual(lines[2], expected_line_2)
+        self.assertEqual(lines[3], expected_line_3)
 
     def teardown_method(self, test_method):
         files = glob.glob('cluster_umap_txt--General_Celltype*.tsv')
