@@ -1,0 +1,11 @@
+codecov:
+  require_ci_to_pass: no
+comment:
+  layout: "reach, diff, files"
+  behavior: default
+coverage:
+  status:
+    project:
+      default:
+        threshold: 0.1%
+    patch: off
