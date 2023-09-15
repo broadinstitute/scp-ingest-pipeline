@@ -376,15 +376,36 @@ def create_parser():
     )
 
     parser_ingest_differential_expression.add_argument(
+        "--gene-header",
+        required=True,
+        help="Header used for gene names / symbols in DE file"
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--group-header",
+        required=True,
+        help="Header used for group in DE file"
+    )
+
+    parser_ingest_differential_expression.add_argument(
+        "--comparison-group-header",
+        required=False,
+        help=(
+            "Header used for comparison group in DE file.  " +
+            "For pairwise comparisons.  Can omit if DE file is in one-vs-rest-only format."
+        )
+    )
+
+    parser_ingest_differential_expression.add_argument(
         "--size-metric",
         required=True,
-        help="Header used as size metric in DE file"
+        help='Header used as size metric in DE file, e.g. "logfoldchanges", "avg_log2FC", etc.'
     )
 
     parser_ingest_differential_expression.add_argument(
         "--significance-metric",
         required=True,
-        help="Header used as significance metric in DE file"
+        help='Header used as significance metric in DE file, e.g. "pvals_adj", "p_val_adj", etc.'
     )
 
     # AnnData subparsers

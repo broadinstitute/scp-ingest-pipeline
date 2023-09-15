@@ -65,6 +65,7 @@ import re
 import sys
 import re
 from contextlib import nullcontext
+import traceback
 from typing import Dict, Generator, List, Tuple, Union
 from wsgiref.simple_server import WSGIRequestHandler  # noqa: F401
 from bson.objectid import ObjectId
@@ -557,20 +558,34 @@ class IngestPipeline:
     def calculate_author_de(self):
         """Run differential expression analysis"""
         try:
+            kwargs = self.kwargs
+            if "comparison_group" not in kwargs:
+                kwargs["comparison_group"] = None
+
+            # Map canonical DE headers to headers in actual DE file to
+            header_refmap = {
+                "gene": kwargs["gene_header"],
+                "group": kwargs["group_header"],
+                "comparison_group": kwargs["comparison_group_header"],
+                "size": kwargs["size_metric"],
+                "significance": kwargs["significance_metric"]
+            }
+
             author_de = AuthorDifferentialExpression(
-                self.kwargs["cluster_name"],
-                self.kwargs["annotation_name"],
-                self.kwargs["study_accession"],
-                self.kwargs["annotation_scope"],
-                self.kwargs["method"],
-                self.kwargs["differential_expression_file"],
-                self.kwargs["size_metric"],
-                self.kwargs["significance_metric"]
+                kwargs["cluster_name"],
+                kwargs["annotation_name"],
+                kwargs["study_accession"],
+                kwargs["annotation_scope"],
+                kwargs["method"],
+
+                kwargs["differential_expression_file"],
+                header_refmap
             )
             author_de.execute()
 
             # execute function as MAIN then create method to search for the files created, delocalize them to bucket as with de.py. adjust other places it needs to be called
         except Exception as e:
+            print(traceback.format_exc())
             log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
             return 1
         # ToDo: surface failed DE for analytics (SCP-4206)
