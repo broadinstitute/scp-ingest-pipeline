@@ -75,9 +75,9 @@ def convert_long_to_wide(data):
     metrics = list(data.columns[3:])
     data["combined"] = data["group"] + "--" + data["comparison_group"]
     frames = []
-    # E.g.
-    # genes  group   comparison_group    log2foldchange  pvals_adj   qvals   mean    cat dog
-    # metrics = ["log2foldchange", "pvals_adj", "qvals", "mean", "cat", "dog"]
+    # Example headers from a hypothetical author DE file:
+    # genes  groups   comparison_groups    log2foldchanges  pvals_adj   qvals   means    cats dogs
+    # metrics = ["log2foldchanges", "pvals_adj", "qvals", "mean", "cat", "dog"]
     for metric in metrics:
         wide_metric = pd.pivot(data, index="gene", columns="combined", values=metric)
         wide_metric = wide_metric.add_suffix(f"--{metric}")
