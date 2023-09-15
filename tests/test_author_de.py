@@ -44,7 +44,7 @@ class TestDifferentialExpression(unittest.TestCase):
         with open(one_vs_rest_de_output_file) as f:
             lines = f.readlines()
         self.assertEqual(len(lines), 41, f"Expected 41 files in: {one_vs_rest_de_output_file}")
-        expected_line_0 = 'genes	logfoldchanges	qval	mean'
+        expected_line_0 = 'gene	logfoldchanges	qval	mean'
         self.assertEqual(lines[0].strip(), expected_line_0)
         expected_line_1 = '0	ACE2	0.9852699170700532	0.146924681159184	0.2277194082712261'
 
@@ -53,7 +53,7 @@ class TestDifferentialExpression(unittest.TestCase):
         with open(pairwise_de_output_file) as f:
             lines = f.readlines()
         self.assertEqual(len(lines), 41, f"Expected 41 files in: {pairwise_de_output_file}")
-        expected_line_0 = 'genes	logfoldchanges	qval	mean'
+        expected_line_0 = 'gene	logfoldchanges	qval	mean'
         self.assertEqual(lines[0].strip(), expected_line_0)
         expected_line_1 = '0	ACE2	0.685269917070053	0.446924681159184	0.727719408271226'
         self.assertEqual(lines[1].strip(), expected_line_1)
@@ -61,7 +61,7 @@ class TestDifferentialExpression(unittest.TestCase):
     def test_column_ordering(self):
         """Tests that processed output has specified size metric as 1st, significance as 2nd.
 
-        This order of "genes", "<size_metric>", "<significance_metric>" is needed by the UI.
+        This order of "gene", "<size_metric>", "<significance_metric>" is needed by the UI.
         """
 
         header_refmap = {
@@ -88,7 +88,7 @@ class TestDifferentialExpression(unittest.TestCase):
         with open(one_vs_rest_de_output_file) as f:
             lines = f.readlines()
         self.assertEqual(len(lines), 41, f"Expected 41 files in: {one_vs_rest_de_output_file}")
-        expected_line_0 = 'genes	avg_log2FC	p_val_adj	pct.2	pct.1	p_val	cluster'
+        expected_line_0 = 'gene	avg_log2FC	p_val_adj	pct.2	pct.1	p_val	cluster'
         self.assertEqual(lines[0].strip(), expected_line_0)
         expected_line_1 = '0	ACE2	0.04469246812	0.561922816	0.2722805917	0.7277194083	0.561922816	6'
         self.assertEqual(lines[1].strip(), expected_line_1)
@@ -149,7 +149,7 @@ class TestDifferentialExpression(unittest.TestCase):
         with open(output_file) as f:
             lines = [line.strip() for line in f.readlines()]
 
-        expected_line_0 = 'genes	avg_log2FC	p_val_adj	pct.2	pct.1	p_val'
+        expected_line_0 = 'gene	avg_log2FC	p_val_adj	pct.2	pct.1	p_val'
         expected_line_1 = '0	CRP	1.082893128	0.0	0.1364	0.3268	0.0'
         expected_line_2 = '1	LGALS3	1.399143463	0.0	0.29848	0.4284	0.0'
         expected_line_3 = '2	PIK3CA	0.7331456728	7.070000000000001e-273	0.34236	0.67932	3.49e-277'
