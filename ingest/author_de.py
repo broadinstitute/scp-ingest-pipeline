@@ -181,13 +181,13 @@ def sort_comparison_metrics(comparison_metrics, size, significance):
     # Sort alphabetically
     comparison_metrics = sorted(comparison_metrics)
 
-    # Rank significance 1st (ultimately ranked 2nd)
+    # Arrange significance in expected order (ultimately ranked 2nd)
     comparison_metrics = sorted(
         comparison_metrics,
         key=lambda x: x.split('--')[-1] == significance
     )
 
-    # Rank size 1st (ultimately ranked 1st)
+    # Arrange size in expected order (ultimately ranked 1st)
     comparison_metrics = sorted(
         comparison_metrics,
         key=lambda x: x.split('--')[-1] == size
