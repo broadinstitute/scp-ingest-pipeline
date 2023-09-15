@@ -558,9 +558,14 @@ class IngestPipeline:
         """Run differential expression analysis"""
         try:
             author_de = AuthorDifferentialExpression(
-                cluster=self.cluster,
-                cell_metadata=self.cell_metadata,
-                **self.kwargs,
+                self.kwargs["cluster_name"],
+                self.kwargs["annotation_name"],
+                self.kwargs["study_accession"],
+                self.kwargs["annotation_scope"],
+                self.kwargs["method"],
+                self.kwargs["differential_expression_file"],
+                self.kwargs["size_metric"],
+                self.kwargs["significance_metric"]
             )
             author_de.execute()
 
