@@ -376,7 +376,7 @@ def create_parser():
     )
 
     parser_ingest_differential_expression.add_argument(
-        "--genes-header",
+        "--gene-header",
         required=True,
         help="Header used for gene names / symbols in DE file"
     )

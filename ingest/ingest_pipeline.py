@@ -564,7 +564,7 @@ class IngestPipeline:
 
             # Map canonical DE headers to headers in actual DE file to
             header_refmap = {
-                "genes": kwargs["genes_header"],
+                "gene": kwargs["gene_header"],
                 "group": kwargs["group_header"],
                 "comparison_group": kwargs["comparison_group_header"],
                 "size": kwargs["size_metric"],

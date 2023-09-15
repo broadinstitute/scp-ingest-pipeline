@@ -37,6 +37,9 @@ def sort_comparison(groups):
 
 def canonicalize_name_and_order(data, header_refmap):
     """Ensure dataframe has column names and ordering as expected by DE UI
+
+    Canonical order:
+    gene,group,<comparison group,>size,significance,<other>
     """
 
     is_one_vs_rest_only = header_refmap["comparison_group"] == "None"
@@ -76,7 +79,7 @@ def convert_long_to_wide(data):
     # genes  group   comparison_group    log2foldchange  pvals_adj   qvals   mean    cat dog
     # metrics = ["log2foldchange", "pvals_adj", "qvals", "mean", "cat", "dog"]
     for metric in metrics:
-        wide_metric = pd.pivot(data, index="genes", columns="combined", values=metric)
+        wide_metric = pd.pivot(data, index="gene", columns="combined", values=metric)
         wide_metric = wide_metric.add_suffix(f"--{metric}")
         frames.append(wide_metric)
 
@@ -183,22 +186,22 @@ def sort_comparison_metrics(comparison_metrics, size, significance):
     # Sort alphabetically
     comparison_metrics = sorted(comparison_metrics)
 
-    # Rank significance 1st (ultimately ranked 4th / 5th)
+    # Arrange significance in expected order (ultimately ranked 3rd)
     comparison_metrics = sorted(
         comparison_metrics,
         key=lambda x: x.split('--')[-1] == significance
     )
 
-    # Rank size 1st (ultimately ranked 3rd / 4th)
+    # Arrange size in expected order (ultimately ranked 2nd)
     comparison_metrics = sorted(
         comparison_metrics,
         key=lambda x: x.split('--')[-1] == size
     )
 
-    # Rank 1st with "genes", "group", then (if present) "comparison_group"
-    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == 'comparison_group')
-    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == 'group')
-    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == 'genes')
+    # Rank 1st with "gene", "group", then (if present) "comparison_group"
+    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == "comparison_group")
+    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == "group")
+    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == "gene")
 
     comparison_metrics.reverse()
 
@@ -224,10 +227,10 @@ def sort_headers(headers, size, significance):
         key=lambda x: x == size
     )
 
-    # Rank 1st with "genes", "group", then (if present) "comparison_group"
-    headers = sorted(headers, key=lambda x: x == 'comparison_group')
-    headers = sorted(headers, key=lambda x: x == 'group')
-    headers = sorted(headers, key=lambda x: x == 'genes')
+    # Rank 1st with "gene", "group", then (if present) "comparison_group"
+    headers = sorted(headers, key=lambda x: x == "comparison_group")
+    headers = sorted(headers, key=lambda x: x == "group")
+    headers = sorted(headers, key=lambda x: x == "gene")
 
     headers.reverse()
 
@@ -494,7 +497,7 @@ class AuthorDifferentialExpression:
             rows_by_comparison[comparison] = rows
 
         headers = sort_headers(metrics, self.size_metric, self.significance_metric)
-        headers.insert(0, "genes")
+        headers.insert(0, "gene")
 
         for comparison_metric in rows_by_comparison:
 

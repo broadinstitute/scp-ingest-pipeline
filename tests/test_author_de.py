@@ -18,7 +18,7 @@ class TestDifferentialExpression(unittest.TestCase):
 
     def test_execute(self):
         header_refmap = {
-            'genes': 'genes',
+            'gene': 'genes',
             'group': 'group',
             'comparison_group': 'comparison_group',
             'size': 'logfoldchanges',
@@ -65,7 +65,7 @@ class TestDifferentialExpression(unittest.TestCase):
         """
 
         header_refmap = {
-            'genes': 'genes',
+            'gene': 'genes',
             'group': 'group',
             'comparison_group': 'comparison_group',
             'size': 'avg_log2FC',
@@ -98,7 +98,7 @@ class TestDifferentialExpression(unittest.TestCase):
         """
         with pytest.raises(ValueError) as exc_info:
             header_refmap = {
-                'genes': 'genes',
+                'gene': 'genes',
                 'group': 'group',
                 'comparison_group': 'comparison_group',
                 'size': 'OTHER_SIZE',
@@ -127,7 +127,7 @@ class TestDifferentialExpression(unittest.TestCase):
         input_filename = 'seurat_findallmarkers_one-vs-rest.csv'
 
         header_refmap = {
-            'genes': 'gene',
+            'gene': 'gene',
             'group': 'cluster',
             'comparison_group': 'None',
             'size': 'avg_log2FC',
