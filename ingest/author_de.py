@@ -12,20 +12,8 @@ import logging
 from monitor import setup_logger, log_exception
 from de import DifferentialExpression
 from ingest_files import IngestFiles
-import de_utils
 
 sanitize_string = DifferentialExpression.sanitize_string
-
-def check_group(names_dict, name):
-    """Helper function to return the comparison based on the comparison with the value
-
-    Takes in dictionary that stores all names, and given name
-
-    E.g. input type_2_type_3_mean returns type_2_type_3
-    """
-    for i in names_dict:
-        if name in names_dict[i]:
-            return i
 
 
 def sort_comparison(groups):
@@ -47,26 +35,58 @@ def sort_comparison(groups):
         return sorted(groups)
 
 
+def canonicalize_name_and_order(data, header_refmap):
+    """Ensure dataframe has column names and ordering as expected by DE UI
+
+    Canonical order:
+    gene,group,<comparison group,>size,significance,<other>
+    """
+
+    is_one_vs_rest_only = header_refmap["comparison_group"] == "None"
+    if is_one_vs_rest_only:
+        data = data.assign(comparison_group="rest")
+
+    # Update column names in DF to expected header names
+    rename_map = {}
+    for ref_header in header_refmap:
+        if ref_header in ["size", "significance"]:
+            continue
+        actual_header = header_refmap[ref_header]
+        rename_map[actual_header] = ref_header
+    data = data.rename(columns=rename_map)
+
+    data = data.astype({"group": "string"})
+
+    # Update headers to expected order
+    unsorted_headers = list(data.columns)
+    size = header_refmap["size"]
+    significance = header_refmap["significance"]
+    sorted_headers = sort_headers(unsorted_headers, size, significance)
+    canonical_long_df = data[sorted_headers]
+
+    return canonical_long_df
+
+
 def convert_long_to_wide(data):
-    """Convert from long format to wide format
+    """Convert from canonical DE long format to SCP DE wide format
 
     (Long format is typical uploaded, but this module internally uses wide.)
     """
     metrics = list(data.columns[3:])
-
-    data["combined"] = data['group'] + "--" + data["comparison_group"]
+    data["combined"] = data["group"] + "--" + data["comparison_group"]
     frames = []
-    # E.g.
-    # gene  group   comparison_group    log2foldchange  pvals_adj   qvals   mean    cat dog
-    # metrics = ["log2foldchange", "pvals_adj", "qvals", "mean", "cat", "dog"]
+    # Example headers from a hypothetical author DE file:
+    # genes  groups   comparison_groups    log2foldchanges  pvals_adj   qvals   means    cats dogs
+    # metrics = ["log2foldchanges", "pvals_adj", "qvals", "mean", "cat", "dog"]
     for metric in metrics:
-        wide_metric = pd.pivot(data, index="genes", columns="combined", values=metric)
+        wide_metric = pd.pivot(data, index="gene", columns="combined", values=metric)
         wide_metric = wide_metric.add_suffix(f"--{metric}")
         frames.append(wide_metric)
 
     result = pd.concat(frames, axis=1, join="inner")
     result.columns.name = " "
     result = result.reset_index()
+
     return result
 
 
@@ -96,8 +116,7 @@ def get_data_by_column(data):
 
 
 def generate_manifest(stem, clean_val, clean_val_p, qual):
-    """
-    create manifest file of each comparison in the initial data
+    """Create manifest file of each comparison in the initial data
     if the comparison is with rest, rest is omitted and just the type is written
     """
     file_names_one_vs_rest = []
@@ -144,7 +163,7 @@ def sort_all_group(all_group):
     return all_group_fin
 
 
-def sort_comparison_metrics(comparison_metrics):
+def sort_comparison_metrics(comparison_metrics, size, significance):
     """Ensure comparison_metrics has the order expected in the UI
 
     E.g., sort raw input:
@@ -167,56 +186,87 @@ def sort_comparison_metrics(comparison_metrics):
     # Sort alphabetically
     comparison_metrics = sorted(comparison_metrics)
 
-    # Put qval first
+    # Arrange significance in expected order (ultimately ranked 3rd)
     comparison_metrics = sorted(
         comparison_metrics,
-        key=lambda x: x.split('--')[-1] == 'qval',
-        reverse=True
+        key=lambda x: x.split('--')[-1] == significance
     )
 
-    # Put logfoldchanges first
+    # Arrange size in expected order (ultimately ranked 2nd)
     comparison_metrics = sorted(
         comparison_metrics,
-        key=lambda x: x.split('--')[-1] == 'logfoldchanges',
-        reverse=True
+        key=lambda x: x.split('--')[-1] == size
     )
+
+    # Rank 1st with "gene", "group", then (if present) "comparison_group"
+    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == "comparison_group")
+    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == "group")
+    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == "gene")
+
+    comparison_metrics.reverse()
 
     return comparison_metrics
 
+
+def sort_headers(headers, size, significance):
+    """Like `sort_comparison_metrics`, but for bare headers / metrics
+    """
+
+    # Sort alphabetically
+    headers = sorted(headers)
+
+    # Rank significance 1st (ultimately ranked 4th)
+    headers = sorted(
+        headers,
+        key=lambda x: x == significance
+    )
+
+    # Rank size 1st (ultimately ranked 4th)
+    headers = sorted(
+        headers,
+        key=lambda x: x == size
+    )
+
+    # Rank 1st with "gene", "group", then (if present) "comparison_group"
+    headers = sorted(headers, key=lambda x: x == "comparison_group")
+    headers = sorted(headers, key=lambda x: x == "group")
+    headers = sorted(headers, key=lambda x: x == "gene")
+
+    headers.reverse()
+
+    return headers
 
 # note: my initial files had pval, qval, logfoldchanges.
 # David's files have qval, mean, logfoldchanges.
 # For the purposes of this validation I will be using his column values/formatting.
 
 
-def validate_size_and_significance(metrics, logger):
+def validate_size_and_significance(metrics, size, significance, logger):
     """Locally log whether size and/or significance are detected among metrics
 
     TODO:
-        - When UI is more robust, convert to logger.warn and don't throw errors
         - Log to Sentry / Mixpanel
     """
-    size, significance = de_utils.get_size_and_significance(metrics)
+    has_size = any([metric.split('--')[-1] == size for metric in metrics])
+    has_significance = any([metric.split('--')[-1] == significance for metric in metrics])
+
     in_headers = f"in headers: {metrics}"
-    instruction = 'Column headers must include "logfoldchanges" and "qval".'
-    if not size and not significance:
-        msg = f"{instruction}  No size or significance metrics found {in_headers}"
+
+    if not has_size or not has_significance:
+        instruction = f'Column headers must include "{size}" and "{significance}".'
+        if not has_size and not has_significance:
+            msg = f"{instruction}  No such size or significance metrics found {in_headers}"
+        elif not size:
+            msg = f"{instruction}  No such size metric found {in_headers}"
+        elif not has_significance:
+            msg = f"{instruction}  No such significance metric found {in_headers}"
         logger.error(msg)
         raise ValueError(msg)
-    elif not size:
-        # TODO: When UI is more robust, convert to logger.warn and don't throw
-        msg = f"{instruction}  No size metrics found {in_headers}"
-        logger.error(msg)
-        raise ValueError(msg)
-    elif not significance:
-        msg = f"{instruction}  No significance metrics found {in_headers}"
-        logger.error(msg)
-        raise ValueError(msg)
-    elif size and significance:
+    elif has_size and has_significance:
         logger.info(f'Found size ("{size}") and significance ("{significance}") metrics {in_headers}')
 
 
-def get_groups_and_metrics(raw_column_names, logger):
+def get_groups_and_metrics(raw_column_names, size, significance, logger):
     """Cleans column names, splits them into compared groups and metrics
 
     A "metric" here is a statistical measure, like "logfoldchanges", "qval",
@@ -263,13 +313,26 @@ def get_groups_and_metrics(raw_column_names, logger):
         if metric not in metrics:
             metrics.append(metric)
 
-    validate_size_and_significance(metrics, logger)
+    validate_size_and_significance(metrics, size, significance, logger)
 
     return groups, split_headers, metrics
 
 
+def detect_seurat_findallmarkers(headers):
+    """Reports whether headers likely derive from FindAllMarkers() in Seurat
+
+    E.g.: https://satijalab.org/seurat/articles/pbmc3k_tutorial.html#finding-differentially-expressed-features-cluster-biomarkers
+
+    These headers were observed in a real user-uploaded DE file.
+    """
+    findallmarkers_headers = ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster', 'gene']
+    is_seurat_findallmarkers = (
+        len(headers) == len(findallmarkers_headers) and all(headers == findallmarkers_headers)
+    )
+    return is_seurat_findallmarkers
+
+
 class AuthorDifferentialExpression:
-    # TODO: reorder author's columns in input file so output is logfoldchanges qval mean
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
     author_de_logger = setup_logger(
         __name__ + ".author_de_logger",
@@ -284,20 +347,35 @@ class AuthorDifferentialExpression:
         self,
         cluster_name,
         annotation_name,
-        **kwargs
+        study_accession,
+        annotation_scope,
+        method,
+        differential_expression_file,
+        header_refmap
     ):
+        """
+        :param cluster_name (string) Name of cluster, e.g. "All Cells UMAP"
+        :param annotation_name (string) Name of annotation, e.g. "General_Celltype"
+        :param study_accession (string) Study accession, e.g. "SCP123"
+        :param annotation_scope (string) Scope of annotation; one of "cluster" or "study"
+        :param method (string) Statistical method used for DE, e.g. "wilcoxon"
+        :param differential_expression_file (string) Path to author DE file
+        :param header_refmap (dict): Map of canonical DE headers to actual headers in DE file
+        """
         # AuthorDifferentialExpression.de_logger.info(
         #    "Initializing DifferentialExpression instance"
         # )
         self.cluster_name = sanitize_string(cluster_name)
         self.annotation = sanitize_string(annotation_name)
-        self.kwargs = kwargs
-        self.accession = self.kwargs["study_accession"]
-        self.annot_scope = self.kwargs["annotation_scope"]
-        self.method = self.kwargs["method"]
+        self.accession = study_accession
+        self.annot_scope = annotation_scope
+        self.method = method
+        self.header_refmap = header_refmap
+        self.size_metric = header_refmap["size"]
+        self.significance_metric = header_refmap["significance"]
         self.stem = f"{self.cluster_name}--{self.annotation}"
 
-        author_de_file_gcs_url = self.kwargs["differential_expression_file"]
+        author_de_file_gcs_url = differential_expression_file
         allowed_file_types = AuthorDifferentialExpression.ALLOWED_FILE_TYPES
         raw_de_file_obj = IngestFiles(author_de_file_gcs_url, allowed_file_types)
         author_file_handle, local_file_path = IngestFiles.resolve_path(
@@ -306,42 +384,41 @@ class AuthorDifferentialExpression:
         self.author_de_file = local_file_path
 
     def execute(self):
+        logger = AuthorDifferentialExpression.dev_logger
+
         clean_val = []
         clean_val_p = []
         metrics = []
         file_path = self.author_de_file
 
-        # TODO:
-        #   - Throw well-formatted error if file type not in ALLOWED_FILE_TYPES
-        #   - Consider if / how this merges with centralized handling in ingest_files.py
-        file_type = IngestFiles.get_file_type(file_path)[0]
-        if file_type == 'text/tab-separated-values':
-            delimiter = '\t'
-        else:
-            delimiter = ','
-        data = pd.read_csv(file_path, delimiter)
+        # sep=None invokes detecting separator via csv.Sniffer, per
+        # https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html
+        data = pd.read_csv(file_path, sep=None)
 
-        first_cols = data.columns
+        headers = data.columns
 
-        if first_cols[0] == "genes" and first_cols[1] == "group" and first_cols[2] == "comparison_group":
-            # Raw data is in long format
-            wide_format = convert_long_to_wide(data)
-            data_by_col = get_data_by_column(wide_format)
-        else:
-            # Raw data is in wide format
+        is_wide_format = '--' in headers[1]
+        if is_wide_format:
             data_by_col = get_data_by_column(data)
+        else:
+            data = canonicalize_name_and_order(data, self.header_refmap)
+            wide_df = convert_long_to_wide(data)
+            data_by_col = get_data_by_column(wide_df)
 
         col, genes, rest, split_values = data_by_col
         pairwise = split_values["pairwise"]
         one_vs_rest = split_values["one_vs_rest"]
 
-        logger = AuthorDifferentialExpression.dev_logger
         if len(one_vs_rest) != 0:
-            groups, clean_val, metrics = get_groups_and_metrics(one_vs_rest, logger)
+            groups, clean_val, metrics = get_groups_and_metrics(
+                one_vs_rest, self.size_metric, self.significance_metric, logger
+            )
             self.generate_result_files(one_vs_rest, genes, rest, groups, clean_val, metrics)
 
         if len(pairwise) != 0:
-            groups_p, clean_val_p, metrics = get_groups_and_metrics(pairwise, logger)
+            groups_p, clean_val_p, metrics = get_groups_and_metrics(
+                pairwise, self.size_metric, self.significance_metric, logger
+            )
             self.generate_result_files(pairwise, genes, rest, groups_p, clean_val_p, metrics)
         generate_manifest(self.stem, clean_val, clean_val_p, metrics)
 
@@ -386,7 +463,9 @@ class AuthorDifferentialExpression:
             for j in range(0, len(i), num_metrics):
                 x = j
                 comparison_metrics = i[x: x + num_metrics]
-                sorted_comparison_metrics = sort_comparison_metrics(comparison_metrics)
+                sorted_comparison_metrics = sort_comparison_metrics(
+                    comparison_metrics, self.size_metric, self.significance_metric
+                )
                 grouped_comparison_metrics.append(sorted_comparison_metrics)
 
         for comparison in comparisons_dict:
@@ -401,42 +480,55 @@ class AuthorDifferentialExpression:
         # comparison name: [[gene, logfoldchanges, qval, mean], [gene, logfoldchanges, qval, mean], ...]
         comparisons = comparisons_dict.keys()
         rows_by_comparison = dict.fromkeys(comparisons, [])
+
         for comparison_metrics in grouped_comparison_metrics:
             metric_values = []
             for comparison_metric in comparison_metrics:
 
                 # E.g. "B cells--CSN1S1 macrophages"
-                comparison = check_group(comparisons_dict, comparison_metric)
+                comparison = '--'.join(comparison_metric.split('--')[0:2])
 
                 # Numerical values for metric in this comparison
                 values = rest[comparison_metric].tolist()
-
                 metric_values.append(values)
 
             rows = metric_values
             rows.insert(0, genes)
             rows_by_comparison[comparison] = rows
 
-        headers = metrics
-        headers.insert(0, "genes")
+        headers = sort_headers(metrics, self.size_metric, self.significance_metric)
+        headers.insert(0, "gene")
 
-        for comparison in rows_by_comparison:
-            arr = np.array(rows_by_comparison[comparison])
-            t_arr = arr.transpose()
-            inner_df = pd.DataFrame(data=t_arr, columns=headers)
+        for comparison_metric in rows_by_comparison:
 
-            if "rest" in comparison:
-                comparison = comparison.split("--")[0]
+            if "rest" in comparison_metric:
+                comparison = comparison_metric.split("--")[0]
 
             else:
-                group = comparison.split("--")[0]
-                comparison_group = comparison.split("--")[1]
+                group = comparison_metric.split("--")[0]
+                comparison_group = comparison_metric.split("--")[1]
                 sorted_list = sort_comparison([group, comparison_group])
                 comparison = f'{sorted_list[0]}--{sorted_list[1]}'
 
-            comparison = '--'.join([sanitize_string(group) for group in comparison.split('--')])
+            clean_comparison_metric = '--'.join([sanitize_string(group) for group in comparison.split('--')])
 
-            tsv_name = f'{self.stem}--{comparison}--{self.annot_scope}--{self.method}.tsv'
+            tsv_name = f'{self.stem}--{clean_comparison_metric}--{self.annot_scope}--{self.method}.tsv'
+
+            rows = rows_by_comparison[comparison_metric]
+
+            arr = np.array(rows)
+
+            t_arr = arr.transpose()
+
+            if len(t_arr) == 0:
+                print(f"No data to output for TSV, skip preparation to write {tsv_name}")
+                continue
+
+            # Drop rows that are all "nan", as seen sometimes in Seurat FindAllMarkers()
+            t_arr = t_arr[~(t_arr == 'nan').any(axis=1)]
+
+            inner_df = pd.DataFrame(data=t_arr, columns=headers)
+
             inner_df.to_csv(tsv_name, sep='\t')
 
             print(f"Wrote TSV: {tsv_name}")
