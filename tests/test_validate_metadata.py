@@ -870,7 +870,7 @@ class TestValidateMetadata(unittest.TestCase):
     @patch("requests.get", side_effect=mocked_requests_get)
     def test_request_backoff_handling(self, mocked_requests_get):
         """errors in retrieving data from external resources should attempt MAX_HTTP_ATTEMPTS times and throw an exception"""
-        request_url = "https://www.ebi.ac.uk/ols/api/ontologies/"
+        request_url = "https://www.ebi.ac.uk/ols4/api/ontologies/"
         self.assertRaises(
             requests.exceptions.RequestException, request_json_with_backoff, request_url
         )
