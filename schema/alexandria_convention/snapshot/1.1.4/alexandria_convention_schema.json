@@ -185,7 +185,7 @@
         },
         "cell_type": {
             "description": "Cell type name determined via unsupervised clustering and marker genes",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/cl",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/cl",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -200,7 +200,7 @@
         },
         "culture_duration__unit": {
             "description": "culture_duration__unit",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uo",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -210,7 +210,7 @@
         },
         "development_stage": {
             "description": "A classification of the developmental stage of the organism",
-            "ontology": "http://www.ebi.ac.uk/ols/api/ontologies/hsapdv",
+            "ontology": "http://www.ebi.ac.uk/ols4/api/ontologies/hsapdv",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -225,7 +225,7 @@
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/mondo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/mondo",
             "type": "array"
         },
         "disease__intracellular_pathogen": {
@@ -234,7 +234,7 @@
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/mondo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/mondo",
             "type": "array"
         },
         "disease__intracellular_pathogen__ontology_label": {
@@ -260,7 +260,7 @@
         },
         "disease__time_since_onset__unit": {
             "description": "disease__time_since_onset__unit",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uo",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -277,7 +277,7 @@
         },
         "disease__time_since_treatment_start__unit": {
             "description": "disease__time_since_treatment_start__unit",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uo",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -310,7 +310,7 @@
         },
         "enrichment__cell_type": {
             "description": "The cell type that was sorted via an enrichment technique such as flow cytometry.",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/cl",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/cl",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -340,7 +340,7 @@
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/hancestro",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/hancestro",
             "type": "array"
         },
         "ethnicity__ontology_label": {
@@ -356,7 +356,7 @@
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ogg",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/ogg",
             "type": "array"
         },
         "gene_perturbation__direction": {
@@ -384,7 +384,7 @@
         },
         "geographical_region": {
             "description": "Location where the sample was collected/donated",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/gaz",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/gaz",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -399,7 +399,7 @@
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/pr",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/pr",
             "type": "array"
         },
         "growth_factor_perturbation__concentration": {
@@ -411,7 +411,7 @@
         },
         "growth_factor_perturbation__concentration__unit": {
             "description": "growth_factor_perturbation__concentration__unit",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uo",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -447,7 +447,7 @@
         },
         "library_preparation_protocol": {
             "description": "The single cell RNA-sequencing protocol used for Library preparation",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/efo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/efo",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -462,7 +462,7 @@
         "mouse_strain": {
             "dependency_condition": "species == NCBITaxon_10090",
             "description": "Mouse strain of the donor organism (ex. C57BL/6, BALB/c, 129, undetermined)",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ncit",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/ncit",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -476,7 +476,7 @@
         },
         "organ": {
             "description": "The organ that the biomaterial came from",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uberon",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uberon",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -490,7 +490,7 @@
         },
         "organism_age__unit": {
             "description": "organism_age__unit",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uo",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -514,7 +514,7 @@
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ncit",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/ncit",
             "type": "array"
         },
         "race__ontology_label": {
@@ -535,7 +535,7 @@
         },
         "sequencing_instrument_manufacturer_model": {
             "description": "name of sequencing instrument manufacturer",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/efo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/efo",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -555,7 +555,7 @@
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/chebi",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/chebi",
             "type": "array"
         },
         "small_molecule_perturbation__concentration": {
@@ -567,7 +567,7 @@
         },
         "small_molecule_perturbation__concentration__unit": {
             "description": "small_molecule_perturbation__concentration__unit",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uo",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -598,7 +598,7 @@
         },
         "species": {
             "description": "The scientific binomial name for the species of the organism.",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ncbitaxon",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
@@ -625,7 +625,7 @@
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/vo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/vo",
             "type": "array"
         },
         "vaccination__adjuvants": {
@@ -666,7 +666,7 @@
         },
         "vaccination__time_since__unit": {
             "description": "Time since each vaccine in the vaccination field was administered",
-            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
+            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uo",
             "pattern": "^[A-Za-z]+[_:][0-9]",
             "type": "string"
         },
