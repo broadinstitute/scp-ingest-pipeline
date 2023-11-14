@@ -567,7 +567,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         validate_input_metadata(metadata, convention)
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid multiple ontologies content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -660,7 +660,7 @@ class TestValidateMetadata(unittest.TestCase):
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid array-based ontology content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -670,7 +670,7 @@ class TestValidateMetadata(unittest.TestCase):
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid cell type custom content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -902,7 +902,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         validate_input_metadata(metadata, convention)
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid ontology synonym content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
