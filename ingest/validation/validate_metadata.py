@@ -160,8 +160,9 @@ class OntologyRetriever:
             if matches:
                 convention_ontology = metadata_ontology.copy()
             else:
-                # store all convention ontologies for lookup later
-                for convention_url in ontology_urls:
+                # store all convention ontologies for lookup later.
+                # Prioritize first ontology, if multiple as with MONDO, PATO in disease
+                for convention_url in list(reversed(ontology_urls)):
                     convention_shortname = extract_terminal_pathname(convention_url)
                     convention_ontology = request_json_with_backoff(convention_url)
                     self.cached_ontologies[convention_shortname] = convention_ontology
