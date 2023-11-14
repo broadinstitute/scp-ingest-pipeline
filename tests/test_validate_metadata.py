@@ -876,6 +876,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.assertEqual(mocked_requests_get.call_count, MAX_HTTP_ATTEMPTS)
 
+
     def test_is_label_or_synonym(self):
         label = "10x 3' v2"
         possible_matches = {
