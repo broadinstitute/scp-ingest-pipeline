@@ -933,7 +933,7 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
     """
     # this function seems overloaded with its three tasks
     # schema validation, non-ontology errors, ontology info collection
-    # the latter two should be done together in the same pass thru the file
+    # the latter two should be done together in the same pass through the file
     js_errors = defaultdict(list)
     schema = validate_schema(convention, metadata)
 
@@ -1414,7 +1414,7 @@ def validate_input_metadata(metadata, convention, bq_json=None):
     review_metadata_names(metadata)
     dev_logger.info('Checking for "Excel drag" events')
     if not detect_excel_drag(metadata, convention):
-        # "short-circut" ontology validation if "Excel drag" detected
+        # "short-circuit" ontology validation if "Excel drag" detected
         # avoids a bloat of calls to EBI OLS, return error faster and avoid
         # long-compute-time issue (if false positives are possible, bypass will be needed)
         dev_logger.info('Validating ontology content against EBI OLS')

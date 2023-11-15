@@ -644,7 +644,7 @@ class TestValidateMetadata(unittest.TestCase):
 
             return metadata
 
-        # metadata validation stores warning messages which are available thru CLI
+        # metadata validation stores warning messages which are available through CLI
         # but not currently included in error email - too noisy
         # because no ontology label supplied in metadata file for the unit ontology
         metadata = set_up_test("valid_array_v2.1.2.txt")
@@ -936,7 +936,7 @@ class TestValidateMetadata(unittest.TestCase):
             ('common cold',),
             ('diabetes mellitus', 'common cold'),
             ('diabetes mellitus', 'mastitis', 'common cold'),
-            ('disease or disorder',),
+            ('disease',),
         ]
 
         self.assertFalse(
@@ -1027,13 +1027,13 @@ class TestValidateMetadata(unittest.TestCase):
 
         # Metadata 'disease' also has multiple ontologyIDs paired with the same label
         # It advises to only check mismatches with labels that are truly multiply assigned:
-        # ['disease or disorder', 'absent']
+        # ['disease', 'absent']
         self.assertIn(
             "disease: Long stretch of contiguously incrementing ontology ID values suggest cut and paste issue - "
             "exiting validation, ontology content not validated against ontology server.\n"
             "Please confirm ontology IDs are correct and resubmit.\n"
             "Check for mismatches between ontology ID and provided ontology label(s) "
-            "['absent', 'disease or disorder'].\n",
+            "['absent', 'disease'].\n",
             metadata.issues["error"]["ontology"].keys(),
             "ontology label multiply paired with IDs should error",
         )
