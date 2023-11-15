@@ -133,7 +133,7 @@ class OntologyRetriever:
         returns JSON payload of ontology, or None if unsuccessful
         Will store any retrieved ontologies for faster validation of downstream terms
         """
-        OLS_BASE_URL = "https://www.ebi.ac.uk/ols4/api/ontologies/"
+        OLS_BASE_URL = "https://www.ebi.ac.uk/ols/api/ontologies/"
         # separate ontology shortname from term ID number
         # valid separators are underscore and colon (used by HCA)
         try:

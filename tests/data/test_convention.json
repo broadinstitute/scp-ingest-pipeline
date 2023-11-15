@@ -40,7 +40,7 @@
         },
         "cell_type": {
             "description": "Cell type name determined via unsupervised clustering and marker genes",
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/cl",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/cl",
             "ontology_browser_url": "https://www.ebi.ac.uk/ols/ontologies/cl",
             "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
             "type": "string"
@@ -56,7 +56,7 @@
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/mondo",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/mondo",
             "type": "array"
         },
         "disease__ontology_label": {
@@ -86,7 +86,7 @@
         },
         "organism_age__unit": {
             "description": "organism_age__unit",
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uo",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
             "ontology_browser_url": "https://www.ebi.ac.uk/ols/ontologies/uo",
             "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
             "type": "string"
@@ -102,7 +102,7 @@
         },
         "species": {
             "description": "The scientific binomial name for the species of the organism.",
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ncbitaxon",
             "ontology_browser_url": "https://www.ebi.ac.uk/ols/ontologies/ncbitaxon",
             "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
             "type": "string"
@@ -118,7 +118,7 @@
                 "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/vo",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/vo",
             "type": "array"
         },
         "vaccination__ontology_label": {

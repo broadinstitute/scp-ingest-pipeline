@@ -75,7 +75,7 @@
         },
         "cell_type": {
             "description": "Cell type name determined via unsupervised clustering and marker genes",
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/cl",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/cl",
             "type": "string"
         },
         "cell_type-ontology_label": {
@@ -87,7 +87,7 @@
             "items": {
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/mondo",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/mondo",
             "type": "array"
         },
         "disease-ontology_label": {
@@ -95,7 +95,7 @@
         },
         "enriched_cell_type": {
             "description": "The cell type that was sorted via an enrichment technique such as flow cytometry.",
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/cl",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/cl",
             "type": "string"
         },
         "enriched_cell_type-ontology_label": {
@@ -115,7 +115,7 @@
             "items": {
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/hancestro",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/hancestro",
             "type": "array"
         },
         "ethnicity-ontology_label": {
@@ -123,7 +123,7 @@
         },
         "genus_species": {
             "description": "The scientific binomial name for the species of the organism.",
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/ncbitaxon",
             "type": "string"
         },
         "genus_species-ontology_label": {
@@ -131,7 +131,7 @@
         },
         "geographical_region": {
             "description": "Location where the sample was collected/donated",
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/gaz",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/gaz",
             "type": "string"
         },
         "geographical_region-ontology_label": {
@@ -142,7 +142,7 @@
             "items": {
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/mondo",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/mondo",
             "type": "array"
         },
         "intracellular_pathogen-ontology_label": {
@@ -153,7 +153,7 @@
         },
         "library_preparation_protocol": {
             "description": "The single cell RNA-sequencing protocol used for Library preparation",
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/efo",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/efo",
             "type": "string"
         },
         "library_preparation_protocol-ontology_label": {
@@ -161,7 +161,7 @@
         },
         "organ": {
             "description": "The organ that the biomaterial came from",
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uberon",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uberon",
             "type": "string"
         },
         "organ-ontology_label": {
@@ -172,7 +172,7 @@
             "type": "number"
         },
         "organism_age-unit": {
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uo",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
             "type": "string"
         },
         "organism_id": {
@@ -195,7 +195,7 @@
             "type": "string"
         },
         "time_since_disease_onset-unit": {
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uo",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
             "type": "string"
         },
         "time_since_vaccine": {
@@ -206,7 +206,7 @@
             "type": "array"
         },
         "time_since_vaccine-unit": {
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/uo",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/uo",
             "type": "string"
         },
         "vaccination": {
@@ -214,7 +214,7 @@
             "items": {
                 "type": "string"
             },
-            "ontology": "https://www.ebi.ac.uk/ols4/api/ontologies/vo",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/vo",
             "type": "array"
         },
         "vaccination-ontology_label": {
