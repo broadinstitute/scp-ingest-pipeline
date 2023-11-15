@@ -567,7 +567,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         validate_input_metadata(metadata, convention)
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid multiple ontologies content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -603,6 +603,7 @@ class TestValidateMetadata(unittest.TestCase):
             "cell_type: No match found in EBI OLS for provided ontology ID: CELL_0000066",
             metadata.issues["error"]["ontology"].keys(),
         )
+
         #   invalid ontology label 'homo sapien' for species__ontology_label
         #     with species ontologyID of 'NCBITaxon_9606'
         self.assertIn(
@@ -611,7 +612,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         #   invalid ontologyID 'NCBITaxon_9606' for geographical_region
         self.assertIn(
-            "geographical_region: No match found in EBI OLS for provided ontology ID: NCBITaxon_9606",
+            'geographical_region: input ontology_label "Boston" does not match EBI OLS lookup "Homo sapiens" for ontology id "NCBITaxon_9606".',
             metadata.issues["error"]["ontology"].keys(),
         )
         #   invalid ontologyID 'UBERON_1000331' for organ__ontology_label
@@ -644,7 +645,7 @@ class TestValidateMetadata(unittest.TestCase):
 
             return metadata
 
-        # metadata validation stores warning messages which are available thru CLI
+        # metadata validation stores warning messages which are available through CLI
         # but not currently included in error email - too noisy
         # because no ontology label supplied in metadata file for the unit ontology
         metadata = set_up_test("valid_array_v2.1.2.txt")
@@ -660,7 +661,7 @@ class TestValidateMetadata(unittest.TestCase):
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid array-based ontology content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -670,7 +671,7 @@ class TestValidateMetadata(unittest.TestCase):
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid cell type custom content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -806,6 +807,7 @@ class TestValidateMetadata(unittest.TestCase):
         generated_bq_json = str(metadata.study_file_id) + ".json"
         # This reference file needs updating with every new metadata convention version
         reference_bq_json = "../tests/data/bq_test.json"
+
         self.assertListEqual(
             list(io.open(generated_bq_json)), list(io.open(reference_bq_json))
         )
@@ -876,6 +878,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.assertEqual(mocked_requests_get.call_count, MAX_HTTP_ATTEMPTS)
 
+
     def test_is_label_or_synonym(self):
         label = "10x 3' v2"
         possible_matches = {
@@ -901,7 +904,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         validate_input_metadata(metadata, convention)
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid ontology synonym content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -935,7 +938,7 @@ class TestValidateMetadata(unittest.TestCase):
             ('common cold',),
             ('diabetes mellitus', 'common cold'),
             ('diabetes mellitus', 'mastitis', 'common cold'),
-            ('disease or disorder',),
+            ('disease',),
         ]
 
         self.assertFalse(
@@ -1026,13 +1029,13 @@ class TestValidateMetadata(unittest.TestCase):
 
         # Metadata 'disease' also has multiple ontologyIDs paired with the same label
         # It advises to only check mismatches with labels that are truly multiply assigned:
-        # ['disease or disorder', 'absent']
+        # ['disease', 'absent']
         self.assertIn(
             "disease: Long stretch of contiguously incrementing ontology ID values suggest cut and paste issue - "
             "exiting validation, ontology content not validated against ontology server.\n"
             "Please confirm ontology IDs are correct and resubmit.\n"
             "Check for mismatches between ontology ID and provided ontology label(s) "
-            "['absent', 'disease or disorder'].\n",
+            "['absent', 'disease'].\n",
             metadata.issues["error"]["ontology"].keys(),
             "ontology label multiply paired with IDs should error",
         )

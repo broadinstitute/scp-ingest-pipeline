@@ -160,20 +160,22 @@ class OntologyRetriever:
             if matches:
                 convention_ontology = metadata_ontology.copy()
             else:
-                # store all convention ontologies for lookup later
-                for convention_url in ontology_urls:
+                # Store all convention ontologies for lookup later.
+                # Prioritize first ontology, if multiple as with MONDO, PATO in disease
+                for convention_url in list(reversed(ontology_urls)):
                     convention_shortname = extract_terminal_pathname(convention_url)
                     convention_ontology = request_json_with_backoff(convention_url)
                     self.cached_ontologies[convention_shortname] = convention_ontology
 
         if convention_ontology and metadata_ontology:
-            base_term_uri = metadata_ontology["config"]["baseUris"][0]
+            base_term_uri = '/'.join(metadata_ontology["config"]["fileLocation"].split('/')[:-1]) + '/'
             # temporary workaround for invald baseURI returned from EBI OLS for NCBITaxon (SCP-2820)
             if base_term_uri == "http://purl.obolibrary.org/obo/NCBITAXON_":
                 base_term_uri = "http://purl.obolibrary.org/obo/NCBITaxon_"
-            query_iri = encode_term_iri(term_id, base_term_uri)
+            query_iri = encode_term_iri(term, base_term_uri)
 
             term_url = convention_ontology["_links"]["terms"]["href"] + "/" + query_iri
+
             # add timeout to prevent request from hanging indefinitely
             response = requests.get(term_url, timeout=60)
             # inserting sleep to minimize 'Connection timed out' error with too many concurrent requests
@@ -931,7 +933,7 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
     """
     # this function seems overloaded with its three tasks
     # schema validation, non-ontology errors, ontology info collection
-    # the latter two should be done together in the same pass thru the file
+    # the latter two should be done together in the same pass through the file
     js_errors = defaultdict(list)
     schema = validate_schema(convention, metadata)
 
@@ -1095,6 +1097,7 @@ def validate_collected_ontology_data(metadata, convention):
                 label_and_synonyms = retriever.retrieve_ontology_term_label_and_synonyms(
                     ontology_id, property_name, convention, attribute_type
                 )
+
                 if not is_label_or_synonym(label_and_synonyms, ontology_label):
                     matched_label_for_id = label_and_synonyms.get("label")
                     ontology_source_name = "EBI OLS"
@@ -1412,7 +1415,7 @@ def validate_input_metadata(metadata, convention, bq_json=None):
     review_metadata_names(metadata)
     dev_logger.info('Checking for "Excel drag" events')
     if not detect_excel_drag(metadata, convention):
-        # "short-circut" ontology validation if "Excel drag" detected
+        # "short-circuit" ontology validation if "Excel drag" detected
         # avoids a bloat of calls to EBI OLS, return error faster and avoid
         # long-compute-time issue (if false positives are possible, bypass will be needed)
         dev_logger.info('Validating ontology content against EBI OLS')
