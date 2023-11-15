@@ -603,6 +603,7 @@ class TestValidateMetadata(unittest.TestCase):
             "cell_type: No match found in EBI OLS for provided ontology ID: CELL_0000066",
             metadata.issues["error"]["ontology"].keys(),
         )
+
         #   invalid ontology label 'homo sapien' for species__ontology_label
         #     with species ontologyID of 'NCBITaxon_9606'
         self.assertIn(
@@ -611,7 +612,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         #   invalid ontologyID 'NCBITaxon_9606' for geographical_region
         self.assertIn(
-            "geographical_region: No match found in EBI OLS for provided ontology ID: NCBITaxon_9606",
+            'geographical_region: input ontology_label "Boston" does not match EBI OLS lookup "Homo sapiens" for ontology id "NCBITaxon_9606".',
             metadata.issues["error"]["ontology"].keys(),
         )
         #   invalid ontologyID 'UBERON_1000331' for organ__ontology_label

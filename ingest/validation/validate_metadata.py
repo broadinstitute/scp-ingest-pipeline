@@ -1097,6 +1097,7 @@ def validate_collected_ontology_data(metadata, convention):
                 label_and_synonyms = retriever.retrieve_ontology_term_label_and_synonyms(
                     ontology_id, property_name, convention, attribute_type
                 )
+
                 if not is_label_or_synonym(label_and_synonyms, ontology_label):
                     matched_label_for_id = label_and_synonyms.get("label")
                     ontology_source_name = "EBI OLS"
