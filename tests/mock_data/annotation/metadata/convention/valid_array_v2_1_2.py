@@ -245,7 +245,7 @@ valid_array_v2_1_2_models = {
                 "common cold",
                 "diabetes mellitus|common cold",
                 "diabetes mellitus|mastitis|common cold",
-                "disease or disorder",
+                "disease",
             ],
             "study_file_id": ObjectId("600f42bdb067340e777b1385"),
             "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
