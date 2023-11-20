@@ -329,7 +329,7 @@ def get_ontology_file_location(ontology):
         location = location.replace(f"{ontology['ontologyId']}/extensions/", "")
     if location == "http://purl.obolibrary.org/obo/NCBITAXON_":
         location = "http://purl.obolibrary.org/obo/NCBITaxon_"
-    return location
+    return '/'.join(location.split('/')[:-1]) + '/'
 
 ######################## END ONTOLOGY RETRIVER DEFINITION #########################
 
