@@ -168,10 +168,7 @@ class OntologyRetriever:
                     self.cached_ontologies[convention_shortname] = convention_ontology
 
         if convention_ontology and metadata_ontology:
-            base_term_uri = '/'.join(metadata_ontology["config"]["fileLocation"].split('/')[:-1]) + '/'
-            # temporary workaround for invald baseURI returned from EBI OLS for NCBITaxon (SCP-2820)
-            if base_term_uri == "http://purl.obolibrary.org/obo/NCBITAXON_":
-                base_term_uri = "http://purl.obolibrary.org/obo/NCBITaxon_"
+            base_term_uri = get_ontology_file_location(metadata_ontology)
             query_iri = encode_term_iri(term, base_term_uri)
 
             term_url = convention_ontology["_links"]["terms"]["href"] + "/" + query_iri
@@ -322,6 +319,17 @@ def extract_terminal_pathname(url):
 def get_urls_for_property(convention, property_name):
     return convention["properties"][property_name]["ontology"].split(",")
 
+
+def get_ontology_file_location(ontology):
+    """Find and format fileLocation URL for running queries against an ontology
+    """
+    location = ontology["config"]["fileLocation"]
+    # issue with some ontologies (like GO) having non-standard fileLocation URLs
+    if 'extensions' in location:
+        location = location.replace(f"{ontology['ontologyId']}/extensions/", "")
+    if location == "http://purl.obolibrary.org/obo/NCBITAXON_":
+        location = "http://purl.obolibrary.org/obo/NCBITaxon_"
+    return '/'.join(location.split('/')[:-1]) + '/'
 
 ######################## END ONTOLOGY RETRIVER DEFINITION #########################
 
