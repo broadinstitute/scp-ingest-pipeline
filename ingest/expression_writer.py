@@ -29,6 +29,7 @@ import re
 import multiprocessing
 import sys
 import datetime
+import urllib
 from dateutil.relativedelta import relativedelta
 from functools import partial
 
@@ -186,7 +187,7 @@ class ExpressionWriter:
             while current_pos < end_pos:
                 line = matrix_file.readline()
                 gene_idx = int(line.split()[0])
-                gene_name = genes[gene_idx - 1]
+                gene_name = urllib.parse.quote_plus(genes[gene_idx - 1])
                 fragment_path = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
                 with open(fragment_path, 'a+') as file:
                     file.write(line)
