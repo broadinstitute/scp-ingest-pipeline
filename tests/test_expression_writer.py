@@ -108,14 +108,15 @@ class TestExpressionWriter(unittest.TestCase):
         exp_writer = self.setup_dense_exp_writer(cluster_name)
         seek_points = exp_writer.get_file_seek_points()
         # note: this is dependent on the number of cores, and depending on your architecture this may differ
-        # this test covers cases for 3, 4, or 8 cores utilized
-        print('exp_writer.num_cores', exp_writer.num_cores)
+        # this test covers cases various numbers of cores utilized
         if exp_writer.num_cores == 3:
             expected_points = [[161, 335], [336, 336]]
         elif exp_writer.num_cores == 4:
             expected_points = [[161, 264], [265, 336]]
-        else:
+        elif exp_writer.num_cores == 8:
             expected_points = [[161, 264], [265, 335], [336, 336]]
+        elif exp_writer.num_cores > 16:
+            expected_points = [[161, 196], [197, 264], [265, 335], [336, 336]]
         self.assertEqual(expected_points, seek_points)
 
     def test_divide_sparse_matrix(self):
