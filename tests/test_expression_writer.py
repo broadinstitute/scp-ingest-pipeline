@@ -109,6 +109,7 @@ class TestExpressionWriter(unittest.TestCase):
         seek_points = exp_writer.get_file_seek_points()
         # note: this is dependent on the number of cores, and depending on your architecture this may differ
         # this test covers cases for 3, 4, or 8 cores utilized
+        print('exp_writer.num_cores', exp_writer.num_cores)
         if exp_writer.num_cores == 3:
             expected_points = [[161, 335], [336, 336]]
         elif exp_writer.num_cores == 4:
