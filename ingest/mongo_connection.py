@@ -34,6 +34,7 @@ class MongoConnection:
                 password=self.password,
                 authSource=self.db_name,
                 authMechanism="SCRAM-SHA-1",
+                serverSelectionTimeoutMS=60_000
             )
             self._client = client[self.db_name]
         # Needed to due to lack of database mock library for MongoDB
