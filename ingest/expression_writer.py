@@ -187,8 +187,9 @@ class ExpressionWriter:
             while current_pos < end_pos:
                 line = matrix_file.readline()
                 gene_idx = int(line.split()[0])
-                gene_name = urllib.parse.quote_plus(genes[gene_idx - 1])
-                fragment_path = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
+                gene_name = genes[gene_idx - 1]
+                safe_gene_name = urllib.parse.quote_plus(gene_name)
+                fragment_path = f"{data_dir}/gene_entries/{safe_gene_name}__entries.txt"
                 with open(fragment_path, 'a+') as file:
                     file.write(line)
                 current_pos += len(line)

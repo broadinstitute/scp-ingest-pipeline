@@ -63,6 +63,7 @@ class TestExpressionWriter(unittest.TestCase):
         self.assertTrue(os.path.exists(cluster_name))
         self.assertTrue(os.path.exists(f"{cluster_name}/Sergef.json"))
         self.assertTrue(os.path.exists(f"{cluster_name}/Itm2a.json"))
+        self.assertTrue(os.path.exists(f"{cluster_name}/THRA1%2FBTR.json"))
         expected_data = json.loads(open(f"data/expression_writer/Sergef.json").read())
         rendered_data = json.loads(gzip.open(f"{cluster_name}/Sergef.json").read())
         self.assertEqual(expected_data, rendered_data)
