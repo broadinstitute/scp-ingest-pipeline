@@ -108,9 +108,11 @@ class TestExpressionWriter(unittest.TestCase):
         exp_writer = self.setup_dense_exp_writer(cluster_name)
         seek_points = exp_writer.get_file_seek_points()
         # note: this is dependent on the number of cores, and depending on your architecture this may differ
-        # this test covers cases for both A) 3 and B) 4 or 8 cores utilized
+        # this test covers cases for 3, 4, or 8 cores utilized
         if exp_writer.num_cores == 3:
             expected_points = [[161, 335], [336, 336]]
+        elif exp_writer.num_cores == 4:
+            expected_points = [[161, 264], [265, 336]]
         else:
             expected_points = [[161, 264], [265, 335], [336, 336]]
         self.assertEqual(expected_points, seek_points)
