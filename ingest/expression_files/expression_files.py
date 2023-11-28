@@ -33,7 +33,7 @@ except ImportError:
 class GeneExpression:
     __metaclass__ = abc.ABCMeta
     COLLECTION_NAME = "genes"
-    DATA_ARRAY_BATCH_SIZE = 1_000
+    DATA_ARRAY_BATCH_SIZE = 500
     # Logger provides more details
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 

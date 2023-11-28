@@ -4,6 +4,7 @@ import re
 import os
 import gzip
 import json
+import urllib.parse
 
 try:
     from ingest_files import IngestFiles
@@ -212,5 +213,6 @@ def write_gene_scores(gene_name, exp_values, data_dir):
     :param exp_values: (list) expression values
     :param data_dir: (str) name out output dir
     """
-    with gzip.open(f"{data_dir}/{gene_name}.json", "wt") as file:
+    safe_gene_name = urllib.parse.quote_plus(gene_name)
+    with gzip.open(f"{data_dir}/{safe_gene_name}.json", "wt") as file:
         json.dump(list(exp_values), file, separators=(',', ':'))
