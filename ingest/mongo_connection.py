@@ -17,7 +17,7 @@ class MongoConnection:
     A concrete class that defines a MongoDB client
     """
 
-    MAX_AUTO_RECONNECT_ATTEMPTS = 5
+    MAX_AUTO_RECONNECT_ATTEMPTS = 10
 
     def __init__(self):
         # Needed to run tests in test_ingest.py in CircleCI.
@@ -58,7 +58,7 @@ def graceful_auto_reconnect(mongo_op_func):
     def retry(attempt_num):
         if attempt_num < MAX_ATTEMPTS - 1:
             exp_backoff = pow(2, attempt_num)
-            max_jitter = math.ceil(exp_backoff * 0.2)
+            max_jitter = math.ceil(exp_backoff * 0.5)
             final_wait_time = exp_backoff + random.randint(
                 0, max_jitter
             )  # exponential back off
