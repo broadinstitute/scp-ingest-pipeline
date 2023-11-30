@@ -52,7 +52,7 @@ def graceful_auto_reconnect(mongo_op_func):
     import random
     import math
 
-    MAX_ATTEMPTS = 5
+    MAX_ATTEMPTS = 10
     # Adopted from https://stackoverflow.com/questions/46939285
 
     def retry(attempt_num):
