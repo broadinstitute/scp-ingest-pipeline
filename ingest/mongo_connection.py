@@ -56,8 +56,8 @@ def graceful_auto_reconnect(mongo_op_func):
 
     def retry(attempt_num):
         if attempt_num < MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS - 1:
-            exp_backoff = pow(2, attempt_num)
-            max_jitter = math.ceil(exp_backoff * 0.5)
+            exp_backoff = pow(2, attempt_num + 1)
+            max_jitter = math.ceil(exp_backoff * 0.2)
             final_wait_time = exp_backoff + random.randint(
                 0, max_jitter
             )  # exponential back off
