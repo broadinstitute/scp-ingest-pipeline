@@ -368,6 +368,7 @@ class TestExpressionFiles(unittest.TestCase):
         )
         self.assertEqual(actual_gene_model, expected_gene_model)
 
+    @patch("mongo_connection.MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS", 3)
     def test_insert(self):
         client_mock = MagicMock()
 
@@ -403,7 +404,7 @@ class TestExpressionFiles(unittest.TestCase):
         self.assertRaises(
             AutoReconnect, GeneExpression.insert, docs, "collection", client_mock
         )
-        self.assertEqual(client_mock["collection"].insert_many.call_count, 5)
+        self.assertEqual(client_mock["collection"].insert_many.call_count, 3)
         client_mock.reset_mock()
 
         def raiseError(*args, **kwargs):
@@ -429,4 +430,4 @@ class TestExpressionFiles(unittest.TestCase):
         self.assertRaises(
             BulkWriteError, GeneExpression.insert, docs, "collection", client_mock
         )
-        self.assertEqual(client_mock["collection"].insert_many.call_count, 5)
+        self.assertEqual(client_mock["collection"].insert_many.call_count, 3)

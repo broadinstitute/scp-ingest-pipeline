@@ -17,7 +17,7 @@ class MongoConnection:
     A concrete class that defines a MongoDB client
     """
 
-    MAX_AUTO_RECONNECT_ATTEMPTS = 5
+    MAX_AUTO_RECONNECT_ATTEMPTS = 10
 
     def __init__(self):
         # Needed to run tests in test_ingest.py in CircleCI.
@@ -52,12 +52,11 @@ def graceful_auto_reconnect(mongo_op_func):
     import random
     import math
 
-    MAX_ATTEMPTS = 5
     # Adopted from https://stackoverflow.com/questions/46939285
 
     def retry(attempt_num):
-        if attempt_num < MAX_ATTEMPTS - 1:
-            exp_backoff = pow(2, attempt_num)
+        if attempt_num < MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS - 1:
+            exp_backoff = pow(2, attempt_num + 1)
             max_jitter = math.ceil(exp_backoff * 0.2)
             final_wait_time = exp_backoff + random.randint(
                 0, max_jitter
@@ -68,17 +67,17 @@ def graceful_auto_reconnect(mongo_op_func):
     @functools.wraps(mongo_op_func)
     def wrapper(*args, **kwargs):
         args = list(args)
-        for attempt in range(MAX_ATTEMPTS):
+        for attempt in range(MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS):
             try:
                 return mongo_op_func(*args, **kwargs)
             except AutoReconnect as e:
-                if attempt < MAX_ATTEMPTS - 1:
+                if attempt < MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS - 1:
                     dev_logger.warning("PyMongo auto-reconnecting... %s.", str(e))
                     retry(attempt)
                 else:
                     raise e
             except BulkWriteError as bwe:
-                if attempt < MAX_ATTEMPTS - 1:
+                if attempt < MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS - 1:
                     dev_logger.warning(
                         "Batch ops error occurred. Reinsert attempt %s.", str(attempt)
                     )
