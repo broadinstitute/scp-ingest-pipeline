@@ -23,6 +23,8 @@ RUN apt-get -y update && \
   apt-get -y install python3.10-dev && \
   apt-get -y install python3.10-distutils
 
+RUN apt-get -y update && apt-get -y install curl
+
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
 
 # symlink python3.10 to python

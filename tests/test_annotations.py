@@ -54,8 +54,7 @@ class TestAnnotations(unittest.TestCase):
         self.assertEqual(colums, expected)
 
     def test_duplicate_headers(self):
-        """Annotation headers should not contain duplicate values
-        """
+        """Annotation headers should not contain duplicate values"""
         dup_headers = Annotations(
             "../tests/data/dup_headers_v2.0.0.tsv",
             ["text/csv", "text/plain", "text/tab-separated-values"],
@@ -110,8 +109,7 @@ class TestAnnotations(unittest.TestCase):
         self.assertTrue(value_with_leading_zeros.startswith("0"))
 
     def test_header_format(self):
-        """Header rows of metadata file should conform to standard
-        """
+        """Header rows of metadata file should conform to standard"""
         error_headers = Annotations(
             "../tests/data/error_headers_v2.0.0.tsv",
             ["text/csv", "text/plain", "text/tab-separated-values"],

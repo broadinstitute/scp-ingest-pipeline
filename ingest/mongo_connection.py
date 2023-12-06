@@ -17,7 +17,7 @@ class MongoConnection:
     A concrete class that defines a MongoDB client
     """
 
-    MAX_AUTO_RECONNECT_ATTEMPTS = 5
+    MAX_AUTO_RECONNECT_ATTEMPTS = 10
 
     def __init__(self):
         # Needed to run tests in test_ingest.py in CircleCI.
@@ -34,6 +34,7 @@ class MongoConnection:
                 password=self.password,
                 authSource=self.db_name,
                 authMechanism="SCRAM-SHA-1",
+                serverSelectionTimeoutMS=60_000
             )
             self._client = client[self.db_name]
         # Needed to due to lack of database mock library for MongoDB
@@ -46,17 +47,16 @@ class MongoConnection:
 # -graceful_auto_reconnect-py
 def graceful_auto_reconnect(mongo_op_func):
     """Gracefully handles a reconnection event as well as other exceptions
-        for mongo.
+    for mongo.
     """
     import random
     import math
 
-    MAX_ATTEMPTS = 5
     # Adopted from https://stackoverflow.com/questions/46939285
 
     def retry(attempt_num):
-        if attempt_num < MAX_ATTEMPTS - 1:
-            exp_backoff = pow(2, attempt_num)
+        if attempt_num < MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS - 1:
+            exp_backoff = pow(2, attempt_num + 1)
             max_jitter = math.ceil(exp_backoff * 0.2)
             final_wait_time = exp_backoff + random.randint(
                 0, max_jitter
@@ -67,17 +67,17 @@ def graceful_auto_reconnect(mongo_op_func):
     @functools.wraps(mongo_op_func)
     def wrapper(*args, **kwargs):
         args = list(args)
-        for attempt in range(MAX_ATTEMPTS):
+        for attempt in range(MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS):
             try:
                 return mongo_op_func(*args, **kwargs)
             except AutoReconnect as e:
-                if attempt < MAX_ATTEMPTS - 1:
+                if attempt < MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS - 1:
                     dev_logger.warning("PyMongo auto-reconnecting... %s.", str(e))
                     retry(attempt)
                 else:
                     raise e
             except BulkWriteError as bwe:
-                if attempt < MAX_ATTEMPTS - 1:
+                if attempt < MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS - 1:
                     dev_logger.warning(
                         "Batch ops error occurred. Reinsert attempt %s.", str(attempt)
                     )
@@ -96,6 +96,7 @@ def graceful_auto_reconnect(mongo_op_func):
 
     return wrapper
 
+
 def log_error_without_values(error):
     """Remove 'values' array from log messages as this is usually very long and makes logs difficult to read
 
@@ -105,6 +106,7 @@ def log_error_without_values(error):
         if 'values' in entry['op']:
             entry['op']['values'] = '<filtered>'
     dev_logger.debug(str(error.details))
+
 
 def discard_inserted_documents(errors, original_documents) -> list[dict]:
     """Discard any documents that have already been inserted which are violating index constraints
@@ -118,5 +120,11 @@ def discard_inserted_documents(errors, original_documents) -> list[dict]:
     error_docs = []
     for doc in errors:
         if doc['code'] == 11000:
-            error_docs.append({'name': doc['op']['name'], 'array_index': doc['op']['array_index']})
-    return list(d for d in original_documents if {'name': d['name'], 'array_index': d['array_index']} not in error_docs)
+            error_docs.append(
+                {'name': doc['op']['name'], 'array_index': doc['op']['array_index']}
+            )
+    return list(
+        d
+        for d in original_documents
+        if {'name': d['name'], 'array_index': d['array_index']} not in error_docs
+    )

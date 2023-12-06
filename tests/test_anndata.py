@@ -5,22 +5,40 @@
 import unittest
 import sys
 import os
+import gzip
 from unittest.mock import patch
+
+from test_expression_files import mock_expression_load
 
 sys.path.append("../ingest")
 from anndata_ import AnnDataIngestor
 from ingest_files import IngestFiles
+from expression_files.expression_files import GeneExpression
 
 
 class TestAnnDataIngestor(unittest.TestCase):
+    GeneExpression.load = mock_expression_load
+
     @staticmethod
     def setup_class(self):
         filepath_valid = "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad"
         filepath_invalid = "../tests/data/anndata/bad.h5"
+        filepath_dup_feature = "../tests/data/anndata/dup_feature.h5ad"
+        filepath_dup_cell = "../tests/data/anndata/dup_cell.h5ad"
+        filepath_nan = "../tests/data/anndata/nan_value.h5ad"
+        filepath_synthetic = "../tests/data/anndata/anndata_test.h5ad"
         self.study_id = "addedfeed000000000000000"
         self.study_file_id = "dec0dedfeed0000000000000"
         self.valid_args = [filepath_valid, self.study_id, self.study_file_id]
         self.invalid_args = [filepath_invalid, self.study_id, self.study_file_id]
+        self.dup_feature_args = [
+            filepath_dup_feature,
+            self.study_id,
+            self.study_file_id,
+        ]
+        self.dup_cell_args = [filepath_dup_cell, self.study_id, self.study_file_id]
+        self.nan_value_args = [filepath_nan, self.study_id, self.study_file_id]
+        self.synthetic_args = [filepath_synthetic, self.study_id, self.study_file_id]
         self.cluster_name = 'X_tsne'
         self.valid_kwargs = {'obsm_keys': [self.cluster_name]}
         self.anndata_ingest = AnnDataIngestor(*self.valid_args, **self.valid_kwargs)
@@ -33,7 +51,8 @@ class TestAnnDataIngestor(unittest.TestCase):
 
     def test_minimal_valid_anndata(self):
         self.assertTrue(
-            self.anndata_ingest.validate(), "expect known good file to open with scanpy"
+            self.anndata_ingest.basic_validation(),
+            "expect known good file to open with scanpy",
         )
 
     def test_truncated_anndata(self):
@@ -46,7 +65,7 @@ class TestAnnDataIngestor(unittest.TestCase):
             "Scanpy cannot read file, \"../tests/data/anndata/bad.h5\".",
             lambda: truncated_input.obtain_adata(),
         )
-        self.assertFalse(truncated_input.validate())
+        self.assertFalse(truncated_input.basic_validation())
 
     def test_input_bad_suffix(self):
         bad_input = AnnDataIngestor(
@@ -60,7 +79,7 @@ class TestAnnDataIngestor(unittest.TestCase):
             "File type not detected for ../tests/data/anndata/bad.foo, expected file endings are: .h5ad .h5 .hdf5",
             lambda: bad_input.obtain_adata(),
         )
-        self.assertFalse(bad_input.validate())
+        self.assertFalse(bad_input.basic_validation())
 
     def test_set_output_filename(self):
         cluster_name = "X_Umap"
@@ -95,7 +114,8 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.anndata_ingest.generate_cluster_body(
             self.anndata_ingest.obtain_adata(), self.cluster_name
         )
-        with open(self.cluster_filename) as cluster_body:
+        compressed_file = self.cluster_filename + ".gz"
+        with gzip.open(compressed_file, "rt", encoding="utf-8-sig") as cluster_body:
             line = cluster_body.readline().split("\t")
             expected_line = ['AAACATACAACCAC-1', '16.009954', "-21.073845\n"]
             self.assertEqual(
@@ -108,23 +128,35 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.anndata_ingest.generate_metadata_file(
             self.anndata_ingest.obtain_adata(), self.metadata_filename
         )
-        with open(self.metadata_filename) as metadata_body:
+        compressed_file = self.metadata_filename + ".gz"
+        with gzip.open(compressed_file, "rt", encoding="utf-8-sig") as metadata_body:
             line = metadata_body.readline().split("\t")
             expected_line = [
-                'NAME', 'n_genes', 'percent_mito', 'n_counts', 'louvain', 'donor_id', 'biosample_id', 'sex', 'species',
-                'species__ontology_label', 'disease', 'disease__ontology_label', 'organ', 'organ__ontology_label',
-                'library_preparation_protocol', "library_preparation_protocol__ontology_label\n"
+                'NAME',
+                'n_genes',
+                'percent_mito',
+                'n_counts',
+                'louvain',
+                'donor_id',
+                'biosample_id',
+                'sex',
+                'species',
+                'species__ontology_label',
+                'disease',
+                'disease__ontology_label',
+                'organ',
+                'organ__ontology_label',
+                'library_preparation_protocol',
+                "library_preparation_protocol__ontology_label\n",
             ]
             self.assertEqual(
-                expected_line,
-                line,
-                'did not get expected headers from metadata body',
+                expected_line, line, 'did not get expected headers from metadata body'
             )
-
 
     def test_get_files_to_delocalize(self):
         files = AnnDataIngestor.clusterings_to_delocalize(self.valid_kwargs)
-        expected_files = [self.cluster_filename]
+        compressed_file = self.cluster_filename + ".gz"
+        expected_files = [compressed_file]
         self.assertEqual(expected_files, files)
 
     def test_delocalize_files(self):
@@ -143,3 +175,4 @@ class TestAnnDataIngestor(unittest.TestCase):
                 1,
                 "expected 1 call to delocalize output files",
             )
+

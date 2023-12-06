@@ -61,8 +61,7 @@ class MetricProperties:
         self.set_mixpanel_nums()
 
     def set_mixpanel_nums(self):
-        """Derive count for each type of Mixpanel property
-        """
+        """Derive count for each type of Mixpanel property"""
         for prop in ["errorTypes", "errors", "warningTypes", "warnings"]:
             num_prop = "num" + prop[0].upper() + prop[1:]
             if self.__properties.get(prop):
@@ -70,7 +69,7 @@ class MetricProperties:
 
     def append_issue(self, props):
         """Add error/warning properties to MetricsProperties
-            without clobbering
+        without clobbering
         """
 
         if props:
@@ -90,7 +89,7 @@ class MetricProperties:
 
 def bypass_mongo_writes():
     """Check if developer has set environment variable to bypass writing data to MongoDB
-        BYPASS_MONGO_WRITES='yes'
+    BYPASS_MONGO_WRITES='yes'
     """
     if os.environ.get("BYPASS_MONGO_WRITES") is not None:
         skip = os.environ["BYPASS_MONGO_WRITES"]
@@ -103,8 +102,7 @@ def bypass_mongo_writes():
 
 
 class Study:
-    """Provides attributes for a given study
-    """
+    """Provides attributes for a given study"""
 
     def __init__(self, study_id):
         self.study = study_id
@@ -125,7 +123,6 @@ class Study:
         if bypass_mongo_writes():
             self.accession = "SCPdev"
         else:
-
             study = list(
                 MONGO_CONNECTION._client["study_accessions"].find(
                     {"study_id": study_id}, {"_id": 0}

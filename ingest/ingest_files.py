@@ -170,7 +170,12 @@ class IngestFiles:
 
     @staticmethod
     def delocalize_file(
-        study_file_id, study_id, file_path, file_to_delocalize, bucket_destination, content_encoding=None
+        study_file_id,
+        study_id,
+        file_path,
+        file_to_delocalize,
+        bucket_destination,
+        content_encoding=None,
     ):
         """Writes local file to Google bucket
         Args:
@@ -202,7 +207,7 @@ class IngestFiles:
             IngestFiles.dev_logger.error("Cannot push to bucket. File is not remote")
 
     def open_file(self, file_path, open_as=None, start_point: int = 0, **kwargs):
-        """ A wrapper function for opening txt (txt is expected to be tsv or csv), csv, or tsv formatted files"""
+        """A wrapper function for opening txt (txt is expected to be tsv or csv), csv, or tsv formatted files"""
         open_file, file_path = self.resolve_path(file_path)
         file_size = os.path.getsize(file_path)
         if file_size == 0:
@@ -268,8 +273,8 @@ class IngestFiles:
 
     # Inherited function
     def extract(self):
-        """ Calls extract function for txt, csv, or tsv formatted files to
-            retrieve all contents from file.
+        """Calls extract function for txt, csv, or tsv formatted files to
+        retrieve all contents from file.
         """
 
         file_type_extract_fns = {
@@ -314,7 +319,7 @@ class IngestFiles:
             )
 
     def open_pandas(self, file_path, file_type, **kwargs):
-        """Opens file as a dataframe """
+        """Opens file as a dataframe"""
         open_file_object = kwargs.pop("open_file_object")
         if file_type in self.allowed_file_types:
             # Determine delimiter based on file type
@@ -334,9 +339,9 @@ class IngestFiles:
             raise ValueError("File must be tab or comma delimited")
 
     def open_anndata(self, file_path, **kwargs):
-        """Opens file as AnnData object """
+        """Opens file as AnnData object"""
         try:
-            return sc.read_h5ad(file_path, backed='r')
+            return sc.read_h5ad(file_path)
         except OSError as e:
             msg = f"Scanpy cannot read file, \"{file_path}\"."
             log_exception(IngestFiles.dev_logger, IngestFiles.user_logger, msg)

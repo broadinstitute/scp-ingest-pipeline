@@ -59,8 +59,7 @@ class DifferentialExpression:
 
     @staticmethod
     def assess_annotation(annotation, metadata):
-        """ Check that annotation for DE is not of TYPE numeric
-        """
+        """Check that annotation for DE is not of TYPE numeric"""
         dtype_info = dict(zip(metadata.headers, metadata.annot_types))
         annotation_info = dtype_info.get(annotation, None)
         if annotation_info == "numeric":
@@ -90,7 +89,7 @@ class DifferentialExpression:
 
     @staticmethod
     def get_cluster_cells(cluster_cells):
-        """ ID cells in cluster file """
+        """ID cells in cluster file"""
         # cluster_cells.tolist() yields a list of lists that needs to be flattened
         # using extend converts a single-value list to a plain value
         cluster_cell_values = cluster_cells.tolist()
@@ -101,9 +100,9 @@ class DifferentialExpression:
 
     @staticmethod
     def determine_dtypes(headers, annot_types):
-        """ use SCP TYPE data to coerce data to proper dtypes:
-                numeric-like group annotations
-                missing values in group annotations (to avoid NaN)
+        """use SCP TYPE data to coerce data to proper dtypes:
+        numeric-like group annotations
+        missing values in group annotations (to avoid NaN)
         """
         dtype_info = dict(zip(headers, annot_types))
         dtypes = {}
@@ -116,9 +115,9 @@ class DifferentialExpression:
 
     @staticmethod
     def process_annots(metadata_file_path, allowed_file_types, headers, dtypes):
-        """ using SCP metadata header lines create pandas dataframe where
-            numeric-seeming group annotations are properly set to dtype of str
-            and NaN in group columns are converted to "__Unspecified__"
+        """using SCP metadata header lines create pandas dataframe where
+        numeric-seeming group annotations are properly set to dtype of str
+        and NaN in group columns are converted to "__Unspecified__"
         """
         annot_redux = IngestFiles(metadata_file_path, allowed_file_types)
         annot_file_type = annot_redux.get_file_type(metadata_file_path)[0]
@@ -146,8 +145,7 @@ class DifferentialExpression:
 
     @staticmethod
     def subset_annots(metadata, de_cells):
-        """ subset metadata based on cells in cluster
-        """
+        """subset metadata based on cells in cluster"""
         DifferentialExpression.de_logger.info(
             "subsetting metadata on cells in clustering"
         )
@@ -162,15 +160,13 @@ class DifferentialExpression:
 
     @staticmethod
     def order_annots(metadata, adata_cells):
-        """ order metadata based on cells order in matrix
-        """
+        """order metadata based on cells order in matrix"""
         matrix_cell_order = adata_cells.tolist()
         return metadata.reindex(matrix_cell_order)
 
     @staticmethod
     def subset_adata(adata, de_cells):
-        """ subset adata object based on cells in cluster
-        """
+        """subset adata object based on cells in cluster"""
         DifferentialExpression.de_logger.info(
             "subsetting matrix on cells in clustering"
         )
@@ -183,7 +179,7 @@ class DifferentialExpression:
         try:
             # only used in output filename, replacing non-alphanumeric with underscores
             # except '+' replaced with 'pos'
-            self.cluster_name = DifferentialExpression.sanitize_strings(
+            self.cluster_name = DifferentialExpression.sanitize_string(
                 self.kwargs["name"]
             )
             if self.matrix_file_type == "mtx":
@@ -228,10 +224,10 @@ class DifferentialExpression:
 
     @staticmethod
     def get_genes(genes_path):
-        """ Genes file can have one or two columns of gene information
-            Preferentially use gene names from second column.
-            If duplicate gene names, check that 1st plus 2nd column provides uniqueness
-            If unique when joined, join columns with pipe (|) for use as DE input
+        """Genes file can have one or two columns of gene information
+        Preferentially use gene names from second column.
+        If duplicate gene names, check that 1st plus 2nd column provides uniqueness
+        If unique when joined, join columns with pipe (|) for use as DE input
         """
         genes_object = IngestFiles(genes_path, None)
         local_genes_path = genes_object.resolve_path(genes_path)[1]
@@ -268,8 +264,7 @@ class DifferentialExpression:
 
     @staticmethod
     def get_barcodes(barcodes_path):
-        """ Extract barcodes from file for mtx reconstitution
-        """
+        """Extract barcodes from file for mtx reconstitution"""
         barcodes_ingest_file = IngestFiles(barcodes_path, "text/tab-separated-values")
         barcodes_file = barcodes_ingest_file.resolve_path(barcodes_path)[0]
         barcodes = [c.strip().strip('"') for c in barcodes_file.readlines()]
@@ -277,8 +272,7 @@ class DifferentialExpression:
 
     @staticmethod
     def adata_from_mtx(matrix_file_path, genes_path, barcodes_path):
-        """ reconstitute AnnData object from matrix, genes, barcodes files
-        """
+        """reconstitute AnnData object from matrix, genes, barcodes files"""
         # process smaller files before reading larger matrix file
         barcodes = DifferentialExpression.get_barcodes(barcodes_path)
         features = DifferentialExpression.get_genes(genes_path)
@@ -295,8 +289,8 @@ class DifferentialExpression:
 
     @staticmethod
     def remove_single_sample_data(adata, annotation):
-        """ identify and remove cells that would constitute an annotation label
-            that has data with only a single sample
+        """identify and remove cells that would constitute an annotation label
+        that has data with only a single sample
         """
         counts = adata.obs[annotation].value_counts(dropna=False)
         for label, count in counts.iteritems():
@@ -306,14 +300,12 @@ class DifferentialExpression:
 
     @staticmethod
     def delimiter_in_gene_name(rank):
-        """ Check if pipe delimiter occurs in "names" column
-        """
+        """Check if pipe delimiter occurs in "names" column"""
         return rank['names'].str.contains('|', regex=False).any()
 
     @staticmethod
     def extract_gene_id_for_out_file(rank):
-        """ Separate out gene name from gene ID
-        """
+        """Separate out gene name from gene ID"""
         rank['gene_id'] = rank['names'].str.split('|').str[0]
         rank['names'] = rank['names'].str.split('|').str[1]
         return rank
@@ -392,8 +384,8 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info("Gathering DE annotation labels")
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
-            clean_group = DifferentialExpression.sanitize_strings(group)
-            clean_annotation = DifferentialExpression.sanitize_strings(annotation)
+            clean_group = DifferentialExpression.sanitize_string(group)
+            clean_annotation = DifferentialExpression.sanitize_string(annotation)
             DifferentialExpression.de_logger.info(f"Writing DE output for {group}")
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
             if DifferentialExpression.delimiter_in_gene_name(rank):
@@ -411,7 +403,7 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info("DE processing complete")
 
     @staticmethod
-    def sanitize_strings(input_string):
+    def sanitize_string(input_string):
         """
         Replace '+' with 'pos', then replace non-alphanumerics with underscore
         this allows distinct sanitization for "CD16+ monocyte" vs "CD16- monocyte"
@@ -421,26 +413,25 @@ class DifferentialExpression:
 
     @staticmethod
     def string_for_output_match(arguments):
-        cleaned_cluster_name = DifferentialExpression.sanitize_strings(
+        cleaned_cluster_name = DifferentialExpression.sanitize_string(
             arguments["cluster_name"]
         )
-        cleaned_annotation_name = DifferentialExpression.sanitize_strings(
+        cleaned_annotation_name = DifferentialExpression.sanitize_string(
             arguments["annotation_name"]
         )
         files_to_match = f"{cleaned_cluster_name}--{cleaned_annotation_name}*.tsv"
         return files_to_match
 
     @staticmethod
-    def delocalize_de_files(file_path, study_file_id, files_to_match):
-        """ Copy DE output files to study bucket
-        """
+    def delocalize_de_files(destination_file_path, study_file_id, files_to_match):
+        """Copy DE output files to study bucket"""
 
         files = glob.glob(files_to_match)
         for file in files:
             IngestFiles.delocalize_file(
                 study_file_id,
                 None,
-                file_path,
+                destination_file_path,
                 file,
                 f"_scp_internal/differential_expression/{file}",
             )

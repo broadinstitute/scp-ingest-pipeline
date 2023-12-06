@@ -118,8 +118,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
     def test_convention_content(self):
-        """Metadata convention should be valid jsonschema
-        """
+        """Metadata convention should be valid jsonschema"""
 
         args = "--convention ../tests/data/AMC_invalid.json ../tests/data/annotation/metadata/convention/valid_no_array_v2.0.0.txt"
         metadata, convention = self.setup_metadata(args)
@@ -470,8 +469,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
 
     def test_valid_nonontology_content(self):
-        """Non-ontology metadata should conform to convention requirements
-        """
+        """Non-ontology metadata should conform to convention requirements"""
         # def set
         # Note: this input metadata file does not have array-based metadata
         args = (
@@ -538,8 +536,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
     def test_valid_ontology_content(self):
-        """Ontology metadata should conform to convention requirements
-        """
+        """Ontology metadata should conform to convention requirements"""
         # Note: this input metadata file does not have array-based metadata
         args = (
             "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
@@ -557,7 +554,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_valid_multiple_ontologies_content(self):
         """Ontology metadata should conform to convention requirements
-           Specifically tests that a term can be found in one of two accepted ontologies (e.g. disease in MONDO or PATO)
+        Specifically tests that a term can be found in one of two accepted ontologies (e.g. disease in MONDO or PATO)
         """
         # Note: this input metadata file does not have array-based metadata
         args = (
@@ -570,13 +567,12 @@ class TestValidateMetadata(unittest.TestCase):
         )
         validate_input_metadata(metadata, convention)
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid multiple ontologies content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
     def test_invalid_ontology_content(self):
-        """Ontology metadata should conform to convention requirements
-        """
+        """Ontology metadata should conform to convention requirements"""
         # Note: this input metadata file does not have array-based metadata
         args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json ../tests/data/invalid_ontology_v2.0.0.tsv"
         metadata, convention = self.setup_metadata(args)
@@ -607,6 +603,7 @@ class TestValidateMetadata(unittest.TestCase):
             "cell_type: No match found in EBI OLS for provided ontology ID: CELL_0000066",
             metadata.issues["error"]["ontology"].keys(),
         )
+
         #   invalid ontology label 'homo sapien' for species__ontology_label
         #     with species ontologyID of 'NCBITaxon_9606'
         self.assertIn(
@@ -615,7 +612,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         #   invalid ontologyID 'NCBITaxon_9606' for geographical_region
         self.assertIn(
-            "geographical_region: No match found in EBI OLS for provided ontology ID: NCBITaxon_9606",
+            'geographical_region: input ontology_label "Boston" does not match EBI OLS lookup "Homo sapiens" for ontology id "NCBITaxon_9606".',
             metadata.issues["error"]["ontology"].keys(),
         )
         #   invalid ontologyID 'UBERON_1000331' for organ__ontology_label
@@ -635,8 +632,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
     def test_content(self):
-        """Array-based metadata should conform to convention requirements
-        """
+        """Array-based metadata should conform to convention requirements"""
 
         def set_up_test(test_file_name, bq=None):
             test_file_path = "data/annotation/metadata/convention/" + test_file_name
@@ -649,7 +645,7 @@ class TestValidateMetadata(unittest.TestCase):
 
             return metadata
 
-        # metadata validation stores warning messages which are available thru CLI
+        # metadata validation stores warning messages which are available through CLI
         # but not currently included in error email - too noisy
         # because no ontology label supplied in metadata file for the unit ontology
         metadata = set_up_test("valid_array_v2.1.2.txt")
@@ -665,7 +661,7 @@ class TestValidateMetadata(unittest.TestCase):
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid array-based ontology content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -675,7 +671,7 @@ class TestValidateMetadata(unittest.TestCase):
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid cell type custom content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -799,8 +795,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
     def test_bigquery_json_content(self):
-        """generated newline delimited JSON for BigQuery upload should match expected output
-        """
+        """generated newline delimited JSON for BigQuery upload should match expected output"""
         args = (
             "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
             "../tests/data/annotation/metadata/convention/valid_array_v2.1.2.txt"
@@ -812,6 +807,7 @@ class TestValidateMetadata(unittest.TestCase):
         generated_bq_json = str(metadata.study_file_id) + ".json"
         # This reference file needs updating with every new metadata convention version
         reference_bq_json = "../tests/data/bq_test.json"
+
         self.assertListEqual(
             list(io.open(generated_bq_json)), list(io.open(reference_bq_json))
         )
@@ -825,8 +821,7 @@ class TestValidateMetadata(unittest.TestCase):
             print("no file to remove")
 
     def test_invalid_mba_content(self):
-        """Mouse Brain Atlas metadata should validate against MBA ontology file
-        """
+        """Mouse Brain Atlas metadata should validate against MBA ontology file"""
         args = (
             "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
             "../tests/data/annotation/metadata/convention/invalid_mba_v2.1.2.tsv"
@@ -876,13 +871,13 @@ class TestValidateMetadata(unittest.TestCase):
 
     @patch("requests.get", side_effect=mocked_requests_get)
     def test_request_backoff_handling(self, mocked_requests_get):
-        """errors in retrieving data from external resources should attempt MAX_HTTP_ATTEMPTS times and throw an exception
-        """
+        """errors in retrieving data from external resources should attempt MAX_HTTP_ATTEMPTS times and throw an exception"""
         request_url = "https://www.ebi.ac.uk/ols/api/ontologies/"
         self.assertRaises(
             requests.exceptions.RequestException, request_json_with_backoff, request_url
         )
         self.assertEqual(mocked_requests_get.call_count, MAX_HTTP_ATTEMPTS)
+
 
     def test_is_label_or_synonym(self):
         label = "10x 3' v2"
@@ -909,7 +904,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
         validate_input_metadata(metadata, convention)
         self.assertFalse(
-            report_issues(metadata), "Valid ontology content should not elicit error"
+            report_issues(metadata), "Valid ontology synonym content should not elicit error"
         )
         self.teardown_metadata(metadata)
 
@@ -943,7 +938,7 @@ class TestValidateMetadata(unittest.TestCase):
             ('common cold',),
             ('diabetes mellitus', 'common cold'),
             ('diabetes mellitus', 'mastitis', 'common cold'),
-            ('disease or disorder',),
+            ('disease',),
         ]
 
         self.assertFalse(
@@ -958,8 +953,7 @@ class TestValidateMetadata(unittest.TestCase):
         )
 
     def test_validate_nonconventional_numeric_content(self):
-        """Nonconventional numeric metadata values should all validate as numeric
-        """
+        """Nonconventional numeric metadata values should all validate as numeric"""
 
         args = (
             "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
@@ -982,7 +976,7 @@ class TestValidateMetadata(unittest.TestCase):
 
     def test_excel_drag_check(self):
         """Evidence of an "Excel drag" event should generate errors
-           Successful detection avoids EBI OLS queries when input data is faulty
+        Successful detection avoids EBI OLS queries when input data is faulty
         """
 
         args = (
@@ -1035,13 +1029,13 @@ class TestValidateMetadata(unittest.TestCase):
 
         # Metadata 'disease' also has multiple ontologyIDs paired with the same label
         # It advises to only check mismatches with labels that are truly multiply assigned:
-        # ['disease or disorder', 'absent']
+        # ['disease', 'absent']
         self.assertIn(
             "disease: Long stretch of contiguously incrementing ontology ID values suggest cut and paste issue - "
             "exiting validation, ontology content not validated against ontology server.\n"
             "Please confirm ontology IDs are correct and resubmit.\n"
             "Check for mismatches between ontology ID and provided ontology label(s) "
-            "['absent', 'disease or disorder'].\n",
+            "['absent', 'disease'].\n",
             metadata.issues["error"]["ontology"].keys(),
             "ontology label multiply paired with IDs should error",
         )

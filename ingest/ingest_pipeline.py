@@ -38,6 +38,21 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 # Ingest mtx files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --matrix-file ../tests/data/mtx/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 
+# Ingest AnnData as reference file
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/test.h5ad
+
+# Ingest AnnData - happy path cluster-only extraction
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad --extract "['cluster']" --obsm-keys "['X_umap','X_tsne']"
+
+# Ingest AnnData - happy path metadata-only extraction
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['metadata']"
+
+# Ingest AnnData - happy path processed expression data only extraction
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['processed_expression']"
+
+# Ingest AnnData - happy path cluster and metadata extraction
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['cluster', 'metadata']" --obsm-keys "['X_umap','X_tsne']"
+
 # Differential Expression analysis (dense matrix)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_dense_matrix.tsv --matrix-file-type dense --annotation-file ../tests/data/differential_expression/de_dense_metadata.tsv --cluster-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
 # Differential Expression analysis (sparse matrix)
@@ -50,6 +65,7 @@ import re
 import sys
 import re
 from contextlib import nullcontext
+import traceback
 from typing import Dict, Generator, List, Tuple, Union
 from wsgiref.simple_server import WSGIRequestHandler  # noqa: F401
 from bson.objectid import ObjectId
@@ -81,6 +97,7 @@ try:
     from expression_files.dense_ingestor import DenseIngestor
     from monitor import setup_logger, log_exception
     from de import DifferentialExpression
+    from author_de import AuthorDifferentialExpression
     from expression_writer import ExpressionWriter
 
     # scanpy uses anndata python package, disamibguate local anndata
@@ -134,6 +151,7 @@ class IngestPipeline:
         ingest_cell_metadata=False,
         ingest_cluster=False,
         differential_expression=False,
+        ingest_differential_expression=False,
         **kwargs,
     ):
         """Initializes variables in Ingest Pipeline"""
@@ -171,6 +189,9 @@ class IngestPipeline:
         if subsample:
             self.cluster_file = cluster_file
             self.cell_metadata_file = cell_metadata_file
+        if ingest_differential_expression:
+            self.cell_metadata = ""
+            self.cluster = ""
 
     # Will be replaced by MongoConnection as defined in SCP-2629
     def get_mongo_db(self):
@@ -191,8 +212,8 @@ class IngestPipeline:
     def initialize_file_connection(self, file_type, file_path):
         """Initializes connection to file.
 
-            Returns:
-                File object.
+        Returns:
+            File object.
         """
         file_connections = {"cell_metadata": CellMetadata, "cluster": Clusters}
         try:
@@ -425,7 +446,6 @@ class IngestPipeline:
 
     @custom_metric(config.get_metric_properties)
     def subsample(self):
-
         """Method for subsampling cluster and metadata files"""
         subsample = SubSample(
             cluster_file=self.cluster_file, cell_metadata_file=self.cell_metadata_file
@@ -486,22 +506,32 @@ class IngestPipeline:
         self.anndata = AnnDataIngestor(
             self.anndata_file, self.study_id, self.study_file_id, **self.kwargs
         )
-        if self.anndata.validate():
-            self.report_validation("success")
+        if self.anndata.basic_validation():
+            # Get metadata extraction parameters and perform extraction
+            if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
+                metadata_filename = "h5ad_frag.metadata.tsv"
+                # TODO (SCP-5104): perform check for successful extraction or report failure and exit
+                AnnDataIngestor.generate_metadata_file(
+                    self.anndata.adata, metadata_filename
+                )
+            # Get cluster extraction parameters and perform extraction
             if self.kwargs.get("extract") and "cluster" in self.kwargs.get("extract"):
                 if not self.kwargs["obsm_keys"]:
-                    self.kwargs["obsm_keys"] = ['X_tsne']
+                    self.kwargs["obsm_keys"] = ["X_tsne"]
+                # TODO (SCP-5104): perform check for successful extraction or report failure and exit
                 for key in self.kwargs["obsm_keys"]:
                     AnnDataIngestor.generate_cluster_header(self.anndata.adata, key)
                     AnnDataIngestor.generate_cluster_type_declaration(
                         self.anndata.adata, key
                     )
                     AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
-            if self.kwargs.get("extract") and "metadata" in self.kwargs.get("extract"):
-                metadata_filename = f"h5ad_frag.metadata.tsv"
-                AnnDataIngestor.generate_metadata_file(
-                    self.anndata.adata, metadata_filename
-                )
+            # process matrix data
+            ### TODO (SCP-5102, SCP-5103): how to associate "raw_count" cells to anndata file
+            if self.kwargs.get("extract") and "processed_expression" in self.kwargs.get(
+                "extract"
+            ):
+                self.anndata.generate_processed_matrix(self.anndata.adata)
+            self.report_validation("success")
             return 0
         # scanpy unable to open AnnData file
         else:
@@ -509,7 +539,7 @@ class IngestPipeline:
             return 1
 
     def calculate_de(self):
-        """ Run differential expression analysis """
+        """Run differential expression analysis"""
         try:
             de = DifferentialExpression(
                 cluster=self.cluster,
@@ -524,6 +554,43 @@ class IngestPipeline:
             return 1
         # ToDo: surface failed DE for analytics (SCP-4206)
         return 0
+
+    def calculate_author_de(self):
+        """Run differential expression analysis"""
+        try:
+            kwargs = self.kwargs
+            if "comparison_group" not in kwargs:
+                kwargs["comparison_group"] = None
+
+            # Map canonical DE headers to headers in actual DE file to
+            header_refmap = {
+                "gene": kwargs["gene_header"],
+                "group": kwargs["group_header"],
+                "comparison_group": kwargs["comparison_group_header"],
+                "size": kwargs["size_metric"],
+                "significance": kwargs["significance_metric"]
+            }
+
+            author_de = AuthorDifferentialExpression(
+                kwargs["cluster_name"],
+                kwargs["annotation_name"],
+                kwargs["study_accession"],
+                kwargs["annotation_scope"],
+                kwargs["method"],
+
+                kwargs["differential_expression_file"],
+                header_refmap
+            )
+            author_de.execute()
+
+            # execute function as MAIN then create method to search for the files created, delocalize them to bucket as with de.py. adjust other places it needs to be called
+        except Exception as e:
+            print(traceback.format_exc())
+            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+            return 1
+        # ToDo: surface failed DE for analytics (SCP-4206)
+        return 0
+
 
     def render_expression_arrays(self):
         try:
@@ -546,8 +613,7 @@ class IngestPipeline:
 
 
 def run_ingest(ingest, arguments, parsed_args):
-    """Runs Ingest Pipeline as indicated by CLI or importing (test) module
-    """
+    """Runs Ingest Pipeline as indicated by CLI or importing (test) module"""
     status = []
     status_cell_metadata = None
     # TODO: Add validation for gene file types
@@ -580,7 +646,14 @@ def run_ingest(ingest, arguments, parsed_args):
         config.set_parent_event_name("ingest-pipeline:differential-expression")
         status_de = ingest.calculate_de()
         status.append(status_de)
-        print(f'STATUS post-DE {status}')
+        print(f"STATUS after DE {status}")
+
+    elif "ingest_differential_expression" in arguments:
+        config.set_parent_event_name("ingest-pipeline:differential-expression:ingest")
+        status_de = ingest.calculate_author_de()
+        status.append(status_de)
+        print(f"STATUS after ingest author DE: {status}")
+
     elif "render_expression_arrays" in arguments:
         config.set_parent_event_name("image-pipeline:render_expression_arrays")
         status_exp_writer = ingest.render_expression_arrays()
@@ -590,8 +663,7 @@ def run_ingest(ingest, arguments, parsed_args):
 
 
 def get_delocalization_info(arguments):
-    """ extract info on study file for delocalization decision-making
-    """
+    """extract info on study file for delocalization decision-making"""
     for argument in list(arguments.keys()):
         captured_argument = re.match("(\w*file)$", argument)
         if captured_argument is not None:
@@ -606,12 +678,13 @@ def get_delocalization_info(arguments):
 
 
 def exit_pipeline(ingest, status, status_cell_metadata, arguments):
-    """Logs any errors, then exits Ingest Pipeline with standard OS code
-    """
+    """Logs any errors, then exits Ingest Pipeline with standard OS code"""
     if len(status) > 0:
         # for successful DE jobs, need to delocalize results
-        if "differential_expression" in arguments and all(i < 1 for i in status):
+        if ("differential_expression" in arguments or "ingest_differential_expression" in arguments) and all(i < 1 for i in status):
             file_path, study_file_id = get_delocalization_info(arguments)
+            print('file_path', file_path)
+            print('study_file_id', study_file_id)
             # append status?
             if IngestFiles.is_remote_file(file_path):
                 files_to_match = DifferentialExpression.string_for_output_match(
@@ -631,10 +704,19 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                         AnnDataIngestor.clusterings_to_delocalize(arguments)
                     )
                 if "metadata" in arguments.get("extract"):
-                    metadata_filename = f"h5ad_frag.metadata.tsv"
+                    metadata_filename = f"h5ad_frag.metadata.tsv.gz"
                     files_to_delocalize.append(metadata_filename)
+                if "processed_expression" in arguments.get("extract"):
+                    mtx = "h5ad_frag.matrix.processed.mtx.gz"
+                    barcodes = "h5ad_frag.barcodes.processed.tsv.gz"
+                    features = "h5ad_frag.features.processed.tsv.gz"
+                    mtx_bundle = [mtx, barcodes, features]
+                    files_to_delocalize.extend(mtx_bundle)
                 AnnDataIngestor.delocalize_extracted_files(
-                    file_path, study_file_id, files_to_delocalize
+                    file_path,
+                    study_file_id,
+                    arguments["study_accession"],
+                    files_to_delocalize,
                 )
         # all non-DE, non-anndata ingest jobs can exit on success
         elif all(i < 1 for i in status):
@@ -689,6 +771,7 @@ def main() -> None:
         arguments["cell_metadata_file"] = arguments["annotation_file"]
         # IngestPipeline initialization expects "name" and not "cluster_name"
         arguments["name"] = arguments["cluster_name"]
+
     # Initialize global variables for current ingest job
     config.init(
         arguments["study_id"],
@@ -700,11 +783,12 @@ def main() -> None:
     # Print metrics properties
     metrics_dump = config.get_metric_properties().get_properties()
     for key in metrics_dump.keys():
-        print(f'{key}: {metrics_dump[key]}')
+        print(f"{key}: {metrics_dump[key]}")
 
     # Log Mixpanel events
     MetricsService.log(config.get_parent_event_name(), config.get_metric_properties())
     # Exit pipeline
+    arguments["study_accession"] = metrics_dump["studyAccession"]
     exit_pipeline(ingest, status, status_cell_metadata, arguments)
 
 

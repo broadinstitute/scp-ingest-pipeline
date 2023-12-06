@@ -29,21 +29,43 @@ import re
 import multiprocessing
 import sys
 import datetime
+import urllib
 from dateutil.relativedelta import relativedelta
 from functools import partial
 
 try:
-    from writer_functions import round_exp, encode_cluster_name, open_file, make_data_dir, get_matrix_size, \
-        get_cluster_cells, load_entities_as_list, process_sparse_fragment, write_gene_scores, process_dense_line, \
-        COMMA_OR_TAB
+    from writer_functions import (
+        round_exp,
+        encode_cluster_name,
+        open_file,
+        make_data_dir,
+        get_matrix_size,
+        get_cluster_cells,
+        load_entities_as_list,
+        process_sparse_fragment,
+        write_gene_scores,
+        process_dense_line,
+        COMMA_OR_TAB,
+    )
     from monitor import setup_logger
     from ingest_files import IngestFiles
 except ImportError:
-    from .writer_functions import round_exp, encode_cluster_name, open_file, make_data_dir, get_matrix_size, \
-        get_cluster_cells, load_entities_as_list, process_sparse_fragment, write_gene_scores, process_dense_line, \
-        COMMA_OR_TAB
+    from .writer_functions import (
+        round_exp,
+        encode_cluster_name,
+        open_file,
+        make_data_dir,
+        get_matrix_size,
+        get_cluster_cells,
+        load_entities_as_list,
+        process_sparse_fragment,
+        write_gene_scores,
+        process_dense_line,
+        COMMA_OR_TAB,
+    )
     from .monitor import setup_logger
     from .ingest_files import IngestFiles
+
 
 class ExpressionWriter:
     DELOCALIZE_FOLDER = "_scp_internal/cache/expression_scatter/data"
@@ -51,7 +73,14 @@ class ExpressionWriter:
     num_cores = int(multiprocessing.cpu_count() / denominator) - 1
 
     def __init__(
-        self, matrix_file_path, matrix_file_type, cluster_file_path, cluster_name, gene_file, barcode_file, **kwargs
+        self,
+        matrix_file_path,
+        matrix_file_type,
+        cluster_file_path,
+        cluster_name,
+        gene_file,
+        barcode_file,
+        **kwargs,
     ):
         self.matrix_file_path = matrix_file_path
         self.matrix_file_type = matrix_file_type
@@ -71,7 +100,9 @@ class ExpressionWriter:
         url_safe_timestamp = re.sub(':', '', timestamp)
         log_name = f"expression_scatter_data_{url_safe_timestamp}_log.txt"
         self.log_name = log_name
-        self.dev_logger = setup_logger(__name__, log_name, level=logging.INFO, format="support_configs")
+        self.dev_logger = setup_logger(
+            __name__, log_name, level=logging.INFO, format="support_configs"
+        )
 
     def get_storage_bucket_name(self):
         """
@@ -133,7 +164,9 @@ class ExpressionWriter:
         self.dev_logger.info(f" loading sparse data from {self.local_matrix_path}")
         slice_indexes = self.get_file_seek_points()
         pool = multiprocessing.Pool(self.num_cores)
-        processor = partial(self.read_sparse_matrix_slice, genes=genes, data_dir=data_dir)
+        processor = partial(
+            self.read_sparse_matrix_slice, genes=genes, data_dir=data_dir
+        )
         pool.map(processor, slice_indexes)
 
     def read_sparse_matrix_slice(self, indexes, genes, data_dir):
@@ -145,7 +178,9 @@ class ExpressionWriter:
         :param data_dir: (str) name of output dir
         """
         start_pos, end_pos = indexes
-        self.dev_logger.info(f"reading {self.local_matrix_path} at index {start_pos}:{end_pos}")
+        self.dev_logger.info(
+            f"reading {self.local_matrix_path} at index {start_pos}:{end_pos}"
+        )
         with open_file(self.local_matrix_path)[0] as matrix_file:
             current_pos = start_pos
             matrix_file.seek(current_pos)
@@ -153,7 +188,8 @@ class ExpressionWriter:
                 line = matrix_file.readline()
                 gene_idx = int(line.split()[0])
                 gene_name = genes[gene_idx - 1]
-                fragment_path = f"{data_dir}/gene_entries/{gene_name}__entries.txt"
+                safe_gene_name = urllib.parse.quote_plus(gene_name)
+                fragment_path = f"{data_dir}/gene_entries/{safe_gene_name}__entries.txt"
                 with open(fragment_path, 'a+') as file:
                     file.write(line)
                 current_pos += len(line)
@@ -167,9 +203,16 @@ class ExpressionWriter:
         :param data_dir: (str) name of output dir
         """
         fragments = os.listdir(f"{data_dir}/gene_entries")
-        self.dev_logger.info(f" subdivision complete, processing {len(fragments)} fragments")
+        self.dev_logger.info(
+            f" subdivision complete, processing {len(fragments)} fragments"
+        )
         pool = multiprocessing.Pool(self.num_cores)
-        processor = partial(process_sparse_fragment, barcodes=barcodes, cluster_cells=cluster_cells, data_dir=data_dir)
+        processor = partial(
+            process_sparse_fragment,
+            barcodes=barcodes,
+            cluster_cells=cluster_cells,
+            data_dir=data_dir,
+        )
         pool.map(processor, fragments)
 
     def write_empty_sparse_genes(self, genes, num_cluster_cells, data_dir):
@@ -180,12 +223,16 @@ class ExpressionWriter:
         :param num_cluster_cells: (Integer) number of cells from cluster file
         :param data_dir: (str) name of output dir
         """
-        gene_fragments = filter(lambda file: file[0] != '.', os.listdir(f"{data_dir}/gene_entries"))
+        gene_fragments = filter(
+            lambda file: file[0] != '.', os.listdir(f"{data_dir}/gene_entries")
+        )
         significant_genes = set([gene.split('__')[0] for gene in gene_fragments])
         missing_genes = [gene for gene in genes if gene not in significant_genes]
         empty_expression = [0] * num_cluster_cells
         pool = multiprocessing.Pool(self.num_cores)
-        processor = partial(write_gene_scores, exp_values=empty_expression, data_dir=data_dir)
+        processor = partial(
+            write_gene_scores, exp_values=empty_expression, data_dir=data_dir
+        )
         pool.map(processor, missing_genes)
 
     def process_dense_data(self, cluster_cells, data_dir):
@@ -202,7 +249,10 @@ class ExpressionWriter:
         values = re.split(COMMA_OR_TAB, header)
         cells = values[1:]
         processor = partial(
-            self.read_dense_matrix_slice, matrix_cells=cells, cluster_cells=cluster_cells, data_dir=data_dir
+            self.read_dense_matrix_slice,
+            matrix_cells=cells,
+            cluster_cells=cluster_cells,
+            data_dir=data_dir,
         )
         pool.map(processor, slice_indexes)
 
@@ -235,7 +285,11 @@ class ExpressionWriter:
         self.dev_logger.info(f" creating data directory at {sanitized_cluster_name}")
         make_data_dir(sanitized_cluster_name)
         cluster_cells = get_cluster_cells(self.local_cluster_path)
-        if self.matrix_file_type == 'mtx' and self.gene_file is not None and self.barcode_file is not None:
+        if (
+            self.matrix_file_type == 'mtx'
+            and self.gene_file is not None
+            and self.barcode_file is not None
+        ):
             self.dev_logger.info(f" reading {self.matrix_file_path} as sparse matrix")
             self.dev_logger.info(f" reading entities from {self.gene_file}")
             genes_file = open_file(self.gene_file)[0]
@@ -244,8 +298,12 @@ class ExpressionWriter:
             barcodes_file = open_file(self.barcode_file)[0]
             barcodes = load_entities_as_list(barcodes_file)
             self.divide_sparse_matrix(genes, sanitized_cluster_name)
-            self.write_empty_sparse_genes(genes, len(cluster_cells), sanitized_cluster_name)
-            self.process_sparse_data_fragments(barcodes, cluster_cells, sanitized_cluster_name)
+            self.write_empty_sparse_genes(
+                genes, len(cluster_cells), sanitized_cluster_name
+            )
+            self.process_sparse_data_fragments(
+                barcodes, cluster_cells, sanitized_cluster_name
+            )
         elif self.matrix_file_type == 'dense':
             self.dev_logger.info(f" reading {self.matrix_file_path} as dense matrix")
             self.process_dense_data(cluster_cells, sanitized_cluster_name)
@@ -266,12 +324,24 @@ class ExpressionWriter:
             bucket_path = f"{self.DELOCALIZE_FOLDER}/{cluster_name}"
             self.dev_logger.info(f" pushing all output files to {bucket_path}")
             dir_files = os.listdir(cluster_name)
-            files_to_push = list(file for file in dir_files if 'gene_entries' not in file)
+            files_to_push = list(
+                file for file in dir_files if 'gene_entries' not in file
+            )
             for file in files_to_push:
                 local_path = f"{cluster_name}/{file}"
                 IngestFiles.delocalize_file(
-                    None, None, self.matrix_file_path, local_path, f"{bucket_path}/{file}", 'gzip'
+                    None,
+                    None,
+                    self.matrix_file_path,
+                    local_path,
+                    f"{bucket_path}/{file}",
+                    'gzip',
                 )
             self.dev_logger.info(" push completed")
-            IngestFiles.delocalize_file(None, None, self.matrix_file_path, self.log_name, f"parse_logs/{self.log_name}")
-
+            IngestFiles.delocalize_file(
+                None,
+                None,
+                self.matrix_file_path,
+                self.log_name,
+                f"parse_logs/{self.log_name}",
+            )
