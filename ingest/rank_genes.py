@@ -13,7 +13,7 @@ engage users with relevant information, and prime the study gene search UX.
 
 EXAMPLES
 
-python3 ingest/rank_genes.py --study-accession SCP138 --bucket-name fc-65379b91-5ded-4d28-8e51-ada209542117 --taxon-name="Homo sapiens" --clustering="All Cells UMAP" --annotation-name="General Celltype" --annotation-groups '["B cells", "CSN1S1 macrophages", "dendritic cells", "eosinophils", "fibroblasts", "GPMNB macrophages", "LC1", "LC2", "neutrophils", "T cells"]' --publication-url https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1
+python3 ingest/rank_genes.py --study-accession SCP138 --bucket-name fc-65379b91-5ded-4d28-8e51-ada209542117 --taxon-name="Homo sapiens" --clustering="All Cells UMAP" --annotation-name="General Celltype" --annotation-groups '["B cells", "CSN1S1 macrophages", "dendritic cells", "eosinophils", "fibroblasts", "GPMNB macrophages", "LC1", "LC2", "neutrophils", "T cells"]' --publication https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1
 """
 
 import argparse
@@ -114,17 +114,15 @@ def fetch_publication_text(publication):
         pmcid = fetch_pmcid(doi)
         text = fetch_pmcid_text(pmcid)
     elif publication.startswith("https://www.biorxiv.org"):
-        print('publication', publication)
-        if publication == 'https://www.biorxiv.org/content/10.1101/2021.07.20.453090v2':
-            file_path = 'ingest/herb_2021_biorxhiv_full_text.txt'
-            with open(file_path) as f:
-                text = f.read()
-        else:
-            full_text_url = f"{publication}.full.txt"
-            print('full_text_url', full_text_url)
-            with urllib.request.urlopen(full_text_url) as response:
-                text = response.read().decode('utf-8')
-                # print('text', text)
+        full_text_url = f"{publication}.full.txt"
+        print('full_text_url', full_text_url)
+        with urllib.request.urlopen(full_text_url) as response:
+            text = response.read().decode('utf-8')
+            # print('text', text)
+    else:
+        file_path = publication
+        with open(file_path) as f:
+            text = f.read()
     return text
 
 
@@ -452,11 +450,11 @@ if __name__ == '__main__':
         help=("List of annotation groups, e.g. ['B cells', 'CSN1S1 macrophages']"),
     )
     parser.add_argument(
-        "--publication-url",
+        "--publication",
         required=True,
         help=(
             "URL of the study's publicly-accessible research article, "
-            "or path to publication text file"
+            "or local path to publication text file"
         ),
     )
 
