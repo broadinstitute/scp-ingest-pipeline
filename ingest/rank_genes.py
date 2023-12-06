@@ -1,19 +1,19 @@
-"""Extract, transform, and load data into TSV files for gene leads ideogram
+"""Extract, transform, and load data into TSV files for to rank genes
 
-Gene leads are all, at least, mentioned in a study's related publication.
+Ranked genes are all, at least, mentioned in a study's related publication.
 These published genes are then sought among very differentially expressed
 genes in the annotation's various labeled groups.  The groups in which each
 published gene is very DE'd (if any) are noted.  Finally, data on each gene's
 worldwide popularity, ultimately measured via the Gene Hints pipeline using
 either Wikipedia page views or PubMed citation counts, is also included.
 
-The output TSV file contains one gene per row. This is parsed by Ideogram.js
-in the SCP UI to display gene leads.  The genome visualization is designed to
+The output TSV file contains one gene per row. This is parsed
+in the SCP UI to display ranked genes.  The genome visualization is designed to
 engage users with relevant information, and prime the study gene search UX.
 
 EXAMPLES
 
-python3 ingest/gene_leads.py --study-accession SCP138 --bucket-name fc-65379b91-5ded-4d28-8e51-ada209542117 --taxon-name="Homo sapiens" --clustering="All Cells UMAP" --annotation-name="General Celltype" --annotation-groups '["B cells", "CSN1S1 macrophages", "dendritic cells", "eosinophils", "fibroblasts", "GPMNB macrophages", "LC1", "LC2", "neutrophils", "T cells"]' --publication-url https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1
+python3 ingest/rank_genes.py --study-accession SCP138 --bucket-name fc-65379b91-5ded-4d28-8e51-ada209542117 --taxon-name="Homo sapiens" --clustering="All Cells UMAP" --annotation-name="General Celltype" --annotation-groups '["B cells", "CSN1S1 macrophages", "dendritic cells", "eosinophils", "fibroblasts", "GPMNB macrophages", "LC1", "LC2", "neutrophils", "T cells"]' --publication-url https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1
 """
 
 import argparse
@@ -91,7 +91,7 @@ def fetch_pmcid_text(pmcid):
     return text
 
 
-def fetch_publication_text(publication_url):
+def fetch_publication_text(publication):
     """Get full text for a publicly-accessible article given its URL"""
     # Examples:
     # <Is open access> -- <publication URL> -- <Study accession>
@@ -108,15 +108,23 @@ def fetch_publication_text(publication_url):
     # 9. Yes -- https://www.biorxiv.org/content/10.1101/2022.06.29.496888v1 -- SCP1903
     # 10. Not really, but abstract mentions genes -- https://doi.org/10.1016/j.immuni.2023.01.002 -- SCP1884
     # 11. Not really, not until 2023-10-12, but abstract mentions genes, and full text available in biorxiv -- https://doi.org/10.1093/toxsci/kfac109 -- SCP1875
-    doi_split = publication_url.split("https://doi.org/")
+    doi_split = publication.split("https://doi.org/")
     if len(doi_split) > 1:
         doi = doi_split[1]
         pmcid = fetch_pmcid(doi)
         text = fetch_pmcid_text(pmcid)
-    elif publication_url.startswith("https://www.biorxiv.org"):
-        full_text_url = f"{publication_url}.full.txt"
-        with urllib.request.urlopen(full_text_url) as response:
-            text = response.read().decode('utf-8')
+    elif publication.startswith("https://www.biorxiv.org"):
+        print('publication', publication)
+        if publication == 'https://www.biorxiv.org/content/10.1101/2021.07.20.453090v2':
+            file_path = 'ingest/herb_2021_biorxhiv_full_text.txt'
+            with open(file_path) as f:
+                text = f.read()
+        else:
+            full_text_url = f"{publication}.full.txt"
+            print('full_text_url', full_text_url)
+            with urllib.request.urlopen(full_text_url) as response:
+                text = response.read().decode('utf-8')
+                # print('text', text)
     return text
 
 
@@ -154,7 +162,7 @@ def fetch_gene_cache(organism):
     return [interest_rank_by_gene, counts_by_gene, loci_by_gene, full_names_by_gene]
 
 
-def extract(meta, all_groups, publication_url):
+def extract(meta, all_groups, publication):
     """Data mine genes from publication"""
     [accession, organism, bucket, clustering, annotation] = list(meta.values())
     [
@@ -164,7 +172,9 @@ def extract(meta, all_groups, publication_url):
         full_names_by_gene,
     ] = fetch_gene_cache(organism)
 
-    publication_text = fetch_publication_text(publication_url)
+
+    print('publication', publication)
+    publication_text = fetch_publication_text(publication)
 
     publication_words = publication_text.split(' ')
     for word in publication_words:
@@ -190,20 +200,26 @@ def extract(meta, all_groups, publication_url):
         full_names_by_gene,
     ]
 
+def sanitize_string(string):
+    return string.replace(' ', '_').replace('.', '_').replace('[', '_').replace(']', '_')
+
 def extract_de(bucket, clustering, annotation, all_groups):
     """Fetch differential expression (DE) files, return DE fields by gene"""
     de_by_gene = {}
 
     origin = "https://storage.googleapis.com"
-    directory = "tests/data/gene_leads/_scp_internal%2Fdifferential_expression%2F"
+    # directory = "tests/data/gene_leads/_scp_internal%2Fdifferential_expression%2F"
+    directory = "tests/data/gene_leads/"
     de_url_stem = f"{origin}/download/storage/v1/b/{bucket}/o/{directory}"
-    leaf = "--study--wilcoxon.tsv"
+    # leaf = "--study--wilcoxon.tsv"
+    leaf = "--cluster--wilcoxon.tsv"
     params = "?alt=media"
 
     for group in all_groups:
-        safe_group = group.replace(' ', '_')
+        safe_group = sanitize_string(group)
+        safe_clustering = sanitize_string(clustering)
         tmp_dir = directory.replace('%2F', '_')
-        de_filename = f"{tmp_dir}{clustering}--{annotation}--{safe_group}{leaf}"
+        de_filename = f"{tmp_dir}{safe_clustering}--{annotation}--{safe_group}{leaf}"
 
         # TODO (pre-GA): Fetch these from bucket; requires auth token
         # de_url = de_url_stem + de_filename + params
@@ -272,7 +288,7 @@ def get_metainformation(meta, de_meta_keys):
     metainformation = (
         "## "
         + "\n## ".join(
-            ["Gene leads ideogram data - Single Cell Portal", content_meta, de_meta]
+            ["Ranked genes - Single Cell Portal", content_meta, de_meta]
         )
         + "\n"
     )
@@ -290,10 +306,10 @@ def sort_genes_by_relevance(gene_dicts):
         full_names_by_gene,
     ] = gene_dicts
 
-    print('de_by_gene')
-    print(de_by_gene)
-    print('mentions_by_gene')
-    print(mentions_by_gene)
+    # print('de_by_gene')
+    # print(de_by_gene)
+    # print('mentions_by_gene')
+    # print(mentions_by_gene)
 
     genes = []
     for gene in de_by_gene:
@@ -380,7 +396,7 @@ def load(clustering, annotation, tsv_content):
     # The # of gene leads files will be many fewer than DE in Q2 '22,
     # i.e. << one-vs-rest DE.
     cache_buster = "_v11"  # TODO (pre-GA): Improve handling if needed beyond dev
-    output_path = f"gene_leads_{clustering}--{annotation}{cache_buster}.tsv"
+    output_path = f"ranked_genes_{clustering}--{annotation}{cache_buster}.tsv"
     with open(output_path, "w") as f:
         f.write(tsv_content)
 
@@ -389,9 +405,9 @@ def load(clustering, annotation, tsv_content):
 
 
 def gene_leads(
-    accession, bucket, organism, clustering, annotation, all_groups, publication_url
+    accession, bucket, organism, clustering, annotation, all_groups, publication
 ):
-    """Extract, transform, and load data into TSV files for gene leads ideogram"""
+    """Extract, transform, and load data into TSV files for ranked genes"""
     organism = organism.lower().replace(' ', '-')
     clustering = clustering.replace(' ', '_')
     annotation = annotation.replace(' ', '_')
@@ -402,7 +418,7 @@ def gene_leads(
         "clustering": clustering,
         "annotation": annotation,
     }
-    gene_dicts = extract(meta, all_groups, publication_url)
+    gene_dicts = extract(meta, all_groups, publication)
     tsv_content = transform(gene_dicts, meta)
     load(clustering, annotation, tsv_content)
 
@@ -438,7 +454,10 @@ if __name__ == '__main__':
     parser.add_argument(
         "--publication-url",
         required=True,
-        help=("URL of the study's publicly-accessible research article"),
+        help=(
+            "URL of the study's publicly-accessible research article, "
+            "or path to publication text file"
+        ),
     )
 
     args = parser.parse_args()
@@ -449,8 +468,8 @@ if __name__ == '__main__':
     clustering = args.clustering
     annotation = args.annotation_name
     all_groups = args.annotation_groups
-    publication_url = args.publication_url
+    publication = args.publication
 
     gene_leads(
-        accession, bucket, organism, clustering, annotation, all_groups, publication_url
+        accession, bucket, organism, clustering, annotation, all_groups, publication
     )
