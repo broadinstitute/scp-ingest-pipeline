@@ -7,9 +7,8 @@ published gene is very DE'd (if any) are noted.  Finally, data on each gene's
 worldwide popularity, ultimately measured via the Gene Hints pipeline using
 either Wikipedia page views or PubMed citation counts, is also included.
 
-The output TSV file contains one gene per row. This is parsed
-in the SCP UI to display ranked genes.  The genome visualization is designed to
-engage users with relevant information, and prime the study gene search UX.
+The output TSV file contains one gene per row. This is parsed by Image Pipeline
+to prioritize which genes to cache.
 
 EXAMPLES
 
@@ -51,7 +50,10 @@ def download_gzip(url, output_path, cache=0):
 
 
 def fetch_pmcid(doi):
-    """Convert Digital Object Identifier (DOI) into PubMed Central ID (PMCID)"""
+    """Convert Digital Object Identifier (DOI) into PubMed Central ID (PMCID)
+
+    Many PMC articles are fully public-access, and machine-readable.
+    """
     idconv_base = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
     params = "?" + "&".join(
         [
@@ -74,7 +76,7 @@ def fetch_pmcid(doi):
 
 
 def fetch_pmcid_text(pmcid):
-    """Get full text for publication given its in PMC ID"""
+    """Get full text for publication, given its PubMed Central ID"""
     oa_url = f"https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi?id={pmcid}"
     with urllib.request.urlopen(oa_url) as response:
         data = response.read().decode("utf-8")
@@ -207,7 +209,7 @@ def extract_de(bucket, clustering, annotation, all_groups):
 
     origin = "https://storage.googleapis.com"
     # directory = "tests/data/gene_leads/_scp_internal%2Fdifferential_expression%2F"
-    directory = "tests/data/gene_leads/"
+    directory = "tests/data/rank_genes/"
     de_url_stem = f"{origin}/download/storage/v1/b/{bucket}/o/{directory}"
     # leaf = "--study--wilcoxon.tsv"
     leaf = "--cluster--wilcoxon.tsv"
@@ -235,11 +237,7 @@ def extract_de(bucket, clustering, annotation, all_groups):
                 if row[0] == "":
                     continue  # Skip novel header / empty lines
                 if i < 500:
-                    # 500 is ~2% of 25k-ish genes in Ensembl genome annotation.
-                    # Like the rest of "gene leads", a big factor in this value
-                    # choice is its ability to yield an engaging UI.  In this
-                    # case, 500 produced a wide-but-not-overwhelming palette
-                    # of annotations in the gene leads ideogram.
+                    # 500 is ~2% of 25k-ish genes in Ensembl genome annotation
                     gene = row[1]
                     de_entry = {
                         "group": group,
@@ -336,6 +334,8 @@ def sort_genes_by_relevance(gene_dicts):
 def transform(gene_dicts, meta):
     """Transform extracted dicts into TSV content"""
 
+    num_genes_to_output = 100
+
     de_meta_keys = ["group", "log2fc", "adjusted_pval", "scores_rank"]
 
     ranked_genes = sort_genes_by_relevance(gene_dicts)
@@ -364,7 +364,7 @@ def transform(gene_dicts, meta):
         rows.append("\t".join(row))
         i += 1
 
-    rows = "\n".join(rows[:30])
+    rows = "\n".join(rows[:num_genes_to_output])
     metainformation = get_metainformation(meta, de_meta_keys)
     header = (
         "# "
@@ -391,7 +391,7 @@ def transform(gene_dicts, meta):
 def load(clustering, annotation, tsv_content):
     """Load TSV content into file, write to disk"""
     # TODO (pre-GA): Write output files to whichever bucket we write DE to.
-    # The # of gene leads files will be many fewer than DE in Q2 '22,
+    # The # of gene-rank files will be many fewer than DE in Q2 '22,
     # i.e. << one-vs-rest DE.
     cache_buster = "_v11"  # TODO (pre-GA): Improve handling if needed beyond dev
     output_path = f"ranked_genes_{clustering}--{annotation}{cache_buster}.tsv"
@@ -402,7 +402,7 @@ def load(clustering, annotation, tsv_content):
     print(tsv_content)
 
 
-def gene_leads(
+def rank_genes(
     accession, bucket, organism, clustering, annotation, all_groups, publication
 ):
     """Extract, transform, and load data into TSV files for ranked genes"""
@@ -455,7 +455,7 @@ if __name__ == '__main__':
         help=(
             "URL of the study's publicly-accessible research article, "
             "or local path to publication text file"
-        ),
+        )
     )
 
     args = parser.parse_args()
@@ -468,6 +468,6 @@ if __name__ == '__main__':
     all_groups = args.annotation_groups
     publication = args.publication
 
-    gene_leads(
+    rank_genes(
         accession, bucket, organism, clustering, annotation, all_groups, publication
     )
