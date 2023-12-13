@@ -301,11 +301,6 @@ def sort_genes_by_relevance(gene_dicts):
         full_names_by_gene,
     ] = gene_dicts
 
-    # print('de_by_gene')
-    # print(de_by_gene)
-    # print('mentions_by_gene')
-    # print(mentions_by_gene)
-
     genes = []
     for gene in de_by_gene:
         if gene not in interest_rank_by_gene:
@@ -400,33 +395,14 @@ def load(clustering, annotation, tsv_content):
     print('Wrote content')
     print(tsv_content)
 
-
-def rank_genes(
-    accession, bucket, organism, clustering, annotation, annotation_groups, publication
-):
-    """Extract, transform, and load data into TSV files for ranked genes"""
-    organism = organism.lower().replace(' ', '-')
-    clustering = clustering.replace(' ', '_')
-    annotation = annotation.replace(' ', '_')
-    meta = {
-        "accession": accession,
-        "organism": organism,
-        "bucket": bucket,
-        "clustering": clustering,
-        "annotation": annotation,
-    }
-    gene_dicts = extract(meta, annotation_groups, publication)
-    tsv_content = transform(gene_dicts, meta)
-    load(clustering, annotation, tsv_content)
-
 class RankGenes:
     def __init__(
         self,
-        clustering,
-        annotation,
         study_accession,
         bucket_name,
         taxon_name,
+        clustering,
+        annotation,
         annotation_groups,
         publication
     ):
@@ -437,7 +413,7 @@ class RankGenes:
         :param annotation_groups (list<string>) List of annotation groups, e.g. ["B cells", "CSN1S1 macrophages"]
         :param clustering (string) Name of clustering
         :param annotation_name (string) Name of annotation
-        :param publication (string) URL of the study's publicly-accessible research article, or local path to publication text file
+        :param publication (string) URL of the study's publicly-accessible research article, or GS URL or local path to publication text file
         """
         organism = taxon_name.lower().replace(' ', '-')
         clustering = clustering.replace(' ', '_')
@@ -501,5 +477,5 @@ if __name__ == '__main__':
     publication = args.publication
 
     RankGenes(
-        clustering, annotation, accession, bucket, organism, annotation_groups, publication
+        accession, bucket, organism, clustering, annotation, annotation_groups, publication
     )

@@ -470,6 +470,42 @@ def create_parser():
         '--barcode-file', help='path to barcode file (omit for dense matrix files)'
     )
 
+    parser_rank_genes = subparsers.add_parser(
+        "rank_genes",
+        help="Rank genes in a study by mentions in publication, DE, and global interest",
+    )
+
+    parser_rank_genes.add_argument(
+        '--rank-genes',
+        action="store_true",
+        help='Invoke rank_genes.py',
+        required=True,
+    )
+
+    parser_rank_genes.add_argument(
+        '--study-accession', help='Study accession, e.g. "SCP123"', required=True
+    )
+    parser_rank_genes.add_argument(
+        '--bucket-name', help='Name of GCS bucket, e.g. "fc-65379b91-5ded-4d28-8e51-ada209541234"', required=True
+    )
+    parser_rank_genes.add_argument(
+        '--taxon-name', help='Scientific name of organism, e.g. "Homo sapiens"', required=True
+    )
+    parser_rank_genes.add_argument(
+        '--cluster-name', help='Name of clustering', required=True
+    )
+    parser_rank_genes.add_argument(
+        '--annotation-name', help='Name of annotation', required=True
+    )
+    parser_rank_genes.add_argument(
+        '--annotation-groups', help='List of annotation groups, e.g. ["B cells", "CSN1S1 macrophages"]', required=True
+    )
+    parser_rank_genes.add_argument(
+        '--publication',
+        help="URL of the study's publicly-accessible research article, or GS URL or local path to publication text file",
+        required=True
+    )
+
     return parser
 
 

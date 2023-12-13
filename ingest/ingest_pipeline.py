@@ -70,61 +70,40 @@ from typing import Dict, Generator, List, Tuple, Union
 from wsgiref.simple_server import WSGIRequestHandler  # noqa: F401
 from bson.objectid import ObjectId
 
-try:
-    # Used when importing internally and in tests
-    from ingest_files import IngestFiles
 
-    # For Mixpanel logging
-    import config
-    from monitoring.mixpanel_log import custom_metric
-    from monitoring.metrics_service import MetricsService
+# Used when importing internally and in tests
+from ingest_files import IngestFiles
 
-    # For tracing
-    from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
-    from opencensus.trace.samplers import AlwaysOnSampler
-    from opencensus.trace.tracer import Tracer
-    from pymongo import MongoClient
-    from subsample import SubSample
-    from validation.validate_metadata import (
-        report_issues,
-        validate_input_metadata,
-        write_metadata_to_bq,
-    )
-    from cell_metadata import CellMetadata
-    from cli_parser import create_parser, validate_arguments
-    from clusters import Clusters
-    from expression_files.mtx import MTXIngestor
-    from expression_files.dense_ingestor import DenseIngestor
-    from monitor import setup_logger, log_exception
-    from de import DifferentialExpression
-    from author_de import AuthorDifferentialExpression
-    from expression_writer import ExpressionWriter
+# For Mixpanel logging
+import config
+from monitoring.mixpanel_log import custom_metric
+from monitoring.metrics_service import MetricsService
 
-    # scanpy uses anndata python package, disamibguate local anndata
-    # using underscore https://peps.python.org/pep-0008/#naming-conventions
-    from anndata_ import AnnDataIngestor
+# For tracing
+from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
+from opencensus.trace.samplers import AlwaysOnSampler
+from opencensus.trace.tracer import Tracer
+from pymongo import MongoClient
+from subsample import SubSample
+from validation.validate_metadata import (
+    report_issues,
+    validate_input_metadata,
+    write_metadata_to_bq,
+)
+from cell_metadata import CellMetadata
+from cli_parser import create_parser, validate_arguments
+from clusters import Clusters
+from expression_files.mtx import MTXIngestor
+from expression_files.dense_ingestor import DenseIngestor
+from monitor import setup_logger, log_exception
+from de import DifferentialExpression
+from author_de import AuthorDifferentialExpression
+from expression_writer import ExpressionWriter
+from rank_genes import RankGenes
 
-except ImportError:
-    # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .ingest_files import IngestFiles
-    from . import config
-    from .monitoring.metrics_service import MetricsService
-    from .subsample import SubSample
-    from .monitoring.mixpanel_log import custom_metric
-    from .validation.validate_metadata import (
-        validate_input_metadata,
-        report_issues,
-        write_metadata_to_bq,
-    )
-    from .monitor import setup_logger, log_exception
-    from .cell_metadata import CellMetadata
-    from .clusters import Clusters
-    from .expression_files.dense_ingestor import DenseIngestor
-    from .expression_files.mtx import MTXIngestor
-    from .anndata_ import AnnDataIngestor
-    from .cli_parser import create_parser, validate_arguments
-    from .de import DifferentialExpression
-    from .expression_writer import ExpressionWriter
+# scanpy uses anndata python package, disamibguate local anndata
+# using underscore https://peps.python.org/pep-0008/#naming-conventions
+from anndata_ import AnnDataIngestor
 
 
 class IngestPipeline:
@@ -606,6 +585,23 @@ class IngestPipeline:
             return 1
         return 0
 
+    def rank_genes(self):
+        try:
+            RankGenes(
+                self.study_accession,
+                self.bucket_name,
+                self.taxon_name,
+                self.clustering,
+                self.annotation,
+                self.annotation_groups,
+                self.publication
+                **self.kwargs,
+            )
+        except Exception as e:
+            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+            return 1
+        return 0
+
     def report_validation(self, status):
         self.props["status"] = status
         config.get_metric_properties().update(self.props)
@@ -655,9 +651,15 @@ def run_ingest(ingest, arguments, parsed_args):
         print(f"STATUS after ingest author DE: {status}")
 
     elif "render_expression_arrays" in arguments:
-        config.set_parent_event_name("image-pipeline:render_expression_arrays")
+        config.set_parent_event_name("image-pipeline:render-expression-arrays")
         status_exp_writer = ingest.render_expression_arrays()
         status.append(status_exp_writer)
+
+    elif "rank_genes" in arguments:
+        config.set_parent_event_name("image-pipeline:rank-genes")
+        status_rank_genes = ingest.rank_genes()
+        status.append(status_rank_genes)
+
 
     return status, status_cell_metadata
 
@@ -666,6 +668,7 @@ def get_delocalization_info(arguments):
     """extract info on study file for delocalization decision-making"""
     for argument in list(arguments.keys()):
         captured_argument = re.match("(\w*file)$", argument)
+        print('captured_argument', captured_argument)
         if captured_argument is not None:
             study_file_id = arguments["study_file_id"]
             matched_argument = captured_argument.groups()[0]
