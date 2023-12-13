@@ -587,15 +587,15 @@ class IngestPipeline:
 
     def rank_genes(self):
         try:
+            kwargs = self.kwargs
             RankGenes(
-                self.study_accession,
-                self.bucket_name,
-                self.taxon_name,
-                self.clustering,
-                self.annotation,
-                self.annotation_groups,
-                self.publication
-                **self.kwargs,
+                kwargs["study_accession"],
+                kwargs["bucket_name"],
+                kwargs["taxon_name"],
+                kwargs["cluster_name"],
+                kwargs["annotation_name"],
+                kwargs["annotation_groups"],
+                kwargs["publication"]
             )
         except Exception as e:
             log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
@@ -725,8 +725,11 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
         elif all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:
-            if "rank_genes" in arguments
-            file_path, study_file_id = get_delocalization_info(arguments)
+            if "rank_genes" in arguments:
+                study_file_id = "rank_genes"
+                file_path = f"gs://{arguments.get('bucket_name')}/blank"
+            else:
+                file_path, study_file_id = get_delocalization_info(arguments)
             if IngestFiles.is_remote_file(file_path):
                 if "differential_expression" in arguments:
                     log_path = (
@@ -738,7 +741,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                 IngestFiles.delocalize_file(file_path, "log.txt", log_path)
                 # Delocalize user log
                 user_log_path = f"parse_logs/{study_file_id}/user_log.txt"
-                IngestFiles.delocalize_file(file_path, "user_log.txt", user_log_path,)
+                IngestFiles.delocalize_file(file_path, "user_log.txt", user_log_path)
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
                     # PAPI jobs failing metadata validation against convention report

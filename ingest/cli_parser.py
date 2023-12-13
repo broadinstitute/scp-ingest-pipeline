@@ -498,7 +498,9 @@ def create_parser():
         '--annotation-name', help='Name of annotation', required=True
     )
     parser_rank_genes.add_argument(
-        '--annotation-groups', help='List of annotation groups, e.g. ["B cells", "CSN1S1 macrophages"]', required=True
+        '--annotation-groups',
+        type=ast.literal_eval,
+        help='List of annotation groups, e.g. ["B cells", "CSN1S1 macrophages"]', required=True
     )
     parser_rank_genes.add_argument(
         '--publication',
