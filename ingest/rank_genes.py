@@ -162,7 +162,7 @@ def fetch_gene_cache(organism):
     return [interest_rank_by_gene, counts_by_gene, loci_by_gene, full_names_by_gene]
 
 
-def extract(meta, all_groups, publication):
+def extract(meta, annotation_groups, publication):
     """Data mine genes from publication"""
     [accession, organism, bucket, clustering, annotation] = list(meta.values())
     [
@@ -171,7 +171,6 @@ def extract(meta, all_groups, publication):
         loci_by_gene,
         full_names_by_gene,
     ] = fetch_gene_cache(organism)
-
 
     print('publication', publication)
     publication_text = fetch_publication_text(publication)
@@ -190,7 +189,7 @@ def extract(meta, all_groups, publication):
         if counts_by_gene[gene] > 0:
             mentions_by_gene[gene] = count
 
-    de_by_gene = extract_de(bucket, clustering, annotation, all_groups)
+    de_by_gene = extract_de(bucket, clustering, annotation, annotation_groups)
 
     return [
         interest_rank_by_gene,
@@ -203,7 +202,7 @@ def extract(meta, all_groups, publication):
 def sanitize_string(string):
     return string.replace(' ', '_').replace('.', '_').replace('[', '_').replace(']', '_')
 
-def extract_de(bucket, clustering, annotation, all_groups):
+def extract_de(bucket, clustering, annotation, annotation_groups):
     """Fetch differential expression (DE) files, return DE fields by gene"""
     de_by_gene = {}
 
@@ -215,7 +214,7 @@ def extract_de(bucket, clustering, annotation, all_groups):
     leaf = "--cluster--wilcoxon.tsv"
     params = "?alt=media"
 
-    for group in all_groups:
+    for group in annotation_groups:
         safe_group = sanitize_string(group)
         safe_clustering = sanitize_string(clustering)
         tmp_dir = directory.replace('%2F', '_')
@@ -403,7 +402,7 @@ def load(clustering, annotation, tsv_content):
 
 
 def rank_genes(
-    accession, bucket, organism, clustering, annotation, all_groups, publication
+    accession, bucket, organism, clustering, annotation, annotation_groups, publication
 ):
     """Extract, transform, and load data into TSV files for ranked genes"""
     organism = organism.lower().replace(' ', '-')
@@ -416,10 +415,43 @@ def rank_genes(
         "clustering": clustering,
         "annotation": annotation,
     }
-    gene_dicts = extract(meta, all_groups, publication)
+    gene_dicts = extract(meta, annotation_groups, publication)
     tsv_content = transform(gene_dicts, meta)
     load(clustering, annotation, tsv_content)
 
+class RankGenes:
+    def __init__(
+        self,
+        clustering,
+        annotation,
+        study_accession,
+        bucket_name,
+        taxon_name,
+        annotation_groups,
+        publication
+    ):
+        """
+        :param study_accession (string) Study accession, e.g. "SCP123"
+        :param bucket_name (string) Name of GCS bucket, e.g. fc-65379b91-5ded-4d28-8e51-ada209541234"
+        :param taxon_name (string) Scientific name of organism, e.g. "Homo sapiens"
+        :param annotation_groups (list<string>) List of annotation groups, e.g. ["B cells", "CSN1S1 macrophages"]
+        :param clustering (string) Name of clustering
+        :param annotation_name (string) Name of annotation
+        :param publication (string) URL of the study's publicly-accessible research article, or local path to publication text file
+        """
+        organism = taxon_name.lower().replace(' ', '-')
+        clustering = clustering.replace(' ', '_')
+        annotation = annotation.replace(' ', '_')
+        meta = {
+            "accession": study_accession,
+            "organism": organism,
+            "bucket": bucket_name,
+            "clustering": clustering,
+            "annotation": annotation,
+        }
+        gene_dicts = extract(meta, annotation_groups, publication)
+        tsv_content = transform(gene_dicts, meta)
+        load(clustering, annotation, tsv_content)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -465,9 +497,9 @@ if __name__ == '__main__':
     organism = args.taxon_name
     clustering = args.clustering
     annotation = args.annotation_name
-    all_groups = args.annotation_groups
+    annotation_groups = args.annotation_groups
     publication = args.publication
 
-    rank_genes(
-        accession, bucket, organism, clustering, annotation, all_groups, publication
+    RankGenes(
+        clustering, annotation, accession, bucket, organism, annotation_groups, publication
     )
