@@ -725,6 +725,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
         elif all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:
+            if "rank_genes" in arguments
             file_path, study_file_id = get_delocalization_info(arguments)
             if IngestFiles.is_remote_file(file_path):
                 if "differential_expression" in arguments:
@@ -734,18 +735,10 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                 else:
                     log_path = f"parse_logs/{study_file_id}/log.txt"
                 # Delocalize support log
-                IngestFiles.delocalize_file(
-                    study_file_id, arguments["study_id"], file_path, "log.txt", log_path
-                )
+                IngestFiles.delocalize_file(file_path, "log.txt", log_path)
                 # Delocalize user log
                 user_log_path = f"parse_logs/{study_file_id}/user_log.txt"
-                IngestFiles.delocalize_file(
-                    study_file_id,
-                    arguments["study_id"],
-                    file_path,
-                    "user_log.txt",
-                    user_log_path,
-                )
+                IngestFiles.delocalize_file(file_path, "user_log.txt", user_log_path,)
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
                     # PAPI jobs failing metadata validation against convention report

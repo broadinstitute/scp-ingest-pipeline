@@ -65,7 +65,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         dim = ['NAME', 'X', 'Y']
         clustering_dimension = adata.obsm[clustering_name].shape[1]
         if clustering_dimension == 3:
-            dim.append('Z') 
+            dim.append('Z')
             headers = dim
         elif clustering_dimension == 2:
             headers = dim
@@ -183,8 +183,6 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
 
         for file in files_to_delocalize:
             IngestFiles.delocalize_file(
-                study_file_id,
-                None,
                 file_path,
                 file,
                 f"_scp_internal/anndata_ingest/{accession}_{study_file_id}/{file}",

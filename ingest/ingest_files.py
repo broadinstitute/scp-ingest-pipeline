@@ -170,8 +170,6 @@ class IngestFiles:
 
     @staticmethod
     def delocalize_file(
-        study_file_id,
-        study_id,
         file_path,
         file_to_delocalize,
         bucket_destination,
