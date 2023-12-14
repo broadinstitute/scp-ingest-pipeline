@@ -90,7 +90,15 @@ class IngestFiles:
         "application/x-hdf5": [".h5ad", ".h5", ".hdf5"],
     }
 
-    def __init__(self, file_path, allowed_file_types):
+    def __init__(
+            self,
+            file_path: str,
+            *allowed_file_types: dict[str, list]
+        ):
+        """
+        :param file_path: GS URL or local file path
+        :param allowed_file_types (optional): list of allowed file extensions by MIME types
+        """
         self.file_path = file_path
         # valid suffixes for AnnData ingest (expecting .h5ad)
         # including hdf5 file extensions - AnnData files should be valid hdf5
@@ -104,7 +112,10 @@ class IngestFiles:
 
         self.verify_file_exists(file_path)
         # Allowed files for a given file type (expression file, cluster files, etc.)
-        self.allowed_file_types = allowed_file_types
+        if allowed_file_types is None:
+            self.allowed_file_types = IngestFiles.ALLOWED_FILE_EXTENSIONS
+        else:
+            self.allowed_file_types = allowed_file_types
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
 
@@ -114,6 +125,7 @@ class IngestFiles:
 
     def download_from_bucket(self, file_path):
         """Downloads file from Google Cloud Storage bucket"""
+        print('downloading file')
         blob = self.bucket.blob(self.source)
         destination = "/tmp/" + self.source.replace("/", "%2f")
         blob.download_to_filename(destination)

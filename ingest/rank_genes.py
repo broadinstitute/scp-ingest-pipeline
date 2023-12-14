@@ -27,6 +27,8 @@ import csv
 from io import BytesIO
 import xml.etree.ElementTree as ET
 
+# Used when importing internally and in tests
+from ingest_files import IngestFiles
 
 def download_gzip(url, output_path, cache=0):
     """Download gzip file, decompress, write to output path; use optional cache
@@ -208,8 +210,9 @@ def extract_de(bucket, clustering, annotation, annotation_groups):
 
     origin = "https://storage.googleapis.com"
     # directory = "tests/data/gene_leads/_scp_internal%2Fdifferential_expression%2F"
-    directory = "tests/data/rank_genes/"
-    de_url_stem = f"{origin}/download/storage/v1/b/{bucket}/o/{directory}"
+    # directory = "tests/data/rank_genes/"
+    directory = "_scp_internal/differential_expression/"
+    de_url_stem = f"{origin}/download/storage/v1/b/{bucket}/o/"
     # leaf = "--study--wilcoxon.tsv"
     leaf = "--cluster--wilcoxon.tsv"
     params = "?alt=media"
@@ -218,7 +221,12 @@ def extract_de(bucket, clustering, annotation, annotation_groups):
         safe_group = sanitize_string(group)
         safe_clustering = sanitize_string(clustering)
         tmp_dir = directory.replace('%2F', '_')
-        de_filename = f"{tmp_dir}{safe_clustering}--{annotation}--{safe_group}{leaf}"
+        safe_dir = directory.replace('/', '%2F')
+        stem = de_url_stem + safe_dir
+        de_gsurl = f"gs://{bucket}/{directory}{safe_clustering}--{annotation}--{safe_group}{leaf}"
+
+        ingest_file = IngestFiles(de_gsurl)
+        file_io, local_path = ingest_file.resolve_path(de_gsurl)
 
         # TODO (pre-GA): Fetch these from bucket; requires auth token
         # de_url = de_url_stem + de_filename + params
@@ -227,7 +235,7 @@ def extract_de(bucket, clustering, annotation, annotation_groups):
         # with open(de_filename, "w") as f:
         #     f.write(de_content)
 
-        with open(de_filename) as file:
+        with open(local_path) as file:
             reader = csv.reader(file, delimiter="\t")
             i = 0
             # Headers in upstream, precomputed DE files:

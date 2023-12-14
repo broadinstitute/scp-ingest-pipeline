@@ -35,7 +35,7 @@ python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5
 # Subsample cluster and metadata file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_data.csv --name cluster1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
-# Ingest mtx files
+# Ingest MTX files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --matrix-file ../tests/data/mtx/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 
 # Ingest AnnData as reference file
@@ -53,9 +53,10 @@ python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5
 # Ingest AnnData - happy path cluster and metadata extraction
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['cluster', 'metadata']" --obsm-keys "['X_umap','X_tsne']"
 
-# Differential Expression analysis (dense matrix)
+# Differential expression analysis (dense matrix)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_dense_matrix.tsv --matrix-file-type dense --annotation-file ../tests/data/differential_expression/de_dense_metadata.tsv --cluster-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
-# Differential Expression analysis (sparse matrix)
+
+# Differential expression analysis (sparse matrix)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --matrix-file-type mtx --annotation-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --cluster-name de_sparse_integration --study-accession SCPsparsemini --differential-expression
 """
 import json
