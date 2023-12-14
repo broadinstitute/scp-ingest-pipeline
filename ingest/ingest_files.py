@@ -182,39 +182,40 @@ class IngestFiles:
 
     @staticmethod
     def delocalize_file(
-        file_path,
-        file_to_delocalize,
-        bucket_destination,
-        content_encoding=None,
+        file_gs_url: str,
+        file_to_delocalize: str,
+        bucket_destination: str,
+        content_encoding: str = None,
     ):
         """Writes local file to Google bucket
-        Args:
-            file_path: path of an ingest file (MUST BE  GS url)
-            file_to_delocalize: name of local file to delocalize (ie. errors.txt)
-            bucket_destination: path to google bucket (ie. parse_logs/{study_file_id}/errors.txt)
-            content_encoding: set Content-Encoding header, if specified
+
+        :param file_gs_url: GS URL to ingest file
+        :param file_to_delocalize: name of local file to delocalize (ie. errors.txt)
+        :param bucket_destination: path in Google bucket (e.g. parse_logs/{study_file_id}/errors.txt)
+        :param content_encoding: set Content-Encoding header, if specified
         """
 
-        if IngestFiles.is_remote_file(file_path):
-            try:
-                path_segments = file_path[5:].split("/")
-                bucket_name = path_segments[0]
-                storage_client = storage.Client()
-                bucket = storage_client.get_bucket(bucket_name)
-                blob = bucket.blob(bucket_destination)
-                if content_encoding is not None:
-                    blob.content_encoding = content_encoding
-                blob.upload_from_filename(file_to_delocalize)
-                IngestFiles.dev_logger.info(
-                    f"File {file_to_delocalize} uploaded to {bucket_destination}."
-                )
-            except Exception:
-                IngestFiles.dev_logger.critical(
-                    f"File {file_to_delocalize} not uploaded to {bucket_destination}.",
-                    exc_info=True,
-                )
-        else:
+        if not IngestFiles.is_remote_file(file_gs_url):
             IngestFiles.dev_logger.error("Cannot push to bucket. File is not remote")
+            return
+
+        try:
+            path_segments = file_gs_url[5:].split("/")
+            bucket_name = path_segments[0]
+            storage_client = storage.Client()
+            bucket = storage_client.get_bucket(bucket_name)
+            blob = bucket.blob(bucket_destination)
+            if content_encoding is not None:
+                blob.content_encoding = content_encoding
+            blob.upload_from_filename(file_to_delocalize)
+            IngestFiles.dev_logger.info(
+                f"File {file_to_delocalize} uploaded to {bucket_destination}."
+            )
+        except Exception:
+            IngestFiles.dev_logger.critical(
+                f"File {file_to_delocalize} not uploaded to {bucket_destination}.",
+                exc_info=True,
+            )
 
     def open_file(self, file_path, open_as=None, start_point: int = 0, **kwargs):
         """A wrapper function for opening txt (txt is expected to be tsv or csv), csv, or tsv formatted files"""

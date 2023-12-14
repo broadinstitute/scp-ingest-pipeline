@@ -13,10 +13,12 @@ to prioritize which genes to cache.
 EXAMPLES
 
 python3 ingest/rank_genes.py --study-accession SCP138 --bucket-name fc-65379b91-5ded-4d28-8e51-ada209542117 --taxon-name="Homo sapiens" --clustering="All Cells UMAP" --annotation-name="General Celltype" --annotation-groups '["B cells", "CSN1S1 macrophages", "dendritic cells", "eosinophils", "fibroblasts", "GPMNB macrophages", "LC1", "LC2", "neutrophils", "T cells"]' --publication https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1
+
+python3 ingest/ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 rank_genes --study-accession SCP170 --bucket-name fc-4deb31ce-2563-4f66-b872-e5ee59ff255a --taxon-name="Homo sapiens" --cluster-name="KaZhouAll_mt10_SCP_UMAP_coords_meta.csv" --annotation-name="celltype" --annotation-groups '[ "Neural Progenitors_1", "Ependymal", "Dividing", "Fibroblasts", "Oligodendrocyte Progenitors_2", "Blood", "Endothelial [Arterial_2]", "Neural Progenitors_2", "Neurons", "Astrocyte Progenitors", "Tanycytes", "Endothelial [Venous]", "Oligodendrocytes [Immature]", "Microglia", "Oligodendrocyte Progenitors_1", "Pericytes_2", "Astrocytes", "vSMC", "RadialGlia", "Endothelial [Arterial_1]", "Oligodendrocytes [Dividing]", "Oligodendrocytes [Maturing]", "Oligodendrocytes [Mature]", "Pericytes_1", "NA" ]' --publication="ingest/herb_2021_biorxhiv_full_text.txt" --rank-genes
 """
 
-import argparse
-import ast
+import logging
+import datetime
 import glob
 import gzip
 import tarfile
@@ -29,6 +31,7 @@ import xml.etree.ElementTree as ET
 
 # Used when importing internally and in tests
 from ingest_files import IngestFiles
+from monitor import setup_logger
 
 def download_gzip(url, output_path, cache=0):
     """Download gzip file, decompress, write to output path; use optional cache
@@ -228,13 +231,6 @@ def extract_de(bucket, clustering, annotation, annotation_groups):
         ingest_file = IngestFiles(de_gsurl)
         file_io, local_path = ingest_file.resolve_path(de_gsurl)
 
-        # TODO (pre-GA): Fetch these from bucket; requires auth token
-        # de_url = de_url_stem + de_filename + params
-        # with request.urlopen(de_url) as response:
-        #     de_content = response.read().decode('utf-8')
-        # with open(de_filename, "w") as f:
-        #     f.write(de_content)
-
         with open(local_path) as file:
             reader = csv.reader(file, delimiter="\t")
             i = 0
@@ -314,17 +310,15 @@ def sort_genes_by_relevance(gene_dicts):
         if gene not in interest_rank_by_gene:
             # TODO: Handle synonyms, e.g. CECR1 for ADA2
             continue
-        genes.append(
-            {
-                "top_de_rank": de_by_gene[gene][0]["scores_rank"],
-                "de": de_by_gene[gene],
-                "mentions": mentions_by_gene.get(gene, 0),
-                "interest_rank": interest_rank_by_gene[gene],
-                "locus": loci_by_gene[gene],
-                "full_name": full_names_by_gene[gene],
-                "symbol": gene,
-            }
-        )
+        genes.append({
+            "top_de_rank": de_by_gene[gene][0]["scores_rank"],
+            "de": de_by_gene[gene],
+            "mentions": mentions_by_gene.get(gene, 0),
+            "interest_rank": interest_rank_by_gene[gene],
+            "locus": loci_by_gene[gene],
+            "full_name": full_names_by_gene[gene],
+            "symbol": gene,
+        })
 
     genes = sorted(genes, key=lambda gene: int(gene["interest_rank"]))
     genes = sorted(genes, key=lambda gene: int(gene["top_de_rank"]))
@@ -370,8 +364,7 @@ def transform(gene_dicts, meta):
     metainformation = get_metainformation(meta, de_meta_keys)
     header = (
         "# "
-        + "\t".join(
-            [
+        + "\t".join([
                 'name',
                 'chromosome',
                 'start',
@@ -380,8 +373,7 @@ def transform(gene_dicts, meta):
                 'differential_expression',
                 'publication_mentions',
                 'interest_rank',
-            ]
-        )
+            ])
         + "\n"
     )
 
@@ -390,42 +382,55 @@ def transform(gene_dicts, meta):
     return tsv_content
 
 
-def load(clustering, annotation, tsv_content):
+def load(clustering, annotation, tsv_content, bucket_name):
     """Load TSV content into file, write to disk"""
-    # TODO (pre-GA): Write output files to whichever bucket we write DE to.
-    # The # of gene-rank files will be many fewer than DE in Q2 '22,
-    # i.e. << one-vs-rest DE.
-    cache_buster = "_v11"  # TODO (pre-GA): Improve handling if needed beyond dev
-    output_path = f"ranked_genes_{clustering}--{annotation}{cache_buster}.tsv"
+
+    output_path = f"ranked_genes_{clustering}--{annotation}.tsv"
     with open(output_path, "w") as f:
         f.write(tsv_content)
-
     print('Wrote content')
     print(tsv_content)
 
+    bucket_folder = "_scp_internal/ranked_genes"
+    gs_path = f"{bucket_folder}/{output_path}"
+    output_gs_url = f"gs://{bucket_name}/{gs_path}"
+
+    IngestFiles.delocalize_file(output_gs_url, output_path, gs_path)
+
+
 class RankGenes:
+
     def __init__(
         self,
-        study_accession,
-        bucket_name,
-        taxon_name,
-        clustering,
-        annotation,
-        annotation_groups,
-        publication
+        study_accession: str,
+        bucket_name: str,
+        taxon_name: str,
+        clustering: str,
+        annotation: str,
+        annotation_groups: list[str],
+        publication: str
     ):
         """
-        :param study_accession (string) Study accession, e.g. "SCP123"
-        :param bucket_name (string) Name of GCS bucket, e.g. fc-65379b91-5ded-4d28-8e51-ada209541234"
-        :param taxon_name (string) Scientific name of organism, e.g. "Homo sapiens"
-        :param annotation_groups (list<string>) List of annotation groups, e.g. ["B cells", "CSN1S1 macrophages"]
-        :param clustering (string) Name of clustering
-        :param annotation_name (string) Name of annotation
-        :param publication (string) URL of the study's publicly-accessible research article, or GS URL or local path to publication text file
+        :param study_accession Study accession, e.g. "SCP123"
+        :param bucket_name Name of GCS bucket, e.g. "fc-65379b91-5ded-4d28-8e51-ada209541234"
+        :param taxon_name Scientific name of organism, e.g. "Homo sapiens"
+        :param annotation_groups List of annotation groups, e.g. ["B cells", "CSN1S1 macrophages"]
+        :param clustering Name of clustering
+        :param annotation_name Name of annotation
+        :param publication URL of the study's publicly-accessible research article, or GS URL or local path to publication text file
         """
         organism = taxon_name.lower().replace(' ', '-')
         clustering = clustering.replace(' ', '_')
         annotation = annotation.replace(' ', '_')
+
+        timestamp = datetime.datetime.now().isoformat(sep="T", timespec="seconds")
+        url_safe_timestamp = re.sub(':', '', timestamp)
+        log_name = f"rank_genes_{url_safe_timestamp}_log.txt"
+        self.log_name = log_name
+        self.dev_logger = setup_logger(
+            __name__, log_name, level=logging.INFO, format="support_configs"
+        )
+
         meta = {
             "accession": study_accession,
             "organism": organism,
@@ -433,57 +438,8 @@ class RankGenes:
             "clustering": clustering,
             "annotation": annotation,
         }
+
         gene_dicts = extract(meta, annotation_groups, publication)
         tsv_content = transform(gene_dicts, meta)
-        load(clustering, annotation, tsv_content)
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-
-    parser.add_argument(
-        "--study-accession",
-        required=True,
-        help="Single study accession associated with provided DE input files.",
-    )
-    parser.add_argument(
-        "--bucket-name",
-        required=True,
-        help=("Name of GCS bucket, e.g. fc-65379b91-5ded-4d28-8e51-ada209541234"),
-    )
-    parser.add_argument(
-        "--taxon-name",
-        required=True,
-        help=("Scientific name of organism, e.g. \"Homo sapiens\""),
-    )
-    parser.add_argument("--clustering", required=True, help=("Name of clustering"))
-    parser.add_argument("--annotation-name", required=True, help=("Name of annotation"))
-    parser.add_argument(
-        "--annotation-groups",
-        required=True,
-        type=ast.literal_eval,
-        help=("List of annotation groups, e.g. ['B cells', 'CSN1S1 macrophages']"),
-    )
-    parser.add_argument(
-        "--publication",
-        required=True,
-        help=(
-            "URL of the study's publicly-accessible research article, "
-            "or local path to publication text file"
-        )
-    )
-
-    args = parser.parse_args()
-
-    accession = args.study_accession
-    bucket = args.bucket_name
-    organism = args.taxon_name
-    clustering = args.clustering
-    annotation = args.annotation_name
-    annotation_groups = args.annotation_groups
-    publication = args.publication
-
-    RankGenes(
-        accession, bucket, organism, clustering, annotation, annotation_groups, publication
-    )
+        load(clustering, annotation, tsv_content, bucket_name)
