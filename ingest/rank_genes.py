@@ -27,8 +27,10 @@ import json
 import urllib
 import urllib.request
 import csv
+import os
 from io import BytesIO
 import xml.etree.ElementTree as ET
+import requests
 
 # Used when importing internally and in tests
 from ingest_files import IngestFiles
@@ -168,10 +170,10 @@ def fetch_gene_cache(organism, logger):
     return [interest_rank_by_gene, counts_by_gene, loci_by_gene, full_names_by_gene]
 
 
-def extract(meta, annotation_groups, publication, logger):
+def extract(organism, publication, bucket, de_dict, logger):
     """Data mine genes from publication"""
     logger.info(f"Exracting gene names from publication: {publication}")
-    [accession, organism, bucket, clustering, annotation] = list(meta.values())
+
     [
         interest_rank_by_gene,
         counts_by_gene,
@@ -195,7 +197,7 @@ def extract(meta, annotation_groups, publication, logger):
         if counts_by_gene[gene] > 0:
             mentions_by_gene[gene] = count
 
-    de_by_gene = extract_de(bucket, clustering, annotation, annotation_groups)
+    de_by_gene = extract_de(bucket, de_dict)
 
     return [
         interest_rank_by_gene,
@@ -208,29 +210,20 @@ def extract(meta, annotation_groups, publication, logger):
 def sanitize_string(string):
     return string.replace(' ', '_').replace('.', '_').replace('[', '_').replace(']', '_')
 
-def extract_de(bucket, clustering, annotation, annotation_groups):
+
+def extract_de(bucket, de_dict):
     """Fetch differential expression (DE) files, return DE fields by gene"""
+
     de_by_gene = {}
 
-    origin = "https://storage.googleapis.com"
-    # directory = "tests/data/gene_leads/_scp_internal%2Fdifferential_expression%2F"
     # directory = "tests/data/rank_genes/"
     directory = "_scp_internal/differential_expression/"
-    de_url_stem = f"{origin}/download/storage/v1/b/{bucket}/o/"
-    # leaf = "--study--wilcoxon.tsv"
-    leaf = "--cluster--wilcoxon.tsv"
-    params = "?alt=media"
 
-    for group in annotation_groups:
-        safe_group = sanitize_string(group)
-        safe_clustering = sanitize_string(clustering)
-        tmp_dir = directory.replace('%2F', '_')
-        safe_dir = directory.replace('/', '%2F')
-        stem = de_url_stem + safe_dir
-        de_gsurl = f"gs://{bucket}/{directory}{safe_clustering}--{annotation}--{safe_group}{leaf}"
+    for [group, de_file] in de_dict["de_groups_and_files"]:
+        de_gsurl = f"gs://{bucket}/{directory}{de_file}"
 
         ingest_file = IngestFiles(de_gsurl)
-        file_io, local_path = ingest_file.resolve_path(de_gsurl)
+        local_path = ingest_file.resolve_path(de_gsurl)[1]
 
         with open(local_path) as file:
             reader = csv.reader(file, delimiter="\t")
@@ -400,30 +393,69 @@ def load(clustering, annotation, tsv_content, bucket_name, logger):
     logger.info("Uploaded gene ranks to bucket")
 
 
+def get_scp_api_origin():
+    db_name = os.environ['DATABASE_NAME']
+    db_env = db_name.split('_')[-1]
+    db_env = 'staging'
+    origins_by_environment = {
+        'development': 'https://localhost:3000',
+        'staging': 'https://singlecell-staging.broadinstitute.org',
+        'production': 'https://singlecell.broadinstitute.org'
+    }
+    return origins_by_environment[db_env]
+
+
+def fetch_context(accession):
+    origin = get_scp_api_origin()
+    url = f"{origin}/single_cell/api/v1/studies/{accession}/explore"
+    print('url', url)
+    response = requests.get(url, verify=False)
+    print('response', response)
+    explore_json = json.loads(response.content)
+
+    bucket_id = explore_json["bucketId"]
+    raw_organism = explore_json["taxonNames"][0]
+    organism = raw_organism.lower().replace(' ', '-')
+
+    try:
+        # DE is available; use first eligible clustering and annotation
+        # TODO: Consider outputting multiple gene rank lists, 1 per DE annot
+        de = explore_json["differentialExpression"][0]
+        clustering = de["cluster_name"]
+        annotation = {
+            "name": de["annotation_name"],
+            "scope": de["annotation_scope"]
+        }
+        de_groups_and_files = de["select_options"]["one_vs_rest"]
+        de_dict = {
+            "clustering": clustering,
+            "annotation": annotation,
+            "de_groups_and_files": de_groups_and_files
+        }
+    except Exception as e:
+        # No DE available; use default clustering and annotation
+        # TODO: Add downstream handling for study without DE
+        raise ValueError(
+            "Rank genes only currently supports studies that have one-vs-rest SCP-computed DE"
+        )
+
+    print('bucket_id, organism, de_dict', bucket_id, organism, de_dict)
+    return bucket_id, organism, de_dict
+
+
 class RankGenes:
 
     def __init__(
         self,
         study_accession: str,
-        bucket_name: str,
-        taxon_name: str,
-        clustering: str,
-        annotation: str,
-        annotation_groups: list[str],
-        publication: str
+        publication: str # TODO: Get this from SCP API given accession
     ):
         """
-        :param study_accession Study accession, e.g. "SCP123"
-        :param bucket_name Name of GCS bucket, e.g. "fc-65379b91-5ded-4d28-8e51-ada209541234"
-        :param taxon_name Scientific name of organism, e.g. "Homo sapiens"
-        :param annotation_groups List of annotation groups, e.g. ["B cells", "CSN1S1 macrophages"]
-        :param clustering Name of clustering
-        :param annotation_name Name of annotation
+        :param study_accession Accession of a public SCP study, e.g. "SCP123"
         :param publication URL of the study's publicly-accessible research article, or GS URL or local path to publication text file
         """
-        organism = taxon_name.lower().replace(' ', '-')
-        clustering = clustering.replace(' ', '_')
-        annotation = annotation.replace(' ', '_')
+
+        bucket, organism, de_dict = fetch_context(study_accession)
 
         timestamp = datetime.datetime.now().isoformat(sep="T", timespec="seconds")
         url_safe_timestamp = re.sub(':', '', timestamp)
@@ -432,16 +464,18 @@ class RankGenes:
         logger = setup_logger(
             __name__, log_name, level=logging.INFO, format="support_configs"
         )
+        clustering = de_dict["clustering"]
+        annotation = de_dict["annotation"]
 
         meta = {
             "accession": study_accession,
             "organism": organism,
-            "bucket": bucket_name,
+            "bucket": bucket,
             "clustering": clustering,
-            "annotation": annotation,
+            "annotation": annotation
         }
 
-        gene_dicts = extract(meta, annotation_groups, publication, logger)
+        gene_dicts = extract(organism, publication, bucket, de_dict, logger)
         tsv_content = transform(gene_dicts, meta)
 
-        load(clustering, annotation, tsv_content, bucket_name, logger)
+        load(clustering, annotation, tsv_content, bucket, logger)
