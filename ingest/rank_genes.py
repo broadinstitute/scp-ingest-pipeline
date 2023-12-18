@@ -97,7 +97,7 @@ def fetch_pmcid_text(pmcid, logger):
     download_gzip(package_url, ".", logger)
     nxml_path = glob.glob(f"{pmcid}/*.nxml")[0]
     article = ET.parse(nxml_path).getroot()
-    text = ET.tostring(article.find("body"), method="text")
+    text = str(ET.tostring(article.find("body"), method="text"))
     return text
 
 
@@ -122,6 +122,7 @@ def fetch_publication_text(publication, logger):
     if len(doi_split) > 1:
         doi = doi_split[1]
         pmcid = fetch_pmcid(doi)
+        logger.info('Converted DOI to PMC ID: ' + pmcid)
         text = fetch_pmcid_text(pmcid, logger)
     elif publication.startswith("https://www.biorxiv.org"):
         full_text_url = f"{publication}.full.txt"
@@ -408,9 +409,7 @@ def get_scp_api_origin():
 def fetch_context(accession):
     origin = get_scp_api_origin()
     url = f"{origin}/single_cell/api/v1/studies/{accession}/explore"
-    print('url', url)
     response = requests.get(url, verify=False)
-    print('response', response)
     explore_json = json.loads(response.content)
 
     bucket_id = explore_json["bucketId"]
@@ -439,7 +438,6 @@ def fetch_context(accession):
             "Rank genes only currently supports studies that have one-vs-rest SCP-computed DE"
         )
 
-    print('bucket_id, organism, de_dict', bucket_id, organism, de_dict)
     return bucket_id, organism, de_dict
 
 

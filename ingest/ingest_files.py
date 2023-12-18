@@ -125,7 +125,7 @@ class IngestFiles:
 
     def download_from_bucket(self, file_path):
         """Downloads file from Google Cloud Storage bucket"""
-        print('downloading file')
+        print(f'Downloading file: {file_path}')
         blob = self.bucket.blob(self.source)
         destination = "/tmp/" + self.source.replace("/", "%2f")
         blob.download_to_filename(destination)
