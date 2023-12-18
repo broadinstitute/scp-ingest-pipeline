@@ -591,11 +591,6 @@ class IngestPipeline:
             kwargs = self.kwargs
             RankGenes(
                 kwargs["study_accession"],
-                kwargs["bucket_name"],
-                kwargs["taxon_name"],
-                kwargs["cluster_name"],
-                kwargs["annotation_name"],
-                kwargs["annotation_groups"],
                 kwargs["publication"]
             )
         except Exception as e:

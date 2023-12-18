@@ -486,23 +486,6 @@ def create_parser():
         '--study-accession', help='Study accession, e.g. "SCP123"', required=True
     )
     parser_rank_genes.add_argument(
-        '--bucket-name', help='Name of GCS bucket, e.g. "fc-65379b91-5ded-4d28-8e51-ada209541234"', required=True
-    )
-    parser_rank_genes.add_argument(
-        '--taxon-name', help='Scientific name of organism, e.g. "Homo sapiens"', required=True
-    )
-    parser_rank_genes.add_argument(
-        '--cluster-name', help='Name of clustering', required=True
-    )
-    parser_rank_genes.add_argument(
-        '--annotation-name', help='Name of annotation', required=True
-    )
-    parser_rank_genes.add_argument(
-        '--annotation-groups',
-        type=ast.literal_eval,
-        help='List of annotation groups, e.g. ["B cells", "CSN1S1 macrophages"]', required=True
-    )
-    parser_rank_genes.add_argument(
         '--publication',
         help="URL of the study's publicly-accessible research article, or GS URL or local path to publication text file",
         required=True
