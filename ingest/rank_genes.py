@@ -35,7 +35,15 @@ import requests
 from ingest_files import IngestFiles
 from monitor import setup_logger
 
-def download_gzip(url, output_path, logger, cache=0):
+timestamp = datetime.datetime.now().isoformat(sep="T", timespec="seconds")
+url_safe_timestamp = re.sub(':', '', timestamp)
+log_name = f"rank_genes_{url_safe_timestamp}_log.txt"
+
+logger = setup_logger(
+    __name__, log_name, level=logging.INFO, format="support_configs"
+)
+
+def download_gzip(url, output_path, cache=0):
     """Download gzip file, decompress, write to output path; use optional cache
     Cached files can help speed development iterations by > 2x, and some
     development scenarios (e.g. on a train or otherwise without an Internet
@@ -82,7 +90,7 @@ def fetch_pmcid(doi):
     return pmcid
 
 
-def fetch_pmcid_text(pmcid, logger):
+def fetch_pmcid_text(pmcid):
     """Get full text for publication, given its PubMed Central ID"""
     oa_url = f"https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi?id={pmcid}"
     with urllib.request.urlopen(oa_url) as response:
@@ -93,14 +101,14 @@ def fetch_pmcid_text(pmcid, logger):
         msg = f"This PMCID is not open access: {pmcid}"
         raise ValueError(msg)
     package_url = oa_package.attrib["href"].replace("ftp://", "https://")
-    download_gzip(package_url, ".", logger)
+    download_gzip(package_url, ".")
     nxml_path = glob.glob(f"{pmcid}/*.nxml")[0]
     article = ET.parse(nxml_path).getroot()
     text = str(ET.tostring(article.find("body"), method="text"))
     return text
 
 
-def fetch_publication_text(publication, logger):
+def fetch_publication_text(publication):
     """Get full text for a publicly-accessible article given its URL"""
     # Examples:
     # <Is open access> -- <publication URL> -- <Study accession>
@@ -122,7 +130,7 @@ def fetch_publication_text(publication, logger):
         doi = doi_split[1]
         pmcid = fetch_pmcid(doi)
         logger.info('Converted DOI to PMC ID: ' + pmcid)
-        text = fetch_pmcid_text(pmcid, logger)
+        text = fetch_pmcid_text(pmcid)
     elif publication.startswith("https://www.biorxiv.org"):
         full_text_url = f"{publication}.full.txt"
         logger.info('full_text_url', full_text_url)
@@ -136,11 +144,11 @@ def fetch_publication_text(publication, logger):
     return text
 
 
-def fetch_gene_cache(organism, logger):
+def fetch_gene_cache(organism):
     genes_filename = f"{organism}-genes.tsv"  # e.g. homo-sapiens-genes.tsv
     base_url = "https://cdn.jsdelivr.net/npm/"
     genes_url = f"{base_url}ideogram@1.41.0/dist/data/cache/genes/{genes_filename}.gz"
-    download_gzip(genes_url, genes_filename, logger)
+    download_gzip(genes_url, genes_filename)
 
     # Populate containers for various name and significance fields
     interest_rank_by_gene = {}
@@ -170,7 +178,7 @@ def fetch_gene_cache(organism, logger):
     return [interest_rank_by_gene, counts_by_gene, loci_by_gene, full_names_by_gene]
 
 
-def extract(organism, publication, bucket, de_dict, logger):
+def extract(organism, publication, bucket, de_dict):
     """Data mine genes from publication"""
     logger.info(f"Exracting gene names from publication: {publication}")
 
@@ -179,9 +187,9 @@ def extract(organism, publication, bucket, de_dict, logger):
         counts_by_gene,
         loci_by_gene,
         full_names_by_gene,
-    ] = fetch_gene_cache(organism, logger)
+    ] = fetch_gene_cache(organism)
 
-    publication_text = fetch_publication_text(publication, logger)
+    publication_text = fetch_publication_text(publication)
 
     publication_words = publication_text.split(' ')
     for word in publication_words:
@@ -378,7 +386,7 @@ def transform(gene_dicts, meta):
     return tsv_content
 
 
-def load(clustering, annotation, tsv_content, bucket_name, logger):
+def load(clustering, annotation, tsv_content, bucket_name):
     """Load TSV content into file, write to disk"""
 
     # TODO: Consider cluster- and annotation-specific gene ranking
@@ -458,13 +466,6 @@ class RankGenes:
 
         bucket, organism, de_dict = fetch_context(study_accession)
 
-        timestamp = datetime.datetime.now().isoformat(sep="T", timespec="seconds")
-        url_safe_timestamp = re.sub(':', '', timestamp)
-        log_name = f"rank_genes_{url_safe_timestamp}_log.txt"
-
-        logger = setup_logger(
-            __name__, log_name, level=logging.INFO, format="support_configs"
-        )
         clustering = de_dict["clustering"]
         annotation = de_dict["annotation"]
 
@@ -476,7 +477,7 @@ class RankGenes:
             "annotation": annotation
         }
 
-        gene_dicts = extract(organism, publication, bucket, de_dict, logger)
+        gene_dicts = extract(organism, publication, bucket, de_dict)
         tsv_content = transform(gene_dicts, meta)
 
-        load(clustering, annotation, tsv_content, bucket, logger)
+        load(clustering, annotation, tsv_content, bucket)
