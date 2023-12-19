@@ -12,9 +12,7 @@ to prioritize which genes to cache.
 
 EXAMPLES
 
-python3 ingest/rank_genes.py --study-accession SCP138 --bucket-name fc-65379b91-5ded-4d28-8e51-ada209542117 --taxon-name="Homo sapiens" --clustering="All Cells UMAP" --annotation-name="General Celltype" --annotation-groups '["B cells", "CSN1S1 macrophages", "dendritic cells", "eosinophils", "fibroblasts", "GPMNB macrophages", "LC1", "LC2", "neutrophils", "T cells"]' --publication https://www.biorxiv.org/content/10.1101/2021.11.13.468496v1
-
-python3 ingest/ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 rank_genes --study-accession SCP170 --bucket-name fc-4deb31ce-2563-4f66-b872-e5ee59ff255a --taxon-name="Homo sapiens" --cluster-name="KaZhouAll_mt10_SCP_UMAP_coords_meta.csv" --annotation-name="celltype" --annotation-groups '[ "Neural Progenitors_1", "Ependymal", "Dividing", "Fibroblasts", "Oligodendrocyte Progenitors_2", "Blood", "Endothelial [Arterial_2]", "Neural Progenitors_2", "Neurons", "Astrocyte Progenitors", "Tanycytes", "Endothelial [Venous]", "Oligodendrocytes [Immature]", "Microglia", "Oligodendrocyte Progenitors_1", "Pericytes_2", "Astrocytes", "vSMC", "RadialGlia", "Endothelial [Arterial_1]", "Oligodendrocytes [Dividing]", "Oligodendrocytes [Maturing]", "Oligodendrocytes [Mature]", "Pericytes_1", "NA" ]' --publication="ingest/herb_2021_biorxhiv_full_text.txt" --rank-genes
+python3 ingest/ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 rank_genes --study-accession SCP367 --publication="https://doi.org/10.1126/sciadv.adf6251" --rank-genes
 """
 
 import logging
@@ -30,6 +28,7 @@ import csv
 import os
 from io import BytesIO
 import xml.etree.ElementTree as ET
+
 import requests
 
 # Used when importing internally and in tests
@@ -277,6 +276,8 @@ def get_metainformation(meta, de_meta_keys):
 
     Metainformation fields are also used in the VCF file specification.
     """
+    annot = meta["annotation"]
+    meta["annotation"] = f"{annot['name']}--group--{annot['scope']}"
     content_meta = ";".join([f"{k}={v}" for (k, v) in meta.items()])
     de_meta = "differential_expression keys: " + ";".join(de_meta_keys)
     metainformation = (
@@ -380,7 +381,9 @@ def transform(gene_dicts, meta):
 def load(clustering, annotation, tsv_content, bucket_name, logger):
     """Load TSV content into file, write to disk"""
 
-    output_path = f"ranked_genes_{clustering}--{annotation}.tsv"
+    # TODO: Consider cluster- and annotation-specific gene ranking
+    # output_path = f"ranked_genes_{clustering}--{annotation}.tsv"
+    output_path = "ranked_genes.tsv"
     with open(output_path, "w") as f:
         f.write(tsv_content)
     logger.info('Wrote content')
@@ -446,7 +449,7 @@ class RankGenes:
     def __init__(
         self,
         study_accession: str,
-        publication: str # TODO: Get this from SCP API given accession
+        publication: str
     ):
         """
         :param study_accession Accession of a public SCP study, e.g. "SCP123"
