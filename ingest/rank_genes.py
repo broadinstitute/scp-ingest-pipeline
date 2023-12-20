@@ -433,9 +433,6 @@ def fetch_context(accession):
     raw_organism = explore_json["taxonNames"][0]
     organism = raw_organism.lower().replace(' ', '-')
 
-    print("explore_json")
-    print(explore_json)
-
     try:
         # DE is available; use first eligible clustering and annotation
         # TODO: Consider outputting multiple gene rank lists, 1 per DE annot
