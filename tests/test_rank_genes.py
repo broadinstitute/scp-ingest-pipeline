@@ -41,8 +41,6 @@ class TestRankGenes(unittest.TestCase):
             self.assertEqual(organism, 'homo-sapiens')
             self.assertEqual(de_dict["de_groups_and_files"][3][0], "Fibroblasts")
 
-
-
     def teardown_method(self, test_method):
         files = glob.glob('cluster_umap_txt--General_Celltype*.tsv')
         for file in files:

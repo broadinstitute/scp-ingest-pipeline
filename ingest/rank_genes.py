@@ -177,11 +177,24 @@ def fetch_gene_cache(organism):
 
     return [interest_rank_by_gene, counts_by_gene, loci_by_gene, full_names_by_gene]
 
+def screen_false_positive_mentions(publication_text, mentions_by_gene):
+    """Screen out hits that are non-gene abbreviations
+    """
+    fp_for_tf = bool(re.search("transcription factor(s)? \(TF", publication_text))
+    print('fp_for_tf', fp_for_tf)
+    if fp_for_tf:
+        print('"TF" in mentions_by_gene', "TF" in mentions_by_gene)
+        del mentions_by_gene["TF"]
+        logger.info(
+            'Deleted false positive gene mention for "TF", ' +
+            'defined as "transcription factor" in publication'
+        )
+    return mentions_by_gene
 
-def extract(organism, publication, bucket, de_dict):
-    """Data mine genes from publication"""
-    logger.info(f"Exracting gene names from publication: {publication}")
-
+def extract_mentions_and_interest(organism, publication):
+    """Get mentions in publication and interest rank for each gene in organism
+    """
+    logger.info('Extracting mentions and interest')
     [
         interest_rank_by_gene,
         counts_by_gene,
@@ -191,9 +204,9 @@ def extract(organism, publication, bucket, de_dict):
 
     publication_text = fetch_publication_text(publication)
 
-    publication_words = publication_text.split(' ')
+    publication_words = re.split(r'[ /]', publication_text)
     for word in publication_words:
-        raw_word = word.strip('*,.()—')
+        raw_word = word.strip('*,.()-+')
         if raw_word in counts_by_gene:
             # print(raw_word)
             counts_by_gene[raw_word] += 1
@@ -205,6 +218,27 @@ def extract(organism, publication, bucket, de_dict):
         if counts_by_gene[gene] > 0:
             mentions_by_gene[gene] = count
 
+    mentions_by_gene =\
+        screen_false_positive_mentions(publication_text, mentions_by_gene)
+
+    return [
+        interest_rank_by_gene,
+        mentions_by_gene,
+        loci_by_gene,
+        full_names_by_gene
+    ]
+
+def extract(organism, publication, bucket, de_dict):
+    """Data mine genes from publication"""
+    logger.info(f"Exracting gene names from publication: {publication}")
+
+    [
+        interest_rank_by_gene,
+        mentions_by_gene,
+        loci_by_gene,
+        full_names_by_gene
+    ] = extract_mentions_and_interest(organism, publication)
+
     de_by_gene = extract_de(bucket, de_dict)
 
     return [
@@ -212,7 +246,7 @@ def extract(organism, publication, bucket, de_dict):
         mentions_by_gene,
         de_by_gene,
         loci_by_gene,
-        full_names_by_gene,
+        full_names_by_gene
     ]
 
 def sanitize_string(string):
