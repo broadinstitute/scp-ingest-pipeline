@@ -267,6 +267,8 @@ def extract_de(bucket, de_dict):
 
 
 def get_de_column(de_entries, de_meta_keys):
+    """Join DE entries for a gene by keys like log2fc, etc.
+    """
     # Collapse DE props for each group, delimit inner fields with "!"
     de_grouped_props = []
     for de in de_entries:
@@ -406,6 +408,8 @@ def load(clustering, annotation, tsv_content, bucket_name):
 
 
 def get_scp_api_origin():
+    """Get domain etc. for SCP REST API URLs
+    """
     db_name = os.environ['DATABASE_NAME']
     db_env = db_name.split('_')[-1]
     db_env = 'staging'
@@ -418,14 +422,19 @@ def get_scp_api_origin():
 
 
 def fetch_context(accession):
+    """Get cluster, annotation, and differential expression data from SCP API
+    """
     origin = get_scp_api_origin()
     url = f"{origin}/single_cell/api/v1/studies/{accession}/explore"
     response = requests.get(url, verify=False)
-    explore_json = json.loads(response.content)
+    explore_json = response.json()
 
     bucket_id = explore_json["bucketId"]
     raw_organism = explore_json["taxonNames"][0]
     organism = raw_organism.lower().replace(' ', '-')
+
+    print("explore_json")
+    print(explore_json)
 
     try:
         # DE is available; use first eligible clustering and annotation
