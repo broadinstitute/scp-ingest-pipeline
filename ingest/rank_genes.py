@@ -181,14 +181,40 @@ def screen_false_positive_mentions(publication_text, mentions_by_gene):
     """Screen out hits that are non-gene abbreviations
     """
     fp_for_tf = bool(re.search("transcription factor(s)? \(TF", publication_text))
-    print('fp_for_tf', fp_for_tf)
     if fp_for_tf:
-        print('"TF" in mentions_by_gene', "TF" in mentions_by_gene)
         del mentions_by_gene["TF"]
         logger.info(
             'Deleted false positive gene mention for "TF", ' +
             'defined as "transcription factor" in publication'
         )
+
+    # Detect gene-mentions that use have the grammatical structure:
+    #
+    #   the <term> (<"gene">)
+    #
+    # like "the Arcuate (ARC", which mentions a non-gene.
+    # Source context: https://doi.org/10.1126/sciadv.adf6251
+    articular_fp_genes = []
+    for gene in mentions_by_gene:
+        fp_match =\
+            re.search("the ([A-Za-z ]){0,20} \(" + gene, publication_text)
+        is_likely_fp = bool(fp_match)
+        if is_likely_fp:
+            term = fp_match.group(0)
+            if (
+                "express" in term or # e.g. "the Oxytocin expressing (OXT"
+                gene.lower() not in term.split('(')[0].lower() # e.g. "the astrocyte (GJA1"
+            ):
+                continue
+            logger.info(
+                f'Deleted false positive gene mention for "{gene}", ' +
+                f'defined as "{term}" in publication'
+            )
+            articular_fp_genes.append(gene)
+
+    for fp_gene in articular_fp_genes:
+        del mentions_by_gene[fp_gene]
+
     return mentions_by_gene
 
 def extract_mentions_and_interest(organism, publication):
