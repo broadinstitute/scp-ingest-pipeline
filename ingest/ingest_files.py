@@ -93,7 +93,7 @@ class IngestFiles:
     def __init__(
             self,
             file_path: str,
-            allowed_file_types: list
+            allowed_file_types: list = list(ALLOWED_FILE_EXTENSIONS.keys())
         ):
         """
         :param file_path: GS URL or local file path
