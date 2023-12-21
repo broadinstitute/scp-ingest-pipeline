@@ -470,7 +470,6 @@ def get_scp_api_origin():
     """
     db_name = os.environ['DATABASE_NAME']
     db_env = db_name.split('_')[-1]
-    db_env = 'staging'
     origins_by_environment = {
         'development': 'https://localhost:3000',
         'staging': 'https://singlecell-staging.broadinstitute.org',
