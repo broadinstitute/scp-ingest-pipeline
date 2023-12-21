@@ -93,11 +93,11 @@ class IngestFiles:
     def __init__(
             self,
             file_path: str,
-            *allowed_file_types: dict[str, list]
+            allowed_file_types: list
         ):
         """
         :param file_path: GS URL or local file path
-        :param allowed_file_types (optional): list of allowed file extensions by MIME types
+        :param allowed_file_types (optional): list of allowed file MIME types
         """
         self.file_path = file_path
         # valid suffixes for AnnData ingest (expecting .h5ad)
@@ -111,11 +111,10 @@ class IngestFiles:
         self.is_gzip_file = self.get_file_type(file_path)[1] == "gzip"
 
         self.verify_file_exists(file_path)
+
         # Allowed files for a given file type (expression file, cluster files, etc.)
-        if allowed_file_types is None:
-            self.allowed_file_types = IngestFiles.ALLOWED_FILE_EXTENSIONS
-        else:
-            self.allowed_file_types = allowed_file_types
+        self.allowed_file_types = allowed_file_types
+
         # Keeps tracks of lines parsed
         self.amount_of_lines = 0
 
