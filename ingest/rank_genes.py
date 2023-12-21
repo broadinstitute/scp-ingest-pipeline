@@ -136,7 +136,6 @@ def fetch_publication_text(publication):
         logger.info('full_text_url', full_text_url)
         with urllib.request.urlopen(full_text_url) as response:
             text = response.read().decode('utf-8')
-            # print('text', text)
     else:
         file_path = publication
         with open(file_path) as f:
@@ -234,7 +233,6 @@ def extract_mentions_and_interest(organism, publication):
     for word in publication_words:
         raw_word = word.strip('*,.()-+')
         if raw_word in counts_by_gene:
-            # print(raw_word)
             counts_by_gene[raw_word] += 1
 
     mentions_by_gene = {}

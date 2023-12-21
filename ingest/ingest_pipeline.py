@@ -664,7 +664,6 @@ def get_delocalization_info(arguments):
     """extract info on study file for delocalization decision-making"""
     for argument in list(arguments.keys()):
         captured_argument = re.match("(\w*file)$", argument)
-        print('captured_argument', captured_argument)
         if captured_argument is not None:
             study_file_id = arguments["study_file_id"]
             matched_argument = captured_argument.groups()[0]
