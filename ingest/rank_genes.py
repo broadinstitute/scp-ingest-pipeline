@@ -486,8 +486,16 @@ def fetch_context(accession):
     """
     origin = get_scp_api_origin()
     url = f"{origin}/single_cell/api/v1/studies/{accession}/explore"
-    response = requests.get(url, verify=False)
-    explore_json = response.json()
+    try:
+        response = requests.get(url, verify=False)
+        explore_json = response.json()
+    except json.decoder.JSONDecodeError as e:
+        if 'staging' in origin:
+            print(
+                '*** Error requesting SCP API on staging.  ' +
+                'Ensure you are connected to VPN. ***'
+            )
+        raise e
 
     bucket_id = explore_json["bucketId"]
     raw_organism = explore_json["taxonNames"][0]
