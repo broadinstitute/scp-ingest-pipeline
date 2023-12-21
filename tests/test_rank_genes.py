@@ -35,7 +35,11 @@ class TestRankGenes(unittest.TestCase):
         with open("../tests/data/rank_genes/mock_explore_response.json") as f:
             expected_json = json.loads(f.read())
         mock_response.json = lambda: expected_json
-        with patch("requests.get", return_value=mock_response):
+        with patch(
+            "requests.get", return_value=mock_response
+        ), patch.dict(
+            "os.environ", {"DATABASE_NAME": "foo_production"}
+        ):
             bucket_id, organism, de_dict = fetch_context("SCP123")
             self.assertEqual(bucket_id, "fc-1a23b456-cde4-5fa6-bc7d-89e0f1a23bc4")
             self.assertEqual(organism, 'homo-sapiens')
