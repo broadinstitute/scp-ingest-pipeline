@@ -360,7 +360,7 @@ def get_metainformation(meta, de_meta_keys):
 
 
 def sort_genes_by_relevance(gene_dicts):
-    """Sort genes by DE score rank, then # mentions, then global interest rank"""
+    """Sort genes by # mentions, then DE score rank, then global interest rank"""
     [
         interest_rank_by_gene,
         mentions_by_gene,
@@ -370,13 +370,12 @@ def sort_genes_by_relevance(gene_dicts):
     ] = gene_dicts
 
     genes = []
-    for gene in de_by_gene:
-        if gene not in interest_rank_by_gene:
-            # TODO: Handle synonyms, e.g. CECR1 for ADA2
-            continue
+    for gene in interest_rank_by_gene:
+        de = de_by_gene.get(gene, '')
+        top_de_rank = de[0]["scores_rank"] if de != '' else -1
         genes.append({
-            "top_de_rank": de_by_gene[gene][0]["scores_rank"],
-            "de": de_by_gene[gene],
+            "top_de_rank": top_de_rank,
+            "de": de,
             "mentions": mentions_by_gene.get(gene, 0),
             "interest_rank": interest_rank_by_gene[gene],
             "locus": loci_by_gene[gene],
