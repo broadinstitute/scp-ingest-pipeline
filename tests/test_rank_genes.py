@@ -34,6 +34,7 @@ class TestRankGenes(unittest.TestCase):
     def test_fetch_context(self):
         with open("../tests/data/rank_genes/mock_explore_response.json") as f:
             expected_json = json.loads(f.read())
+        mock_response.status_code = 200
         mock_response.json = lambda: expected_json
         with patch(
             "requests.get", return_value=mock_response
