@@ -35,7 +35,7 @@ python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5
 # Subsample cluster and metadata file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_subsample --cluster-file ../tests/data/test_1k_cluster_data.csv --name cluster1 --cell-metadata-file ../tests/data/test_1k_metadata_Data.csv --subsample
 
-# Ingest mtx files
+# Ingest MTX files
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --matrix-file ../tests/data/mtx/matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/genes.tsv --barcode-file ../tests/data/barcodes.tsv
 
 # Ingest AnnData as reference file
@@ -53,9 +53,10 @@ python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5
 # Ingest AnnData - happy path cluster and metadata extraction
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['cluster', 'metadata']" --obsm-keys "['X_umap','X_tsne']"
 
-# Differential Expression analysis (dense matrix)
+# Differential expression analysis (dense matrix)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_dense_matrix.tsv --matrix-file-type dense --annotation-file ../tests/data/differential_expression/de_dense_metadata.tsv --cluster-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
-# Differential Expression analysis (sparse matrix)
+
+# Differential expression analysis (sparse matrix)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --matrix-file-type mtx --annotation-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --cluster-name de_sparse_integration --study-accession SCPsparsemini --differential-expression
 """
 import json
@@ -70,61 +71,40 @@ from typing import Dict, Generator, List, Tuple, Union
 from wsgiref.simple_server import WSGIRequestHandler  # noqa: F401
 from bson.objectid import ObjectId
 
-try:
-    # Used when importing internally and in tests
-    from ingest_files import IngestFiles
 
-    # For Mixpanel logging
-    import config
-    from monitoring.mixpanel_log import custom_metric
-    from monitoring.metrics_service import MetricsService
+# Used when importing internally and in tests
+from ingest_files import IngestFiles
 
-    # For tracing
-    from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
-    from opencensus.trace.samplers import AlwaysOnSampler
-    from opencensus.trace.tracer import Tracer
-    from pymongo import MongoClient
-    from subsample import SubSample
-    from validation.validate_metadata import (
-        report_issues,
-        validate_input_metadata,
-        write_metadata_to_bq,
-    )
-    from cell_metadata import CellMetadata
-    from cli_parser import create_parser, validate_arguments
-    from clusters import Clusters
-    from expression_files.mtx import MTXIngestor
-    from expression_files.dense_ingestor import DenseIngestor
-    from monitor import setup_logger, log_exception
-    from de import DifferentialExpression
-    from author_de import AuthorDifferentialExpression
-    from expression_writer import ExpressionWriter
+# For Mixpanel logging
+import config
+from monitoring.mixpanel_log import custom_metric
+from monitoring.metrics_service import MetricsService
 
-    # scanpy uses anndata python package, disamibguate local anndata
-    # using underscore https://peps.python.org/pep-0008/#naming-conventions
-    from anndata_ import AnnDataIngestor
+# For tracing
+from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
+from opencensus.trace.samplers import AlwaysOnSampler
+from opencensus.trace.tracer import Tracer
+from pymongo import MongoClient
+from subsample import SubSample
+from validation.validate_metadata import (
+    report_issues,
+    validate_input_metadata,
+    write_metadata_to_bq,
+)
+from cell_metadata import CellMetadata
+from cli_parser import create_parser, validate_arguments
+from clusters import Clusters
+from expression_files.mtx import MTXIngestor
+from expression_files.dense_ingestor import DenseIngestor
+from monitor import setup_logger, log_exception
+from de import DifferentialExpression
+from author_de import AuthorDifferentialExpression
+from expression_writer import ExpressionWriter
+from rank_genes import RankGenes
 
-except ImportError:
-    # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .ingest_files import IngestFiles
-    from . import config
-    from .monitoring.metrics_service import MetricsService
-    from .subsample import SubSample
-    from .monitoring.mixpanel_log import custom_metric
-    from .validation.validate_metadata import (
-        validate_input_metadata,
-        report_issues,
-        write_metadata_to_bq,
-    )
-    from .monitor import setup_logger, log_exception
-    from .cell_metadata import CellMetadata
-    from .clusters import Clusters
-    from .expression_files.dense_ingestor import DenseIngestor
-    from .expression_files.mtx import MTXIngestor
-    from .anndata_ import AnnDataIngestor
-    from .cli_parser import create_parser, validate_arguments
-    from .de import DifferentialExpression
-    from .expression_writer import ExpressionWriter
+# scanpy uses anndata python package, disamibguate local anndata
+# using underscore https://peps.python.org/pep-0008/#naming-conventions
+from anndata_ import AnnDataIngestor
 
 
 class IngestPipeline:
@@ -606,6 +586,18 @@ class IngestPipeline:
             return 1
         return 0
 
+    def rank_genes(self):
+        try:
+            kwargs = self.kwargs
+            RankGenes(
+                kwargs["study_accession"],
+                kwargs["publication"]
+            )
+        except Exception as e:
+            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+            return 1
+        return 0
+
     def report_validation(self, status):
         self.props["status"] = status
         config.get_metric_properties().update(self.props)
@@ -655,9 +647,15 @@ def run_ingest(ingest, arguments, parsed_args):
         print(f"STATUS after ingest author DE: {status}")
 
     elif "render_expression_arrays" in arguments:
-        config.set_parent_event_name("image-pipeline:render_expression_arrays")
+        config.set_parent_event_name("image-pipeline:render-expression-arrays")
         status_exp_writer = ingest.render_expression_arrays()
         status.append(status_exp_writer)
+
+    elif "rank_genes" in arguments:
+        config.set_parent_event_name("image-pipeline:rank-genes")
+        status_rank_genes = ingest.rank_genes()
+        status.append(status_rank_genes)
+
 
     return status, status_cell_metadata
 
@@ -722,7 +720,11 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
         elif all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:
-            file_path, study_file_id = get_delocalization_info(arguments)
+            if "rank_genes" in arguments:
+                study_file_id = "rank_genes"
+                file_path = f"gs://{arguments.get('bucket_name')}/blank"
+            else:
+                file_path, study_file_id = get_delocalization_info(arguments)
             if IngestFiles.is_remote_file(file_path):
                 if "differential_expression" in arguments:
                     log_path = (
@@ -731,18 +733,10 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                 else:
                     log_path = f"parse_logs/{study_file_id}/log.txt"
                 # Delocalize support log
-                IngestFiles.delocalize_file(
-                    study_file_id, arguments["study_id"], file_path, "log.txt", log_path
-                )
+                IngestFiles.delocalize_file(file_path, "log.txt", log_path)
                 # Delocalize user log
                 user_log_path = f"parse_logs/{study_file_id}/user_log.txt"
-                IngestFiles.delocalize_file(
-                    study_file_id,
-                    arguments["study_id"],
-                    file_path,
-                    "user_log.txt",
-                    user_log_path,
-                )
+                IngestFiles.delocalize_file(file_path, "user_log.txt", user_log_path)
             if status_cell_metadata is not None:
                 if status_cell_metadata > 0 and ingest.cell_metadata.is_remote_file:
                     # PAPI jobs failing metadata validation against convention report

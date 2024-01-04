@@ -429,8 +429,6 @@ class DifferentialExpression:
         files = glob.glob(files_to_match)
         for file in files:
             IngestFiles.delocalize_file(
-                study_file_id,
-                None,
                 destination_file_path,
                 file,
                 f"_scp_internal/differential_expression/{file}",

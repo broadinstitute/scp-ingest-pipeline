@@ -50,7 +50,7 @@ class TestIngestFiles(unittest.TestCase):
 
         try:
             IngestFiles.delocalize_file(
-                None, None, dev_reference_bucket, file_to_delocalize, dest_name
+                dev_reference_bucket, file_to_delocalize, dest_name
             )
             self.assertTrue(
                 storage.Blob(bucket=bucket, name=dest_name).exists(storage_client)
