@@ -1,6 +1,6 @@
 google-cloud-storage==1.28.1
 google-cloud-bigquery==1.24.0
-grpcio==1.53.0
+grpcio==1.53.2
 requests==2.31.0
 numpy==1.23.5
 scipy==1.10.1
