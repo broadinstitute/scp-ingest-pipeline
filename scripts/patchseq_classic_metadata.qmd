@@ -12,7 +12,7 @@ import scanpy as sc
 Read in metadata file from BIL dataset
 ```{python}
 
-meta = pd.read_csv('/Users/jlchang/Documents/Broad-SCP/cb_work/2024/BRAIN_pilot_dataset/BIL/m1_patchseq_meta_data.csv', index_col=0, sep='\t')
+meta = pd.read_csv('m1_patchseq_meta_data.csv', index_col=0, sep='\t')
 ```
 
 Transform applicable headers to use SCP conventional naming
@@ -53,12 +53,13 @@ meta['bil_url'] = ""
 
 Extract electrophysiology data URLs from manifest of electrophysiology data files
 Emit message if cell identifier for a URL is not in metadata file from BIL dataset
+Note: assets file from DANDI is called `assets.yaml`. Filename in SCP development reference bucket was modified for clarity.
 ```{python}
 import yaml
 
 meta = meta.set_index('NAME')
 
-with open('/Users/jlchang/Documents/Broad-SCP/cb_work/2024/BRAIN_pilot_dataset/DANDI/assets.yaml', 'r') as file:
+with open('DANDI000008_0.211014.0809_assets.yaml', 'r') as file:
      dandi  = yaml.safe_load(file)
 
 line = 0
@@ -75,11 +76,12 @@ for d in dandi:
 Extract morphology data URLs from manifest of morphology data files
 Emit message if file URL is not of type SWC
 Expect three warning messages for csv files (including the BIL metadata file) that are in the BIL manifest
+Note: manifest file from BIL is called `9ed17a6a-67c0-5454-a5ba-33bd2d4cb543.json`. Filename in repo was modified for clarity
 ```{python}
 import json
 import pathlib
 
-with open('/Users/jlchang/Documents/Broad-SCP/cb_work/2024/BRAIN_pilot_dataset/BIL/ace-aim-now_manifest_9ed17a6a-67c0-5454-a5ba-33bd2d4cb543.json', 'r') as file:
+with open('ace-aim-now_manifest_9ed17a6a-67c0-5454-a5ba-33bd2d4cb543.json', 'r') as file:
   bil = json.load(file)
 for b in bil['manifest']:
   sample_file = b['filename']
