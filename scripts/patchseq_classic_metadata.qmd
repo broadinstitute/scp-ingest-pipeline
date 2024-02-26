@@ -1,0 +1,120 @@
+---
+title: "Generating pilot metadata"
+format: html
+---
+
+```{python}
+import numpy as np
+import pandas as pd
+import scanpy as sc
+```
+
+Read in metadata file from BIL dataset
+```{python}
+
+meta = pd.read_csv('m1_patchseq_meta_data.csv', index_col=0, sep='\t')
+```
+
+Transform applicable headers to use SCP conventional naming
+```{python}
+meta = meta.rename(columns={'Cell': 'NAME', 'Mouse': 'donor_id' ,  'Mouse gender': 'sex' , 'Mouse': 'donor_id' , 'Slice': 'biosample_id'})
+```
+Transform values for Mouse gender (aka sex) to match expected SCP controlled vocabulary
+```{python}
+meta.sex.replace(["M", "F"], ["male","female"], inplace=True)
+```
+
+Append required SCP conventional metadata
+Create placeholder columns for metadatum of interest
+```{python}
+# species ontology ID available in both BIL manifest and DANDI assets file
+meta['species'] = "NCBITaxon_10090"
+meta['species__ontology_label'] = "Mus musculus"
+
+# assumption: disease == normal for atlas data (caveat - not all are wild-type mice)
+meta['disease'] = "PATO_0000461"
+meta['disease__ontology_label'] = "normal"
+
+# organ ontology ID available in dandiset.json
+meta['organ'] = "UBERON:0001384"
+meta['organ__ontology_label'] = "primary motor cortex"
+
+# library_preparation_protocol available in BIL manifest as string "PATCH-Seq"
+meta['library_preparation_protocol'] = "EFO_0008853"
+meta['library_preparation_protocol__ontology_label'] = "Patch-seq"
+
+# available in DANDI assets file as contentURL
+meta['dandi_url'] = ""
+
+# available in BIL manifest file as download_url
+meta['bil_url'] = ""
+```
+
+
+Extract electrophysiology data URLs from manifest of electrophysiology data files
+Emit message if cell identifier for a URL is not in metadata file from BIL dataset
+Note: assets file from DANDI is called `assets.yaml`. Filename in SCP development reference bucket was modified for clarity.
+```{python}
+import yaml
+
+meta = meta.set_index('NAME')
+
+with open('DANDI000008_0.211014.0809_assets.yaml', 'r') as file:
+     dandi  = yaml.safe_load(file)
+
+line = 0
+for d in dandi:
+  if d['contentUrl'][1]:
+    meta.loc[d['wasDerivedFrom'][0]['identifier'], 'dandi_url'] = d['contentUrl'][1]
+    pass
+  else:
+    print("WARNING: entry ", line, d['wasDerivedFrom'][0]['identifier'], "no URL")
+  line = line + 1
+
+```
+
+Extract morphology data URLs from manifest of morphology data files
+Emit message if file URL is not of type SWC
+Expect three warning messages for csv files (including the BIL metadata file) that are in the BIL manifest
+Note: manifest file from BIL is called `9ed17a6a-67c0-5454-a5ba-33bd2d4cb543.json`. Filename in repo was modified for clarity
+```{python}
+import json
+import pathlib
+
+with open('ace-aim-now_manifest_9ed17a6a-67c0-5454-a5ba-33bd2d4cb543.json', 'r') as file:
+  bil = json.load(file)
+for b in bil['manifest']:
+  sample_file = b['filename']
+  file_suffix = pathlib.Path(sample_file).suffix
+  if file_suffix == ".SWC":
+    sample = b['filename'].removesuffix(file_suffix)
+    meta.loc[sample, 'bil_url'] = b['download_url']
+  else:
+    print("WARNING: ", sample_file, "non-SWC file")
+    pass
+
+```
+
+Simple-minded column header sanitization
+```{python}
+import re
+meta = meta.rename(columns=lambda x: re.sub('\W+','_',x))
+
+```
+
+SCP metadata file for whole dataset
+```{python}
+meta = meta.reset_index()
+
+meta.to_csv('patchseq_classic_metadata_full.tsv', sep="\t", index=False)
+```
+
+Diverse sampling for dev work
+```{python}
+# ten diverse cells (five have SWC files)
+meta.iloc[[0,4,11,23,103,164,188,204,277,344],:].to_csv('patchseq_classic_metadata_test_10.tsv', sep="\t", index=False)
+# 5 cells, all have SWC files
+meta.iloc[[0,4,164,277,344],:].to_csv('patchseq_classic_metadata_test_5a.tsv', sep="\t", index=False)
+# 5 cells,
+meta.iloc[[0,4,23,103,164],:].to_csv('patchseq_classic_metadata_test_5b.tsv', sep="\t", index=False)
+```
