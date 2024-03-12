@@ -11,12 +11,13 @@ import subprocess
 def index_fragments(tsv_path):
     """Bgzip and TBI-index a raw ATAC-seq fragments file
     """
-    print("Index fragments file")
+    print("Index fragments file from DSP Pipelines team")
 
     print("Change suffix from .tsv to .bed, as expected by igv.js")
-    shutil.copy2(tsv_path, f"{tsv_path}.tmp") # Preserve original file
-    bed_path = tsv_path.replace(".tsv.tmp", ".bed")
-    os.rename(tsv_path, bed_path)
+    tmp_tsv_path = f"{tsv_path}.tmp"
+    shutil.copy2(tsv_path, tmp_tsv_path) # Preserve original file
+    bed_path = tmp_tsv_path.replace(".tsv.tmp", ".bed")
+    os.rename(tmp_tsv_path, bed_path)
 
     print("Sort BED file by genomic position")
     # The "-k1.4V" argument ensures `sort` uses column "1" and breaks ties
