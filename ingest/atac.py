@@ -2,6 +2,7 @@
 
 PREREQUISITE:
 - Install htslib: `brew install htslib` on macOS (TODO: Create Docker file)
+- Install bedtools: `brew install bedtools` on macOS (TODO: Create Docker file)
 
 """
 import os
@@ -20,12 +21,8 @@ def index_fragments(tsv_path):
     os.rename(tmp_tsv_path, bed_path)
 
     print("Sort BED file by genomic position")
-    # The "-k1.4V" argument ensures `sort` uses column "1" and breaks ties
-    # by ordering character "4" using version-sort, i.e. "V", which does a
-    # natural sort of (version) numbers within text.  This ensures e.g. "12"
-    # appears after "2".
     sorted_bed_path = bed_path.replace(".bed", ".possorted.bed")
-    sort_command = (f"sort -k1.4V {bed_path}").split(" ")
+    sort_command = (f"bedtools sort -i {bed_path}").split(" ")
     sorted_bed_file = open(sorted_bed_path, 'w')
     subprocess.call(sort_command, stdout=sorted_bed_file)
 
@@ -38,6 +35,8 @@ def index_fragments(tsv_path):
     # tabix creates an index for the tab-delimited files, used for getting small chunks
     tabix_command = (f"tabix -s 1 -b 2 -e 3 {sorted_bed_path}.gz").split(" ")
     subprocess.call(tabix_command)
+
+    print("Successfully indexed fragments file for visualization in igv.js")
 
 index_fragments("Library-8-20230710_atac.fragments.tsv")
 
