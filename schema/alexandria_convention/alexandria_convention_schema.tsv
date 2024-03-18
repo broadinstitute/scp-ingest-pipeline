@@ -19,7 +19,7 @@ cell_type__custom		string										cell_type__custom
 culture_duration		number								sample_type in cell line, organoid, cultured primary cells	culture_duration__unit	length of time cells have been in culture
 culture_duration__unit		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	https://www.ebi.ac.uk/ols/ontologies/uo	UO_0000003		culture_duration			culture_duration__unit
 culture_duration__unit_label		string		unit_label					culture_duration__unit			culture_duration__unit_label
-development_stage		string		ontology	http://www.ebi.ac.uk/ols/api/ontologies/hsapdv	http://www.ebi.ac.uk/ols/ontologies/hsapdv						A classification of the developmental stage of the organism
+development_stage		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/hsapdv,https://www.ebi.ac.uk/ols/api/ontologies/mmusdv	https://www.ebi.ac.uk/ols/ontologies/hsapdv,https://www.ebi.ac.uk/ols/ontologies/mmusdv						A classification of the developmental stage of the organism
 development_stage__ontology_label		string		ontology_label					development_stage			development_stage__ontology_label
 disease__intracellular_pathogen		string	TRUE	ontology	https://www.ebi.ac.uk/ols/api/ontologies/mondo	https://www.ebi.ac.uk/ols/ontologies/mondo	MONDO_0005550		disease			If evidence of a pathogen is detected in this cell
 disease__intracellular_pathogen__ontology_label		string	TRUE	ontology_label					disease__intracellular_pathogen			disease__intracellular_pathogen__ontology_label
@@ -52,12 +52,14 @@ growth_factor_perturbation__concentration__unit_label		string		unit_label					gr
 growth_factor_perturbation__ontology_label		string	TRUE	ontology_label					growth_factor_perturbation			growth_factor_perturbation__ontology_label
 growth_factor_perturbation__solvent		string	TRUE						growth_factor_perturbation			Solvent in which the growth factor was added to the cells. Ex. the base media.
 growth_factor_perturbation__source		string	TRUE						growth_factor_perturbation			Source from which the growth factor was purchased
+has_electrophysiology		boolean		boolean
+has_morphology		boolean		boolean
 is_living		string		enum				"[""yes"", ""no"", ""unknown""]"				Whether organism was alive at time of biomaterial collection
 mhc_genotype		string										MHC genotype for humans and other species
 mouse_strain		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/ncit	https://www.ebi.ac.uk/ols/ontologies/ncit	"NCIT_C14420 "			species == NCBITaxon_10090		Mouse strain of the donor organism (ex. C57BL/6, BALB/c, 129, undetermined)
 mouse_strain__ontology_label		string		ontology_label					mouse_strain			mouse_strain__ontology_label
 number_of_reads		number										Number of reads mapped to that cell
-organ_region		string	TRUE	ontology	https://api.brain-map.org/api/v2/structure_graph_download/1.json	http://atlas.brain-map.org/atlas?atlas=602630314						organ_region
+organ_region		string	TRUE	ontology	https://api.brain-map.org/api/v2/structure_graph_download/1.json	https://atlas.brain-map.org/atlas?atlas=602630314						organ_region
 organ_region__ontology_label		string	TRUE	ontology_label					organ_region			organ_region__ontology_label
 organism_age		number									organism_age__unit	Age of the organism at time of sample collection.
 organism_age__unit		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/uo	https://www.ebi.ac.uk/ols/ontologies/uo	UO_0000003		organism_age			organism_age__unit
