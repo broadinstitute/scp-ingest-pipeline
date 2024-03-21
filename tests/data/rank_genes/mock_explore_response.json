@@ -1,0 +1,564 @@
+{
+  "cluster": {
+    "numPoints": 155183,
+    "isSubsampled": true
+  },
+  "taxonNames": [
+    "Homo sapiens"
+  ],
+  "inferCNVIdeogramFiles": null,
+  "bamBundleList": [],
+  "uniqueGenes": [
+    "RP11-34P13.3",
+    "RP11-34P13.7",
+    "RP11-34P13.8",
+    "RP11-34P13.9",
+    "FO538757.3",
+    "FO538757.2",
+    "AP006222.2",
+    "RP4-669L17.2",
+    "RP4-669L17.10",
+    "RP5-857K21.4",
+    "RP11-206L10.4",
+    "RP11-206L10.9",
+    "FAM87B",
+    "LINC00115",
+    "FAM41C",
+    "RP11-54O7.16",
+    "RP11-54O7.1",
+    "RP11-54O7.2",
+    "RP11-54O7.3",
+    "SAMD11",
+    "NOC2L",
+    "KLHL17",
+    "PLEKHN1",
+    "PERM1",
+    "RP11-54O7.17",
+    "HES4",
+    "ISG15",
+    "RP11-54O7.11",
+    "AGRN",
+    "RP11-54O7.18",
+    "RNF223",
+    "C1orf159",
+    "RP11-465B22.8",
+    "TTLL10-AS1",
+    "TTLL10",
+    "TNFRSF18",
+    "TNFRSF4",
+    "SDF4",
+    "B3GALT6",
+    "FAM132A",
+    "RP5-902P8.12",
+    "UBE2J2",
+    "RP5-902P8.10",
+    "SCNN1D",
+    "ACAP3",
+    "PUSL1",
+    "CPSF3L",
+    "CPTP",
+    "TAS1R3",
+    "DVL1",
+    "MXRA8",
+    "AURKAIP1",
+    "CCNL2",
+    "MRPL20",
+    "RP4-758J18.13",
+    "ANKRD65",
+    "RP4-758J18.7",
+    "TMEM88B",
+    "RP4-758J18.10",
+    "VWA1",
+    "ATAD3C",
+    "ATAD3B",
+    "ATAD3A",
+    "TMEM240",
+    "SSU72",
+    "RP5-832C2.5",
+    "AL645728.1",
+    "C1orf233",
+    "RP11-345P4.9",
+    "MIB2",
+    "MMP23B",
+    "CDK11B",
+    "RP11-345P4.10",
+    "SLC35E2B",
+    "RP11-345P4.7",
+    "CDK11A",
+    "SLC35E2",
+    "NADK",
+    "GNB1",
+    "RP1-140A9.1",
+    "CALML6",
+    "TMEM52",
+    "CFAP74",
+    "RP11-547D24.1",
+    "GABRD",
+    "RP11-547D24.3",
+    "PRKCZ",
+    "RP5-892K4.1",
+    "RP11-181G12.2",
+    "FAAP20",
+    "RP11-181G12.4",
+    "SKI",
+    "MORN1",
+    "RER1",
+    "PEX10",
+    "PLCH2",
+    "RP3-395M20.2",
+    "PANK4",
+    "HES5",
+    "RP3-395M20.12",
+    "RP3-395M20.8",
+    "TNFRSF14",
+    "RP3-395M20.9",
+    "FAM213B",
+    "MMEL1",
+    "RP13-436F16.1",
+    "TTC34",
+    "ACTRT2",
+    "LINC00982",
+    "PRDM16",
+    "RP1-163G9.2",
+    "RP11-22L13.1",
+    "ARHGEF16",
+    "RP11-168F9.2",
+    "MEGF6",
+    "RP11-46F15.2",
+    "TPRG1L",
+    "WRAP73",
+    "TP73",
+    "RP5-1092A11.5",
+    "RP5-1092A11.2",
+    "TP73-AS1"
+  ],
+  "geneLists": [],
+  "precomputedHeatmapLabel": null,
+  "annotationList": {
+    "default_cluster": "KaZhouAll_mt10_SCP_UMAP_coords_meta.csv",
+    "default_annotation": {
+      "name": "seurat_clusters",
+      "type": "group",
+      "scope": "cluster",
+      "values": [
+        "3",
+        "27",
+        "1",
+        "11",
+        "8",
+        "17",
+        "15",
+        "9",
+        "7",
+        "13",
+        "2",
+        "20",
+        "0",
+        "31",
+        "6",
+        "10",
+        "19",
+        "25",
+        "22",
+        "16",
+        "24",
+        "21",
+        "14",
+        "30",
+        "26",
+        "23",
+        "5",
+        "4",
+        "18",
+        "12",
+        "28",
+        "29"
+      ],
+      "identifier": "seurat_clusters--group--cluster"
+    },
+    "annotations": [
+      {
+        "name": "biosample_id",
+        "type": "group",
+        "values": [
+          "CS13",
+          "CS14",
+          "CS15",
+          "CS22_hypo",
+          "CS22_2_hypo",
+          "GW16_hypo",
+          "GW18_hypo",
+          "GW19_hypo",
+          "GW20_34_hypo",
+          "GW22T_hypo1",
+          "GW25_3V_hypo",
+          "GW7_Lane1",
+          "GW7_Lane2",
+          "GW8_1",
+          "GW8_2",
+          "GW10",
+          "GW12_01",
+          "GW12_02",
+          "GW15_A",
+          "GW15_M",
+          "GW15_P",
+          "GW18_A",
+          "GW18_M",
+          "GW18_P",
+          "GW18_Lane1",
+          "GW18_Lane2",
+          "GW18_Lane3",
+          "GW20_A",
+          "GW20_M",
+          "GW20_P"
+        ],
+        "scope": "study",
+        "is_differential_expression_enabled": false
+      },
+      {
+        "name": "donor_id",
+        "type": "group",
+        "values": [
+          "Kriegstein_CS13",
+          "Kriegstein_CS14",
+          "Kriegstein_CS15",
+          "Kriegstein_CS22_hypo",
+          "Kriegstein_CS22_2_hypo",
+          "Kriegstein_GW16_hypo",
+          "Kriegstein_GW18_hypo",
+          "Kriegstein_GW19_hypo",
+          "Kriegstein_GW20_34_hypo",
+          "Kriegstein_GW22T_hypo1",
+          "Kriegstein_GW25_3V_hypo",
+          "Zhou_GW7_Lane1",
+          "Zhou_GW7_Lane2",
+          "Zhou_GW8_1",
+          "Zhou_GW8_2",
+          "Zhou_GW10",
+          "Zhou_GW12_01",
+          "Zhou_GW12_02",
+          "Zhou_GW15_A",
+          "Zhou_GW15_M",
+          "Zhou_GW15_P",
+          "Zhou_GW18_A",
+          "Zhou_GW18_M",
+          "Zhou_GW18_P",
+          "Zhou_GW18_Lane1",
+          "Zhou_GW18_Lane2",
+          "Zhou_GW18_Lane3",
+          "Zhou_GW20_A",
+          "Zhou_GW20_M",
+          "Zhou_GW20_P"
+        ],
+        "scope": "study",
+        "is_differential_expression_enabled": false
+      },
+      {
+        "name": "species",
+        "type": "group",
+        "values": [
+          "NCBITaxon_9606"
+        ],
+        "scope": "invalid",
+        "is_differential_expression_enabled": false
+      },
+      {
+        "name": "species__ontology_label",
+        "type": "group",
+        "values": [
+          "Homo sapiens"
+        ],
+        "scope": "invalid",
+        "is_differential_expression_enabled": false
+      },
+      {
+        "name": "disease",
+        "type": "group",
+        "values": [
+          "PATO_0000461"
+        ],
+        "scope": "invalid",
+        "is_differential_expression_enabled": false
+      },
+      {
+        "name": "disease__ontology_label",
+        "type": "group",
+        "values": [
+          "normal"
+        ],
+        "scope": "invalid",
+        "is_differential_expression_enabled": false
+      },
+      {
+        "name": "organ",
+        "type": "group",
+        "values": [
+          "UBERON_0001898"
+        ],
+        "scope": "invalid",
+        "is_differential_expression_enabled": false
+      },
+      {
+        "name": "organ__ontology_label",
+        "type": "group",
+        "values": [
+          "hypothalamus"
+        ],
+        "scope": "invalid",
+        "is_differential_expression_enabled": false
+      },
+      {
+        "name": "library_preparation_protocol",
+        "type": "group",
+        "values": [
+          "EFO_0030003"
+        ],
+        "scope": "invalid",
+        "is_differential_expression_enabled": false
+      },
+      {
+        "name": "library_preparation_protocol__ontology_label",
+        "type": "group",
+        "values": [
+          "10x 3' transcription profiling"
+        ],
+        "scope": "invalid",
+        "is_differential_expression_enabled": false
+      },
+      {
+        "name": "sex",
+        "type": "group",
+        "values": [
+          "unknown"
+        ],
+        "scope": "invalid",
+        "is_differential_expression_enabled": false
+      },
+      {
+        "name": "seurat_clusters",
+        "type": "group",
+        "values": [
+          "3",
+          "27",
+          "1",
+          "11",
+          "8",
+          "17",
+          "15",
+          "9",
+          "7",
+          "13",
+          "2",
+          "20",
+          "0",
+          "31",
+          "6",
+          "10",
+          "19",
+          "25",
+          "22",
+          "16",
+          "24",
+          "21",
+          "14",
+          "30",
+          "26",
+          "23",
+          "5",
+          "4",
+          "18",
+          "12",
+          "28",
+          "29"
+        ],
+        "scope": "cluster",
+        "cluster_name": "KaZhouAll_mt10_SCP_UMAP_coords_meta.csv",
+        "is_differential_expression_enabled": null
+      },
+      {
+        "name": "Study",
+        "type": "group",
+        "values": [
+          "Kriegstein",
+          "Zhou"
+        ],
+        "scope": "cluster",
+        "cluster_name": "KaZhouAll_mt10_SCP_UMAP_coords_meta.csv",
+        "is_differential_expression_enabled": null
+      },
+      {
+        "name": "celltype",
+        "type": "group",
+        "values": [
+          "Neural Progenitors_1",
+          "Ependymal",
+          "Dividing",
+          "Fibroblasts",
+          "Oligodendrocyte Progenitors_2",
+          "Blood",
+          "Endothelial [Arterial_2]",
+          "Neural Progenitors_2",
+          "Neurons",
+          "Astrocyte Progenitors",
+          "Tanycytes",
+          "Endothelial [Venous]",
+          "Oligodendrocytes [Immature]",
+          "Microglia",
+          "Oligodendrocyte Progenitors_1",
+          "Pericytes_2",
+          "Astrocytes",
+          "vSMC",
+          "RadialGlia",
+          "Endothelial [Arterial_1]",
+          "Oligodendrocytes [Dividing]",
+          "Oligodendrocytes [Maturing]",
+          "Oligodendrocytes [Mature]",
+          "Pericytes_1",
+          "NA"
+        ],
+        "scope": "cluster",
+        "cluster_name": "KaZhouAll_mt10_SCP_UMAP_coords_meta.csv",
+        "is_differential_expression_enabled": null
+      }
+    ],
+    "clusters": [
+      "KaZhouAll_mt10_SCP_UMAP_coords_meta.csv"
+    ],
+    "subsample_thresholds": {
+      "KaZhouAll_mt10_SCP_UMAP_coords_meta.csv": [
+        100000,
+        20000,
+        10000,
+        1000
+      ]
+    }
+  },
+  "clusterGroupNames": [
+    "KaZhouAll_mt10_SCP_UMAP_coords_meta.csv"
+  ],
+  "spatialGroups": [],
+  "differentialExpression": [
+    {
+      "cluster_name": "KaZhouAll_mt10_SCP_UMAP_coords_meta.csv",
+      "annotation_name": "celltype",
+      "annotation_scope": "cluster",
+      "select_options": {
+        "is_author_de": false,
+        "headers": {
+          "gene": null,
+          "group": null,
+          "comparison_group": null,
+          "size": null,
+          "significance": null
+        },
+        "one_vs_rest": [
+          [
+            "Neural Progenitors_1",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Neural_Progenitors_1--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Ependymal",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Ependymal--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Dividing",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Dividing--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Fibroblasts",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Fibroblasts--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Oligodendrocyte Progenitors_2",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Oligodendrocyte_Progenitors_2--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Blood",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Blood--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Endothelial [Arterial_2]",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Endothelial__Arterial_2_--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Neural Progenitors_2",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Neural_Progenitors_2--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Neurons",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Neurons--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Astrocyte Progenitors",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Astrocyte_Progenitors--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Tanycytes",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Tanycytes--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Endothelial [Venous]",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Endothelial__Venous_--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Oligodendrocytes [Immature]",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Oligodendrocytes__Immature_--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Microglia",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Microglia--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Oligodendrocyte Progenitors_1",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Oligodendrocyte_Progenitors_1--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Pericytes_2",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Pericytes_2--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Astrocytes",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Astrocytes--cluster--wilcoxon.tsv"
+          ],
+          [
+            "vSMC",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--vSMC--cluster--wilcoxon.tsv"
+          ],
+          [
+            "RadialGlia",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--RadialGlia--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Endothelial [Arterial_1]",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Endothelial__Arterial_1_--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Oligodendrocytes [Dividing]",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Oligodendrocytes__Dividing_--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Oligodendrocytes [Maturing]",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Oligodendrocytes__Maturing_--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Oligodendrocytes [Mature]",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Oligodendrocytes__Mature_--cluster--wilcoxon.tsv"
+          ],
+          [
+            "Pericytes_1",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--Pericytes_1--cluster--wilcoxon.tsv"
+          ],
+          [
+            "NA",
+            "KaZhouAll_mt10_SCP_UMAP_coords_meta_csv--celltype--NA--cluster--wilcoxon.tsv"
+          ]
+        ],
+        "pairwise": []
+      }
+    }
+  ],
+  "hasImageCache": [],
+  "clusterPointAlpha": 1.0,
+  "colorProfile": null,
+  "bucketId": "fc-1a23b456-cde4-5fa6-bc7d-89e0f1a23bc4"
+}

@@ -470,6 +470,27 @@ def create_parser():
         '--barcode-file', help='path to barcode file (omit for dense matrix files)'
     )
 
+    parser_rank_genes = subparsers.add_parser(
+        "rank_genes",
+        help="Rank genes in a study by mentions in publication, DE, and global interest",
+    )
+
+    parser_rank_genes.add_argument(
+        '--rank-genes',
+        action="store_true",
+        help='Invoke rank_genes.py',
+        required=True,
+    )
+
+    parser_rank_genes.add_argument(
+        '--study-accession', help='Study accession, e.g. "SCP123"', required=True
+    )
+    parser_rank_genes.add_argument(
+        '--publication',
+        help="URL of the study's publicly-accessible research article, or GS URL or local path to publication text file",
+        required=True
+    )
+
     return parser
 
 

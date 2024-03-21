@@ -330,8 +330,6 @@ class ExpressionWriter:
             for file in files_to_push:
                 local_path = f"{cluster_name}/{file}"
                 IngestFiles.delocalize_file(
-                    None,
-                    None,
                     self.matrix_file_path,
                     local_path,
                     f"{bucket_path}/{file}",
@@ -339,8 +337,6 @@ class ExpressionWriter:
                 )
             self.dev_logger.info(" push completed")
             IngestFiles.delocalize_file(
-                None,
-                None,
                 self.matrix_file_path,
                 self.log_name,
                 f"parse_logs/{self.log_name}",

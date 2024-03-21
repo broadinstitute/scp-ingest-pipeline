@@ -1,5 +1,5 @@
 {
-    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata_schemas/alexandria_convention/2.2.1/json",
+    "$id": "https://singlecell.broadinstitute.org/single_cell/api/v1/metadata_schemas/alexandria_convention/2.3.0/json",
     "$schema": "https://json-schema.org/draft-07/schema#",
     "dependencies": {
         "cell_type__ontology_label": [
@@ -225,8 +225,8 @@
         },
         "development_stage": {
             "description": "A classification of the developmental stage of the organism",
-            "ontology": "http://www.ebi.ac.uk/ols/api/ontologies/hsapdv",
-            "ontology_browser_url": "http://www.ebi.ac.uk/ols/ontologies/hsapdv",
+            "ontology": "https://www.ebi.ac.uk/ols/api/ontologies/hsapdv,https://www.ebi.ac.uk/ols/api/ontologies/mmusdv",
+            "ontology_browser_url": "https://www.ebi.ac.uk/ols/ontologies/hsapdv,https://www.ebi.ac.uk/ols/ontologies/mmusdv",
             "pattern": "^[-A-Za-z0-9]+[_:][-A-Za-z0-9]+",
             "type": "string"
         },
@@ -465,6 +465,12 @@
             },
             "type": "array"
         },
+        "has_electrophysiology": {
+            "type": "boolean"
+        },
+        "has_morphology": {
+            "type": "boolean"
+        },
         "is_living": {
             "description": "Whether organism was alive at time of biomaterial collection",
             "enum": ["yes", "no", "unknown"],
@@ -515,7 +521,7 @@
         "organ_region": {
             "description": "organ_region",
             "items": {
-                "ontology_browser_url": "http://atlas.brain-map.org/atlas?atlas=602630314",
+                "ontology_browser_url": "https://atlas.brain-map.org/atlas?atlas=602630314",
                 "type": "string"
             },
             "ontology": "https://api.brain-map.org/api/v2/structure_graph_download/1.json",

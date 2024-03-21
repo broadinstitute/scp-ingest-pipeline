@@ -39,7 +39,7 @@ def create_parser():
 def process_row_type(type_info):
     type_map = {
         'integer': 'integer',
-        'boolean': 'boolean',
+        'boolean': 'bool',
         'string': 'string',
         'number': 'float',
     }
