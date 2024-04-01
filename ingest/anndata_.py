@@ -155,7 +155,14 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         h5ad_frag.features.processed.tsv
         Gzip files for faster delocalization
         """
-        pd.DataFrame(adata.var.index).to_csv(
+        if adata.var.index.name == 'gene_ids':
+            # CELLxGENE indexes by Ensembl gene ID, not gene name (i.e. symbol).
+            # Gene name is encoded in feature_name, which is needed for gene search.
+            feature_frame = adata.var.feature_name
+        else:
+            # Default case
+            feature_frame = adata.var.index
+        pd.DataFrame(feature_frame).to_csv(
             "h5ad_frag.features.processed.tsv.gz",
             sep="\t",
             index=False,
