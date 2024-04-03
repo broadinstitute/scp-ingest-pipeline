@@ -4,8 +4,10 @@
 
 import unittest
 import sys
+import glob
 import os
 import gzip
+import time
 from unittest.mock import patch
 
 from test_expression_files import mock_expression_load
@@ -48,6 +50,8 @@ class TestAnnDataIngestor(unittest.TestCase):
     def teardown_method(self, _):
         if os.path.isfile(self.cluster_filename):
             os.remove(self.cluster_filename)
+        for f in glob.glob("h5ad_frag*.gz"):
+            os.remove(f)
 
     def test_minimal_valid_anndata(self):
         self.assertTrue(
@@ -153,8 +157,10 @@ class TestAnnDataIngestor(unittest.TestCase):
                 expected_line, line, 'did not get expected headers from metadata body'
             )
 
-    def test_generate_processed_matrix(self):
-        """ To reproduce test data:
+    def test_gene_id_indexed_generate_processed_matrix(self):
+        """Tests creating matrix when indexed by Ensembl ID, not gene name
+
+        To reproduce test data:
 
         1.  Go to https://singlecell.broadinstitute.org/single_cell/study/SCP2557
         2.  In "Download" tab, click to download file "MRCA_AC.h5ad"
@@ -179,6 +185,24 @@ class TestAnnDataIngestor(unittest.TestCase):
             # Write out a file to disk for filtered AnnData
             filtered_adata.write('indexed_by_gene_id.h5ad')
         """
+        indexed_by_geneid = AnnDataIngestor(
+            "../tests/data/anndata/indexed_by_gene_id.h5ad", self.study_id, self.study_file_id
+        )
+        adata = indexed_by_geneid.obtain_adata()
+        self.anndata_ingest.generate_processed_matrix(adata)
+
+        print('adata.var.index.name', adata.var.index.name)
+        now = time.time() # current time (ms since epoch)
+        expected_features_fp = 'h5ad_frag.features.processed.tsv.gz'
+        mtime = os.path.getmtime(expected_features_fp) # modified time (ms since epoch)
+        self.assertTrue(abs(now - mtime) < 1000)
+
+        with gzip.open(expected_features_fp, 'rt') as f:
+            first_line = f.readline().strip('\n')
+        self.assertFalse(
+            first_line.startswith('ENSMUSG'), 'Expected gene name, not Ensembl ID'
+        )
+
 
     def test_get_files_to_delocalize(self):
         files = AnnDataIngestor.clusterings_to_delocalize(self.valid_kwargs)
