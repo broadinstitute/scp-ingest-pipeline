@@ -153,6 +153,33 @@ class TestAnnDataIngestor(unittest.TestCase):
                 expected_line, line, 'did not get expected headers from metadata body'
             )
 
+    def test_generate_processed_matrix(self):
+        """ To reproduce test data:
+
+        1.  Go to https://singlecell.broadinstitute.org/single_cell/study/SCP2557
+        2.  In "Download" tab, click to download file "MRCA_AC.h5ad"
+        3.  cp -p ~/Downloads/MRCA_AC.h5ad ~/scp-ingest-pipeline
+        4.  source env/bin/activate
+        5.  python
+        6.  Run the following commands in your Python shell:
+
+            import anndata
+            adata = anndata.read_h5ad('MRCA_AC.h5ad')
+
+            # Delete data not needed for this test
+            del adata.obsm
+            del adata.raw
+
+            # Subset data to a small cohort of cells (males of age "P14")
+            filtered_adata = adata[(adata.obs["sex"] == "male") & (adata.obs["age"] == "P14")]
+
+            # Subset data to a small cohort of genes (those that are > 20 kbp in length)
+            filtered_adata = filtered_adata[:, filtered_adata.var["feature_length"].astype('int64') > 20000]
+
+            # Write out a file to disk for filtered AnnData
+            filtered_adata.write('indexed_by_gene_id.h5ad')
+        """
+
     def test_get_files_to_delocalize(self):
         files = AnnDataIngestor.clusterings_to_delocalize(self.valid_kwargs)
         compressed_file = self.cluster_filename + ".gz"
