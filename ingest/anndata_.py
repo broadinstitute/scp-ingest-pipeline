@@ -159,13 +159,15 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
             # CELLxGENE indexes by Ensembl gene ID, not gene name (i.e. symbol).
             # Gene name is encoded in feature_name, which is needed for gene search.
             feature_frame = adata.var.feature_name
+            index = True
         else:
             # Default case
             feature_frame = adata.var.index
+            index = False
         pd.DataFrame(feature_frame).to_csv(
             "h5ad_frag.features.processed.tsv.gz",
             sep="\t",
-            index=False,
+            index=index,
             header=False,
             compression="gzip",
         )
