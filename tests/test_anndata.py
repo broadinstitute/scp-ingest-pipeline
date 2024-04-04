@@ -191,7 +191,6 @@ class TestAnnDataIngestor(unittest.TestCase):
         adata = indexed_by_geneid.obtain_adata()
         self.anndata_ingest.generate_processed_matrix(adata)
 
-        print('adata.var.index.name', adata.var.index.name)
         now = time.time() # current time (ms since epoch)
         expected_features_fp = 'h5ad_frag.features.processed.tsv.gz'
         mtime = os.path.getmtime(expected_features_fp) # modified time (ms since epoch)
@@ -199,8 +198,10 @@ class TestAnnDataIngestor(unittest.TestCase):
 
         with gzip.open(expected_features_fp, 'rt') as f:
             first_line = f.readline().strip('\n')
-        self.assertFalse(
-            first_line.startswith('ENSMUSG'), 'Expected gene name, not Ensembl ID'
+
+        expected_first_line = 'ENSMUSG00000037270\t4932438A13Rik'
+        self.assertEqual(
+            first_line, expected_first_line, 'Expected Ensembl ID and gene name'
         )
 
 
