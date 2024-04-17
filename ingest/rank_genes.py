@@ -180,7 +180,7 @@ def screen_false_positive_mentions(publication_text, mentions_by_gene):
     """Screen out hits that are non-gene abbreviations
     """
     fp_for_tf = bool(re.search("transcription factor(s)? \(TF", publication_text))
-    if fp_for_tf:
+    if fp_for_tf and "TF" in mentions_by_gene:
         del mentions_by_gene["TF"]
         logger.info(
             'Deleted false positive gene mention for "TF", ' +
