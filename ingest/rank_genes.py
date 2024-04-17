@@ -127,20 +127,24 @@ def fetch_publication_text(publication):
     # 11. Not really, not until 2023-10-12, but abstract mentions genes, and full text available in biorxiv -- https://doi.org/10.1093/toxsci/kfac109 -- SCP1875
     doi_split = publication.split("https://doi.org/")
     if len(doi_split) > 1:
+        platform = 'pmc'
         doi = doi_split[1]
         pmcid = fetch_pmcid(doi)
         logger.info('Converted DOI to PMC ID: ' + pmcid)
         text = fetch_pmcid_text(pmcid)
     elif publication.startswith("https://www.biorxiv.org"):
+        platform = 'biorxiv'
         full_text_url = f"{publication}.full.txt"
         logger.info('full_text_url', full_text_url)
         with urllib.request.urlopen(full_text_url) as response:
-            text = response.read().decode('utf-8')
+            raw_text = response.read().decode('utf-8')
+            text = raw_text.split('## Reference')[0] # Skip author names, etc.
     else:
+        platform = 'other'
         file_path = publication
         with open(file_path) as f:
             text = f.read()
-    return text
+    return [text, platform]
 
 
 def fetch_gene_cache(organism):
@@ -227,11 +231,18 @@ def extract_mentions_and_interest(organism, publication):
         full_names_by_gene,
     ] = fetch_gene_cache(organism)
 
-    publication_text = fetch_publication_text(publication)
+    [publication_text, platform] = fetch_publication_text(publication)
 
     publication_words = re.split(r'[ /]', publication_text)
     for word in publication_words:
         raw_word = word.strip('*,.()-+')
+        if (
+            platform == 'biorxiv' and
+            len(raw_word) == 1 and # "a" and "T" are official mouse gene names, but rarely relevant
+            word[0] != '*' and word[-1] != '*' # Plaintext mark for italics in Biorxhiv, suggests gene name
+        ):
+            logger.info(f'Omitting likely false positive gene mention: "{word}"')
+            continue
         if raw_word in counts_by_gene:
             counts_by_gene[raw_word] += 1
 
@@ -468,7 +479,7 @@ def get_scp_api_origin():
     """Get domain etc. for SCP REST API URLs
     """
     db_name = os.environ['DATABASE_NAME']
-    db_env = db_name.split('_')[-1]
+    db_env = 'production' #  db_name.split('_')[-1]
     origins_by_environment = {
         'development': 'https://localhost:3000',
         'staging': 'https://singlecell-staging.broadinstitute.org',
