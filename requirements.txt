@@ -10,7 +10,7 @@ pandocfilters==1.4.2
 mypy-extensions==0.4.3
 dataclasses==0.6
 colorama==0.4.1
-pymongo==3.12.0
+pymongo==4.6.3
 backoff==1.10.0
 scanpy==1.9.2
 anndata==0.9.1
