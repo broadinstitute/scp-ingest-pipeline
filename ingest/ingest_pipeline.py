@@ -369,6 +369,7 @@ class IngestPipeline:
             IngestPipeline.dev_logger.info("Cell metadata file format valid")
             # Check file against metadata convention
             if validate_against_convention:
+                self.cell_metadata.booleanize_modality_metadata()
                 if self.cell_metadata.conforms_to_metadata_convention():
                     IngestPipeline.dev_logger.info(
                         "Cell metadata file conforms to metadata convention"
@@ -379,10 +380,12 @@ class IngestPipeline:
                     return 1
             self.report_validation("success")
 
+            self.cell_metadata.restore_modality_metadata()
             for metadata_model in self.cell_metadata.execute_ingest():
                 IngestPipeline.dev_logger.info(
                     f"Attempting to load cell metadata header : {metadata_model.annot_header}"
                 )
+
                 status = self.load(
                     self.cell_metadata.COLLECTION_NAME,
                     metadata_model.model,

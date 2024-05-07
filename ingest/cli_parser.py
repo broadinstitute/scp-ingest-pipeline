@@ -209,6 +209,11 @@ def create_parser():
         action="store_true",
         help="Indicates that metadata file should be validated against convention",
     )
+    parser_cell_metadata.add_argument(
+        "--has-modality",
+        type=ast.literal_eval,
+        help="Array of modalities metadata ingest should transform to boolean for BigQuery",
+    )
 
     # Parser ingesting cluster files
     parser_cluster = subparsers.add_parser(
