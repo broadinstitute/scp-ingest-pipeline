@@ -84,7 +84,7 @@ class TestCellMetadata(unittest.TestCase):
         ), "empty cell -> NaN that remains float (not coerced)"
 
     def test_make_multiindex_name(modality):
-        """Check multiindex generation
+        """Check proper multiindex generation
         """
         cm = CellMetadata(
             "../tests/data/annotation/metadata/convention/brain_rf1//patchseq_classic_metadata_has_modality_10.tsv",
@@ -96,6 +96,58 @@ class TestCellMetadata(unittest.TestCase):
         cm.preprocess()
         modality = "foo"
         assert isinstance(cm.make_multiindex_name(modality), tuple), "multiindex format should be of type tuple"
+
+    def test_create_boolean_modality_metadatum(self):
+        """Check derived modality boolian metadata generation
+        """
+        cm = CellMetadata(
+            "../tests/data/annotation/metadata/convention/brain_rf1//patchseq_classic_metadata_has_modality_10.tsv",
+            "addedfeed000000000000000",
+            "dec0dedfeed1111111111111",
+            study_accession="SCPtest",
+            tracer=None,
+        )
+        cm.preprocess()
+        modality = "morphology"
+        modality_bool = modality + "_bool"
+        expected_index = CellMetadata.make_multiindex_name(modality_bool)
+        result = CellMetadata.create_boolean_modality_metadatum(cm.file, modality)
+        assert expected_index in result.columns, f"{expected_header} not found in resulting dataframe"
+
+    def test_booleanize_modality_metadata(self):
+        """Check boolean created and detailed modality metadata hidden
+        """
+        cm = CellMetadata(
+            "../tests/data/annotation/metadata/convention/brain_rf1//patchseq_classic_metadata_has_modality_10.tsv",
+            "addedfeed000000000000000",
+            "dec0dedfeed1111111111111",
+            study_accession="SCPtest",
+            tracer=None,
+        )
+        cm.preprocess()
+        assert isinstance(cm.file[('has_morphology',   'group')][0], str), "pre-booleanization, values should be strings"
+        cm.modalities = ["morphology", "electrophysiology"]
+        cm.booleanize_modality_metadata()
+        assert cm.file[('has_electrophysiology',   'group')][0] == True, "post-booleanization, values should be boolean"
+
+
+    def test_restore_modality_metadata(modality):
+        """Check proper multiindex generation
+        """
+        cm = CellMetadata(
+            "../tests/data/annotation/metadata/convention/brain_rf1//patchseq_classic_metadata_has_modality_10.tsv",
+            "addedfeed000000000000000",
+            "dec0dedfeed1111111111111",
+            study_accession="SCPtest",
+            tracer=None,
+        )
+        cm.preprocess()
+        cm.modalities = ["morphology"]
+        # instead of hidden boolean data, grabbing Mouse-age to restored
+        cm.modality_urls = cm.file[[('Mouse_age',   'numeric')]].copy()
+        cm.modality_urls.rename(columns= {'Mouse_age': 'has_morphology', 'numeric':'group'}, inplace=True)
+        cm.restore_modality_metadata()
+        assert isinstance(cm.file[('has_morphology',   'group')][0], float), "inserted numeric data for test, expect int data upon restore"
 
     def test_transform(self):
         # Numeric columns that have array convention data are stored as a group in Mongo
