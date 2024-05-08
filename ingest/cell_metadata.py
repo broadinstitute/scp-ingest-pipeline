@@ -60,7 +60,7 @@ class CellMetadata(Annotations):
         self.synonym_updates = defaultdict(lambda: defaultdict(str))
         self.cells = []
         self.numeric_array_columns = {}
-        self.modalities = kwargs.pop("has_modality")
+        self.modalities = kwargs.get("has_modality", None)
         self.kwargs = kwargs
 
     # This model pertains to columns from cell metadata files
@@ -152,7 +152,7 @@ class CellMetadata(Annotations):
         """Translate presence of modality data to boolean for BigQuery
            If no modality data, self.files is unchanged
         """
-        if self.modalities:
+        if self.modalities is not None:
             df = copy.deepcopy(self.file)
             for m in self.modalities:
                 df = CellMetadata.create_boolean_modality_metadatum(df, m)
@@ -161,12 +161,12 @@ class CellMetadata(Annotations):
 
     def restore_modality_metadata(self):
         """Restore modality file data for MongoDB ingest"""
-        m_to_drop = []
-        for m in self.modalities:
-            m_to_drop.append(CellMetadata.make_multiindex_name(m))
-        self.file.drop(m_to_drop, axis=1, inplace=True)
-        self.file = self.file.join(self.modality_urls)
-        return
+        if self.modalities is not None:
+            m_to_drop = []
+            for m in self.modalities:
+                m_to_drop.append(CellMetadata.make_multiindex_name(m))
+            self.file.drop(m_to_drop, axis=1, inplace=True)
+            self.file = self.file.join(self.modality_urls)
 
     def conforms_to_metadata_convention(self):
         """Determines if cell metadata file follows metadata convention"""

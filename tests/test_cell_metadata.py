@@ -83,6 +83,20 @@ class TestCellMetadata(unittest.TestCase):
             cm.file["NA_f_n_s__num"]["numeric"][3], float
         ), "empty cell -> NaN that remains float (not coerced)"
 
+    def test_make_multiindex_name(modality):
+        """Check multiindex generation
+        """
+        cm = CellMetadata(
+            "../tests/data/annotation/metadata/convention/brain_rf1//patchseq_classic_metadata_has_modality_10.tsv",
+            "addedfeed000000000000000",
+            "dec0dedfeed1111111111111",
+            study_accession="SCPtest",
+            tracer=None,
+        )
+        cm.preprocess()
+        modality = "foo"
+        assert isinstance(cm.make_multiindex_name(modality), tuple), "multiindex format should be of type tuple"
+
     def test_transform(self):
         # Numeric columns that have array convention data are stored as a group in Mongo
         cm = CellMetadata(
