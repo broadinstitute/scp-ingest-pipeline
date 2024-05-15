@@ -159,14 +159,16 @@ class CellMetadata(Annotations):
             self.file = df
             self.hide_modality_metadatum()
 
-    def restore_modality_metadata(self):
+    @staticmethod
+    def restore_modality_metadata(cm):
         """Restore modality file data for MongoDB ingest"""
-        if self.modalities is not None:
+        if cm.modalities is not None:
             m_to_drop = []
-            for m in self.modalities:
+            for m in cm.modalities:
                 m_to_drop.append(CellMetadata.make_multiindex_name(m))
-            self.file.drop(m_to_drop, axis=1, inplace=True)
-            self.file = self.file.join(self.modality_urls)
+            cm.file.drop(m_to_drop, axis=1, inplace=True)
+            cm.file = cm.file.join(cm.modality_urls)
+        return cm.file
 
     def conforms_to_metadata_convention(self):
         """Determines if cell metadata file follows metadata convention"""
