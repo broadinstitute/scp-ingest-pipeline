@@ -1,0 +1,85 @@
+---
+title: "patchseq"
+---
+
+## TRANSCRIPTOMIC DATA: read counts
+
+```{python}
+import numpy as np
+import pandas as pd
+import scipy
+```
+
+```{python}
+data_exons = pd.read_csv('m1_patchseq_exon_counts.csv.gz',
+                   na_filter=False, index_col=0)
+exonCounts = data_exons.values.transpose()
+exonCounts = scipy.sparse.csr_matrix(exonCounts)
+genes = np.array(data_exons.index)
+```
+
+## exon data introspection
+```{python}
+data_exons.columns # patchseq cell names
+data_exons.index # patchseq genes
+
+```
+
+
+```{python}
+data_introns = pd.read_csv('count_files/m1_patchseq_intron_counts.csv.gz',
+                   na_filter=False, index_col=0)
+intronCounts = data_introns.values.transpose()
+intronCounts = scipy.sparse.csr_matrix(intronCounts)
+```
+
+# TRANSCRIPTOMIC DATA: gene lengths
+
+```{python}
+data = pd.read_csv('count_files/gene_lengths.txt')
+exonLengths = data['exon_bp'].values
+intronLengths = data['intron_bp'].values
+```
+
+
+```{python}
+print('\nBOTH')
+
+seqdepths     = np.array(np.sum(intronCounts+exonCounts,   axis=1))
+genesdetected = np.array(np.sum(intronCounts+exonCounts>0, axis=1))
+
+print('Seq depths: median {:.0f}, mean+-STD log10: {:.1f}+-{:.1f}'.format(
+    np.median(seqdepths), np.mean(np.log10(seqdepths)), np.std(np.log10(seqdepths))))
+
+print('Genes detected: median {:.0f}, mean+-STD: {:.0f}+-{:.0f}'.format(
+    np.median(genesdetected), np.mean(genesdetected), np.std(genesdetected)))
+```
+
+#### adapted from map_to_clusters in https://github.com/berenslab/mini-atlas/blob/master/code/rnaseqTools.py
+```{python}
+normalizeNew=True
+X = exonCounts
+if scipy.sparse.issparse(X):
+    X = np.array(X.todense())
+if normalizeNew:
+    X = X / (exonLengths/1000)
+if intronCounts is not None:
+    Xi = intronCounts
+    if scipy.sparse.issparse(Xi):
+        Xi = np.array(Xi.todense())
+    if normalizeNew:
+        Xi = Xi / ((intronLengths+.001)/1000)
+    X = X + Xi
+X = np.log2(X + 1)
+
+```
+
+
+```{python}
+X.shape
+```
+
+
+```{python}
+pd.DataFrame(X.T, index=data_exons.index, columns=data_exons.columns ).to_csv("patchseq_counts.tsv", mode='w', sep="\t", index=True, header=True)
+```
