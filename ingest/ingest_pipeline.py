@@ -128,6 +128,7 @@ class IngestPipeline:
         cluster_file: str = None,
         anndata_file: str = None,
         subsample=False,
+        validate_cell_metadata=False,
         ingest_cell_metadata=False,
         ingest_cluster=False,
         differential_expression=False,
@@ -358,18 +359,21 @@ class IngestPipeline:
     # More work needs to be done to fully remove ingest from IngestPipeline
     # Tracked in SCP-3023
     @custom_metric(config.get_metric_properties)
-    def ingest_cell_metadata(self):
-        """Ingests cell metadata files into Firestore."""
+    def validate_cell_metadata(self):
+        """If indicated, validate cell metadata against convention
+           otherwise, just preprocess file
+        """
         validate_against_convention = False
         if self.kwargs["validate_convention"] is not None:
             if self.kwargs["validate_convention"]:
                 validate_against_convention = True
         self.cell_metadata.preprocess(validate_against_convention)
         if self.cell_metadata.validate(validate_against_convention):
-            IngestPipeline.dev_logger.info("Cell metadata file format valid")
+            IngestPipeline.dev_logger.info("Cell metadata file structure valid")
             # Check file against metadata convention
             if validate_against_convention:
-                self.cell_metadata.booleanize_modality_metadata()
+                if self.kwargs['has_modality'] is not None:
+                    self.cell_metadata.booleanize_modality_metadata()
                 if self.cell_metadata.conforms_to_metadata_convention():
                     IngestPipeline.dev_logger.info(
                         "Cell metadata file conforms to metadata convention"
@@ -379,31 +383,33 @@ class IngestPipeline:
                     self.report_validation("failure")
                     return 1
             self.report_validation("success")
-
-            self.cell_metadata.restore_modality_metadata()
-            for metadata_model in self.cell_metadata.execute_ingest():
-                IngestPipeline.dev_logger.info(
-                    f"Attempting to load cell metadata header : {metadata_model.annot_header}"
-                )
-
-                status = self.load(
-                    self.cell_metadata.COLLECTION_NAME,
-                    metadata_model.model,
-                    self.cell_metadata.set_data_array,
-                    metadata_model.annot_header,
-                )
-                if status != 0:
-                    IngestPipeline.user_logger.error(
-                        f"Loading cell metadata header : {metadata_model.annot_header} failed. Exiting program"
-                    )
-                    return status
-            return status if status is not None else 1
         else:
             report_issues(self.cell_metadata)
             config.get_metric_properties().update(self.cell_metadata.props)
             self.report_validation("failure")
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
+        return 0
+
+
+    @custom_metric(config.get_metric_properties)
+    def ingest_cell_metadata(self):
+        for metadata_model in self.cell_metadata.execute_ingest():
+            IngestPipeline.dev_logger.info(
+                f"Attempting to load cell metadata header : {metadata_model.annot_header}"
+            )
+            status = self.load(
+                self.cell_metadata.COLLECTION_NAME,
+                metadata_model.model,
+                self.cell_metadata.set_data_array,
+                metadata_model.annot_header,
+            )
+            if status != 0:
+                IngestPipeline.user_logger.error(
+                    f"Loading cell metadata header : {metadata_model.annot_header} failed. Exiting program"
+                )
+                return status
+        return status if status is not None else 1
 
     @custom_metric(config.get_metric_properties)
     def ingest_cluster(self):
@@ -618,11 +624,16 @@ def run_ingest(ingest, arguments, parsed_args):
     elif "ingest_cell_metadata" in arguments:
         if arguments["ingest_cell_metadata"]:
             config.set_parent_event_name("ingest-pipeline:cell_metadata:ingest")
-            status_cell_metadata = ingest.ingest_cell_metadata()
-            status.append(status_cell_metadata)
-            if parsed_args.bq_table is not None and status_cell_metadata == 0:
+            status_cell_metadata_validation = ingest.validate_cell_metadata()
+            status.append(status_cell_metadata_validation)
+            if parsed_args.bq_table is not None and status_cell_metadata_validation == 0:
                 status_metadata_bq = ingest.upload_metadata_to_bq()
                 status.append(status_metadata_bq)
+            if status_cell_metadata_validation == 0:
+                if ingest.kwargs['has_modality'] is not None:
+                    ingest.cell_metadata.file = CellMetadata.restore_modality_metadata(ingest.cell_metadata)
+                status_cell_metadata_ingest = ingest.ingest_cell_metadata()
+                status.append(status_cell_metadata_ingest)
     elif "ingest_cluster" in arguments:
         if arguments["ingest_cluster"]:
             config.set_parent_event_name("ingest-pipeline:cluster:ingest")
@@ -659,7 +670,7 @@ def run_ingest(ingest, arguments, parsed_args):
         status_rank_genes = ingest.rank_genes()
         status.append(status_rank_genes)
 
-
+    status_cell_metadata =  0 if all(i < 1 for i in status) else 1
     return status, status_cell_metadata
 
 
