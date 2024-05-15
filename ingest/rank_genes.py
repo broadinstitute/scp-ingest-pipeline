@@ -25,11 +25,12 @@ import json
 import urllib
 import urllib.request
 import csv
-import os
 from io import BytesIO
 import xml.etree.ElementTree as ET
 
 import requests
+
+from utils import get_scp_api_base
 
 # Used when importing internally and in tests
 from ingest_files import IngestFiles
@@ -475,24 +476,11 @@ def load(clustering, annotation, tsv_content, bucket_name):
     logger.info("Uploaded gene ranks to bucket")
 
 
-def get_scp_api_origin():
-    """Get domain etc. for SCP REST API URLs
-    """
-    db_name = os.environ['DATABASE_NAME']
-    db_env = 'production' #  db_name.split('_')[-1]
-    origins_by_environment = {
-        'development': 'https://localhost:3000',
-        'staging': 'https://singlecell-staging.broadinstitute.org',
-        'production': 'https://singlecell.broadinstitute.org'
-    }
-    return origins_by_environment[db_env]
-
-
 def fetch_context(accession):
     """Get cluster, annotation, and differential expression data from SCP API
     """
-    origin = get_scp_api_origin()
-    url = f"{origin}/single_cell/api/v1/studies/{accession}/explore"
+    api_base = get_scp_api_base()
+    url = f"{api_base}/studies/{accession}/explore"
 
     response = requests.get(url, verify=False)
     try:
@@ -503,7 +491,7 @@ def fetch_context(accession):
                 'Ensure study is public, not private. ***'
             )
     except json.decoder.JSONDecodeError as e:
-        if 'staging' in origin:
+        if 'staging' in api_base:
             print(
                 '*** Error requesting SCP API on staging.  ' +
                 'Ensure you are connected to VPN. ***'
