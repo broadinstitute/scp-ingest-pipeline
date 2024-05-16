@@ -30,7 +30,7 @@ import xml.etree.ElementTree as ET
 
 import requests
 
-from utils import get_scp_api_base
+from utils import get_scp_api_base, fetch_pmid_pmcid
 
 # Used when importing internally and in tests
 from ingest_files import IngestFiles
@@ -63,33 +63,6 @@ def download_gzip(url, output_path, cache=0):
         content = gzip.decompress(response.read()).decode()
         with open(output_path, "w") as f:
             f.write(content)
-
-
-def fetch_pmcid(doi):
-    """Convert Digital Object Identifier (DOI) into PubMed Central ID (PMCID)
-
-    Many PMC articles are fully public-access, and machine-readable.
-    """
-    idconv_base = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
-    params = "?" + "&".join(
-        [
-            "tool=scp-fetch-pmcid",
-            "email=scp-dev@broadinstitute.org",
-            "format=json",
-            f"ids={doi}",
-        ]
-    )
-    idconv_url = idconv_base + params
-    with urllib.request.urlopen(idconv_url) as response:
-        data = response.read().decode("utf-8")
-    idconv_json = json.loads(data)
-    record = idconv_json["records"][0]
-    if "pmcid" not in record:
-        msg = f"PubMed Central ID (PMCID) not found for DOI \"{doi}\""
-        raise ValueError(msg)
-    pmcid = record["pmcid"]
-    return pmcid
-
 
 def fetch_pmcid_text(pmcid):
     """Get full text for publication, given its PubMed Central ID"""
@@ -130,7 +103,7 @@ def fetch_publication_text(publication):
     if len(doi_split) > 1:
         platform = 'pmc'
         doi = doi_split[1]
-        pmcid = fetch_pmcid(doi)
+        pmcid = fetch_pmid_pmcid(doi, True)
         logger.info('Converted DOI to PMC ID: ' + pmcid)
         text = fetch_pmcid_text(pmcid)
     elif publication.startswith("https://www.biorxiv.org"):
