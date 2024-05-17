@@ -109,8 +109,10 @@ def get_doi(url):
 
     return doi
 
-def fetch_processed_citation(doi):
+def fetch_citation(doi, bibliographic_data):
     """Get a ready-to-display citation string
+
+    Example: (TODO)
     """
     # E.g. 10.1126/sciadv.adh9570 -> 10.1126%2Fsciadv.adh9570
     safe_doi = urllib.parse.quote_plus(doi)
@@ -131,12 +133,25 @@ def fetch_processed_citation(doi):
     raw_cite = crosscite_response.text()
 
     # Fix occasional mangling of non-ASCII strings in Crosscite responses
-    citation = ftfy.fix_encoding(raw_cite)
+    base_cite = ftfy.fix_encoding(raw_cite)
+
+    # Get archive IDs; often shown for convenient bibliographic reference
+    archives = []
+    pmcid = bibliographic_data["pmcid"] # PubMed Central ID (full text)
+    pmid = bibliographic_data["pmid"] # PubMed ID (abstracts)
+    if pmcid:
+        archives.append(f"PMCID: {pmcid}")
+    if pmid:
+        archives.append(f"PMID: {pmcid}")
+    archive_ids.append(f"DOI: {doi}")
+    archive_ids = archives.join("; ")
+
+    citation = f"{base_cite} {archive_ids}"
 
     return citation
 
 def fetch_bibliographic_data(doi):
-    """Return details on publication title, journal, authors, and year
+    """Return publication title, journal, PMCID, authors, year, etc.
 
     (Abstract, references, and much else is also gathered, but not returned;
     these might be useful for future development.)
@@ -151,9 +166,18 @@ def fetch_bibliographic_data(doi):
     crossref_response = requests.get(crossref_url)
     raw_biblio = crossref_response.json()
     date_ymd = raw_biblio["published"]["date-parts"][0] # e.g. "[2023, 8, 25]"
+
+    # Get PubMed ID, and PubMed Central ID
+    [pmid, pmcid] = fetch_pmid_pmcid(doi)
+
     bibliographic_data = {
-        "title": raw_biblio["title"],
-        "journal": raw_biblio["container-title"],
+        # Canonical publication fields
+        "title": raw_biblio["title"], # required
+        "journal": raw_biblio["container-title"], # required
+        "pmcid": pmcid, # optional
+
+        # Other useful fields
+        "pmid": pmid,
         "journal_short": raw_biblio["container-title-short"],
         "year": date_ymd[0],
 
@@ -170,7 +194,6 @@ def fetch_bibliographic_data(doi):
         #     }, ...]
         "authors": raw_biblio["authors"]
     }
-
     return bibliographic_data
 
 def parse_publications_from_resources(external_resources):
@@ -179,13 +202,6 @@ def parse_publications_from_resources(external_resources):
     publications = []
 
     for external_resource in external_resources:
-        publication = {
-            "title": "", # required
-            "journal": "", # required
-            "url": "", # required
-            "citation": "", # optional, would help search
-            "pmcid": "" # optional, would help text mining, ultimately search
-        }
         url = external_resource["url"]
         # title = external_resource["title"]
         # description = external_resource["description"]
@@ -195,21 +211,18 @@ def parse_publications_from_resources(external_resources):
             # Lacking DOI means publication is pre-preprint or absent, so skip
             continue
 
-        archives = []
+        bibliographic_data = fetch_bibliographic_data(doi)
+        citation = fetch_citation(doi, bibliographic_data)
 
-        if "biorxiv.org" not in url:
-            [pmid, pmcid] = fetch_pmid_pmcid(doi)
-            archives.append(f"PMID: {pmid}")
-            if pmcid:
-                archives.append(f"PMCID: {pmcid}")
-                publication["pmcid"] = pmcid
+        publication = {
+            "title": bibliographic_data["title"], # required
+            "journal": bibliographic_data["journal"], # required
+            "url": url, # required
 
-        base_cite = fetch_base_citation(doi)
-        archives.append(f"DOI: {doi}")
-
-        archive_ids = archives.join("; ")
-        citation = f"{base_cite} {archive_ids}"
-        publication
+            "citation": citation, # optional, helps search
+            "pmcid": bibliographic_data["pmcid"] # optional, helps text mining, search
+        }
+        publications.append(publication)
 
     return publications
 
