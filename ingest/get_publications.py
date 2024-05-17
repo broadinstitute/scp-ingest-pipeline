@@ -77,6 +77,8 @@ publication_parseable_bases = [
 
 def get_study(accession):
     """Get JSON object for study
+
+    Docs: https://singlecell.broadinstitute.org/single_cell/api/v1#/Site/site_study_view_path
     """
     api_base = get_scp_api_base(env)
     study_api_url = f"{api_base}/site/studies/{accession}"
@@ -84,13 +86,21 @@ def get_study(accession):
     study_json = response.json()
     return study_json
 
-def parse_doi(url, pub_base):
-    """Convert a URL to
+def get_doi(url):
+    """Convert a URL to a DOI (Digital Object Identifier)
+
+    Example DOI: 10.1093/bfgp/elac044
     """
+    doi = None
+
+    pub_base = next((pb for pb in publication_bases if pb in url), None)
+    if pub_base is None:
+        return None
+
     if pub_base == "doi.org":
         # E.g. https://doi.org/10.1093/bfgp/elac044 -> 10.1093/bfgp/elac044
         doi = url.split("https://doi.org/")[1]
-    elif pub_base == 'science.org':
+    elif pub_base == "science.org":
         # E.g. https://www.science.org/doi/10.1126/sciadv.adh9570 -> 10.1126/sciadv.adh9570
         doi = url.split('/doi/')[1]
     elif pub_base in doi_stems_by_domain:
@@ -103,15 +113,20 @@ def parse_doi(url, pub_base):
 def fetch_citation(doi):
     """Retrieve a basic citation given a DOI
     """
-
     # E.g. 10.1126/sciadv.adh9570 -> 10.1126%2Fsciadv.adh9570
     safe_doi = urllib.parse.quote_plus(doi)
 
+    # Nature citation style is familiar to the single cell community,
+    # and "no-et-al" provides the full list of authors, which
+    # could be useful for SCP global search.
+    style = "nature-no-et-al"
+
     # Example:
     # https://citation.crosscite.org/format?doi=10.1126%2Fsciadv.adh9570&style=nature-no-et-al&lang=en-US
+    # UI: https://citation.crosscite.org
     crosscite_url = (
         "https://citation.crosscite.org/format" +
-        f"?doi={safe_doi}&style=nature-no-et-al&lang=en-US"
+        f"?doi={safe_doi}&style={style}&lang=en-US"
     )
     response = requests.get(crosscite_url)
     raw_cite = response.text()
@@ -121,20 +136,24 @@ def fetch_citation(doi):
 
     return citation
 
-def detect_publication_from_resource(external_resource):
+def parse_publication_from_resource(external_resource):
+    """Return rich, canonical publication object from resource, if possible
+    """
     url = external_resource["url"]
     # title = external_resource["title"]
     # description = external_resource["description"]
-    pub_base = next(pb for pb in publication_bases if pb in url)
-    doi = parse_doi(url, pub_base)
-    [pmid, pmcid] = fetch_pmid_pmcid(doi)
-    base_cite = fetch_citation(doi)
-    pmcid_entry = f"; PMCID: {pmcid}" if pmcid else ""
-    citation = f"{base_cite} DOI: {doi}; PMID: {pmid}; {pmcid_entry}"
+    doi = get_doi(url)
+    pmcid = external_resource
 
-
+    if doi:
+        [pmid, pmcid] = fetch_pmid_pmcid(doi)
+        base_cite = fetch_citation(doi)
+        pmcid_entry = f"; PMCID: {pmcid}" if pmcid else ""
+        citation = f"{base_cite} DOI: {doi}; PMID: {pmid}; {pmcid_entry}"
 
 def get_publications_from_study(accession):
+    """Parse or infer publications corresponding to a study
+    """
     study_json = get_study(accession)
     canonical_publications = study_json["publications"]
     external_resources = study_json["external_resources"]
