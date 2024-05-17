@@ -35,7 +35,7 @@ def fetch_pmid_pmcid(doi, require_pmcid=False):
 
     PMCIDs are more useful than PMIDs, but there ~4x more PMIDs (37M vs 9.9M).
 
-    Many PMC articles are completely public-access *and* machine-readable.
+    Many (but not all) PMC articles have *machine-readable* full text.
     """
     # Example:
     # https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?format=json&ids=10.1038/s41467-022-28372-y

@@ -1,4 +1,4 @@
-"""Get scientific article publications for SCP study, via SCP API or inference
+"""Parse or infer scientific article publications for SCP studies
 
 Many studies have publications but not all of them use canonical "Publication"
 fields.  This module detects publications by text mining non-canonical sources.
@@ -87,7 +87,7 @@ def get_study(accession):
     return study_json
 
 def get_doi(url):
-    """Convert a URL to a DOI (Digital Object Identifier)
+    """Convert a URL to a DOI (digital object identifier)
 
     Example DOI: 10.1093/bfgp/elac044
     """
@@ -136,22 +136,44 @@ def fetch_citation(doi):
 
     return citation
 
-def parse_publication_from_resource(external_resource):
-    """Return rich, canonical publication object from resource, if possible
+def parse_publications_from_resources(external_resources):
+    """Return rich, canonical publication objects from resources, if possible
     """
-    url = external_resource["url"]
-    # title = external_resource["title"]
-    # description = external_resource["description"]
-    doi = get_doi(url)
-    pmcid = external_resource
+    publications = []
 
-    if doi:
-        [pmid, pmcid] = fetch_pmid_pmcid(doi)
+    for external_resource in external_resources:
+        publication = {
+            "title": "", # required
+            "journal": "", # required
+            "url": "", # required
+            "citation": "", # optional, would help search
+            "pmcid": "" # optional, would help text mining, ultimately search
+        }
+        url = external_resource["url"]
+        # title = external_resource["title"]
+        # description = external_resource["description"]
+        doi = get_doi(url)
+
+        if doi:
+            # Lacking DOI means publication is pre-preprint or absent, so skip
+            continue
+
         base_cite = fetch_citation(doi)
-        pmcid_entry = f"; PMCID: {pmcid}" if pmcid else ""
-        citation = f"{base_cite} DOI: {doi}; PMID: {pmid}; {pmcid_entry}"
+        archives = []
 
-def get_publications_from_study(accession):
+        if "biorxiv.org" not in url:
+            [pmid, pmcid] = fetch_pmid_pmcid(doi)
+            archives.append(f"PMID: {pmid}")
+            if pmcid:
+                archives.append(f"PMCID: {pmcid}")
+                publication["PMCID"] = pmcid
+
+        archive_ids = archives.join("; ")
+        citation = f"{base_cite} {archive_ids}"
+
+    return publications
+
+def get_publications_for_study(accession):
     """Parse or infer publications corresponding to a study
     """
     study_json = get_study(accession)
@@ -163,12 +185,12 @@ def get_publications_from_study(accession):
 
     # Canonical SCP publication format:
     #   Required: title, journal, URL
-    #   Optional: PMCID, citation, preprint (Boolean, default: true)
+    #   Optional: pmcid, citation, preprint (Boolean, default: true)
 
     if len(canonical_publications) > 0:
         publications += canonical_publications
     if len(external_resources) > 0:
-
+        publications += parse_publications_from_resources(external_resources)
 
 accession = "SCP2560"
 
