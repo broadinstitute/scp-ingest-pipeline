@@ -33,16 +33,6 @@ from utils import get_scp_api_base, fetch_pmid_pmcid
 #
 # Out of first 60 (visualizable) of 1633 studies in SCP as of 2024-05-16,
 # 5-7 have directly detectable publications (i.e. via data in study itself):
-# SCP2510* -> EX https://zenodo.org/records/10667499 -> https://www.nature.com/articles/s41590-024-01792-2
-# SCP2484 -> DE https://doi.org/10.1093/bfgp/elac044 -> https://academic.oup.com/bfg/article/22/3/263/6874511
-# SCP2454 -> DE https://doi.org/10.1101/2023.09.18.558077 -> https://www.biorxiv.org/content/10.1101/2023.09.18.558077v1
-#     ^ Presumably same for 2-5 associated studies, linked from there (perhaps sometimes transitively)
-# SCP2450 -> DE (private, abstract)
-# SCP2393 -> PU, https://doi.org/doi:10.1126/sciadv.add9668, https://www.ncbi.nlm.nih.gov/pmc/articles/37756410
-# SCP2384* -> ER https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244451 -> https://pubmed.ncbi.nlm.nih.gov/37873456 -> https://www.biorxiv.org/content/10.1101/2023.10.09.561581v1
-# SCP2369 -> ER https://www.science.org/doi/10.1126/sciadv.adh9570
-#
-# * Zenodo and GEO links are not HTTP redirects to publications, like DOI links.
 #
 # This initial data suggests:
 #   1.  ~10% of studies (5-7/60) have publications that are directly detectable.
@@ -59,8 +49,6 @@ from utils import get_scp_api_base, fetch_pmid_pmcid
 #   2.  Plus all benefits of refining non-canonical publication data
 
 biorxiv_url = "https://www.biorxiv.org"
-
-env = None # Switch to "production" or "staging" to easily work with those locally
 
 publication_bases = [
     "doi.org", "biorxiv.org", "nature.com", "science.org"
@@ -81,7 +69,8 @@ def get_study(accession):
     """
     api_base = get_scp_api_base(env)
     study_api_url = f"{api_base}/site/studies/{accession}"
-    response = requests.get(study_api_url)
+    print('study_api_url', study_api_url)
+    response = requests.get(study_api_url, verify=False)
     study_json = response.json()
     return study_json
 
@@ -94,6 +83,7 @@ def get_doi(url):
 
     pub_base = next((pb for pb in publication_bases if pb in url), None)
     if pub_base is None:
+        print("Cannot determine DOI from publication URL")
         return None
 
     if pub_base == "doi.org":
@@ -107,6 +97,7 @@ def get_doi(url):
         last_url_segment = url.split("/")[-1]
         doi = f"{doi_stem}/{last_url_segment}"
 
+    print('Fetched DOI', doi)
     return doi
 
 def fetch_citation(doi, bibliographic_data):
@@ -114,6 +105,7 @@ def fetch_citation(doi, bibliographic_data):
 
     Example: (TODO)
     """
+    print("Fetch citation for DOI", doi)
     # E.g. 10.1126/sciadv.adh9570 -> 10.1126%2Fsciadv.adh9570
     safe_doi = urllib.parse.quote_plus(doi)
 
@@ -130,7 +122,7 @@ def fetch_citation(doi, bibliographic_data):
         f"?doi={safe_doi}&style={style}&lang=en-US"
     )
     crosscite_response = requests.get(crosscite_url)
-    raw_cite = crosscite_response.text()
+    raw_cite = crosscite_response.text.strip()
 
     # Fix occasional mangling of non-ASCII strings in Crosscite responses
     base_cite = ftfy.fix_encoding(raw_cite)
@@ -142,9 +134,9 @@ def fetch_citation(doi, bibliographic_data):
     if pmcid:
         archives.append(f"PMCID: {pmcid}")
     if pmid:
-        archives.append(f"PMID: {pmcid}")
-    archive_ids.append(f"DOI: {doi}")
-    archive_ids = archives.join("; ")
+        archives.append(f"PMID: {pmid}")
+    archives.append(f"DOI: {doi}")
+    archive_ids = "; ".join(archives)
 
     citation = f"{base_cite} {archive_ids}"
 
@@ -156,7 +148,7 @@ def fetch_bibliographic_data(doi):
     (Abstract, references, and much else is also gathered, but not returned;
     these might be useful for future development.)
     """
-
+    print("Fetch bibliographic data for DOI", doi)
     # Example:
     # https://api.crossref.org/works/10.1126/sciadv.adh9570/transform/application/vnd.citationstyles.csl+json
     crossref_url = (
@@ -192,7 +184,7 @@ def fetch_bibliographic_data(doi):
         #       "name": "Department of Biology, University of Virginia, Charlottesville, VA 22904, USA."
         #       }]
         #     }, ...]
-        "authors": raw_biblio["authors"]
+        "authors": raw_biblio["author"]
     }
     return bibliographic_data
 
@@ -202,12 +194,13 @@ def parse_publications_from_resources(external_resources):
     publications = []
 
     for external_resource in external_resources:
+        print('external_resource', external_resource)
         url = external_resource["url"]
         # title = external_resource["title"]
         # description = external_resource["description"]
         doi = get_doi(url)
 
-        if doi:
+        if not doi:
             # Lacking DOI means publication is pre-preprint or absent, so skip
             continue
 
@@ -245,7 +238,27 @@ def get_publications_for_study(accession):
     if len(external_resources) > 0:
         publications += parse_publications_from_resources(external_resources)
 
-accession = "SCP2560"
+    return publications
 
+
+# SCP2510 -> EXT https://zenodo.org/records/10667499 -> https://www.nature.com/articles/s41590-024-01792-2
+# SCP2484 -> DES https://doi.org/10.1093/bfgp/elac044 -> https://academic.oup.com/bfg/article/22/3/263/6874511
+# SCP2454 -> DES https://doi.org/10.1101/2023.09.18.558077 -> https://www.biorxiv.org/content/10.1101/2023.09.18.558077v1
+#     ^ Presumably same for 2-5 associated studies, linked from there (perhaps sometimes transitively)
+# SCP2450 -> DES (private, abstract)
+# SCP2393 -> PUB https://doi.org/doi:10.1126/sciadv.add9668, https://www.ncbi.nlm.nih.gov/pmc/articles/37756410
+# SCP2384 -> EXT https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244451 -> https://pubmed.ncbi.nlm.nih.gov/37873456 -> https://www.biorxiv.org/content/10.1101/2023.10.09.561581v1
+# SCP2369 -> EXT https://www.science.org/doi/10.1126/sciadv.adh9570
+#
+# * Zenodo and GEO links are not HTTP redirects to publications, like DOI links.
+
+accession = "SCP2369"
+#env = None # Switch to "production" or "staging" to easily work with those locally
+env = "production"
+
+publications = get_publications_for_study(accession)
+
+print('publications')
+print(publications)
 
 
