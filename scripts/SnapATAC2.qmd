@@ -1,0 +1,101 @@
+---
+title: "SnapATAC2"
+---
+
+
+```{python}
+import numpy as np
+import pandas as pd
+import scanpy as sc
+sc.logging.print_versions()
+```
+
+```{python}
+adata = sc.read_h5ad("data.h5ad")
+adata
+```
+
+### Generate barcode file
+```{python}
+pd.DataFrame(adata.obs.index).to_csv(
+"barcodes.tsv",
+sep="\t",
+index=False,
+header=False,
+)
+```
+
+
+### explore feature info
+```{python}
+adata.var.index
+adata.var.columns
+adata.obs.index
+adata.obs.columns
+adata.varnames
+```
+
+##### Features are genomic bins
+```{python}
+adata.var_names
+adata.obs_names
+```
+
+### generate feature file
+```{python}
+pd.DataFrame(adata.var_names).to_csv( "features.tsv", sep = "\t", index = False, header = False)
+```
+
+
+```{python}
+import scipy
+import scipy.io as sio
+sio.mmwrite("matrix.mtx", scipy.sparse.csr_matrix(adata.X.T))
+```
+
+#### fails with: "TypeError: sparse matrix length is ambiguous; use getnnz() or shape[0]"
+```{python}
+adata.write_csvs( "csvs", skip_data = True, sep = "\t")
+```
+
+### write cluster info
+```{python}
+cluster = pd.DataFrame(adata.obsm['X_umap'])
+cluster.index = adata.obs_names
+filename = "umap.tsv"
+with open(filename, "w") as file:
+    file.write('NAME\tX\tY\n')
+    file.write('TYPE\tgroup\tgroup\n')
+cluster.to_csv(filename, mode='a', sep="\t", index=True, header=False)
+```
+
+### explore metadata info
+```{python}
+adata.obs.columns
+adata.obs
+```
+
+### add conventional metadata file
+```{python}
+meta = adata.obs
+meta['biosample_id'] = "sample-1"
+meta['donor_id'] = "donor-1"
+meta['species'] = "NCBITaxon_9606"
+meta['species__ontology_label'] = "Homo sapiens"
+meta['disease'] = "PATO_0000461"
+meta['disease__ontology_label'] = "normal"
+meta['organ'] = "UBERON_0000178"
+meta['organ__ontology_label'] = "blood"
+meta['library_preparation_protocol'] = "EFO_0030059"
+meta['library_preparation_protocol__ontology_label'] = "10x multiome"
+meta['sex'] = "female"
+```
+
+### Generate metadata file with TYPE row
+```{python}
+type = ['group']*20
+with open("dummy_snapatac2_metadata.tsv", "w") as file:
+  file.write('NAME\t' + '\t'.join(meta.columns.values) + '\n')
+  file.write('TYPE\t' + '\t'.join(type) + '\n')
+meta.to_csv('dummy_snapatac2_metadata.tsv', mode='a', sep="\t", index=True, header=False)
+```
