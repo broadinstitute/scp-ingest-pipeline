@@ -1,0 +1,134 @@
+---
+title: "pipelines-dev_multiome"
+---
+
+
+```{python}
+import numpy as np
+import pandas as pd
+import scanpy as sc
+sc.logging.print_versions()
+```
+## pipelines-dev_multiome GEX h5ad
+
+```{python}
+adata = sc.read_h5ad("Library-8-20230710_gex.h5ad")
+adata
+```
+
+### explore feature info
+```{python}
+adata.var.index
+adata.var.columns
+adata.obs.index
+adata.obs.columns
+adata.varnames
+```
+
+### Generate barcode file
+```{python}
+pd.DataFrame(adata.obs.index).to_csv(
+"barcodes.tsv",
+sep="\t",
+index=False,
+header=False,
+)
+```
+
+### Rearrange columns to generate feature file
+```{python}
+features = adata.var[['ensembl_ids', 'gene_names']]
+features['feature_types'] = "gene expression"
+features[['ensembl_ids', 'gene_names', 'feature_types']].to_csv(
+"3-col_features.tsv",
+sep="\t",
+index=False,
+header=False,
+)
+```
+
+```{python}
+# import scipy
+# import scipy.io as sio
+# sio.mmwrite("matrix.mtx", scipy.sparse.csr_matrix(adata.X.T))
+```
+
+
+
+```{python}
+adata.var_names_make_unique()
+adata.var["mt"] = adata.var_names.str.startswith("MT-")
+adata.var["ribo"] = adata.var_names.str.startswith(("RPS", "RPL"))
+adata.var["hb"] = adata.var_names.str.contains("^HB[^(P)]")
+sc.pp.calculate_qc_metrics(
+    adata, qc_vars=["mt", "ribo", "hb"], inplace=True, log1p=True
+)
+```
+
+
+```{python}
+sc.pl.violin(
+    adata,
+    ["n_genes_by_counts", "total_counts", "pct_counts_mt"],
+    jitter=0.4,
+    multi_panel=True,
+)
+```
+
+
+```{python}
+adata
+```
+
+```{python}
+sc.pp.filter_cells(adata, min_genes=200)
+sc.pp.filter_genes(adata, min_cells=3)
+adata
+```
+
+
+```{python}
+# sc.pp.scrublet(adata, batch_key="sample")
+# Normalizing to median total counts
+sc.pp.normalize_total(adata)
+# Logarithmize the data
+sc.pp.log1p(adata)
+sc.pp.highly_variable_genes(adata, n_top_genes=2000)
+sc.pl.highly_variable_genes(adata)
+```
+
+
+```{python}
+sc.tl.pca(adata)
+sc.pl.pca_variance_ratio(adata, n_pcs=50, log=True)
+```
+
+#### running this block resulted in an error involving eigenvalues
+#### the process used a randomly generated value instead so the plot is likely invalid
+```{python}
+sc.pp.neighbors(adata)
+sc.tl.umap(adata)
+sc.pl.umap(
+    adata,
+    color="input_id",
+    # Setting a smaller point size to prevent overlap
+    size=2,
+)
+```
+
+```{python}
+sc.tl.leiden(adata, n_iterations=2)
+sc.pl.umap(adata, color=["leiden"])
+```
+
+
+### write cluster info
+```{python}
+cluster = pd.DataFrame(adata.obsm['X_umap'])
+cluster.index = adata.obs_names
+filename = "umap.tsv"
+with open(filename, "w") as file:
+    file.write('NAME\tX\tY\n')
+    file.write('TYPE\tgroup\tgroup\n')
+cluster.to_csv(filename, mode='a', sep="\t", index=True, header=False)
+```
