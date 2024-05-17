@@ -52,8 +52,7 @@ from utils import get_scp_api_base, fetch_pmid_pmcid
 #   1.  Ease findability of publication content -- it'd help to link in a consistent place and format
 #   2.  Improve visual quality of study summary -- unconventional formatting can distract from exploration
 #   3.  Increase findability of studies by (publication) author -- informal delimiters can confuse text search
-#   4.  Decrease user support load, by easing discovery of corresponding author for study-specific questions
-#   5.  Enable text mining publication content, for e.g. relevant genes, canonicalizing custom abbreviations
+#   4.  Enable text mining publication content, for e.g. relevant genes, canonicalizing custom abbreviations
 #
 # Benefits to inferring publications where study lacks even non-canonical publication data
 #   1.  Enable finding publication -- linking from study where none was available would greatly lower barriers
@@ -110,8 +109,8 @@ def get_doi(url):
 
     return doi
 
-def fetch_citation(doi):
-    """Retrieve a basic citation given a DOI
+def fetch_processed_citation(doi):
+    """Get a ready-to-display citation string
     """
     # E.g. 10.1126/sciadv.adh9570 -> 10.1126%2Fsciadv.adh9570
     safe_doi = urllib.parse.quote_plus(doi)
@@ -128,13 +127,51 @@ def fetch_citation(doi):
         "https://citation.crosscite.org/format" +
         f"?doi={safe_doi}&style={style}&lang=en-US"
     )
-    response = requests.get(crosscite_url)
-    raw_cite = response.text()
+    crosscite_response = requests.get(crosscite_url)
+    raw_cite = crosscite_response.text()
 
     # Fix occasional mangling of non-ASCII strings in Crosscite responses
     citation = ftfy.fix_encoding(raw_cite)
 
     return citation
+
+def fetch_bibliographic_data(doi):
+    """Return details on publication title, journal, authors, and year
+
+    (Abstract, references, and much else is also gathered, but not returned;
+    these might be useful for future development.)
+    """
+
+    # Example:
+    # https://api.crossref.org/works/10.1126/sciadv.adh9570/transform/application/vnd.citationstyles.csl+json
+    crossref_url = (
+        "https://api.crossref.org/works/" +
+        f"{doi}/transform/application/vnd.citationstyles.csl+json"
+    )
+    crossref_response = requests.get(crossref_url)
+    raw_biblio = crossref_response.json()
+    date_ymd = raw_biblio["published"]["date-parts"][0] # e.g. "[2023, 8, 25]"
+    bibliographic_data = {
+        "title": raw_biblio["title"],
+        "journal": raw_biblio["container-title"],
+        "journal_short": raw_biblio["container-title-short"],
+        "year": date_ymd[0],
+
+        # Example `authors`:
+        # [{
+        #    "ORCID": "http://orcid.org/0000-0002-5958-4616",
+        #    "authenticated-orcid": true,
+        #    "given": "Qijun",
+        #    "family": "Tang",
+        #    "sequence": "first",
+        #    "affiliation": [{
+        #       "name": "Department of Biology, University of Virginia, Charlottesville, VA 22904, USA."
+        #       }]
+        #     }, ...]
+        "authors": raw_biblio["authors"]
+    }
+
+    return bibliographic_data
 
 def parse_publications_from_resources(external_resources):
     """Return rich, canonical publication objects from resources, if possible
@@ -158,7 +195,6 @@ def parse_publications_from_resources(external_resources):
             # Lacking DOI means publication is pre-preprint or absent, so skip
             continue
 
-        base_cite = fetch_citation(doi)
         archives = []
 
         if "biorxiv.org" not in url:
@@ -166,10 +202,14 @@ def parse_publications_from_resources(external_resources):
             archives.append(f"PMID: {pmid}")
             if pmcid:
                 archives.append(f"PMCID: {pmcid}")
-                publication["PMCID"] = pmcid
+                publication["pmcid"] = pmcid
+
+        base_cite = fetch_base_citation(doi)
+        archives.append(f"DOI: {doi}")
 
         archive_ids = archives.join("; ")
         citation = f"{base_cite} {archive_ids}"
+        publication
 
     return publications
 
