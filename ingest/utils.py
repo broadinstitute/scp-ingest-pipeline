@@ -45,7 +45,7 @@ def fetch_pmid_pmcid(doi, require_pmcid=False):
             "tool=scp-fetch-pmid-pmcid",
             "email=scp-dev@broadinstitute.org",
             "format=json",
-            f"ids={doi}",
+            f"ids={doi}"
         ]
     )
     idconv_url = idconv_base + params

@@ -6,6 +6,7 @@ fields.  This module detects publications by text mining non-canonical sources.
 A publication can reasonably be defined as "a work including substantial narrative scientific
 prose that specifically contextualizes the study's data".
 """
+import re
 import urllib
 
 import ftfy
@@ -162,15 +163,18 @@ def fetch_bibliographic_data(doi):
     # Get PubMed ID, and PubMed Central ID
     [pmid, pmcid] = fetch_pmid_pmcid(doi)
 
+    journal = raw_biblio["container-title"]
+    journal_short = raw_biblio.get("container-title-short", journal)
+
     bibliographic_data = {
         # Canonical publication fields
         "title": raw_biblio["title"], # required
-        "journal": raw_biblio["container-title"], # required
+        "journal": journal, # required
         "pmcid": pmcid, # optional
 
         # Other useful fields
         "pmid": pmid,
-        "journal_short": raw_biblio["container-title-short"],
+        "journal_short": journal_short,
         "year": date_ymd[0],
 
         # Example `authors`:
@@ -188,34 +192,59 @@ def fetch_bibliographic_data(doi):
     }
     return bibliographic_data
 
-def parse_publications_from_resources(external_resources):
-    """Return rich, canonical publication objects from resources, if possible
+def parse_publication_from_url(url):
+    """Return rich, canonical publication objects from URL, if possible
     """
+    doi = get_doi(url)
+
+    if not doi:
+        # Lacking DOI means publication is pre-preprint or absent
+        return None
+
+    bibliographic_data = fetch_bibliographic_data(doi)
+    citation = fetch_citation(doi, bibliographic_data)
+
+    publication = {
+        "title": bibliographic_data["title"], # required
+        "journal": bibliographic_data["journal"], # required
+        "url": url, # required
+
+        "citation": citation, # optional, helps search
+        "pmcid": bibliographic_data["pmcid"] # optional, helps text mining, search
+    }
+    return publication
+
+def parse_publications_from_resources(external_resources):
+    """Return publication objects for resources' URLs, if possible
+    """
+    print("Parse publications from resources")
     publications = []
 
     for external_resource in external_resources:
-        print('external_resource', external_resource)
         url = external_resource["url"]
-        # title = external_resource["title"]
-        # description = external_resource["description"]
-        doi = get_doi(url)
+        publication = parse_publication_from_url(url)
+        if publication:
+            publications.append(publication)
 
-        if not doi:
-            # Lacking DOI means publication is pre-preprint or absent, so skip
-            continue
+    return publications
 
-        bibliographic_data = fetch_bibliographic_data(doi)
-        citation = fetch_citation(doi, bibliographic_data)
+def parse_publications_from_description(description):
+    """Return publication objects for free-text description, if possible
+    """
+    print("Parse publications from description")
+    publications = []
 
-        publication = {
-            "title": bibliographic_data["title"], # required
-            "journal": bibliographic_data["journal"], # required
-            "url": url, # required
+    # From https://stackoverflow.com/a/15518253
+    url_regex = '<a\s*href=[\'|"](.*?)[\'"].*?>'
+    urls = re.findall(url_regex, description)
 
-            "citation": citation, # optional, helps search
-            "pmcid": bibliographic_data["pmcid"] # optional, helps text mining, search
-        }
-        publications.append(publication)
+    print('description', description)
+    print('urls', urls)
+
+    for url in urls:
+        publication = parse_publication_from_url(url)
+        if publication:
+            publications.append(publication)
 
     return publications
 
@@ -225,7 +254,7 @@ def get_publications_for_study(accession):
     study_json = get_study(accession)
     canonical_publications = study_json["publications"]
     external_resources = study_json["external_resources"]
-    description = study_json["description"]
+    description = study_json["full_description"]
 
     publications = []
 
@@ -237,6 +266,8 @@ def get_publications_for_study(accession):
         publications += canonical_publications
     if len(external_resources) > 0:
         publications += parse_publications_from_resources(external_resources)
+    if len(publications) == 0:
+        publications += parse_publications_from_description(description)
 
     return publications
 
@@ -252,7 +283,7 @@ def get_publications_for_study(accession):
 #
 # * Zenodo and GEO links are not HTTP redirects to publications, like DOI links.
 
-accession = "SCP2369"
+accession = "SCP2484"
 #env = None # Switch to "production" or "staging" to easily work with those locally
 env = "production"
 
