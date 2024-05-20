@@ -670,7 +670,6 @@ def run_ingest(ingest, arguments, parsed_args):
         status_rank_genes = ingest.rank_genes()
         status.append(status_rank_genes)
 
-    status_cell_metadata =  0 if all(i < 1 for i in status) else 1
     return status, status_cell_metadata
 
 
