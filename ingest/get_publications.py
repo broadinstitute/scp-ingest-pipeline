@@ -25,6 +25,7 @@ from utils import get_scp_api_base, fetch_pmid_pmcid
 #   C.  `description` string -- oldest, rawest place to note a publication
 #       Introduced in Q3 2016 at SCP launch
 #
+# TODO:
 # 2.  PubMed Central (PMC) API
 #   A.  Search PubMed for references to SCP domain, see if study title or
 #       authors roughly match publication title or authors.
@@ -68,9 +69,9 @@ def get_study(accession):
 
     Docs: https://singlecell.broadinstitute.org/single_cell/api/v1#/Site/site_study_view_path
     """
+    print(f"Get study object from from SCP API for {accession}")
     api_base = get_scp_api_base(env)
     study_api_url = f"{api_base}/site/studies/{accession}"
-    print('study_api_url', study_api_url)
     response = requests.get(study_api_url, verify=False)
     study_json = response.json()
     return study_json
@@ -81,6 +82,7 @@ def get_doi(url):
     Example DOI: 10.1093/bfgp/elac044
     """
     doi = None
+    print("Get DOI for URL")
 
     pub_base = next((pb for pb in publication_bases if pb in url), None)
     if pub_base is None:
@@ -98,13 +100,16 @@ def get_doi(url):
         last_url_segment = url.split("/")[-1]
         doi = f"{doi_stem}/{last_url_segment}"
 
-    print('Fetched DOI', doi)
+    print("Fetched DOI", doi)
     return doi
 
 def fetch_citation(doi, bibliographic_data):
     """Get a ready-to-display citation string
 
-    Example: (TODO)
+    Example (for SCP2369, DOI 10.1126/sciadv.adh9570):
+    Tang, Q., Godschall, E., Brennan, C. D., Zhang, Q., Abraham-Fan, R.-J., Williams, S. P., Güngül, T. B., Onoharigho, R., Buyukaksakal, A., Salinas, R., Sajonia, I. R., Olivieri, J. J., Calhan, O. Y., Deppmann, C. D., Campbell, J. N., Podyma, B. & Güler, A. D. Leptin receptor neurons in the dorsomedial hypothalamus input to the circadian feeding network. Sci. Adv. 9, (2023). PMCID: PMC10456850; PMID: 37624889; DOI: 10.1126/sciadv.adh9570
+
+    TODO: Remove HTML from citation, e.g. "<i>in vivo</i>" for SCP2454
     """
     print("Fetch citation for DOI", doi)
     # E.g. 10.1126/sciadv.adh9570 -> 10.1126%2Fsciadv.adh9570
@@ -123,10 +128,23 @@ def fetch_citation(doi, bibliographic_data):
         f"?doi={safe_doi}&style={style}&lang=en-US"
     )
     crosscite_response = requests.get(crosscite_url)
+    status_code = crosscite_response.status_code
+    if status_code == 500:
+        # Occurs with e.g. bioRxiv publications
+        return ""
+
     raw_cite = crosscite_response.text.strip()
 
     # Fix occasional mangling of non-ASCII strings in Crosscite responses
     base_cite = ftfy.fix_encoding(raw_cite)
+
+    if base_cite.startswith("1. "):
+        # Fixes e.g. "1. Sundell, T., Grimstad, K." for SCP2484
+        base_cite = base_cite.replace("1. ", "", 1)
+
+    if " . . . " in base_cite:
+        # Fix "Shannon, E., . . . Murphy, G. J." for SCP2393
+        base_cite = base_cite.replace(" . . . ", "", 1)
 
     # Get archive IDs; often shown for convenient bibliographic reference
     archives = []
@@ -164,17 +182,20 @@ def fetch_bibliographic_data(doi):
     [pmid, pmcid] = fetch_pmid_pmcid(doi)
 
     journal = raw_biblio["container-title"]
+    if journal == []:
+        # e.g. "bioRxiv" for DOI "10.1101/2023.09.18.558077"
+        journal = raw_biblio["institution"][0]["name"]
     journal_short = raw_biblio.get("container-title-short", journal)
 
     bibliographic_data = {
         # Canonical publication fields
         "title": raw_biblio["title"], # required
-        "journal": journal, # required
+        "journal": journal_short, # required
         "pmcid": pmcid, # optional
 
         # Other useful fields
         "pmid": pmid,
-        "journal_short": journal_short,
+        "journal_long": journal,
         "year": date_ymd[0],
 
         # Example `authors`:
@@ -238,9 +259,6 @@ def parse_publications_from_description(description):
     url_regex = '<a\s*href=[\'|"](.*?)[\'"].*?>'
     urls = re.findall(url_regex, description)
 
-    print('description', description)
-    print('urls', urls)
-
     for url in urls:
         publication = parse_publication_from_url(url)
         if publication:
@@ -258,10 +276,6 @@ def get_publications_for_study(accession):
 
     publications = []
 
-    # Canonical SCP publication format:
-    #   Required: title, journal, URL
-    #   Optional: pmcid, citation, preprint (Boolean, default: true)
-
     if len(canonical_publications) > 0:
         publications += canonical_publications
     if len(external_resources) > 0:
@@ -271,19 +285,19 @@ def get_publications_for_study(accession):
 
     return publications
 
-
-# SCP2510 -> EXT https://zenodo.org/records/10667499 -> https://www.nature.com/articles/s41590-024-01792-2
+# SCP2510* -> EXT https://zenodo.org/records/10667499 -> https://www.nature.com/articles/s41590-024-01792-2
 # SCP2484 -> DES https://doi.org/10.1093/bfgp/elac044 -> https://academic.oup.com/bfg/article/22/3/263/6874511
 # SCP2454 -> DES https://doi.org/10.1101/2023.09.18.558077 -> https://www.biorxiv.org/content/10.1101/2023.09.18.558077v1
 #     ^ Presumably same for 2-5 associated studies, linked from there (perhaps sometimes transitively)
-# SCP2450 -> DES (private, abstract)
+# SCP2450** -> DES (private, abstract)
 # SCP2393 -> PUB https://doi.org/doi:10.1126/sciadv.add9668, https://www.ncbi.nlm.nih.gov/pmc/articles/37756410
-# SCP2384 -> EXT https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244451 -> https://pubmed.ncbi.nlm.nih.gov/37873456 -> https://www.biorxiv.org/content/10.1101/2023.10.09.561581v1
+# SCP2384* -> EXT https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244451 -> https://pubmed.ncbi.nlm.nih.gov/37873456 -> https://www.biorxiv.org/content/10.1101/2023.10.09.561581v1
 # SCP2369 -> EXT https://www.science.org/doi/10.1126/sciadv.adh9570
 #
 # * Zenodo and GEO links are not HTTP redirects to publications, like DOI links.
+# ** Private studies can be supported via gcloud auth
 
-accession = "SCP2484"
+accession = "SCP2454"
 #env = None # Switch to "production" or "staging" to easily work with those locally
 env = "production"
 
