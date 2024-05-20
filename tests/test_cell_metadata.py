@@ -146,7 +146,7 @@ class TestCellMetadata(unittest.TestCase):
         # instead of hidden boolean data, grabbing Mouse-age to restored
         cm.modality_urls = cm.file[[('Mouse_age',   'numeric')]].copy()
         cm.modality_urls.rename(columns= {'Mouse_age': 'has_morphology', 'numeric':'group'}, inplace=True)
-        cm.restore_modality_metadata()
+        cm.restore_modality_metadata(cm)
         assert isinstance(cm.file[('has_morphology',   'group')][0], float), "inserted numeric data for test, expect int data upon restore"
 
     def test_transform(self):
