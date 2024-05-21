@@ -54,7 +54,12 @@ def fetch_pmid_pmcid(doi, require_pmcid=False):
     idconv_json = json.loads(data)
     record = idconv_json["records"][0]
 
-    pmid = record["pmid"]
+    pmid = None
+    if "pmid" in record:
+        pmid = record["pmid"]
+    else:
+        print(f"Warning: PubMed ID (ID) not found for DOI \"{doi}\"")
+
     pmcid = None
 
     if "pmcid" in record:
@@ -63,7 +68,6 @@ def fetch_pmid_pmcid(doi, require_pmcid=False):
         msg = f"PubMed Central ID (PMCID) not found for DOI \"{doi}\""
         raise ValueError(msg)
 
-    pmcid = record["pmcid"]
     return [pmid, pmcid]
 
 

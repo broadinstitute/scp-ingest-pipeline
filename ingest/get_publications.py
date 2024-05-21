@@ -94,13 +94,18 @@ def get_doi(url):
 
     if pub_base == "doi.org":
         # E.g. https://doi.org/10.1093/bfgp/elac044 -> 10.1093/bfgp/elac044
-        doi = url.split("https://doi.org/")[1]
+        doi = url.split("doi.org/")[1]
     elif pub_base == "science.org":
         # E.g. https://www.science.org/doi/10.1126/sciadv.adh9570 -> 10.1126/sciadv.adh9570
         doi = url.split('/doi/')[1]
     elif pub_base in doi_stems_by_domain:
         doi_stem = doi_stems_by_domain[pub_base]
+        if "nature.com" in url and "/figures/" in url:
+            # Don't attempt to get DOIs for images and their captions
+            # https://www.nature.com/articles/s42003-022-04196-w/figures/1
+            return None
         last_url_segment = url.split("/")[-1]
+        last_url_segment = last_url_segment.replace(".html", "")
         doi = f"{doi_stem}/{last_url_segment}"
 
     print("Fetched DOI", doi)
@@ -348,14 +353,14 @@ def fetch_and_merge_publications(
     study_publications = get_publications_for_study(accession, study_json)
 
     with open(publications_json_path, "w") as f:
-
-        f.write(json.dumps({
+        publications.append({
             "accession": accession,
             "publications": study_publications,
-        }))
+        })
+        f.write(json.dumps(publications))
     print(f"Wrote study publications for {accession} to {publications_json_path}")
 
-    return study_publications
+    return publications
 
 def get_all_study_publications(studies_json, reuse_publications_json=False):
     publications = [] # publications for all studies
@@ -368,13 +373,14 @@ def get_all_study_publications(studies_json, reuse_publications_json=False):
         with open(publications_json_path) as f:
             publications_json = json.loads(f.read())
 
-    cached_accessions = [s["accession"] for s in publications_json]
+    print('publications_json', publications_json)
+    cached_accessions = [p["accession"] for p in publications_json]
 
     for study_json in studies_json:
         # Get publications for this study
         accession = study_json["accession"]
         if not reuse_publications_json or accession not in cached_accessions:
-            study_publications = fetch_and_merge_publications(
+            publications = fetch_and_merge_publications(
                 accession, study_json, publications, publications_json_path
             )
         else:
@@ -383,7 +389,7 @@ def get_all_study_publications(studies_json, reuse_publications_json=False):
             study_publications = next(
                 p for p in publications_json if p["accession"] == accession
             )
-        publications.append(study_publications)
+            publications.append(study_publications)
 
     print(f"Fetched all publications for all studies; wrote to {publications_json_path}")
     return publications
