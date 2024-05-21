@@ -23,6 +23,10 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 !! Please note that you must have a pre-configured BigQuery table available
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/annotation/metadata/convention/valid_no_array_v2.0.0.txt --study-accession SCP123 --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
 
+# Ingest Cell Metadata file against convention AND booleanize has_<modality> metadata for BigQuery
+#### BQ schema must be updated for each has_<modality>
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_cell_metadata --cell-metadata-file ../tests/data/annotation/metadata/convention/brain_rf1/patchseq_classic_metadata_has_modality_10.tsv --study-accession SCPPR344 --ingest-cell-metadata --validate-convention --has-modality "['electrophysiology', 'morphology']" --bq-dataset cell_metadata_development --bq-table alexandria_convention
+
 # Ingest dense file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_1000_cells.txt --matrix-file-type dense
 
