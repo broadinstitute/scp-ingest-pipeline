@@ -181,10 +181,11 @@ def fetch_bibliographic_data(doi):
     crossref_url = (
         "https://api.crossref.org/works/" +
         f"{doi}/transform/application/vnd.citationstyles.csl+json" +
-        "?&mailto=scp-dev@broadinstitute.org"
+        "?mailto=scp-dev@broadinstitute.org"
     )
     crossref_response = requests.get(crossref_url)
     raw_biblio = crossref_response.json()
+
     date_ymd = raw_biblio["published"]["date-parts"][0] # e.g. "[2023, 8, 25]"
 
     # Get PubMed ID, and PubMed Central ID
