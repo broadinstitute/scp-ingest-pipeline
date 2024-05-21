@@ -6,7 +6,10 @@ fields.  This module detects publications by text mining non-canonical sources.
 A publication can reasonably be defined as "a work including substantial narrative scientific
 prose that specifically contextualizes the study's data".
 """
+import json
+from pathlib import Path
 import re
+import time
 import urllib
 
 import ftfy
@@ -82,7 +85,7 @@ def get_doi(url):
     Example DOI: 10.1093/bfgp/elac044
     """
     doi = None
-    print("Get DOI for URL")
+    print(f"Get DOI for URL: {url}")
 
     pub_base = next((pb for pb in publication_bases if pb in url), None)
     if pub_base is None:
@@ -266,10 +269,11 @@ def parse_publications_from_description(description):
 
     return publications
 
-def get_publications_for_study(accession):
+def get_publications_for_study(accession, study_json=None):
     """Parse or infer publications corresponding to a study
     """
-    study_json = get_study(accession)
+    if not study_json:
+        study_json = get_study(accession)
     canonical_publications = study_json["publications"]
     external_resources = study_json["external_resources"]
     description = study_json["full_description"]
@@ -283,6 +287,105 @@ def get_publications_for_study(accession):
     if len(publications) == 0:
         publications += parse_publications_from_description(description)
 
+    return publications
+
+def fetch_and_merge_study(accession, studies_json, studies_json_path):
+    time.sleep(2)
+    study_json = get_study(accession)
+    studies_json.append(study_json)
+
+    with open(studies_json_path, "w") as f:
+        f.write(json.dumps(studies_json))
+    print(f"Wrote study {accession} to {studies_json_path}")
+
+    return studies_json
+
+def get_public_study_objects(reuse_studies_json=False):
+    """Get JSON objects for all public studies
+
+    Docs: https://singlecell.broadinstitute.org/single_cell/api/v1#/Site/site_study_view_path
+    """
+    print(f"Get all public study objects from from SCP API")
+
+    api_base = get_scp_api_base(env)
+    study_api_url = f"{api_base}/site/studies"
+    response = requests.get(study_api_url, verify=False)
+    studies_brief_json = response.json()
+
+    if not reuse_studies_json:
+        studies_json = []
+
+        for study_brief in studies_brief_json:
+            accession = study_brief["accession"]
+            studies_json = fetch_and_merge_study(
+                accession, studies_json, studies_json_path
+            )
+    else:
+        print(f"Reusing cached public studies JSON from: {studies_json_path}")
+
+        with open(studies_json_path) as f:
+            studies_json = json.loads(f.read())
+
+        cached_accessions = [s["accession"] for s in studies_json]
+
+        for study_brief in studies_brief_json:
+            accession = study_brief["accession"]
+            if accession in cached_accessions:
+                print(f"Using cached data for study {accession}")
+                continue
+            studies_json = fetch_and_merge_study(
+                accession, studies_json, studies_json_path
+            )
+
+
+    print(f"Finished writing public studies to {studies_json_path}")
+
+    return studies_json
+
+def fetch_and_merge_publications(
+    accession, study_json, publications, publications_json_path
+):
+    study_publications = get_publications_for_study(accession, study_json)
+
+    with open(publications_json_path, "w") as f:
+
+        f.write(json.dumps({
+            "accession": accession,
+            "publications": study_publications,
+        }))
+    print(f"Wrote study publications for {accession} to {publications_json_path}")
+
+    return study_publications
+
+def get_all_study_publications(studies_json, reuse_publications_json=False):
+    publications = [] # publications for all studies
+    publications_json = []
+    publications_json_path = "publications.json"
+    cache_file = Path(publications_json_path)
+    if not cache_file.exists():
+        reuse_publications_json = False
+    else:
+        with open(publications_json_path) as f:
+            publications_json = json.loads(f.read())
+
+    cached_accessions = [s["accession"] for s in publications_json]
+
+    for study_json in studies_json:
+        # Get publications for this study
+        accession = study_json["accession"]
+        if not reuse_publications_json or accession not in cached_accessions:
+            study_publications = fetch_and_merge_publications(
+                accession, study_json, publications, publications_json_path
+            )
+        else:
+            print(f"Using cached publications for {accession}")
+            # Use cached study publications
+            study_publications = next(
+                p for p in publications_json if p["accession"] == accession
+            )
+        publications.append(study_publications)
+
+    print(f"Fetched all publications for all studies; wrote to {publications_json_path}")
     return publications
 
 # SCP2510* -> EXT https://zenodo.org/records/10667499 -> https://www.nature.com/articles/s41590-024-01792-2
@@ -301,7 +404,14 @@ accession = "SCP2454"
 #env = None # Switch to "production" or "staging" to easily work with those locally
 env = "production"
 
-publications = get_publications_for_study(accession)
+publications = []
+
+studies_json_path = "studies.json"
+reuse_studies_json = True
+studies_json = get_public_study_objects(reuse_studies_json)
+
+reuse_publications_json = True
+publications = get_all_study_publications(studies_json)
 
 print('publications')
 print(publications)
