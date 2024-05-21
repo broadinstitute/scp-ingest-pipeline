@@ -103,7 +103,7 @@ def fetch_publication_text(publication):
     if len(doi_split) > 1:
         platform = 'pmc'
         doi = doi_split[1]
-        pmcid = fetch_pmid_pmcid(doi, True)
+        [_, pmcid] = fetch_pmid_pmcid(doi, True)
         logger.info('Converted DOI to PMC ID: ' + pmcid)
         text = fetch_pmcid_text(pmcid)
     elif publication.startswith("https://www.biorxiv.org"):
