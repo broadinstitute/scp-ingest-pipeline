@@ -18,7 +18,7 @@ def get_scp_api_origin(env):
 
     return origins_by_environment[env]
 
-def get_scp_api_base(env):
+def get_scp_api_base(env=None):
     """Get base URL for SCP API
 
     :param env override default, e.g. set to "production" in local ("development") host
