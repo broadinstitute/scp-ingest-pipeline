@@ -180,7 +180,8 @@ def fetch_bibliographic_data(doi):
     # https://api.crossref.org/works/10.1126/sciadv.adh9570/transform/application/vnd.citationstyles.csl+json
     crossref_url = (
         "https://api.crossref.org/works/" +
-        f"{doi}/transform/application/vnd.citationstyles.csl+json"
+        f"{doi}/transform/application/vnd.citationstyles.csl+json" +
+        "?&mailto=scp-dev@broadinstitute.org"
     )
     crossref_response = requests.get(crossref_url)
     raw_biblio = crossref_response.json()
@@ -413,13 +414,14 @@ env = "production"
 publications = []
 
 studies_json_path = "studies.json"
-reuse_studies_json = True
-studies_json = get_public_study_objects(reuse_studies_json)
+reuse_studies_json = True # Use previously-cached studies
+reuse_publications_json = True # Use previously-cached publications
 
-reuse_publications_json = True
-publications = get_all_study_publications(studies_json)
+def run():
+    studies_json = get_public_study_objects(reuse_studies_json)
+    publications = get_all_study_publications(studies_json)
 
-print('publications')
-print(publications)
+    print('publications')
+    print(publications)
 
 
