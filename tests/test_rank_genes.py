@@ -22,7 +22,7 @@ mock_response = Mock(spec=Response)
 class TestRankGenes(unittest.TestCase):
 
     def test_publication_text(self):
-        publication_text = fetch_publication_text("https://doi.org/10.1126/sciadv.adf6251")
+        [publication_text, platform] = fetch_publication_text("https://doi.org/10.1126/sciadv.adf6251")
         self.assertEqual(len(publication_text), 66433, "Publication text does not have expected length")
 
     def test_fetch_gene_cache(self):
