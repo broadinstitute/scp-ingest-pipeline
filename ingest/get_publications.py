@@ -3,8 +3,8 @@
 Many studies have publications but not all of them use canonical "Publication"
 fields.  This module detects publications by text mining non-canonical sources.
 
-A publication can reasonably be defined as "a work including substantial narrative scientific
-prose that specifically contextualizes the study's data".
+More context:
+https://github.com/broadinstitute/scp-ingest-pipeline/pull/347
 """
 import json
 from pathlib import Path
@@ -17,37 +17,14 @@ import requests
 
 from utils import get_scp_api_base, fetch_pmid_pmcid
 
-# Techniques:
-# 1.  From the study itself, i.e. SCP API (/site/studies/{accession} endpoint)
-#   A.  `publications` array -- ideal place for article cross-references
-#       Introduced in Q1 2022, https://github.com/broadinstitute/single_cell_portal_core/pull/1379
-#
-#   B.  `external_resources` array -- not tailored for publications
-#       Introduced in Q1 2019, https://github.com/broadinstitute/single_cell_portal_core/pull/221
-#
-#   C.  `description` string -- oldest, rawest place to note a publication
-#       Introduced in Q3 2016 at SCP launch
-#
 # TODO:
-# 2.  PubMed Central (PMC) API
+# Use
+# 1.  PubMed Central (PMC) API
 #   A.  Search PubMed for references to SCP domain, see if study title or
 #       authors roughly match publication title or authors.
 #
-# 3.  BiorXiv API
+# 2.  BiorXiv API
 #   A.  Apply same technique as PMC API, but for BiorXiv API.
-#
-# Out of first 60 (visualizable) of 1633 studies in SCP as of 2024-05-16,
-# 5-7 have directly detectable publications (i.e. via data in study itself):
-#
-# This initial data suggests:
-#   1.  ~10% of studies (5-7/60) have publications that are directly detectable.
-#   2.  ~15-20% of study publications (1/5-7) use canonical "Publication" fields
-#
-# Benefits to refining non-canonical publication data:
-#   1.  Ease findability of publication content -- it'd help to link in a consistent place and format
-#   2.  Improve visual quality of study summary -- unconventional formatting can distract from exploration
-#   3.  Increase findability of studies by (publication) author -- informal delimiters can confuse text search
-#   4.  Enable text mining publication content, for e.g. relevant genes, canonicalizing custom abbreviations
 #
 # Benefits to inferring publications where study lacks even non-canonical publication data
 #   1.  Enable finding publication -- linking from study where none was available would greatly lower barriers
@@ -343,7 +320,6 @@ def get_public_study_objects(reuse_studies_json=False):
             studies_json = fetch_and_merge_study(
                 accession, studies_json, studies_json_path
             )
-
 
     print(f"Finished writing public studies to {studies_json_path}")
 
