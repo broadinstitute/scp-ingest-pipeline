@@ -112,7 +112,7 @@ def fetch_citation(doi, bibliographic_data):
         "https://citation.crosscite.org/format" +
         f"?doi={safe_doi}&style={style}&lang=en-US"
     )
-    crosscite_response = requests.get(crosscite_url)
+    crosscite_response = requests.get(crosscite_url, verify=False)
     status_code = crosscite_response.status_code
     if status_code == 500:
         # Occurs with e.g. bioRxiv publications
@@ -160,7 +160,7 @@ def fetch_bibliographic_data(doi):
         f"{doi}/transform/application/vnd.citationstyles.csl+json" +
         "?mailto=scp-dev@broadinstitute.org"
     )
-    crossref_response = requests.get(crossref_url)
+    crossref_response = requests.get(crossref_url, verify=False)
     raw_biblio = crossref_response.json()
 
     date_ymd = raw_biblio["published"]["date-parts"][0] # e.g. "[2023, 8, 25]"
