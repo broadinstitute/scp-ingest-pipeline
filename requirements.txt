@@ -14,6 +14,7 @@ pymongo==4.6.3
 backoff==1.10.0
 scanpy==1.9.2
 anndata==0.9.1
+ftfy==6.2.0
 
 # Dev dependencies
 pytest==7.2.1
