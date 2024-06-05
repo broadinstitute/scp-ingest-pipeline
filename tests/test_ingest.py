@@ -469,11 +469,11 @@ class IngestTestCase(unittest.TestCase):
 
         # TODO:
         # After integrating MongoDB emulator (SCP-2000), refactor this test to
-        # verify that status is "0", not [None] as done below.  This peculiar
+        # verify that status is "0", not [0, None] as done below.  This peculiar
         # expected value is tested because we intercept the load() function,
         # because we lack a MongoDB emulator.
-        self.assertEqual(len(status), 1)
-        self.assertEqual(status[0], None)
+        self.assertEqual(len(status), 2)
+        self.assertEqual(status[1], None)
 
     @patch(
         "expression_files.expression_files.GeneExpression.check_unique_cells",

@@ -1,7 +1,7 @@
 google-cloud-storage==1.28.1
 google-cloud-bigquery==1.24.0
 grpcio==1.53.2
-requests==2.31.0
+requests==2.32.0
 numpy==1.23.5
 scipy==1.10.1
 jsonschema==3.0.1
@@ -10,10 +10,11 @@ pandocfilters==1.4.2
 mypy-extensions==0.4.3
 dataclasses==0.6
 colorama==0.4.1
-pymongo==3.12.0
+pymongo==4.6.3
 backoff==1.10.0
 scanpy==1.9.2
 anndata==0.9.1
+ftfy==6.2.0
 
 # Dev dependencies
 pytest==7.2.1

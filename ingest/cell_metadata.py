@@ -60,6 +60,7 @@ class CellMetadata(Annotations):
         self.synonym_updates = defaultdict(lambda: defaultdict(str))
         self.cells = []
         self.numeric_array_columns = {}
+        self.modalities = kwargs.get("has_modality", None)
         self.kwargs = kwargs
 
     # This model pertains to columns from cell metadata files
@@ -114,6 +115,60 @@ class CellMetadata(Annotations):
                 "error", msg, "format:cap:metadata-no-coordinates"
             )
             return False
+    @staticmethod
+    def make_multiindex_name(modality):
+        """From modality, generate column name in multi-index format"""
+        has_modality_name = "has_" + modality
+        multiindex_name = (has_modality_name, 'group')
+        return multiindex_name
+
+    @staticmethod
+    def create_boolean_modality_metadatum(df, modality):
+        """Translate presence of single modality to boolean for BigQuery"""
+        # check for empty cells (aka. nan) or empty strings
+        modality_multiindex = CellMetadata.make_multiindex_name(modality)
+        no_modality_info = df[modality_multiindex].isna() | df[modality_multiindex].str.len().eq(0)
+        bool_name = modality + "_bool"
+        bool_multiindex = CellMetadata.make_multiindex_name(bool_name)
+        # store inverse of no_modality_info (ie. True = has modality info)
+        df[bool_multiindex] = ~no_modality_info
+        return df
+
+    def hide_modality_metadatum(self):
+        """Move non-boolean modality info out of self.file"""
+        m_to_hide = []
+        m_to_rename = {}
+        for m in self.modalities:
+            has_m = "has_" + m
+            bool_name = has_m + "_bool"
+            m_to_hide.append(CellMetadata.make_multiindex_name(m))
+            m_to_rename[bool_name] = has_m
+        self.modality_urls = self.file.filter(m_to_hide, axis=1)
+        self.file.drop(m_to_hide, axis=1, inplace=True)
+        self.file.rename(columns= m_to_rename, inplace=True)
+        return
+
+    def booleanize_modality_metadata(self):
+        """Translate presence of modality data to boolean for BigQuery
+           If no modality data, self.files is unchanged
+        """
+        if self.modalities is not None:
+            df = copy.deepcopy(self.file)
+            for m in self.modalities:
+                df = CellMetadata.create_boolean_modality_metadatum(df, m)
+            self.file = df
+            self.hide_modality_metadatum()
+
+    @staticmethod
+    def restore_modality_metadata(cm):
+        """Restore modality file data for MongoDB ingest"""
+        if cm.modalities is not None:
+            m_to_drop = []
+            for m in cm.modalities:
+                m_to_drop.append(CellMetadata.make_multiindex_name(m))
+            cm.file.drop(m_to_drop, axis=1, inplace=True)
+            cm.file = cm.file.join(cm.modality_urls)
+        return cm.file
 
     def conforms_to_metadata_convention(self):
         """Determines if cell metadata file follows metadata convention"""
