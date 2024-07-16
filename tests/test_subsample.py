@@ -32,6 +32,9 @@ class TestSubsample(unittest.TestCase):
         # This cluster file should be sampled at 1k
         self.subsample_obj = SubSample(self.CLUSTER_PATH)
 
+    def test_thresholds(self):
+        self.assertEqual([100000], self.subsample_obj.SUBSAMPLE_THRESHOLDS)
+
     def test_subsample(self):
         for data in self.subsample_obj.subsample("cluster"):
             header_value = data[1]

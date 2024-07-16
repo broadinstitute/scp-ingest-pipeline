@@ -17,7 +17,7 @@ except ImportError:
 class SubSample(Annotations):
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
     MAX_THRESHOLD = 100_000
-    SUBSAMPLE_THRESHOLDS = [MAX_THRESHOLD, 20_000, 10_000, 1_000]
+    SUBSAMPLE_THRESHOLDS = [MAX_THRESHOLD]
 
     def __init__(self, cluster_file, cell_metadata_file=None):
         Annotations.__init__(self, cluster_file, self.ALLOWED_FILE_TYPES)
