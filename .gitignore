@@ -30,3 +30,5 @@ errors.txt
 info.txt
 log.txt
 user_log.txt
+
+ingest/.cas-api-token
