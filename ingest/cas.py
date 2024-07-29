@@ -4,23 +4,85 @@ Context: https://github.com/broadinstitute/scp-ingest-pipeline/pull/353
 """
 
 from cellarium.cas import CASClient
+import json
 
-# TODO (SCP-5715):
-# - Add CAS API token to Google Secrets Manager
-# - Update block below to use GSM
-# - Ensure team removes any local .cas-api-token files and .gitignore entry
-with open(".cas-api-token") as f:
-    api_token = f.read().strip()
+from cellarium.cas._io import suppress_stderr
+import cellarium.cas.postprocessing.ontology_aware as pp
+from cellarium.cas.postprocessing.cell_ontology import CellOntologyCache
+from cellarium.cas.postprocessing import insert_cas_ontology_aware_response_into_adata
 
-cas = CASClient(api_token=api_token)
 
-# Cavaet: processed expression values, as in this normalized / filtered 10x h5 file,
-# are not suitable for CAS.  The current code is only intended as a "Hello World".
-# The corresponding, commented-out "raw" 10x h5 file below would be best, but only
-# if refined to not have ~600K cells analyzed by CAS.
-h5_10x_path = "pbmc_unsorted_3k_filtered_feature_bc_matrix.h5"
+import numpy as np
+import pandas as pd
+import scanpy as sc
 
-# h5_10x_path = "pbmc_unsorted_3k_raw_feature_bc_matrix.h5"
+with suppress_stderr():
+    cl = CellOntologyCache()
 
-response = cas.annotate_matrix_cell_type_summary_statistics_strategy(h5_10x_path)
-print(response)
+input_path = "pbmc_10x_v3_4k.h5ad"
+output_path = f"{input_path}__cas_response_2.json"
+
+def run(input_path, output_path):
+    # TODO (SCP-5715):
+    # - Add CAS API token to Google Secrets Manager
+    # - Update block below to use GSM
+    # - Ensure team removes any local .cas-api-token files and .gitignore entry
+    with open(".cas-api-token") as f:
+        api_token = f.read().strip()
+
+    print('api_token')
+    print(api_token)
+    cas = CASClient(api_token=api_token)
+    print('cas')
+    print(cas)
+
+    adata = sc.read_h5ad(input_path)
+
+    response = cas.annotate_matrix_cell_type_summary_statistics_strategy(
+        matrix=adata
+    )
+    print("CAS response")
+    print(response)
+    print("")
+    print("")
+    print("")
+    print("adata")
+    print(adata)
+
+    with open(output_path, "w") as f:
+        f.write(json.dumps(response))
+
+    print(f"Wrote CAS response to: {output_path}")
+    return [response, adata]
+
+def make_compliant(input_path):
+    adata = sc.read_h5ad(input_path)
+    # Uncomment only if running in debug with non-compliant file
+    if 'biosample_id' not in adata.obs:
+        adata.obs['biosample_id'] = "sample-1"
+        adata.obs['donor_id'] = "donor-1"
+        adata.obs['species'] = "NCBITaxon_9606"
+        adata.obs['species__ontology_label'] = "Homo sapiens"
+        adata.obs['disease'] = "PATO_0000461"
+        adata.obs['disease__ontology_label'] = "normal"
+        adata.obs['organ'] = "UBERON_0000178"
+        adata.obs['organ__ontology_label'] = "blood"
+        adata.obs['library_preparation_protocol'] = "EFO_0030059"
+        adata.obs['library_preparation_protocol__ontology_label'] = "10x multiome"
+        adata.obs['sex'] = "female"
+        # adata.write(input_path)
+        # print(f"Updated AnnData to be SCP-compliant: {cas_response_filepath}")
+    return adata
+
+def format_as_scp_metadatum(cas_response_path):
+    with open(cas_response_filepath) as f:
+        cas_response = json.loads(f.read())
+
+    tsv_rows = []
+    for cas_item in cas_response:
+        cell = cas_item["query_cell_id"]
+        first_match = cas_item["matches"][0]
+        annotation_label = cas_item["matches"][0]
+
+if __name__ == "__main__":
+    run(input_path)
