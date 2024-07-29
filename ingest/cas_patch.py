@@ -49,20 +49,32 @@ def convert_cas_ontology_aware_response_to_score_matrix(
     map_length = len(cl.cl_names_to_idx_map)
     cl.cl_names_to_idx_map['unknown'] = map_length
     cl.cl_labels_to_names_map['unknown'] = 'unknown'
+    cl.cl_names.append('unknown')
 
     obs_values = adata.obs.index.values
     for obs_idx, cas_cell_response in enumerate(cas_ontology_aware_response):
-        # print('cas_cell_response', cas_cell_response)
-        # print('cas_cell_response["query_cell_id"]', cas_cell_response["query_cell_id"])
-        # print('obs_values[obs_idx]', obs_values[obs_idx])
         assert cas_cell_response["query_cell_id"] == obs_values[obs_idx]
         for match in cas_cell_response["matches"]:
             row.append(obs_idx)
             # eweitz 2024-07-26: Default CAS response lacks `cell_type_ontology_term_id`
+            # Line below was in original
             # col.append(cl.cl_names_to_idx_map[match["cell_type_ontology_term_id"]])
 
-            col.append(cl.cl_names_to_idx_map[cl.cl_labels_to_names_map[match["cell_type"]]])
+            cl_label = match["cell_type"]
+            if cl_label in cl.cl_labels_to_names_map:
+                cl_name = cl.cl_labels_to_names_map[cl_label]
+            else:
+                # E.g. for cl_label "lung resident memory CD4-positive, alpha-beta T cell",
+                # which is in Cell Ontology as CL_4033038 but not in cl.cl_labels_to_names_map.
+                # TODO: Does CAS need to update its Cell Ontology cache?
+                tmp_cl_name = f"unknown__{cl_label}"
+                map_length = len(cl.cl_names_to_idx_map)
+                cl.cl_names_to_idx_map[tmp_cl_name] = map_length
+                cl.cl_names.append(tmp_cl_name)
+
+            col.append(cl.cl_names_to_idx_map[cl_name])
             # eweitz 2024-07-26: Default CAS response lacks `score`
+            # Line below was in original
             # data.append(match["score"])
             data.append(match["median_distance"])
 
