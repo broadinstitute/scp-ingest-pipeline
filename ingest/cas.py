@@ -63,7 +63,11 @@ def cas_annotate(input_path, output_path):
     return [adata, cas_ontology_aware_response]
 
 def make_compliant_for_scp(adata):
-    # Uncomment only if running in debug with non-compliant file
+    """Shim to make AnnData file compliant with SCP metadata schema
+
+    Only use for demo / development purposes.  This is generally commented out
+    upstream.
+    """
     if 'biosample_id' not in adata.obs:
         adata.obs['biosample_id'] = "sample-1"
         adata.obs['donor_id'] = "donor-1"
@@ -74,10 +78,8 @@ def make_compliant_for_scp(adata):
         adata.obs['organ'] = "UBERON_0000178"
         adata.obs['organ__ontology_label'] = "blood"
         adata.obs['library_preparation_protocol'] = "EFO_0030059"
-        adata.obs['library_preparation_protocol__ontology_label'] = "10x multiome"
+        adata.obs['library_preparation_protocol__ontology_label'] = "10x 3' v3"
         adata.obs['sex'] = "female"
-        # adata.write(input_path)
-        # print(f"Updated AnnData to be SCP-compliant: {cas_response_filepath}")
     return adata
 
 # Stub for potential later expansion
@@ -194,9 +196,10 @@ def run(input_path, cas_response_output_path):
     adata = trim_cas_adata(adata)
     save_anndata(adata, "cas_annotated_trimmed", input_path)
 
+    # Comment out block below below unless debugging or generating demo data
     # TODO: Enable SCP metadata validation exemption for AnnData
-    adata = make_compliant_for_scp(adata)
-    save_anndata(adata, "cas_annotated_trimmed_compliant", input_path)
+    # adata = make_compliant_for_scp(adata)
+    # save_anndata(adata, "cas_annotated_trimmed_compliant", input_path)
 
 
 if __name__ == "__main__":
