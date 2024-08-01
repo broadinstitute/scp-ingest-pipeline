@@ -6,16 +6,16 @@ Context: https://github.com/broadinstitute/scp-ingest-pipeline/pull/353
 import json
 import re
 
+import scanpy as sc
+
 from cellarium.cas import CASClient
 from cellarium.cas._io import suppress_stderr
 import cellarium.cas.postprocessing.ontology_aware as pp
 from cellarium.cas.postprocessing.cell_ontology import CellOntologyCache
 from cellarium.cas.postprocessing import insert_cas_ontology_aware_response_into_adata
 
-
-import numpy as np
-import pandas as pd
-import scanpy as sc
+# Comment out block below below unless debugging
+# from cellarium.cas.visualization import CASCircularTreePlotUMAPDashApp
 
 with suppress_stderr():
     cl = CellOntologyCache()
@@ -34,14 +34,17 @@ def cas_annotate(input_path, output_path):
         api_token = f.read().strip()
 
     cas = CASClient(api_token=api_token)
-    print('cas')
+    print('CASClient')
     print(cas)
 
     adata = sc.read_h5ad(input_path)
 
     # Returns summary results that have substantial post-processing support
-    cas_response = cas.annotate_matrix_cell_type_ontology_aware_strategy(
-        matrix=adata
+    cas_ontology_aware_response = cas.annotate_matrix_cell_type_ontology_aware_strategy(
+        matrix=adata,
+        chunk_size=500,
+        feature_ids_column_name='gene_ids',
+        feature_names_column_name='index'
     )
 
     # Returns dataset-specific results.
@@ -51,13 +54,13 @@ def cas_annotate(input_path, output_path):
     # )
 
     with open(output_path, "w") as f:
-        f.write(json.dumps(cas_response))
+        f.write(json.dumps(cas_ontology_aware_response))
 
     adata.write(f"cas_annotated_before_postprocessing__{input_path}")
 
     print(f"Wrote CAS response to: {output_path}")
 
-    return [adata, cas_response]
+    return [adata, cas_ontology_aware_response]
 
 def make_compliant_for_scp(adata):
     # Uncomment only if running in debug with non-compliant file
@@ -93,21 +96,34 @@ def merge_cas_results(adata, cas_ontology_aware_response):
     """
     insert_cas_ontology_aware_response_into_adata(cas_ontology_aware_response, adata, cl)
 
-    pp.compute_most_granular_top_k_calls_single(
-        adata=adata,
-        cl=cl,
-        min_acceptable_score=0.1,  # minimum acceptable score for a call
-        top_k=3,  # how many top calls to make?
-        obs_prefix="cas_cell_type"  # .obs column to write the top-k calls to
-    )
+    # Comment out block below unless debugging
+    # DASH_SERVER_PORT = 8050
+    # with suppress_stderr():
+    #     CASCircularTreePlotUMAPDashApp(
+    #         adata,  # the AnnData file
+    #         cas_ontology_aware_response,  # CAS response
+    #         cluster_label_obs_column="cluster_label",  # (optional) The .obs column name containing cluster labels
+    #     ).run(port=DASH_SERVER_PORT, debug=False, jupyter_width="100%")
 
+    # TODO: Consider conditionally using this `single` method if (and only if)
+    # AnnData lacks "raw annotations" as returned from e.g. Scanpy or Seurat
+    # ("0", "1", "2", etc.)
+    # pp.compute_most_granular_top_k_calls_single(
+    #     adata=adata,
+    #     cl=cl,
+    #     min_acceptable_score=0.1,  # minimum acceptable score for a call
+    #     top_k=3,  # how many top calls to make?
+    #     obs_prefix="cell_type_cas"  # .obs column to write the top-k calls to
+    # )
+
+    # Use this only if source AnnData has clusterings
     pp.compute_most_granular_top_k_calls_cluster(
         adata=adata,
         cl=cl,
         min_acceptable_score=0.1,  # minimum acceptable score for a call
         cluster_label_obs_column='cluster_label',  # .obs column containing cluster labels
         top_k=3,  # how many top calls to make?
-        obs_prefix='cas_cell_type_cluster'  # .obs column to write the top-k calls to
+        obs_prefix='cell_type_cas'  # .obs column to write the top-k calls to
     )
 
     return adata
@@ -126,11 +142,37 @@ def trim_cas_adata(adata):
     for to_omit in annots_to_omit:
         for col in columns:
             # E.g. re.match('cas.*_name_\d+', 'cas_cell_type_name_1')
-            match = re.match(f"cas.*_{to_omit}_\d+", col)
+            match = re.match(f".*_cas_.*{to_omit}_\d+", col)
             if match:
                 del adata.obs[col]
 
     return adata
+
+# TODO: Consider porting to SCP Core JS
+# def friendlify_cas_adata(adata):
+#     """Make CAS annotation names human-friendlier, e.g. "CAS
+#     """
+
+#     columns = list(adata.obs)
+#     for old_col in columns:
+#         if not '_cas_' in old_col:
+#             continue
+#         # E.g. cell_type_cas_label_42 -> cell_type_(CAS 42)
+#         col = re.sub(r'_cas_label_(\d+)', r'_(CAS \1)_', old_col)
+
+#         # E.g. cell_type_(CAS 42) -> cell type (CAS 42)
+#         col = col.replace('_', ' ')
+
+#         # E.g. cell type (CAS 42) -> Cell type (CAS 42)
+#         col = col[0].upper() + col[1:]
+
+#         # E.g. Cell type (CAS 1) -> Cell type (CAS)
+#         col = col.replace('CAS 1)', 'CAS)')
+
+#         adata.obs[col] = adata.obs[old_col]
+#         del adata.obs[old_col]
+
+#     return adata
 
 def save_anndata(adata, stem, input_path):
     cas_anndata_output_path = f"{stem}__{input_path}"
@@ -142,9 +184,9 @@ def run(input_path, cas_response_output_path):
     adata, cas_ontology_aware_response = cas_annotate(input_path, cas_response_output_path)
 
     # Comment out block below below unless debugging
-    adata = sc.read_h5ad(f"cas_annotated_before_postprocessing__{input_path}")
-    with open(cas_response_output_path) as f:
-        cas_ontology_aware_response = json.loads(f.read())
+    # adata = sc.read_h5ad(f"cas_annotated_before_postprocessing__{input_path}")
+    # with open(cas_response_output_path) as f:
+    #     cas_ontology_aware_response = json.loads(f.read())
 
     adata = merge_cas_results(adata, cas_ontology_aware_response)
     save_anndata(adata, "cas_annotated_", input_path)
@@ -152,7 +194,6 @@ def run(input_path, cas_response_output_path):
     adata = trim_cas_adata(adata)
     save_anndata(adata, "cas_annotated_trimmed", input_path)
 
-    # Comment out block below unless debugging
     # TODO: Enable SCP metadata validation exemption for AnnData
     adata = make_compliant_for_scp(adata)
     save_anndata(adata, "cas_annotated_trimmed_compliant", input_path)
