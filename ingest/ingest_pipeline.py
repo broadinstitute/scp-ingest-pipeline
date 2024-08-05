@@ -289,7 +289,7 @@ class IngestPipeline:
                 # multiple clusters will not be able to subsample as the first cluster will be found each time
                 file_type = config.get_metric_properties().get_properties().get('fileType')
                 if file_type and file_type == "AnnData":
-                    query["name"] = self.name
+                    query["name"] = self.kwargs.get("name")
 
                 # Query mongo for linear_id and 'name' of parent
                 # Then return 'name' and 'id' fields from query results
