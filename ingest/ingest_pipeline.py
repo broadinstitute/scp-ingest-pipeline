@@ -284,6 +284,11 @@ class IngestPipeline:
                     "study_id": ObjectId(self.study_id),
                     "study_file_id": ObjectId(self.study_file_id),
                 }
+                # if this is an AnnData file, we need to append in the cluster name, otherwise studies with
+                # multiple clusters will not be able to subsample as the first cluster will be found each time
+                if config.study_file.file_type == "AnnData":
+                    query["name"] = self.name
+
                 # Query mongo for linear_id and 'name' of parent
                 # Then return 'name' and 'id' fields from query results
                 parent_data = self.db[parent_collection_name].find_one(
