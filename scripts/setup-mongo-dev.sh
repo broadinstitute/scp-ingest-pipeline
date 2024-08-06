@@ -7,7 +7,7 @@
 
 GOOGLE_PROJECT=$(gcloud info --format="value(config.project)")
 MONGODB_PASSWORD=$(gcloud secrets versions access latest --project=$GOOGLE_PROJECT --secret=mongo-user | jq .password)
-DATABASE_HOST=$(gcloud secrets versions access latest --project=$GOOGLE_PROJECT --secret=mongo-hostname| jq -r '.ip[0]')
+DATABASE_HOST=$(gcloud secrets versions access latest --project=$GOOGLE_PROJECT --secret=mongo-hostname | jq -r '.ip[0]')
 
 # Dev env vars
 export MONGODB_USERNAME='single_cell'
