@@ -32,7 +32,7 @@ pytest --cov=../ingest/
 
 """
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from test_dense import mock_load_r_files
 import os
 
@@ -651,6 +651,40 @@ class IngestTestCase(unittest.TestCase):
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
         self.assertEqual(len(status), 1)
         self.assertEqual(status[0], 0)
+
+    def test_get_cluster_query(self):
+        """When subsampling AnnData files cluster name should be appended to query"""
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_subsample",
+            "--cluster-file",
+            "../tests/data/good_subsample_cluster.csv",
+            "--name",
+            "custer1",
+            "--cell-metadata-file",
+            "../tests/data/test_cell_metadata.csv",
+            "--subsample",
+        ]
+        parsed_args = create_parser().parse_args(args)
+        validate_arguments(parsed_args)
+        arguments = vars(parsed_args)
+        ingest = IngestPipeline(**arguments)
+
+        mock_metrics = MagicMock()
+        mock_metrics.get_properties.return_value = {"fileType": "AnnData"}
+        with patch("config.get_metric_properties", return_value=mock_metrics):
+            query = ingest.get_cluster_query()
+            expected_keys = ['study_id', 'study_file_id', 'name']
+            self.assertEqual(expected_keys, list(query.keys()))
+
+        mock_metrics.get_properties.return_value = {"fileType": "Cluster"}
+        with patch("config.get_metric_properties", return_value=mock_metrics):
+            query = ingest.get_cluster_query()
+            expected_keys = ['study_id', 'study_file_id']
+            self.assertEqual(expected_keys, list(query.keys()))
 
     @patch("ingest_pipeline.IngestPipeline.load_subsample", return_value=0)
     def test_subsample_no_cell_intersection(self, mock_load_subsample):
