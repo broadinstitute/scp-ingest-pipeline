@@ -4,25 +4,14 @@
 #
 # Keep "Dev env vars" synced with `setup-mongo-dev.sh`
 
-VAULT_TOKEN_PATH="$1"
-if [[ -z "$VAULT_TOKEN_PATH" ]]
-then
-  echo "You must provide a path to a GitHub token to proceed, e.g. ~/.github-token"
-  exit 1
-fi
-vault login -method=github token=$(cat $VAULT_TOKEN_PATH)
-if [[ $? -ne 0 ]]
-then
-  echo "Unable to authenticate into Vault"
-  exit 1
-fi
+GOOGLE_PROJECT=$(gcloud info --format="value(config.project)")
 
 # Dev env vars
 BROAD_USER=`whoami`
 MONGODB_USERNAME='single_cell'
 DATABASE_NAME='single_cell_portal_development'
-MONGODB_PASSWORD=`vault read secret/kdux/scp/development/$BROAD_USER/mongo/user | grep password | awk '{ print $2 }' `
-DATABASE_HOST=`vault read secret/kdux/scp/development/$BROAD_USER/mongo/hostname | grep ip | awk '{ $2=substr($2,2,length($2)-2); print $2 }' ` 
+MONGODB_PASSWORD=$(gcloud secrets versions access latest --project=$GOOGLE_PROJECT --secret=mongo-user | jq .password)
+DATABASE_HOST=$(gcloud secrets versions access latest --project=$GOOGLE_PROJECT --secret=mongo-hostname| jq -r '.ip[0]')
 BYPASS_MONGO_WRITES='yes'
 BARD_HOST_URL="https://terra-bard-dev.appspot.com"
 

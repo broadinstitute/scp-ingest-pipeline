@@ -10,22 +10,17 @@ usage=$(
 cat <<EOF
 $0 [OPTION]
 -i   Set URL for GCR image; helpful if not using latest development
--t   Set GitHub Vault token (e.g. ~/.github-token)
 -h   print this text
 EOF
 )
 
 GCR_IMAGE=""
 VAULT_TOKEN_PATH=""
-while getopts "i:t:h" OPTION; do
+while getopts "i:h" OPTION; do
 case $OPTION in
   i)
     echo "### SETTING GCR IMAGE ###"
     export GCR_IMAGE="$OPTARG"
-    ;;
-  t)
-    echo "### SETTING VAULT TOKEN ###"
-    VAULT_TOKEN_PATH="$OPTARG"
     ;;
   h)
   	echo "$usage"
@@ -45,13 +40,8 @@ if [[ $GCR_IMAGE = "" ]]; then
   export GCR_IMAGE="${IMAGE_NAME}:${LATEST_TAG}"
 fi
 
-if [[ $VAULT_TOKEN_PATH = "" ]]; then
-  echo "Did not provide VAULT_TOKEN_PATH"
-  exit 1
-fi
-
 echo "### SETTING UP ENVIRONMENT ###"
-./scripts/ingest-local-setup.sh $VAULT_TOKEN_PATH
+./scripts/ingest-local-setup.sh
 
 docker pull $GCR_IMAGE
 
