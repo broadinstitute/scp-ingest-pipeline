@@ -13,8 +13,9 @@ colorama==0.4.1
 pymongo==4.6.3
 backoff==1.10.0
 scanpy==1.9.2
-anndata==0.9.1
+anndata==0.8.0
 ftfy==6.2.0
+cellarium-cas[vis]==1.4.11
 
 # Dev dependencies
 pytest==7.2.1
@@ -38,6 +39,6 @@ opencensus==0.7.6
 opencensus-context==0.1.1
 opencensus-ext-stackdriver==0.7.2
 google-cloud-trace==0.23.0
-sentry-sdk==1.14.0
+sentry-sdk==2.8.0
 
 # memory-profiler==0.57.0
