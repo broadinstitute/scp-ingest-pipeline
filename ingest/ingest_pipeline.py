@@ -280,10 +280,8 @@ class IngestPipeline:
                 annot_name = subsampled_data[1][0]
                 annot_type = subsampled_data[1][1]
                 sample_size = subsampled_data[2]
-                query = {
-                    "study_id": ObjectId(self.study_id),
-                    "study_file_id": ObjectId(self.study_file_id),
-                }
+                query = self.get_cluster_query()
+
                 # Query mongo for linear_id and 'name' of parent
                 # Then return 'name' and 'id' fields from query results
                 parent_data = self.db[parent_collection_name].find_one(
@@ -311,6 +309,21 @@ class IngestPipeline:
             log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
             return 1
         return 0
+
+    def get_cluster_query(self):
+        """Generate MongoDB query to load ClusterGroup to set association IDs when subsampling"""
+        query = {
+            "study_id": ObjectId(self.study_id),
+            "study_file_id": ObjectId(self.study_file_id),
+        }
+
+        # if this is an AnnData file, we need to append in the cluster name, otherwise AnnData studies with
+        # multiple clusters will fail subsampling as the first cluster is always returned from the query
+        file_type = config.get_metric_properties().get_properties().get('fileType')
+        if file_type and file_type == "AnnData":
+            query["name"] = self.kwargs.get("name")
+
+        return query
 
     def upload_metadata_to_bq(self):
         """Uploads metadata to BigQuery"""
