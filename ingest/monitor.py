@@ -129,7 +129,7 @@ def integrate_sentry():
     See also: links to Sentry resources atop this module
     """
 
-    # Ultimately stored in Vault, passed in as environmen variable to PAPI
+    # Ultimately stored in GSM, passed in as environment variable to PAPI
     sentry_DSN = os.environ.get("SENTRY_DSN")
 
     if sentry_DSN is None:
