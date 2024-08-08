@@ -27,21 +27,21 @@ cd scp-ingest-pipeline
 python3 -m venv env --copies
 source env/bin/activate
 pip install -r requirements.txt
-scripts/setup-mongo-dev.sh <PATH_TO_YOUR_VAULT_TOKEN> # E.g. ~/.github-token
+source scripts/setup-mongo-dev.sh
 ```
 
 ### Docker
 
-With Docker running and Vault active on your local machine, run:
+With Docker running and `gcloud` authenticated on your local machine, run:
 
 ```
-scripts/docker-compose-setup.sh -t <PATH_TO_YOUR_VAULT_TOKEN> # E.g. ~/.github-token
+scripts/docker-compose-setup.sh
 ```
 
 If on Apple silicon Mac (e.g. M1), and performance seems poor, consider generating a docker image using the arm64 base. Example test image: gcr.io/broad-singlecellportal-staging/single-cell-portal:development-2.2.0-arm64, usage:
 
 ```
-scripts/docker-compose-setup.sh -i development-2.2.0-arm64 -t <PATH_TO_YOUR_VAULT_TOKEN>
+scripts/docker-compose-setup.sh -i development-2.2.0-arm64
 ```
 
 To update dependencies when in Docker, you can pip install from within the Docker Bash shell after adjusting your requirements.txt.
@@ -132,10 +132,10 @@ Pro-Tip: For local builds, you can try adding docker build options `--progress=p
 
 ### 2. Set up environment variables
 
-Run the following to pull database-specific secrets out of vault (passing in the path to your vault token):
+Run the following to pull database-specific secrets out of Google Secrets Manager (GSM):
 
 ```
-source scripts/setup-mongo-dev.sh ~/.your-vault-token
+source scripts/setup-mongo-dev.sh
 ```
 
 Now run `env` to make sure you've set the following values:
@@ -152,7 +152,8 @@ DATABASE_HOST=<ip address>
 Run the following to export out your default service account JSON keyfile:
 
 ```
-vault read -format=json secret/kdux/scp/development/$(whoami)/scp_service_account.json | jq .data > /tmp/keyfile.json
+GOOGLE_PROJECT=$(gcloud info --format="value(config.project)")
+gcloud secrets versions access latest --project=$GOOGLE_PROJECT --secret=default-sa-keyfile | jq > /tmp/keyfile.json
 ```
 
 ### 4. Start the Docker container
