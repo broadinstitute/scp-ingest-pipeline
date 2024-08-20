@@ -228,3 +228,9 @@ class TestAnnDataIngestor(unittest.TestCase):
                 "expected 1 call to delocalize output files",
             )
 
+    def test_extract_raw_cells(self):
+        arrays = self.anndata_ingest.create_cell_data_arrays()
+        self.assertEqual(len(arrays), 1)
+        data_array = arrays[0]
+        self.assertEqual('h5ad_frag.matrix.raw.mtx.gz Cells', data_array['name'])
+        self.assertEqual(2638, len(data_array['values']))

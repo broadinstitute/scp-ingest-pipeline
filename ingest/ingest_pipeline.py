@@ -54,6 +54,9 @@ python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5
 # Ingest AnnData - happy path processed expression data only extraction
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['processed_expression']"
 
+# Ingest AnnData - happy path raw count cell name only extraction
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['raw_counts']"
+
 # Ingest AnnData - happy path cluster and metadata extraction
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['cluster', 'metadata']" --obsm-keys "['X_umap','X_tsne']"
 
@@ -537,6 +540,11 @@ class IngestPipeline:
                 "extract"
             ):
                 self.anndata.generate_processed_matrix(self.anndata.adata)
+
+            if self.kwargs.get('extract') and "raw_counts" in self.kwargs.get(
+                "extract"
+            ):
+                self.anndata.ingest_raw_cells()
             self.report_validation("success")
             return 0
         # scanpy unable to open AnnData file
