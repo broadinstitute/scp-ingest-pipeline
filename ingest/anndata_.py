@@ -117,7 +117,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
         headers = adata.obs.columns.tolist()
         types = []
         for header in headers:
-            if pd.api.types.is_number(adata.obs[header]):
+            if pd.api.types.is_numeric_dtype(adata.obs[header]):
                 types.append("NUMERIC")
             else:
                 types.append("GROUP")
