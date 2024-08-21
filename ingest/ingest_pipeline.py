@@ -541,9 +541,7 @@ class IngestPipeline:
             ):
                 self.anndata.generate_processed_matrix(self.anndata.adata)
 
-            if self.kwargs.get('extract') and "raw_counts" in self.kwargs.get(
-                "extract"
-            ):
+            if self.kwargs.get('extract') and "raw_counts" in self.kwargs.get('extract'):
                 self.anndata.ingest_raw_cells()
             self.report_validation("success")
             return 0
