@@ -101,6 +101,13 @@ class GeneExpression:
         QUERY = {"_id": study_file_id, "study_id": study_id}
 
         study_file_doc = list(client[COLLECTION_NAME].find(QUERY)).pop()
+        # special handling of non-reference AnnData files to always return false
+        # this will allow normal extraction of expression data as raw count cells are already ingested during
+        # the "raw_counts" extract phase
+        if (study_file_doc["file_type"] == "AnnData" and "ann_data_file_info" in study_file_doc.keys() and not
+          study_file_doc["ann_data_file_info"]["reference_file"]):
+            return False
+
         # Name of embedded document that holds 'is_raw_count_files is named expression_file_info.
         # If study files does not have document expression_file_info
         # field, "is_raw_count_files", will not exist.:
