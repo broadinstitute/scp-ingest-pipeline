@@ -76,6 +76,8 @@ def mock_expression_load(self, *args):
                 self.test_models = raw_count_dense
             if model_name in raw_count_mtx["data_arrays"]:
                 self.test_models = raw_count_mtx
+            if model_name in anndata_test_models["data_arrays"]:
+                self.test_models = anndata_test_models
     # _id and linear_data_id are unique identifiers and can not be predicted
     # so we exclude it from the comparison
     for document in documents:
