@@ -269,6 +269,15 @@ class TestExpressionFiles(unittest.TestCase):
             )
         )
 
+        client["study_files"].find.return_value = [
+            {"file_type": "AnnData", "ann_data_file_info": {"reference_file": False}}
+        ]
+        self.assertFalse(
+            GeneExpression.is_raw_count_file(
+                TestExpressionFiles.STUDY_ID, TestExpressionFiles.STUDY_FILE_ID, client
+            )
+        )
+
     def test_get_study_expression_file_ids(self):
         RAW_COUNTS_QUERY = {
             "$and": [{"study_id": ObjectId("5d276a50421aa9117c982845")}],
