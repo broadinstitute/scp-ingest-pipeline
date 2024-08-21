@@ -15,19 +15,19 @@ class MMFileFixedFormat(MMFile):
 
 
 try:
-    from ingest_files import IngestFiles
+    from ingest_files import DataArray, IngestFiles
     from expression_files.expression_files import GeneExpression
-    from monitor import log_exception
+    from monitor import log_exception, bypass_mongo_writes
     from validation.validate_metadata import list_duplicates
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .ingest_files import IngestFiles
+    from .ingest_files import DataArray, IngestFiles
     from .expression_files.expression_files import GeneExpression
-    from .monitor import log_exception
+    from .monitor import log_exception, bypass_mongo_writes
     from .validation.validate_metadata import list_duplicates
 
 
-class AnnDataIngestor(GeneExpression, IngestFiles):
+class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
     ALLOWED_FILE_TYPES = ['application/x-hdf5']
 
     def __init__(self, file_path, study_file_id, study_id, **kwargs):
@@ -56,6 +56,36 @@ class AnnDataIngestor(GeneExpression, IngestFiles):
             return True
         except ValueError:
             return False
+
+    def create_cell_data_arrays(self):
+        """Extract cell name DataArray documents for raw data"""
+        adata = self.obtain_adata()
+        cells = list(adata.obs_names)
+        # use filename denoting a raw 'fragment' to allow successful ingest and downstream queries
+        raw_filename = "h5ad_frag.matrix.raw.mtx.gz"
+        data_arrays = []
+        for data_array in GeneExpression.create_data_arrays(
+            name=f"{raw_filename} Cells",
+            array_type="cells",
+            values=cells,
+            linear_data_type="Study",
+            linear_data_id=self.study_file_id,
+            cluster_name=raw_filename,
+            study_file_id=self.study_file_id,
+            study_id=self.study_id
+        ):
+            data_arrays.append(data_array)
+
+        return data_arrays
+
+    def ingest_raw_cells(self):
+        """Insert raw count cells into MongoDB"""
+        arrays = self.create_cell_data_arrays()
+        if not bypass_mongo_writes():
+            self.load(arrays, DataArray.COLLECTION_NAME)
+        else:
+            dev_msg = f"Extracted {len(arrays)} DataArray for {self.study_file_id}:{arrays[0]['name']}"
+            IngestFiles.dev_logger.info(dev_msg)
 
     @staticmethod
     def generate_cluster_header(adata, clustering_name):
