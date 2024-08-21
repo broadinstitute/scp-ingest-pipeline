@@ -83,6 +83,9 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
         arrays = self.create_cell_data_arrays()
         if not bypass_mongo_writes():
             self.load(arrays, DataArray.COLLECTION_NAME)
+        else:
+            dev_msg = f"Extracted {len(arrays)} DataArray for {self.study_file_id}:{arrays[0]['name']}"
+            IngestFiles.dev_logger.info(dev_msg)
 
     @staticmethod
     def generate_cluster_header(adata, clustering_name):
