@@ -136,8 +136,8 @@ class TestAnnDataIngestor(unittest.TestCase):
         )
         compressed_file = self.metadata_filename + ".gz"
         with gzip.open(compressed_file, "rt", encoding="utf-8-sig") as metadata_body:
-            line = metadata_body.readline().split("\t")
-            expected_line = [
+            name_line = metadata_body.readline().split("\t")
+            expected_names = [
                 'NAME',
                 'n_genes',
                 'percent_mito',
@@ -156,7 +156,29 @@ class TestAnnDataIngestor(unittest.TestCase):
                 "library_preparation_protocol__ontology_label\n",
             ]
             self.assertEqual(
-                expected_line, line, 'did not get expected headers from metadata body'
+                expected_names, name_line, 'did not get expected headers from metadata body'
+            )
+            type_line = metadata_body.readline().split("\t")
+            expected_types = [
+                'TYPE',
+                'NUMERIC',
+                'NUMERIC',
+                'NUMERIC',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                "GROUP\n",
+            ]
+            self.assertEqual(
+                expected_types, type_line, 'did not get expected types from metadata body'
             )
 
     def test_gene_id_indexed_generate_processed_matrix(self):
