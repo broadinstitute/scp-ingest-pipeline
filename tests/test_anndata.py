@@ -8,7 +8,7 @@ import glob
 import os
 import gzip
 import time
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from test_expression_files import mock_expression_load
 
@@ -46,6 +46,8 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.anndata_ingest = AnnDataIngestor(*self.valid_args, **self.valid_kwargs)
         self.cluster_filename = f"h5ad_frag.cluster.{self.cluster_name}.tsv"
         self.metadata_filename = "h5ad_frag.metadata.tsv"
+        self.anndata_ingest.test_models = None
+        self.anndata_ingest.models_processed = 0
 
     def teardown_method(self, _):
         if os.path.isfile(self.cluster_filename):
@@ -134,8 +136,8 @@ class TestAnnDataIngestor(unittest.TestCase):
         )
         compressed_file = self.metadata_filename + ".gz"
         with gzip.open(compressed_file, "rt", encoding="utf-8-sig") as metadata_body:
-            line = metadata_body.readline().split("\t")
-            expected_line = [
+            name_line = metadata_body.readline().split("\t")
+            expected_names = [
                 'NAME',
                 'n_genes',
                 'percent_mito',
@@ -154,7 +156,29 @@ class TestAnnDataIngestor(unittest.TestCase):
                 "library_preparation_protocol__ontology_label\n",
             ]
             self.assertEqual(
-                expected_line, line, 'did not get expected headers from metadata body'
+                expected_names, name_line, 'did not get expected headers from metadata body'
+            )
+            type_line = metadata_body.readline().split("\t")
+            expected_types = [
+                'TYPE',
+                'NUMERIC',
+                'NUMERIC',
+                'NUMERIC',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                "GROUP\n",
+            ]
+            self.assertEqual(
+                expected_types, type_line, 'did not get expected types from metadata body'
             )
 
     def test_gene_id_indexed_generate_processed_matrix(self):
@@ -228,3 +252,15 @@ class TestAnnDataIngestor(unittest.TestCase):
                 "expected 1 call to delocalize output files",
             )
 
+    def test_create_raw_cells_arrays(self):
+        arrays = self.anndata_ingest.create_cell_data_arrays()
+        self.assertEqual(len(arrays), 1)
+        data_array = arrays[0]
+        self.assertEqual('h5ad_frag.matrix.raw.mtx.gz Cells', data_array['name'])
+        self.assertEqual(2638, len(data_array['values']))
+
+
+    def test_ingest_raw_cells(self):
+        with patch('anndata_.bypass_mongo_writes', return_value=False):
+            self.anndata_ingest.ingest_raw_cells()
+            self.assertEqual(1, self.anndata_ingest.models_processed)

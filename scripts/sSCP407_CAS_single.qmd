@@ -1,0 +1,156 @@
+---
+title: "sSCP407 single CAS"
+format: html
+---
+
+```{python}
+!curl -O https://storage.googleapis.com/cellarium-file-system-public/cellarium-cas-tutorial/pbmc_10x_v3_4k.h5ad
+```
+
+```{python}
+import numpy as np
+import pandas as pd
+import scanpy as sc
+adata = sc.read_h5ad("pbmc_10x_v3_4k.h5ad")
+adata
+```
+
+# start CAS notebook
+
+
+```{python}
+import scanpy as sc
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+sc.set_figure_params(dpi=80)
+```
+
+
+```{python}
+with open(".cas-api-token") as f:
+    api_token = f.read().strip()"
+```
+
+
+```{python}
+from cellarium.cas.client import CASClient
+
+cas = CASClient(api_token=api_token)
+```
+
+
+```{python}
+cas_model_name = 'cellarium-pca-default-v1'
+cas_ontology_aware_response = cas.annotate_matrix_cell_type_ontology_aware_strategy(
+    matrix=adata,
+    chunk_size=500,
+    feature_ids_column_name='gene_ids',
+    feature_names_column_name='index',
+    cas_model_name=cas_model_name)
+```
+
+```{python}
+from cellarium.cas._io import suppress_stderr
+from cellarium.cas.visualization import CASCircularTreePlotUMAPDashApp
+```
+
+```{python}
+import cellarium.cas.postprocessing.ontology_aware as pp
+from cellarium.cas.postprocessing.cell_ontology import CellOntologyCache
+
+with suppress_stderr():
+  cl = CellOntologyCache()
+```
+
+```{python}
+from cellarium.cas.postprocessing import insert_cas_ontology_aware_response_into_adata
+
+insert_cas_ontology_aware_response_into_adata(cas_ontology_aware_response, adata, cl)
+```
+
+```{python}
+
+pp.compute_most_granular_top_k_calls_cluster(
+        adata=adata,
+        cl=cl,
+        min_acceptable_score=0.1,  # minimum acceptable score for a call
+        cluster_label_obs_column='cluster_label',  # .obs column containing cluster labels
+        top_k=3,  # how many top calls to make?
+        obs_prefix='cell_type_cas_cluster_calls'  # .obs column to write the top-k calls to
+    )
+```
+
+```{python}
+pp.compute_most_granular_top_k_calls_single(
+    adata=adata,
+    cl=cl,
+    min_acceptable_score=0.1,  # minimum acceptable score for a call
+    top_k=3,  # how many top calls to make?
+    obs_prefix="cas_cell_type_single_calls"  # .obs column to write the top-k calls to
+)
+```
+
+
+```{python}
+test = cas.annotate_matrix_cell_type_summary_statistics_strategy(adata)
+```
+
+# write out both CAS result files as json
+```{python}
+import json
+with open("ontology_aware_strategy_cas_response.json", "w") as f:
+        f.write(json.dumps(cas_ontology_aware_response))
+
+with open("cell_type_summary_statistics_strategy_response.json", "w") as f:
+        f.write(json.dumps(test))
+```
+
+# add dummy metadata for SCP convention
+# Note: lpp is possibly incorrect
+```{python}
+adata.obs['biosample_id'] = "sample-1"
+adata.obs['donor_id'] = "donor-1"
+adata.obs['species'] = "NCBITaxon_9606"
+adata.obs['species__ontology_label'] = "Homo sapiens"
+adata.obs['disease'] = "PATO_0000461"
+adata.obs['disease__ontology_label'] = "normal"
+adata.obs['organ'] = "UBERON_0000178"
+adata.obs['organ__ontology_label'] = "blood"
+adata.obs['library_preparation_protocol'] = "EFO_0030059"
+adata.obs['library_preparation_protocol__ontology_label'] = "10x multiome"
+adata.obs['sex'] = "female"
+```
+# update numeric metadata to be of appropriate numeric type in dataframe
+
+```{python}
+scores = adata.obs.columns.str.contains('.*cell_type.*score.*')
+adata.obs.loc[:, scores] = adata.obs.loc[:, scores].astype(float)
+```
+# write AnnData to file
+
+```{python}
+
+adata.write_h5ad("sSCP407_CAS.h5ad")
+```
+
+# extract cell type label annotations to a clustering file
+
+```{python}
+cluster_types = ["umap"]
+mask = adata.obs.columns.str.contains('.*cell_type.*label.*')
+extracted = adata.obs.loc[:,mask]
+headers = ["NAME", "X", "Y" ] + extracted.columns.to_list()
+types = ["TYPE"] + ["group"] * (len(headers) - 1)
+for ctype in cluster_types:
+  cluster_slot = "X_" + ctype
+  cluster = pd.DataFrame(adata.obsm[cluster_slot])
+  cluster.index = adata.obs_names
+  cluster = pd.concat([cluster,extracted], axis=1)
+  filename = "sSCP407_"+ ctype + ".tsv"
+  with open(filename, "w") as file:
+      file.write('\t'.join(map(str,headers)) + "\n")
+      file.write('\t'.join(map(str,types)) + "\n")
+  cluster.to_csv(filename, mode='a', sep="\t", index=True, header=False)
+```
+
