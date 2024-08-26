@@ -410,6 +410,90 @@ class TestDifferentialExpression(unittest.TestCase):
             except:
                 print(f"Error while deleting file : {file}")
 
+    def test_de_process_h5ad(self):
+        test_annotation = "louvain"
+        test_config = {
+            "test_annotation": test_annotation,
+            "test_scope": "study",
+            "test_method": "wilcoxon",
+            "annot_path": "../tests/data/anndata/h5ad_frag.metadata.tsv",
+            "study_accession": "SCPh5adde",
+            "cluster_path": "../tests/data/anndata/h5ad_frag.cluster.X_umap.tsv",
+            "cluster_name": "umap",
+            "matrix_file": "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad",
+            "matrix_type": "h5ad",
+        }
+
+        found_labels = run_de(**test_config)
+        found_label_count = len(found_labels)
+
+        self.assertEqual(
+            found_label_count,
+            8,
+            f"expected eight annotation labels for {test_annotation}",
+        )
+
+        expected_file = (
+           "umap--louvain--0--study--wilcoxon.tsv"
+        )
+
+        expected_file_path = f"../tests/{expected_file}"
+
+        # confirm expected results filename was generated in found result files
+        self.assertIn(
+            expected_file, found_labels, "Expected filename not in found files list"
+        )
+
+        content = pd.read_csv(expected_file_path, sep="\t", index_col=0)
+        # confirm expected gene in DE file at expected position
+        self.assertEqual(
+            content.iloc[0, 0],
+            "LDHB",
+            "Did not find expected gene, LDHB, at second row in DE file.",
+        )
+        # confirm calculated value has expected significant digits
+        self.assertEqual(
+            content.iloc[0, 2],
+            2.091,
+            "Did not find expected logfoldchange value for LDHB in DE file.",
+        )
+
+        # md5 checksum calculated using reference file in tests/data/differential_expression/reference
+        # file added on 2024-08-26
+        expected_checksum = "33bbe8eed25a01380fe283cfc5d3b039"
+
+        # running DifferentialExpression via pytest results in output files in the tests dir
+        with open(expected_file_path, "rb") as f:
+            bytes = f.read()
+            de_output_checksum = hashlib.md5(bytes).hexdigest()
+        self.assertEqual(
+            de_output_checksum,
+            expected_checksum,
+            "Generated output file should match expected checksum.",
+        )
+
+        expected_output_match = "umap--louvain--*--study--wilcoxon.tsv"
+
+        with patch('ingest_files.IngestFiles.delocalize_file'):
+            DifferentialExpression.delocalize_de_files(
+                'gs://fake_bucket', None, expected_output_match
+            )
+
+            self.assertEqual(
+                IngestFiles.delocalize_file.call_count,
+                8,
+                "expected 8 calls to delocalize output files",
+            )
+
+        # clean up DE outputs
+        files = glob.glob(expected_output_match)
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
+
     def test_de_process_na(self):
         """Run DE on small test case with na-type values in matrix
         confirm expected output filenames
