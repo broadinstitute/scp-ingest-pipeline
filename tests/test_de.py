@@ -430,7 +430,7 @@ class TestDifferentialExpression(unittest.TestCase):
         self.assertEqual(
             found_label_count,
             8,
-            f"expected seven annotation labels for {test_annotation}",
+            f"expected eight annotation labels for {test_annotation}",
         )
 
         expected_file = (
@@ -458,8 +458,8 @@ class TestDifferentialExpression(unittest.TestCase):
             "Did not find expected logfoldchange value for LDHB in DE file.",
         )
 
-        # md5 checksum calculated using reference file in tests/data/differential_expression/sparse/reference
-        # file updated 2022-05-25 to include output for duplicate gene handling
+        # md5 checksum calculated using reference file in tests/data/differential_expression/reference
+        # file added on 2024-08-26
         expected_checksum = "33bbe8eed25a01380fe283cfc5d3b039"
 
         # running DifferentialExpression via pytest results in output files in the tests dir
