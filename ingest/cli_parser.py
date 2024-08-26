@@ -9,7 +9,7 @@ from google.cloud.exceptions import NotFound
 
 
 # Ingest file types
-EXPRESSION_FILE_TYPES = ["dense", "mtx", "loom"]
+EXPRESSION_FILE_TYPES = ["dense", "mtx", "h5ad"]
 
 
 def bq_dataset_exists(dataset):

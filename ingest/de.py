@@ -197,8 +197,8 @@ class DifferentialExpression:
                     self.genes_path,
                     self.barcodes_path,
                 )
-            elif self.matrix_file_type == "dense":
-                DifferentialExpression.de_logger.info("preparing DE on dense matrix")
+            elif self.matrix_file_type == "dense" or self.matrix_file_type == "h5ad":
+                DifferentialExpression.de_logger.info(f"preparing DE on {self.matrix_file_type} matrix")
                 self.run_scanpy_de(
                     self.cluster,
                     self.metadata,
@@ -211,7 +211,7 @@ class DifferentialExpression:
                     self.method,
                 )
             else:
-                msg = f"Submitted matrix_file_type should be \"dense\" or \"mtx\" not \"{self.matrix_file_type}\""
+                msg = f"Submitted matrix_file_type should be \"dense\", \"mtx\" or \"h5ad\" not \"{self.matrix_file_type}\""
                 print(msg)
                 log_exception(
                     DifferentialExpression.dev_logger,
@@ -337,6 +337,10 @@ class DifferentialExpression:
             matrix_object = IngestFiles(matrix_file_path, None)
             local_file_path = matrix_object.resolve_path(matrix_file_path)[1]
             adata = sc.read(local_file_path)
+        elif matrix_file_type == "h5ad":
+            matrix_object = IngestFiles(matrix_file_path, None)
+            local_file_path = matrix_object.resolve_path(matrix_file_path)[1]
+            adata = matrix_object.open_anndata(local_file_path)
         else:
             # MTX reconstitution UNTESTED (SCP-4203)
             # will want try/except here to catch failed data object composition
@@ -344,7 +348,10 @@ class DifferentialExpression:
                 matrix_file_path, genes_path, barcodes_path
             )
 
-        adata = adata.transpose()
+        if not matrix_file_type == "h5ad":
+            adata = adata.transpose()
+
+        use_raw = True if matrix_file_type == "h5ad" else False
 
         adata = DifferentialExpression.subset_adata(adata, de_cells)
 
@@ -362,7 +369,7 @@ class DifferentialExpression:
                 adata,
                 annotation,
                 key_added=rank_key,
-                use_raw=False,
+                use_raw=use_raw,
                 method=method,
                 pts=True,
             )

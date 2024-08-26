@@ -65,6 +65,10 @@ python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id de
 
 # Differential expression analysis (sparse matrix)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --matrix-file-type mtx --annotation-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --cluster-name de_sparse_integration --study-accession SCPsparsemini --differential-expression
+
+# Differential expression analysis (h5ad matrix)
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_dense_matrix.tsv --matrix-file-type h5ad --annotation-file ../tests/data/differential_expression/de_dense_metadata.tsv --cluster-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
+
 """
 import json
 import logging
