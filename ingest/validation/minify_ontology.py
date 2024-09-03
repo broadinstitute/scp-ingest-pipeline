@@ -47,12 +47,17 @@ def fetch_ontologies(use_cache=True):
 
 
 def get_synonyms(node):
+    """Get related and exact synonyms for an ontology node
+    """
     if 'meta' not in node or 'synonyms' not in node['meta']:
         return ''
 
     raw_synonyms = []
     synonym_nodes = node['meta']['synonyms']
     for synonym_node in synonym_nodes:
+        if 'val' not in synonym_node:
+            # Handles e.g. incomplete EFO synonym nodes
+            continue
         raw_synonyms.append(synonym_node['val'])
     # print('raw_synonyms', raw_synonyms)
     synonyms = '||'.join(raw_synonyms) # Unambiguously delimit synonyms
@@ -62,20 +67,21 @@ def minify(ontology_json, filename):
     print(f'Minify {filename}')
     ontology_shortname = filename.split('.json')[0]
     ontology_shortname_uc = ontology_shortname.upper()
-    nodes = ontology_json['graphs'][0]['nodes']
+    graph_nodes = ontology_json['graphs'][0]['nodes']
 
-    raw_disease_nodes = list(filter(
-        lambda n: f'obo/{ontology_shortname_uc}' in n['id'] and 'lbl' in n,
-        nodes
+    raw_nodes = list(filter(
+        lambda n: f'/{ontology_shortname_uc}_' in n['id'] and 'lbl' in n,
+        graph_nodes
     ))
-    disease_nodes = list(map(
+
+    nodes = list(map(
         lambda n: '\t'.join(
             [n['id'].split('/')[-1], n['lbl'], get_synonyms(n)]
-        ), raw_disease_nodes
+        ), raw_nodes
     ))
 
     with open(f'{ontology_shortname}.min.tsv', 'w') as f:
-        f.write('\n'.join(disease_nodes))
+        f.write('\n'.join(nodes))
 
 def run(use_cache=True):
     print('Run')
