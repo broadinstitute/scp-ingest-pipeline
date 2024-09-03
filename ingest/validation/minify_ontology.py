@@ -66,11 +66,14 @@ def get_synonyms(node):
 def minify(ontology_json, filename):
     print(f'Minify {filename}')
     ontology_shortname = filename.split('.json')[0]
+    if ontology_shortname == 'taxslim':
+        ontology_shortname = 'ncbitaxon'
     ontology_shortname_uc = ontology_shortname.upper()
     graph_nodes = ontology_json['graphs'][0]['nodes']
 
+
     raw_nodes = list(filter(
-        lambda n: f'/{ontology_shortname_uc}_' in n['id'] and 'lbl' in n,
+        lambda n: f'/{ontology_shortname_uc}_' in n['id'].upper() and 'lbl' in n,
         graph_nodes
     ))
 
