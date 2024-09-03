@@ -1,18 +1,24 @@
+"""Minifies ontologies used in EBI OLS, to enable instant ontology validation
+
+This converts ~224 MB in ontology JSON files into 2 MB TSV.GZs at build-time.
+The 2 MB compressed ontologies can then be retrieved at runtime.
+"""
+
 import json
 import urllib
 import urllib.request
 from pathlib import Path
 import gzip
 
-mondo_url = 'https://github.com/monarch-initiative/mondo/releases/latest/download/mondo.json'
-pato_url = 'https://github.com/pato-ontology/pato/raw/master/pato.json'
-ncbitaxon_url = 'https://github.com/obophenotype/ncbitaxon/releases/latest/download/taxslim.json'
-efo_url = 'https://github.com/EBISPOT/efo/releases/latest/download/efo.json'
+MONDO_URL = 'https://github.com/monarch-initiative/mondo/releases/latest/download/mondo.json'
+PATO_URL = 'https://github.com/pato-ontology/pato/raw/master/pato.json'
+NCBITAXON_URL = 'https://github.com/obophenotype/ncbitaxon/releases/latest/download/taxslim.json'
+EFO_URL = 'https://github.com/EBISPOT/efo/releases/latest/download/efo.json'
 
 ONTOLOGY_JSON_URLS = {
-    'disease': [mondo_url, pato_url],
-    'species': [ncbitaxon_url],
-    'library_preparation_protocol': [efo_url]
+    'disease': [MONDO_URL, PATO_URL],
+    'species': [NCBITAXON_URL],
+    'library_preparation_protocol': [EFO_URL]
 }
 
 def fetch(url, use_cache=True):
@@ -30,12 +36,12 @@ def fetch(url, use_cache=True):
     return [content, filename]
 
 
-def fetch_ontologies(use_cache=True):
+def fetch_ontologies(ontology_json_urls, use_cache=True):
     """Retrieve ontology JSON and JSON filename for required ontology
     """
     ontologies = {}
-    for annotation in ONTOLOGY_JSON_URLS:
-        ontology_urls = ONTOLOGY_JSON_URLS[annotation]
+    for annotation in ontology_json_urls:
+        ontology_urls = ontology_json_urls[annotation]
         ontologies[annotation] = []
         for ontology_url in ontology_urls:
             print(f'Fetch ontology: {ontology_url}')
@@ -63,14 +69,13 @@ def get_synonyms(node):
     return synonyms
 
 def minify(ontology_json, filename):
-    """
+    """Convert full ontology JSON into a minimal gzipped TSV, write to disk
     """
     ontology_shortname = filename.split('.json')[0]
     if ontology_shortname == 'taxslim':
         ontology_shortname = 'ncbitaxon'
     ontology_shortname_uc = ontology_shortname.upper()
     graph_nodes = ontology_json['graphs'][0]['nodes']
-
 
     raw_nodes = list(filter(
         lambda n: f'/{ontology_shortname_uc}_' in n['id'].upper() and 'lbl' in n,
@@ -92,13 +97,25 @@ def minify(ontology_json, filename):
     print(f'Wrote {output_filename}')
 
 
-def run(use_cache=True):
-    print('Run')
-    ontologies = fetch_ontologies(use_cache)
-    for annotation in ontologies:
-        for conf in ontologies[annotation]:
-            # print('conf', conf)
-            ontology_json, filename = conf
-            minify(ontology_json, filename)
+class OntologyMinifier:
 
-run()
+    def __init__(annotations=None, use_cache=True):
+
+        # Enable minifying incomplete set of ontologies, e.g. for testing
+        if annotations:
+            ontology_json_urls = {}
+            for annotation in ONTOLOGY_JSON_URLS:
+                ontology_json_urls[annotation] = ONTOLOGY_JSON_URLS[annotation]
+        else:
+            ontology_json_urls = ONTOLOGY_JSON_URLS
+
+        ontologies = fetch_ontologies(ontology_json_urls, use_cache)
+        for annotation in ontologies:
+            for conf in ontologies[annotation]:
+                # print('conf', conf)
+                ontology_json, filename = conf
+                minify(ontology_json, filename)
+
+if __name__ == '__main__':
+    OntologyMinifier()
+
