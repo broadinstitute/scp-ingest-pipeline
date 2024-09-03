@@ -2,11 +2,10 @@ import json
 import urllib
 import urllib.request
 from pathlib import Path
+import gzip
 
 mondo_url = 'https://github.com/monarch-initiative/mondo/releases/latest/download/mondo.json'
 pato_url = 'https://github.com/pato-ontology/pato/raw/master/pato.json'
-
-# TODO: Determine how to query for current JSON
 ncbitaxon_url = 'https://github.com/obophenotype/ncbitaxon/releases/latest/download/taxslim.json'
 efo_url = 'https://github.com/EBISPOT/efo/releases/latest/download/efo.json'
 
@@ -64,7 +63,8 @@ def get_synonyms(node):
     return synonyms
 
 def minify(ontology_json, filename):
-    print(f'Minify {filename}')
+    """
+    """
     ontology_shortname = filename.split('.json')[0]
     if ontology_shortname == 'taxslim':
         ontology_shortname = 'ncbitaxon'
@@ -83,8 +83,14 @@ def minify(ontology_json, filename):
         ), raw_nodes
     ))
 
-    with open(f'{ontology_shortname}.min.tsv', 'w') as f:
-        f.write('\n'.join(nodes))
+    tsv_content = '\n'.join(nodes)
+    compressed_tsv_content = gzip.compress(tsv_content.encode())
+
+    output_filename = f'{ontology_shortname}.min.tsv.gz'
+    with open(f'{ontology_shortname}.min.tsv.gz', 'wb') as f:
+        f.write(compressed_tsv_content)
+    print(f'Wrote {output_filename}')
+
 
 def run(use_cache=True):
     print('Run')
