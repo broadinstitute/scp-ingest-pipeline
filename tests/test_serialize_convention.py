@@ -25,7 +25,6 @@ from serialize_convention import (
     write_convention_schema,
 )
 
-
 class TestValidateMetadata(unittest.TestCase):
     def setup_metadata(self, args):
         args_list = args.split(" ")

@@ -25,11 +25,12 @@ def fetch(url, use_cache=True):
     """Request remote resource, read local cache if availalble
     """
     filename = url.split('/')[-1]
-    if use_cache and not Path(filename).is_file():
+    if use_cache == False or (use_cache and not Path(filename).is_file()):
         with urllib.request.urlopen(url) as f:
             content = f.read()
-        with open(filename, 'wb') as f:
-            f.write(content)
+        if use_cache:
+            with open(filename, 'wb') as f:
+                f.write(content)
     else:
         with open(filename) as f:
             content = f.read()
@@ -99,12 +100,13 @@ def minify(ontology_json, filename):
 
 class OntologyMinifier:
 
-    def __init__(annotations=None, use_cache=True):
+    def __init__(self, annotations=None, use_cache=True):
 
         # Enable minifying incomplete set of ontologies, e.g. for testing
         if annotations:
+            print('annotations', annotations)
             ontology_json_urls = {}
-            for annotation in ONTOLOGY_JSON_URLS:
+            for annotation in annotations:
                 ontology_json_urls[annotation] = ONTOLOGY_JSON_URLS[annotation]
         else:
             ontology_json_urls = ONTOLOGY_JSON_URLS
