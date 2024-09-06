@@ -106,7 +106,6 @@ def minify(ontology_json, filename):
 class OntologyMinifier:
 
     def __init__(self, annotations=None, use_cache=True):
-
         # Enable minifying incomplete set of ontologies, e.g. for testing
         if annotations:
             ontology_json_urls = {}
@@ -118,7 +117,6 @@ class OntologyMinifier:
         ontologies = fetch_ontologies(ontology_json_urls, use_cache)
         for annotation in ontologies:
             for conf in ontologies[annotation]:
-                # print('conf', conf)
                 ontology_json, filename = conf
                 minify(ontology_json, filename)
 
@@ -137,4 +135,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
     use_cache = args.use_cache
     OntologyMinifier(None, use_cache)
-

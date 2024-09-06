@@ -19,3 +19,17 @@ jobs:
     - name: Minify ontology
       run: cd ingest/validation; python3 minify_ontology.py
 
+    - name: Check for changes
+      id: check_changes
+      run: |
+        git diff --quiet || echo "Changes detected"
+
+    - name: Commit and push changes
+      if: steps.check_changes.outputs.stdout != ''  # Only run if changes are detected
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config --global user.name 'github-actions'
+        git config --global user.email 'actions@github.com'
+        git commit -am 'Update minified ontologies via GitHub Actions'
+        git push
