@@ -1,11 +1,11 @@
 name: Minify ontology
 
 on:
-  push:
-    branches:
-      ew-minify-ontologies
-  # pull_request:
-  #   types: [opened]  # Only trigger on PR "opened" event
+  pull_request:
+    types: [opened]  # Only trigger on PR "opened" event
+  # push: # Uncomment, update branches to develop / debug
+  #   branches:
+  #     ew-minify-ontologies
 
 jobs:
   build:
