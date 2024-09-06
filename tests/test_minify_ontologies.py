@@ -11,7 +11,7 @@ import os
 import gzip
 
 sys.path.append("../ingest/validation")
-from minify_ontology import OntologyMinifier
+from minify_ontologies import OntologyMinifier
 
 class TestOntologyMinifier(unittest.TestCase):
 

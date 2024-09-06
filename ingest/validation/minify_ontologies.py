@@ -9,6 +9,7 @@ cd ingest/validation
 python minify_ontologies.py
 """
 
+import argparse
 import json
 import urllib.request
 from pathlib import Path
@@ -122,5 +123,18 @@ class OntologyMinifier:
                 minify(ontology_json, filename)
 
 if __name__ == '__main__':
-    OntologyMinifier()
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--use-cache",
+        help=(
+            "Whether to use previously-downloaded raw ontologies"
+        ),
+        action="store_true"
+    )
+    args = parser.parse_args()
+    use_cache = args.use_cache
+    OntologyMinifier(None, use_cache)
 
