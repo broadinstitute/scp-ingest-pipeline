@@ -2,6 +2,11 @@
 
 This converts ~224 MB in ontology JSON files into 2 MB TSV.GZs at build-time.
 The 2 MB compressed ontologies can then be retrieved at runtime.
+Only IDs, labels, and synonyms are retained from the original ontologies.
+
+Example:
+cd ingest/validation
+python minify_ontologies.py
 """
 
 import json
@@ -103,7 +108,6 @@ class OntologyMinifier:
 
         # Enable minifying incomplete set of ontologies, e.g. for testing
         if annotations:
-            print('annotations', annotations)
             ontology_json_urls = {}
             for annotation in annotations:
                 ontology_json_urls[annotation] = ONTOLOGY_JSON_URLS[annotation]
