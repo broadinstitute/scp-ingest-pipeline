@@ -9,13 +9,9 @@ import sys
 import glob
 import os
 import gzip
-from unittest.mock import patch
-from unittest.mock import Mock
 
 sys.path.append("../ingest/validation")
 from minify_ontology import OntologyMinifier
-
-# mock_response = Mock(spec=Response)
 
 class TestOntologyMinifier(unittest.TestCase):
 

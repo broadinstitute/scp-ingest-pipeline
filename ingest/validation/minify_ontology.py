@@ -5,7 +5,6 @@ The 2 MB compressed ontologies can then be retrieved at runtime.
 """
 
 import json
-import urllib
 import urllib.request
 from pathlib import Path
 import gzip
