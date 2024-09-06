@@ -1,0 +1,20 @@
+name: Minify ontology
+
+on:
+  push:
+    branches:
+      ew-minify-ontologies
+
+  # pull_request:
+  #   types: [opened]  # Only trigger on PR "opened" event
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Minify ontology
+      run: cd ingest/validation; python3 minify_ontology.py
