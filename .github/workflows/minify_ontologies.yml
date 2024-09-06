@@ -28,7 +28,7 @@ jobs:
         # Revert the default `set -e` in GitHub Actions, to e.g. ensure
         # "diff" doesn't throw an error when something is found
         set +e
-        set -x  # Enable debugging
+        # set -x  # Enable debugging
 
         cd ingest/validation
 
