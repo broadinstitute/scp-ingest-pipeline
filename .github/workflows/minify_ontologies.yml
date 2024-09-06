@@ -45,12 +45,6 @@ jobs:
         # Flag to track if there are any changes
         CHANGES_DETECTED=false
 
-        echo "Contents of current directory"
-        ls -latr .
-
-        echo "Contents of tmp directory"
-        ls -latr tmp
-
         # Find and diff files
         for FILE in $(find "$SOURCE_DIR" -type f -name "*.min.tsv"); do
           # Get the base name of the file
@@ -65,7 +59,6 @@ jobs:
             diff "$FILE" "$TMP_FILE" > diff_output.txt
             # Check if diff output is not empty
             if [ -s diff_output.txt ]; then
-              echo "Differences found"
               echo "Differences found in $BASENAME"
               cat diff_output.txt
               # Copy the updated file to the source directory (if needed)
@@ -75,7 +68,6 @@ jobs:
               # Stage the modified file
               git add "$FILE".gz
             else
-              echo "No differences found"
               echo "No differences in $BASENAME"
             fi
           else
@@ -89,7 +81,7 @@ jobs:
           git config --global user.email "github-actions@github.com"
 
           # Commit changes
-          git commit -m "Update minified ontologies to newest upstream version"
+          git commit -m "Update minified ontologies via GitHub Actions"
           git push origin HEAD
         else
           echo "No changes to commit."
