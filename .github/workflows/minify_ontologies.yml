@@ -1,4 +1,4 @@
-name: Minify ontology
+name: Minify ontologies
 
 on:
   pull_request:
