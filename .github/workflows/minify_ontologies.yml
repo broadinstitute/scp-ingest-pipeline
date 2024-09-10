@@ -1,0 +1,88 @@
+name: Minify ontologies
+
+on:
+  pull_request:
+    types: [opened]  # Only trigger on PR "opened" event
+  # push: # Uncomment, update branches to develop / debug
+  #   branches:
+  #     ew-minify-ontologies
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Copy and decompress ontologies in repo
+      run: cd ingest/validation; mkdir tmp; cp -r *.min.tsv.gz tmp/; gzip -d tmp/*.min.tsv.gz
+
+    - name: Minify newest ontologies
+      run: cd ingest/validation; python3 minify_ontologies.py; gzip -dkf *.min.tsv.gz
+
+    - name: Diff and commit changes
+      run: |
+        #!/bin/bash
+
+        # Revert the default `set -e` in GitHub Actions, to e.g. ensure
+        # "diff" doesn't throw an error when something is found
+        set +e
+        # set -x  # Enable debugging
+
+        cd ingest/validation
+
+        # Define directories
+        SOURCE_DIR="."
+        TMP_DIR="tmp"
+
+        # Ensure TMP_DIR exists
+        if [ ! -d "$TMP_DIR" ]; then
+          echo "Temporary directory $TMP_DIR does not exist."
+          exit 1
+        fi
+
+        # Flag to track if there are any changes
+        CHANGES_DETECTED=false
+
+        # Find and diff files
+        for FILE in $(find "$SOURCE_DIR" -type f -name "*.min.tsv"); do
+          # Get the base name of the file
+          BASENAME=$(basename "$FILE")
+          # Construct the path to the corresponding file in the TMP_DIR
+          TMP_FILE="$TMP_DIR/$BASENAME"
+
+          # Check if the corresponding file exists in TMP_DIR
+          if [ -f "$TMP_FILE" ]; then
+            # Run the diff command
+            echo "Diffing $FILE and $TMP_FILE"
+            diff "$FILE" "$TMP_FILE" > diff_output.txt
+            # Check if diff output is not empty
+            if [ -s diff_output.txt ]; then
+              echo "Differences found in $BASENAME"
+              cat diff_output.txt
+              # Copy the updated file to the source directory (if needed)
+              cp "$TMP_FILE" "$FILE"
+              # Mark that changes have been detected
+              CHANGES_DETECTED=true
+              # Stage the modified file
+              git add "$FILE".gz
+            else
+              echo "No differences in $BASENAME"
+            fi
+          else
+            echo "No corresponding file found in $TMP_DIR for $BASENAME"
+          fi
+        done
+
+        if [ "$CHANGES_DETECTED" = true ]; then
+          # Configure Git
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+          # Commit changes
+          git commit -m "Update minified ontologies via GitHub Actions"
+          git push origin HEAD
+        else
+          echo "No changes to commit."
+        fi
