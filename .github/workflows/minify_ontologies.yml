@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Copy and decompress ontologies in repo
       run: cd ingest/validation; mkdir tmp; cp -r *.min.tsv.gz tmp/; gzip -d tmp/*.min.tsv.gz
