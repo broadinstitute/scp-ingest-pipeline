@@ -19,11 +19,13 @@ MONDO_URL = 'https://github.com/monarch-initiative/mondo/releases/latest/downloa
 PATO_URL = 'https://github.com/pato-ontology/pato/raw/master/pato.json'
 NCBITAXON_URL = 'https://github.com/obophenotype/ncbitaxon/releases/latest/download/taxslim.json'
 EFO_URL = 'https://github.com/EBISPOT/efo/releases/latest/download/efo.json'
+UBERON_URL = 'https://github.com/obophenotype/uberon/releases/latest/download/uberon.json'
 
 ONTOLOGY_JSON_URLS = {
     'disease': [MONDO_URL, PATO_URL],
     'species': [NCBITAXON_URL],
-    'library_preparation_protocol': [EFO_URL]
+    'library_preparation_protocol': [EFO_URL],
+    'organ': [UBERON_URL]
 }
 
 def fetch(url, use_cache=True):
