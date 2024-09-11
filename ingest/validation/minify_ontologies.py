@@ -71,7 +71,9 @@ def get_synonyms(node):
         if 'val' not in synonym_node:
             # Handles e.g. incomplete EFO synonym nodes
             continue
-        raw_synonyms.append(synonym_node['val'])
+        raw_synonym = synonym_node['val']
+        if not raw_synonym.startswith('obsolete '):
+            raw_synonyms.append(raw_synonym)
     # print('raw_synonyms', raw_synonyms)
     synonyms = '||'.join(raw_synonyms) # Unambiguously delimit synonyms
     return synonyms
@@ -90,13 +92,20 @@ def minify(ontology_json, filename):
         graph_nodes
     ))
 
-    nodes = list(map(
-        lambda n: '\t'.join(
+    all_nodes = list(map(
+        lambda n: (
             [n['id'].split('/')[-1], n['lbl'], get_synonyms(n)]
         ), raw_nodes
     ))
 
-    tsv_content = '\n'.join(nodes)
+    nodes = list(filter(
+        lambda n: not n[1].startswith('obsolete '),
+        all_nodes
+    ))
+
+    tsv_content = '\n'.join(
+        map(lambda n: '\t'.join(n), nodes)
+    )
     compressed_tsv_content = gzip.compress(tsv_content.encode())
 
     output_filename = f'{ontology_shortname}.min.tsv.gz'
