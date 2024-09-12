@@ -15,11 +15,14 @@ from minify_ontologies import OntologyMinifier
 
 class TestOntologyMinifier(unittest.TestCase):
 
+    def setup_method(self, test_method):
+        os.mkdir('ontologies')
+
     def test_mondo_and_pato_minification(self):
         OntologyMinifier(['disease'], False)
-        files = glob.glob('*.tsv.gz')
+        files = glob.glob('ontologies/*.tsv.gz')
         self.assertEqual(len(files), 2, 'Did not find 2 TSV.GZ files')
-        with gzip.open('mondo.min.tsv.gz', 'rt') as f:
+        with gzip.open('ontologies/mondo.min.tsv.gz', 'rt') as f:
             first_line = f.readline().strip().split('\t')
         expected_first_line = [
             'MONDO_0000001',
@@ -30,9 +33,10 @@ class TestOntologyMinifier(unittest.TestCase):
         self.assertEqual(first_line, expected_first_line, error_message)
 
     def teardown_method(self, test_method):
-        output_files = glob.glob('*.min.tsv.gz')
+        output_files = glob.glob('ontologies/*.min.tsv.gz')
         for file in output_files:
             os.remove(file)
+        os.rmdir('ontologies')
 
 
 
