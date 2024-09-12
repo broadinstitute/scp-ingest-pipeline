@@ -16,10 +16,10 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Copy and decompress ontologies in repo
-      run: cd ingest/validation; mkdir tmp; cp -r *.min.tsv.gz tmp/; gzip -d tmp/*.min.tsv.gz
+      run: cd ingest/validation/ontologies; mkdir tmp; cp -r *.min.tsv.gz tmp/; gzip -d tmp/*.min.tsv.gz
 
     - name: Minify newest ontologies
-      run: cd ingest/validation; python3 minify_ontologies.py; gzip -dkf *.min.tsv.gz
+      run: cd ingest/validation; python3 minify_ontologies.py; gzip -dkf ontologies/*.min.tsv.gz
 
     - name: Diff and commit changes
       run: |
@@ -30,7 +30,7 @@ jobs:
         set +e
         # set -x  # Enable debugging
 
-        cd ingest/validation
+        cd ingest/validation/ontologies
 
         # Define directories
         SOURCE_DIR="."
@@ -76,6 +76,10 @@ jobs:
         done
 
         if [ "$CHANGES_DETECTED" = true ]; then
+          # Update version to signal downstream caches should update
+          echo "$(date -Iseconds) # used as signal in validation caches" > version.txt
+          git add version.txt
+
           # Configure Git
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
