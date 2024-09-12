@@ -74,7 +74,6 @@ def get_synonyms(node):
         raw_synonym = synonym_node['val']
         if not raw_synonym.startswith('obsolete '):
             raw_synonyms.append(raw_synonym)
-    # print('raw_synonyms', raw_synonyms)
     synonyms = '||'.join(raw_synonyms) # Unambiguously delimit synonyms
     return synonyms
 
@@ -98,6 +97,7 @@ def minify(ontology_json, filename):
         ), raw_nodes
     ))
 
+    # Remove obsolete labels
     nodes = list(filter(
         lambda n: not n[1].startswith('obsolete '),
         all_nodes
@@ -108,8 +108,8 @@ def minify(ontology_json, filename):
     )
     compressed_tsv_content = gzip.compress(tsv_content.encode())
 
-    output_filename = f'{ontology_shortname}.min.tsv.gz'
-    with open(f'{ontology_shortname}.min.tsv.gz', 'wb') as f:
+    output_filename = f'ontologies/{ontology_shortname}.min.tsv.gz'
+    with open(output_filename, 'wb') as f:
         f.write(compressed_tsv_content)
     print(f'Wrote {output_filename}')
 
