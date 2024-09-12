@@ -77,7 +77,7 @@ jobs:
 
         if [ "$CHANGES_DETECTED" = true ]; then
           # Update version to signal downstream caches should update
-          echo "$(date -Iseconds) # used as signal in validation caches" > version.txt
+          echo "$(date +%s) # validation cache key" > version.txt
           git add version.txt
 
           # Configure Git
