@@ -94,7 +94,7 @@ def minify(ontology_json, filename):
 
     all_nodes = list(map(
         lambda n: (
-            [n['id'].split('/')[-1], n['lbl'], get_synonyms(n, n['label'])]
+            [n['id'].split('/')[-1], n['lbl'], get_synonyms(n, n['lbl'])]
         ), raw_nodes
     ))
 
