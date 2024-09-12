@@ -27,7 +27,7 @@ class TestOntologyMinifier(unittest.TestCase):
         expected_first_line = [
             'MONDO_0000001',
             'disease',
-            'condition||disease||disease or disorder||disease or disorder, non-neoplastic||diseases||diseases and disorders||disorder||disorders||medical condition||other disease'
+            'condition||disease or disorder||disease or disorder, non-neoplastic||diseases||diseases and disorders||disorder||disorders||medical condition||other disease'
         ]
         error_message = 'Did not get expected first line in mondo.min.tsv.gz'
         self.assertEqual(first_line, expected_first_line, error_message)

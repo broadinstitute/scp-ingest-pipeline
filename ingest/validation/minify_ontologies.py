@@ -43,7 +43,6 @@ def fetch(url, use_cache=True):
             content = f.read()
     return [content, filename]
 
-
 def fetch_ontologies(ontology_json_urls, use_cache=True):
     """Retrieve ontology JSON and JSON filename for required ontology
     """
@@ -58,8 +57,7 @@ def fetch_ontologies(ontology_json_urls, use_cache=True):
             ontologies[annotation].append([ontology_json, filename])
     return ontologies
 
-
-def get_synonyms(node):
+def get_synonyms(node, label):
     """Get related and exact synonyms for an ontology node
     """
     if 'meta' not in node or 'synonyms' not in node['meta']:
@@ -72,7 +70,10 @@ def get_synonyms(node):
             # Handles e.g. incomplete EFO synonym nodes
             continue
         raw_synonym = synonym_node['val']
-        if not raw_synonym.startswith('obsolete '):
+        if (
+            not raw_synonym.startswith('obsolete ') and # Omit obsolete synonyms
+            raw_synonym != label # Omit synonyms that are redundant with label
+        ):
             raw_synonyms.append(raw_synonym)
     synonyms = '||'.join(raw_synonyms) # Unambiguously delimit synonyms
     return synonyms
@@ -93,7 +94,7 @@ def minify(ontology_json, filename):
 
     all_nodes = list(map(
         lambda n: (
-            [n['id'].split('/')[-1], n['lbl'], get_synonyms(n)]
+            [n['id'].split('/')[-1], n['lbl'], get_synonyms(n, n['label'])]
         ), raw_nodes
     ))
 
