@@ -19,11 +19,15 @@ MONDO_URL = 'https://github.com/monarch-initiative/mondo/releases/latest/downloa
 PATO_URL = 'https://github.com/pato-ontology/pato/raw/master/pato.json'
 NCBITAXON_URL = 'https://github.com/obophenotype/ncbitaxon/releases/latest/download/taxslim.json'
 EFO_URL = 'https://github.com/EBISPOT/efo/releases/latest/download/efo.json'
+UBERON_URL = 'https://github.com/obophenotype/uberon/releases/latest/download/uberon.json'
+CL_URL = 'https://github.com/obophenotype/cell-ontology/releases/latest/download/cl.json'
 
 ONTOLOGY_JSON_URLS = {
     'disease': [MONDO_URL, PATO_URL],
     'species': [NCBITAXON_URL],
-    'library_preparation_protocol': [EFO_URL]
+    'library_preparation_protocol': [EFO_URL],
+    'organ': [UBERON_URL],
+    'cell_type': [CL_URL]
 }
 
 def fetch(url, use_cache=True):
@@ -41,7 +45,6 @@ def fetch(url, use_cache=True):
             content = f.read()
     return [content, filename]
 
-
 def fetch_ontologies(ontology_json_urls, use_cache=True):
     """Retrieve ontology JSON and JSON filename for required ontology
     """
@@ -56,8 +59,7 @@ def fetch_ontologies(ontology_json_urls, use_cache=True):
             ontologies[annotation].append([ontology_json, filename])
     return ontologies
 
-
-def get_synonyms(node):
+def get_synonyms(node, label):
     """Get related and exact synonyms for an ontology node
     """
     if 'meta' not in node or 'synonyms' not in node['meta']:
@@ -69,8 +71,12 @@ def get_synonyms(node):
         if 'val' not in synonym_node:
             # Handles e.g. incomplete EFO synonym nodes
             continue
-        raw_synonyms.append(synonym_node['val'])
-    # print('raw_synonyms', raw_synonyms)
+        raw_synonym = synonym_node['val']
+        if (
+            not raw_synonym.startswith('obsolete ') and # Omit obsolete synonyms
+            raw_synonym != label # Omit synonyms that are redundant with label
+        ):
+            raw_synonyms.append(raw_synonym)
     synonyms = '||'.join(raw_synonyms) # Unambiguously delimit synonyms
     return synonyms
 
@@ -88,17 +94,25 @@ def minify(ontology_json, filename):
         graph_nodes
     ))
 
-    nodes = list(map(
-        lambda n: '\t'.join(
-            [n['id'].split('/')[-1], n['lbl'], get_synonyms(n)]
+    all_nodes = list(map(
+        lambda n: (
+            [n['id'].split('/')[-1], n['lbl'], get_synonyms(n, n['lbl'])]
         ), raw_nodes
     ))
 
-    tsv_content = '\n'.join(nodes)
+    # Remove obsolete labels
+    nodes = list(filter(
+        lambda n: not n[1].startswith('obsolete '),
+        all_nodes
+    ))
+
+    tsv_content = '\n'.join(
+        map(lambda n: '\t'.join(n), nodes)
+    )
     compressed_tsv_content = gzip.compress(tsv_content.encode())
 
-    output_filename = f'{ontology_shortname}.min.tsv.gz'
-    with open(f'{ontology_shortname}.min.tsv.gz', 'wb') as f:
+    output_filename = f'ontologies/{ontology_shortname}.min.tsv.gz'
+    with open(output_filename, 'wb') as f:
         f.write(compressed_tsv_content)
     print(f'Wrote {output_filename}')
 
