@@ -78,7 +78,7 @@ function main {
 
   # set up for GSM secret based on existing vault path
   # changes / to -, e.g. mongo/hostname becomes mongo-hostname
-  GSM_SECRET_NAME=$(echo "$VAULT_SECRET" | sed 's/\//\-/g')
+  GSM_SECRET_NAME=$(echo "$VAULT_SECRET" | sed 's/[/_]/\-/g')
 
   if [[ "$ROLLBACK" = "true" ]]; then
     echo "Rolling back GSM migration"
