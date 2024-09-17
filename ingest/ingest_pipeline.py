@@ -124,6 +124,12 @@ class IngestPipeline:
         "../schema/alexandria_convention/alexandria_convention_schema.json"
     )
 
+    # array of actions to use when reporting to Mixpanel
+    ACTION_NAMES = [
+        'ingest_cluster', 'ingest_cell_metadata', 'ingest_expression', 'ingest_anndata', 'ingest_subsample',
+        'ingest_differential_expression', 'differential_expression', 'render_expression_arrays', 'rank_genes'
+    ]
+
     # Logger provides more details for trouble shooting
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
     user_logger = setup_logger(__name__ + ".usr", "user_log.txt", level=logging.ERROR)
@@ -786,6 +792,10 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     sys.exit(os.EX_DATAERR)
             sys.exit(1)
 
+def get_action_from_args(arguments):
+    """Get the action from list of arguments denoting which data type is being ingested/extracted"""
+    action = list(set(IngestPipeline.ACTION_NAMES) & set(arguments))
+    return action[0] if action else ""
 
 def main() -> None:
     """Enables running Ingest Pipeline via CLI
@@ -811,6 +821,7 @@ def main() -> None:
         arguments["study_id"],
         arguments["study_file_id"],
         arguments["user_metrics_uuid"],
+        get_action_from_args(arguments)
     )
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
