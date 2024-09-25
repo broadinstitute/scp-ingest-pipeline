@@ -21,6 +21,7 @@ def mock_post_event(props):
     props = json.loads(props)
     expected_props = {
         "properties": {
+            "action": "ingest_expression",
             "studyAccession": "SCP123",
             "fileName": "File_name.txt",
             "fileType": "Expression matrix",
@@ -29,6 +30,7 @@ def mock_post_event(props):
             "logger": "ingest-pipeline",
             "appId": "single-cell-portal",
             "status": "success",
+            "trigger": "bucket"
         }
     }
     if props["event"] == "file-validation":
@@ -56,6 +58,8 @@ class MetricsServiceTestCase(unittest.TestCase):
             "file_type": "Expression matrix",
             "upload_file_size": 400,
             "name": "File_name.txt",
+            "remote_location": "File_name.txt",
+            "options": { "upload_trigger": "bucket" }
         }
     ]
     # Build client mock with functions and return values needed to query
@@ -94,7 +98,7 @@ class MetricsServiceTestCase(unittest.TestCase):
             "dense",
         ]
         # Initialize global variables
-        config.init("5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337")
+        config.init("5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337", None, 'ingest_expression')
         config.set_parent_event_name("ingest-pipeline:expression:ingest")
         IngestTestCase.execute_ingest(args)
         metrics_model = config.get_metric_properties()
@@ -108,10 +112,39 @@ class MetricsServiceTestCase(unittest.TestCase):
         # args.insert(3).append(user_metrics_uuid)
         # Initialize global variables
         config.init(
-            "5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337", user_metrics_uuid
+            "5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337", user_metrics_uuid, 'ingest_expression'
         )
         config.set_parent_event_name("ingest-pipeline:expression:ingest")
         IngestTestCase.execute_ingest(args)
         metrics_model = config.get_metric_properties()
         # Log Mixpanel events
         MetricsService.log(config.get_parent_event_name(), metrics_model)
+
+    @patch("config.MONGO_CONNECTION")
+    def test_init(self, mock_mongo_conn):
+        client_values = {}
+        client_values["study_accessions"] = MagicMock()
+        client_values["study_accessions"].find.return_value = [{"accession": "SCP123"}]
+        client_values["study_files"] = MagicMock()
+        client_values["study_files"].find.return_value = [
+            {
+                "file_type": "AnnData",
+                "upload_file_size": 400,
+                "name": "matrix.h5ad",
+                "remote_location": "",
+                "ann_data_file_info": {
+                    "reference_file": False
+                }
+            }
+        ]
+        # Build client mock with functions and return values needed to query
+        client_mock = MagicMock()
+        client_mock.__getitem__.side_effect = client_values.__getitem__
+        mock_mongo_conn._client = client_mock
+        config.init(
+            "5d276a50421aa9117c982845", "5dd5ae25421aa910a723a337", user_metrics_uuid, "ingest_anndata"
+        )
+        props = config.get_metric_properties().get_properties()
+        self.assertEqual("ingest_anndata", props["action"])
+        self.assertEqual("upload", props["trigger"])
+        self.assertFalse(props["referenceAnnDataFile"])
