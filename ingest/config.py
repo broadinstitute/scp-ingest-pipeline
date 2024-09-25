@@ -10,12 +10,12 @@ from bson.objectid import ObjectId
 MONGO_CONNECTION = MongoConnection()
 
 
-def init(study_id, study_file_id, user_metric_uuid=None):
+def init(study_id, study_file_id, user_metric_uuid=None, action=None):
     global __metric_properties
 
     study = Study(study_id)
     study_file = StudyFile(study_file_id)
-    __metric_properties = MetricProperties(study, study_file, user_metric_uuid)
+    __metric_properties = MetricProperties(study, study_file, user_metric_uuid, action)
 
 
 def set_parent_event_name(event_name):
@@ -39,7 +39,7 @@ class MetricProperties:
     # This is a generic write-only log token, not a secret
     USER_ID = "2f30ec50-a04d-4d43-8fd1-b136a2045079"
 
-    def __init__(self, study, study_file, user_uuid=None):
+    def __init__(self, study, study_file, user_uuid=None, action=None):
         distinct_id = user_uuid if user_uuid else MetricProperties.USER_ID
         self.__properties = {
             "distinct_id": distinct_id,
@@ -50,7 +50,11 @@ class MetricProperties:
             "trigger": study_file.trigger,
             "logger": "ingest-pipeline",
             "appId": "single-cell-portal",
+            "action": action
         }
+        # merge in referenceAnnDataFile if necessary
+        if study_file.file_type == 'AnnData':
+            self.__properties["referenceAnnDataFile"] = study_file.is_reference_anndata
 
     def get_properties(self):
         return self.__properties
@@ -171,12 +175,15 @@ class StudyFile:
                 self.file_type = self.study_file["file_type"]
                 self.file_size = self.study_file["upload_file_size"]
                 self.file_name = self.study_file["name"]
+                upload_trigger = self.study_file.get("options", {}).get("upload_trigger")
                 # when set, remote_location is the name of the file in the bucket
-                if self.study_file.get("remote_location") is not None:
-                    if self.study_file["remote_location"] == "":
-                        self.trigger = 'upload'
-                    else:
-                        self.trigger = 'sync'
+                if upload_trigger is not None:
+                    self.trigger = upload_trigger
+                elif self.study_file["remote_location"] is not None:
+                    self.trigger = 'upload' if self.study_file["remote_location"] == "" else 'sync'
                 # indicate trigger state for tests/mocks
                 else:
                     self.trigger = 'not set'
+
+                if self.study_file["file_type"] == 'AnnData':
+                    self.is_reference_anndata = self.study_file.get("ann_data_file_info", {}).get("reference_file")
