@@ -4,6 +4,7 @@ import pandas as pd
 import scanpy as sc
 import re
 import glob
+from anndata import AnnData
 
 try:
     from monitor import setup_logger, log_exception
@@ -219,8 +220,10 @@ class DifferentialExpression:
                     msg,
                 )
                 raise ValueError(msg)
-        except:
-            raise
+        except Exception as e:
+            print(e)
+
+
 
     @staticmethod
     def get_genes(genes_path):
@@ -340,7 +343,7 @@ class DifferentialExpression:
         elif matrix_file_type == "h5ad":
             matrix_object = IngestFiles(matrix_file_path, None)
             local_file_path = matrix_object.resolve_path(matrix_file_path)[1]
-            adata = matrix_object.open_anndata(local_file_path)
+            orig_adata = matrix_object.open_anndata(local_file_path)
         else:
             # MTX reconstitution UNTESTED (SCP-4203)
             # will want try/except here to catch failed data object composition
@@ -348,15 +351,32 @@ class DifferentialExpression:
                 matrix_file_path, genes_path, barcodes_path
             )
 
-        if not matrix_file_type == "h5ad":
+        if matrix_file_type == "h5ad":
+            if orig_adata.raw is not None:
+                adata = AnnData(
+                    # using .copy() for the AnnData components is good practice
+                    # but we won't be using orig_adata for analyses
+                    # choosing to avoid .copy() for memory efficiency
+                    X = orig_adata.raw.X,
+                    obs = orig_adata.obs,
+                    var = orig_adata.var,
+                )
+            else:
+                msg = f'{matrix_file_path} does not have a .raw attribute'
+                print(msg)
+                log_exception(
+                    DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+                )
+                raise ValueError(msg)
+        # AnnData expects gene x cell so dense and mtx matrices require transposition
+        else:
             adata = adata.transpose()
-
-        use_raw = True if matrix_file_type == "h5ad" else False
 
         adata = DifferentialExpression.subset_adata(adata, de_cells)
 
-        # will need try/except (SCP-4205)
-        adata.obs = DifferentialExpression.order_annots(de_annots, adata.obs_names)
+        # h5ad inputs will already have obs data, only non-h5ad need this step
+        if not matrix_file_type == "h5ad":
+            adata.obs = DifferentialExpression.order_annots(de_annots, adata.obs_names)
 
         adata = DifferentialExpression.remove_single_sample_data(adata, annotation)
 
@@ -369,7 +389,6 @@ class DifferentialExpression:
                 adata,
                 annotation,
                 key_added=rank_key,
-                use_raw=use_raw,
                 method=method,
                 pts=True,
             )
