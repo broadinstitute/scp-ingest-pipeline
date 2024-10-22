@@ -67,7 +67,7 @@ python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id de
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --matrix-file-type mtx --annotation-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --cluster-name de_sparse_integration --study-accession SCPsparsemini --differential-expression
 
 # Differential expression analysis (h5ad matrix)
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_dense_matrix.tsv --matrix-file-type h5ad --annotation-file ../tests/data/differential_expression/de_dense_metadata.tsv --cluster-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name louvain --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad --matrix-file-type h5ad --annotation-file ../tests/data/anndata/h5ad_frag.metadata.tsv --cluster-file ../tests/data/anndata/h5ad_frag.cluster.X_umap.tsv --cluster-name umap --study-accession SCPdev --differential-expression
 
 """
 import json
@@ -123,6 +123,12 @@ class IngestPipeline:
     JSON_CONVENTION = (
         "../schema/alexandria_convention/alexandria_convention_schema.json"
     )
+
+    # array of actions to use when reporting to Mixpanel
+    ACTION_NAMES = [
+        'ingest_cluster', 'ingest_cell_metadata', 'ingest_expression', 'ingest_anndata', 'ingest_subsample',
+        'ingest_differential_expression', 'differential_expression', 'render_expression_arrays', 'rank_genes'
+    ]
 
     # Logger provides more details for trouble shooting
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
@@ -786,6 +792,10 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     sys.exit(os.EX_DATAERR)
             sys.exit(1)
 
+def get_action_from_args(arguments):
+    """Get the action from list of arguments denoting which data type is being ingested/extracted"""
+    action = list(set(IngestPipeline.ACTION_NAMES) & set(arguments))
+    return action[0] if action else ""
 
 def main() -> None:
     """Enables running Ingest Pipeline via CLI
@@ -811,6 +821,7 @@ def main() -> None:
         arguments["study_id"],
         arguments["study_file_id"],
         arguments["user_metrics_uuid"],
+        get_action_from_args(arguments)
     )
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)
