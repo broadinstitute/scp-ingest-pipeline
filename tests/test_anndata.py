@@ -29,6 +29,7 @@ class TestAnnDataIngestor(unittest.TestCase):
         filepath_dup_cell = "../tests/data/anndata/dup_cell.h5ad"
         filepath_nan = "../tests/data/anndata/nan_value.h5ad"
         filepath_synthetic = "../tests/data/anndata/anndata_test.h5ad"
+        filepath_boolean = "../tests/data/anndata/anndata_boolean_test.h5ad"
         self.study_id = "addedfeed000000000000000"
         self.study_file_id = "dec0dedfeed0000000000000"
         self.valid_args = [filepath_valid, self.study_id, self.study_file_id]
@@ -41,6 +42,7 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.dup_cell_args = [filepath_dup_cell, self.study_id, self.study_file_id]
         self.nan_value_args = [filepath_nan, self.study_id, self.study_file_id]
         self.synthetic_args = [filepath_synthetic, self.study_id, self.study_file_id]
+        self.boolean_args = [filepath_boolean, self.study_id, self.study_file_id]
         self.cluster_name = 'X_tsne'
         self.valid_kwargs = {'obsm_keys': [self.cluster_name]}
         self.anndata_ingest = AnnDataIngestor(*self.valid_args, **self.valid_kwargs)
@@ -180,6 +182,42 @@ class TestAnnDataIngestor(unittest.TestCase):
             self.assertEqual(
                 expected_types, type_line, 'did not get expected types from metadata body'
             )
+
+    def test_generate_metadata_with_boolean(self):
+        boolean_ingest = AnnDataIngestor(*self.boolean_args, **self.valid_kwargs)
+        adata = boolean_ingest.obtain_adata()
+        boolean_filename = "h5ad_frag.metadata_boolean.tsv"
+        boolean_ingest.generate_metadata_file(
+            adata, boolean_filename
+        )
+        self.assertEqual(
+            'bool', adata.obs['is_primary_data'].dtype.name,
+            'did not correctly get "bool" dtype for "is_primary_data"'
+        )
+        compressed_file = boolean_filename + ".gz"
+        with gzip.open(compressed_file, "rt", encoding="utf-8-sig") as metadata_body:
+            name_line = metadata_body.readline().split("\t")
+            expected_headers = [
+                'NAME', 'donor_id', 'biosample_id', 'sex', 'species', 'species__ontology_label',
+                'library_preparation_protocol', 'library_preparation_protocol__ontology_label', 'organ',
+                'organ__ontology_label', 'disease', 'disease__ontology_label', "is_primary_data\n"
+            ]
+            self.assertEqual(
+                expected_headers, name_line, 'did not get expected headers from metadata body'
+            )
+            expected_types = [
+                'TYPE', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP',
+                'GROUP', "GROUP\n"
+            ]
+            type_line = metadata_body.readline().split("\t")
+            self.assertEqual(
+                expected_types, type_line, 'did not get expected types from metadata body'
+            )
+            for line in metadata_body.readlines():
+                is_primary_data = line.split("\t")[12].strip()
+                self.assertEqual(
+                    "False", is_primary_data, 'did not correctly read boolean value as string from data'
+                )
 
     def test_gene_id_indexed_generate_processed_matrix(self):
         """Tests creating matrix when indexed by Ensembl ID, not gene name

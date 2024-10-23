@@ -3,9 +3,9 @@ name: Minify ontologies
 on:
   pull_request:
     types: [opened]  # Only trigger on PR "opened" event
-#  push: # Uncomment, update branches to develop / debug
-#    branches:
-#      jb-anndata-mixpanel-props
+  push: # Uncomment, update branches to develop / debug
+    branches:
+      jb-metadata-boolean
 
 jobs:
   build:
@@ -86,7 +86,7 @@ jobs:
 
           # Commit changes
           git commit -m "Update minified ontologies via GitHub Actions"
-          git push origin ${{ github.ref_name }}
+          git push origin ${{ github.head_ref }}
         else
           echo "No changes to commit."
         fi
