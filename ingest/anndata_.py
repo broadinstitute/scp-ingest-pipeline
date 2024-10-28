@@ -222,8 +222,8 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
         if adata.var.index.name == 'gene_ids':
             return True
         else:
-            prefixes = list(set(gene_id[:4] for gene_id in adata.var_names))
-            return len(prefixes) == 1 and prefixes[0] == 'ENSG'
+            prefixes = list(set(gene_id[:3] for gene_id in adata.var_names))
+            return len(prefixes) == 1 and prefixes[0] == 'ENS'
 
     @staticmethod
     def delocalize_extracted_files(
