@@ -187,7 +187,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
         h5ad_frag.features.processed.tsv
         Gzip files for faster delocalization
         """
-        if adata.var.index.name == 'gene_ids':
+        if AnnDataIngestor.check_ensembl_index(adata):
             # CELLxGENE indexes by Ensembl gene ID, not gene name (i.e. symbol).
             # Gene name is encoded in feature_name, which is needed for gene search.
             feature_frame = adata.var.feature_name
@@ -215,6 +215,15 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
             mtx_filename, a=scipy.sparse.csr_matrix(adata.X.T), precision=3
         )
         AnnDataIngestor.compress_file(mtx_filename)
+
+    @staticmethod
+    def check_ensembl_index(adata):
+        """Check if an AnnData file is indexed on Ensembl gene IDs (e.g. ENSG00000243485) instead of gene symbols"""
+        if adata.var.index.name == 'gene_ids':
+            return True
+        else:
+            prefixes = list(set(gene_id[:4] for gene_id in adata.var_names))
+            return len(prefixes) == 1 and prefixes[0] == 'ENSG'
 
     @staticmethod
     def delocalize_extracted_files(

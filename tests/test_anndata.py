@@ -266,6 +266,21 @@ class TestAnnDataIngestor(unittest.TestCase):
             first_line, expected_first_line, 'Expected Ensembl ID and gene name'
         )
 
+    def test_check_if_indexed_by_gene_id(self):
+        # check var.index.name
+        feature_name = AnnDataIngestor(
+            "../tests/data/anndata/indexed_by_gene_id.h5ad", self.study_id, self.study_file_id
+        )
+        adata = feature_name.obtain_adata()
+        self.assertTrue(feature_name.check_ensembl_index(adata))
+
+        # check data inspection
+        data_inspect = AnnDataIngestor(
+            "../tests/data/anndata/cellxgene.human_liver_b_cells.h5ad", self.study_id, self.study_file_id
+        )
+        liver_adata = data_inspect.obtain_adata()
+        self.assertTrue(data_inspect.check_ensembl_index(liver_adata))
+
 
     def test_get_files_to_delocalize(self):
         files = AnnDataIngestor.clusterings_to_delocalize(self.valid_kwargs)
