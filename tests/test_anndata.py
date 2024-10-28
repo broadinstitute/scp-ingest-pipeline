@@ -281,6 +281,12 @@ class TestAnnDataIngestor(unittest.TestCase):
         liver_adata = data_inspect.obtain_adata()
         self.assertTrue(data_inspect.check_ensembl_index(liver_adata))
 
+        # negative test
+        gene_symbols = AnnDataIngestor(
+            "../tests/data/anndata/anndata_test.h5ad", self.study_id, self.study_file_id
+        )
+        normal_adata = gene_symbols.obtain_adata()
+        self.assertFalse(gene_symbols.check_ensembl_index(normal_adata))
 
     def test_get_files_to_delocalize(self):
         files = AnnDataIngestor.clusterings_to_delocalize(self.valid_kwargs)
