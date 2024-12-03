@@ -3,9 +3,9 @@ name: Minify ontologies
 on:
   pull_request:
     types: [opened]  # Only trigger on PR "opened" event
-#  push: # Uncomment, update branches to develop / debug
-#    branches:
-#      jb-metadata-boolean
+  push: # Uncomment, update branches to develop / debug
+    branches:
+      jlc_show_gene_name 
 
 jobs:
   build:
