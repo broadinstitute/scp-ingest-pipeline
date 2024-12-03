@@ -1,3 +1,3 @@
-	names	scores	logfoldchanges	pvals	pvals_adj	pct_nz_group	pct_nz_reference	gene_id
+	names	scores	logfoldchanges	pvals	pvals_adj	pct_nz_group	pct_nz_reference	feature_id
 0	Sox17	41.46	11.63	0	0	0.4833	0.002793	ENSMUST00000027035
 1	Sox17	-5.059	-0.8853	4.225e-07	4.225e-07	0.1514	0.1939	ENSMUST00000195555
