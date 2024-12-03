@@ -372,10 +372,10 @@ class TestDifferentialExpression(unittest.TestCase):
             "Did not find expected logfoldchange value for Sox17 in DE file.",
         )
         # confirm duplicate gene input generates expected gene_id info in output
-        self.assertIn('gene_id', content.columns, "Expected gene_id output not found.")
+        self.assertIn('feature_id', content.columns, "Expected feature_id output not found.")
 
         # md5 checksum calculated using reference file in tests/data/differential_expression/sparse/reference
-        expected_checksum = "0d275d9f8a47f774513ac42f478393fc"
+        expected_checksum = "2129b3f6f0c7ee56ab2b6a74948c46a7"
 
         # running DifferentialExpression via pytest results in output files in the tests dir
         with open(expected_file_path, "rb") as f:
