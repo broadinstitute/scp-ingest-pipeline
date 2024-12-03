@@ -310,7 +310,7 @@ class DifferentialExpression:
     def extract_gene_id_for_out_file(rank):
         """Separate out gene name from gene ID"""
         rank['names'] = rank['names'].str.split('|').str[0]
-        rank['gene_id'] = rank['names'].str.split('|').str[1]
+        rank['feature_id'] = rank['names'].str.split('|').str[1]
         return rank
 
     @staticmethod
