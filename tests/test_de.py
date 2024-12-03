@@ -375,8 +375,7 @@ class TestDifferentialExpression(unittest.TestCase):
         self.assertIn('gene_id', content.columns, "Expected gene_id output not found.")
 
         # md5 checksum calculated using reference file in tests/data/differential_expression/sparse/reference
-        # file updated 2022-05-25 to include output for duplicate gene handling
-        expected_checksum = "ca0c7dcc4048614f22d6bc7dec18a2c0"
+        expected_checksum = "0d275d9f8a47f774513ac42f478393fc"
 
         # running DifferentialExpression via pytest results in output files in the tests dir
         with open(expected_file_path, "rb") as f:
@@ -411,16 +410,16 @@ class TestDifferentialExpression(unittest.TestCase):
                 print(f"Error while deleting file : {file}")
 
     def test_de_process_h5ad(self):
-        test_annotation = "louvain"
+        test_annotation = "cell_type__ontology_label"
         test_config = {
             "test_annotation": test_annotation,
             "test_scope": "study",
             "test_method": "wilcoxon",
-            "annot_path": "../tests/data/anndata/h5ad_frag.metadata.tsv",
+            "annot_path": "../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz",
             "study_accession": "SCPh5adde",
-            "cluster_path": "../tests/data/anndata/h5ad_frag.cluster.X_umap.tsv",
+            "cluster_path": "../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz",
             "cluster_name": "umap",
-            "matrix_file": "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad",
+            "matrix_file": "../tests/data/anndata/compliant_liver.h5ad",
             "matrix_type": "h5ad",
         }
 
@@ -429,12 +428,12 @@ class TestDifferentialExpression(unittest.TestCase):
 
         self.assertEqual(
             found_label_count,
-            8,
-            f"expected eight annotation labels for {test_annotation}",
+            2,
+            f"expected nine annotation labels for {test_annotation}",
         )
 
         expected_file = (
-           "umap--louvain--0--study--wilcoxon.tsv"
+           "umap--cell_type__ontology_label--plasma_cell--study--wilcoxon.tsv"
         )
 
         expected_file_path = f"../tests/{expected_file}"
@@ -448,19 +447,18 @@ class TestDifferentialExpression(unittest.TestCase):
         # confirm expected gene in DE file at expected position
         self.assertEqual(
             content.iloc[0, 0],
-            "LDHB",
-            "Did not find expected gene, LDHB, at second row in DE file.",
+            "MZB1",
+            "Did not find expected gene, MZB1, at second row in DE file.",
         )
         # confirm calculated value has expected significant digits
         self.assertEqual(
             content.iloc[0, 2],
-            2.091,
-            "Did not find expected logfoldchange value for LDHB in DE file.",
+            5.329,
+            "Did not find expected logfoldchange value for MZB1 in DE file.",
         )
 
         # md5 checksum calculated using reference file in tests/data/differential_expression/reference
-        # file added on 2024-08-26
-        expected_checksum = "33bbe8eed25a01380fe283cfc5d3b039"
+        expected_checksum = "649e5fd26575255bfca14c7b25d804ba"
 
         # running DifferentialExpression via pytest results in output files in the tests dir
         with open(expected_file_path, "rb") as f:
@@ -472,7 +470,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "Generated output file should match expected checksum.",
         )
 
-        expected_output_match = "umap--louvain--*--study--wilcoxon.tsv"
+        expected_output_match = "umap--cell_type__ontology_label--*--study--wilcoxon.tsv"
 
         with patch('ingest_files.IngestFiles.delocalize_file'):
             DifferentialExpression.delocalize_de_files(
@@ -481,8 +479,8 @@ class TestDifferentialExpression(unittest.TestCase):
 
             self.assertEqual(
                 IngestFiles.delocalize_file.call_count,
-                8,
-                "expected 8 calls to delocalize output files",
+                2,
+                "expected 2 calls to delocalize output files",
             )
 
         # clean up DE outputs

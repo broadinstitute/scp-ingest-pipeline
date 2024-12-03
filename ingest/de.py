@@ -172,7 +172,7 @@ class DifferentialExpression:
             "subsetting matrix on cells in clustering"
         )
         matrix_subset_list = np.in1d(adata.obs_names, de_cells)
-        adata = adata[matrix_subset_list]
+        adata = adata[matrix_subset_list].copy()
         return adata
 
     def execute_de(self):
@@ -244,7 +244,7 @@ class DifferentialExpression:
                     "dev_info: Features file contains duplicate identifiers in column 2"
                 )
                 print(warning)
-                genes_df['new_id'] = genes_df[[0, 1]].agg('|'.join, axis=1)
+                genes_df['new_id'] = genes_df[[1, 0]].agg('|'.join, axis=1)
                 if genes_df['new_id'].count() != genes_df['new_id'].nunique():
                     msg = "Duplicates in features file even after joining gene_id and gene_name"
                     log_exception(
@@ -309,9 +309,14 @@ class DifferentialExpression:
     @staticmethod
     def extract_gene_id_for_out_file(rank):
         """Separate out gene name from gene ID"""
-        rank['gene_id'] = rank['names'].str.split('|').str[0]
-        rank['names'] = rank['names'].str.split('|').str[1]
+        rank['names'] = rank['names'].str.split('|').str[0]
+        rank['gene_id'] = rank['names'].str.split('|').str[1]
         return rank
+
+    @staticmethod
+    def all_match_ensembl_id_regex(adata, col_name):
+        regex = r'ENS[A-Z]{0,4}\d{11}'
+        return adata[col_name].astype(str).str.match(regex).all()
 
     @staticmethod
     def run_scanpy_de(
@@ -412,13 +417,21 @@ class DifferentialExpression:
         for group in groups:
             clean_group = DifferentialExpression.sanitize_string(group)
             clean_annotation = DifferentialExpression.sanitize_string(annotation)
-            DifferentialExpression.de_logger.info(f"Writing DE output for {group}")
             rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
+            if DifferentialExpression.all_match_ensembl_id_regex(rank, "names"):
+                feature_name_rank = rank.merge(adata.var['feature_name'], left_on="names", right_index=True, how='left')
+                feature_name_rank.rename(columns={'names':'feature_id'}, inplace=True)
+                feature_name_rank.rename(columns={'feature_name':'names'}, inplace=True)
+                new_column_order = ["names"] + [col for col in feature_name_rank.columns if col not in {"names", "feature_id"}] + ["feature_id"]
+                feature_name_rank = feature_name_rank[new_column_order]
+
+                rank = feature_name_rank
             if DifferentialExpression.delimiter_in_gene_name(rank):
                 DifferentialExpression.extract_gene_id_for_out_file(rank)
             out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
             # Round numbers to 4 significant digits while respecting fixed point
             # and scientific notation (note: trailing zeros are removed)
+            DifferentialExpression.de_logger.info(f"Writing DE output for {clean_group}")
             rank.to_csv(out_file, sep='\t', float_format='%.4g')
 
         # Provide h5ad of DE analysis as reference computable object
