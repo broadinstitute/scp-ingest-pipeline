@@ -375,7 +375,7 @@ class TestDifferentialExpression(unittest.TestCase):
         self.assertIn('feature_id', content.columns, "Expected feature_id output not found.")
 
         # md5 checksum calculated using reference file in tests/data/differential_expression/sparse/reference
-        expected_checksum = "2129b3f6f0c7ee56ab2b6a74948c46a7"
+        expected_checksum = "7b13cb24b020aca268015e714ca2d666"
 
         # running DifferentialExpression via pytest results in output files in the tests dir
         with open(expected_file_path, "rb") as f:
