@@ -275,6 +275,12 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
+        "--de-type",
+        default="rest",
+        help="Accepted values: 'pairwise' or 'rest'",
+    )
+
+    parser_differential_expression.add_argument(
         "--study-accession",
         required=True,
         help="Single study accession associated with provided DE input files.",
@@ -334,6 +340,12 @@ def create_parser():
     )
     parser_differential_expression.add_argument(
         "--gene-file", help="Path to .genes.tsv file"
+    )
+
+    # For pairwise analyses
+    parser_differential_expression.add_argument(
+        "--reference",
+        help="2nd annotation group to use for pairwise DE analysis",
     )
 
     parser_ingest_differential_expression = subparsers.add_parser(

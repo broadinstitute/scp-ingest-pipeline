@@ -176,7 +176,8 @@ class DifferentialExpression:
         return adata
 
     def execute_de(self):
-        print(f'dev_info: Starting DE for {self.accession}')
+        DifferentialExpression.de_logger.info(f'dev_info: Starting DE for {self.accession}')
+        #FIXME
         # try:
         # only used in output filename, replacing non-alphanumeric with underscores
         # except '+' replaced with 'pos'
@@ -184,15 +185,15 @@ class DifferentialExpression:
             self.kwargs["name"]
         )
         if self.matrix_file_type in ["dense", "mtx", "h5ad"]:
-                DifferentialExpression.de_logger.info(f"preparing DE on {self.matrix_file_type} matrix")
-                self.run_scanpy_de(
-                    self.cluster,
-                    self.metadata,
-                    self.matrix_file_path,
-                    self.matrix_file_type,
-                    self.annotation,
-                    self.cluster_name,
-                    self.kwargs,
+            DifferentialExpression.de_logger.info(f"preparing DE on {self.matrix_file_type} matrix")
+            self.run_scanpy_de(
+                self.cluster,
+                self.metadata,
+                self.matrix_file_path,
+                self.matrix_file_type,
+                self.annotation,
+                self.cluster_name,
+                self.kwargs,
             )
         else:
             msg = f"Submitted matrix_file_type should be \"dense\", \"mtx\" or \"h5ad\" not \"{self.matrix_file_type}\""
@@ -205,7 +206,7 @@ class DifferentialExpression:
             raise ValueError(msg)
         # except Exception as e:
         #     print(str(e))
-
+        return
 
 
     @staticmethod
@@ -309,7 +310,7 @@ class DifferentialExpression:
         # annot_scope = extra_params.get("annot_scope")
         de_type =  extra_params["de_type"]
         method = extra_params["method"]
-        annot_scope = extra_params["annot_scope"]
+        annot_scope = extra_params["annotation_scope"]
         clean_group = DifferentialExpression.sanitize_string(group)
         clean_annotation = DifferentialExpression.sanitize_string(annotation)
         rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
