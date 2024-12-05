@@ -177,28 +177,13 @@ class DifferentialExpression:
 
     def execute_de(self):
         print(f'dev_info: Starting DE for {self.accession}')
-        try:
-            # only used in output filename, replacing non-alphanumeric with underscores
-            # except '+' replaced with 'pos'
-            self.cluster_name = DifferentialExpression.sanitize_string(
-                self.kwargs["name"]
-            )
-            if self.matrix_file_type == "mtx":
-                DifferentialExpression.de_logger.info("preparing DE on sparse matrix")
-                self.run_scanpy_de(
-                    self.cluster,
-                    self.metadata,
-                    self.matrix_file_path,
-                    self.matrix_file_type,
-                    self.annotation,
-                    self.annot_scope,
-                    self.accession,
-                    self.cluster_name,
-                    self.method,
-                    self.genes_path,
-                    self.barcodes_path,
-                )
-            elif self.matrix_file_type == "dense" or self.matrix_file_type == "h5ad":
+        # try:
+        # only used in output filename, replacing non-alphanumeric with underscores
+        # except '+' replaced with 'pos'
+        self.cluster_name = DifferentialExpression.sanitize_string(
+            self.kwargs["name"]
+        )
+        if self.matrix_file_type in ["dense", "mtx", "h5ad"]:
                 DifferentialExpression.de_logger.info(f"preparing DE on {self.matrix_file_type} matrix")
                 self.run_scanpy_de(
                     self.cluster,
@@ -206,22 +191,20 @@ class DifferentialExpression:
                     self.matrix_file_path,
                     self.matrix_file_type,
                     self.annotation,
-                    self.annot_scope,
-                    self.accession,
                     self.cluster_name,
-                    self.method,
-                )
-            else:
-                msg = f"Submitted matrix_file_type should be \"dense\", \"mtx\" or \"h5ad\" not \"{self.matrix_file_type}\""
-                print(msg)
-                log_exception(
-                    DifferentialExpression.dev_logger,
-                    DifferentialExpression.de_logger,
-                    msg,
-                )
-                raise ValueError(msg)
-        except Exception as e:
-            print(e)
+                    self.kwargs,
+            )
+        else:
+            msg = f"Submitted matrix_file_type should be \"dense\", \"mtx\" or \"h5ad\" not \"{self.matrix_file_type}\""
+            print(msg)
+            log_exception(
+                DifferentialExpression.dev_logger,
+                DifferentialExpression.de_logger,
+                msg,
+            )
+            raise ValueError(msg)
+        # except Exception as e:
+        #     print(str(e))
 
 
 
@@ -320,23 +303,65 @@ class DifferentialExpression:
         return adata[col_name].astype(str).str.match(regex).all()
 
     @staticmethod
+    def write_de_result(adata, group, annotation, rank_key, cluster_name, extra_params):
+        # de_type =  extra_params.get("de_type")
+        # method = extra_params.get("method")
+        # annot_scope = extra_params.get("annot_scope")
+        de_type =  extra_params["de_type"]
+        method = extra_params["method"]
+        annot_scope = extra_params["annot_scope"]
+        clean_group = DifferentialExpression.sanitize_string(group)
+        clean_annotation = DifferentialExpression.sanitize_string(annotation)
+        rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
+        if DifferentialExpression.all_match_ensembl_id_regex(rank, "names"):
+            feature_name_rank = rank.merge(adata.var['feature_name'], left_on="names", right_index=True, how='left')
+            feature_name_rank.rename(columns={'names':'feature_id'}, inplace=True)
+            feature_name_rank.rename(columns={'feature_name':'names'}, inplace=True)
+            new_column_order = ["names"] + [col for col in feature_name_rank.columns if col not in {"names", "feature_id"}] + ["feature_id"]
+            feature_name_rank = feature_name_rank[new_column_order]
+
+            rank = feature_name_rank
+        if DifferentialExpression.delimiter_in_gene_name(rank):
+            DifferentialExpression.extract_gene_id_for_out_file(rank)
+        if de_type == "rest":
+            out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
+        elif de_type == "pairwise":
+            # reference = extra_params.get("reference")
+            reference = extra_params["reference"]
+            clean_reference = DifferentialExpression.sanitize_string(reference)
+            out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{clean_reference}--{annot_scope}--{method}.tsv'
+        else:
+            msg = f'Unknown de_type, {de_type}'
+            print(msg)
+            log_exception(
+                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+            )
+            raise ValueError(msg)
+        # Round numbers to 4 significant digits while respecting fixed point
+        # and scientific notation (note: trailing zeros are removed)
+        DifferentialExpression.de_logger.info(f"Writing DE output for {clean_group}")
+        rank.to_csv(out_file, sep='\t', float_format='%.4g')
+
+
+    @staticmethod
     def run_scanpy_de(
         cluster,
         metadata,
         matrix_file_path,
         matrix_file_type,
         annotation,
-        annot_scope,
-        study_accession,
         cluster_name,
-        method,
-        genes_path=None,
-        barcodes_path=None,
+        extra_params,
     ):
+        # method = extra_params.get("method")
+        # de_type = extra_params.get("de_type")
+        method = extra_params["method"]
+        de_type = extra_params["de_type"]
+
         try:
             DifferentialExpression.assess_annotation(annotation, metadata)
         except (TypeError, KeyError, ValueError) as e:
-            raise
+            raise ValueError(e)
 
         de_cells = DifferentialExpression.get_cluster_cells(cluster.file['NAME'].values)
         de_annots = DifferentialExpression.subset_annots(metadata, de_cells)
@@ -349,10 +374,15 @@ class DifferentialExpression:
         elif matrix_file_type == "h5ad":
             matrix_object = IngestFiles(matrix_file_path, None)
             local_file_path = matrix_object.resolve_path(matrix_file_path)[1]
-            orig_adata = matrix_object.open_anndata(local_file_path)
+            # orig_adata = matrix_object.open_anndata(local_file_path)
+            orig_adata = sc.read_h5ad(local_file_path)
         else:
             # MTX reconstitution UNTESTED (SCP-4203)
             # will want try/except here to catch failed data object composition
+            # genes_path = extra_params.get("gene_file")
+            # barcodes_path = extra_params.get("barcode_file")
+            genes_path = extra_params["gene_file"]
+            barcodes_path = extra_params["barcode_file"]
             adata = DifferentialExpression.adata_from_mtx(
                 matrix_file_path, genes_path, barcodes_path
             )
@@ -416,28 +446,11 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info("Gathering DE annotation labels")
         groups = np.unique(adata.obs[annotation]).tolist()
         for group in groups:
-            clean_group = DifferentialExpression.sanitize_string(group)
-            clean_annotation = DifferentialExpression.sanitize_string(annotation)
-            rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
-            if DifferentialExpression.all_match_ensembl_id_regex(rank, "names"):
-                feature_name_rank = rank.merge(adata.var['feature_name'], left_on="names", right_index=True, how='left')
-                feature_name_rank.rename(columns={'names':'feature_id'}, inplace=True)
-                feature_name_rank.rename(columns={'feature_name':'names'}, inplace=True)
-                new_column_order = ["names"] + [col for col in feature_name_rank.columns if col not in {"names", "feature_id"}] + ["feature_id"]
-                feature_name_rank = feature_name_rank[new_column_order]
-
-                rank = feature_name_rank
-            if DifferentialExpression.delimiter_in_gene_name(rank):
-                DifferentialExpression.extract_gene_id_for_out_file(rank)
-            out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
-            # Round numbers to 4 significant digits while respecting fixed point
-            # and scientific notation (note: trailing zeros are removed)
-            DifferentialExpression.de_logger.info(f"Writing DE output for {clean_group}")
-            rank.to_csv(out_file, sep='\t', float_format='%.4g')
-
+            if de_type == "rest":
+                DifferentialExpression.write_de_result(adata, group, annotation, rank_key, cluster_name, extra_params)
         # Provide h5ad of DE analysis as reference computable object
         # DifferentialExpression.de_logger.info("Writing DE h5ad file")
-        # file_name = f'{study_accession}_{cluster_name}_to_DE.h5ad'
+        # file_name = f'{study_accession}_{cluster_name}_to_DE.h5ad's
         # adata.write_h5ad(file_name)
 
         DifferentialExpression.de_logger.info("DE processing complete")
