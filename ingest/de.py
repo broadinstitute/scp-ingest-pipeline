@@ -59,7 +59,7 @@ class DifferentialExpression:
             self.barcodes_path = self.kwargs["barcode_file"]
 
     @staticmethod
-    def assess_annotation(annotation, metadata):
+    def assess_annotation(annotation, metadata, extra_params):
         """Check that annotation for DE is not of TYPE numeric"""
         dtype_info = dict(zip(metadata.headers, metadata.annot_types))
         annotation_info = dtype_info.get(annotation, None)
@@ -77,6 +77,8 @@ class DifferentialExpression:
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
             raise KeyError(msg)
+            #FIXME check pairwise groups exist
+            de_type =  extra_params.get("de_type")
         elif annotation_info == "group":
             # DE annotations should be of TYPE group
             return None
@@ -87,6 +89,8 @@ class DifferentialExpression:
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
             raise ValueError(msg)
+
+
 
     @staticmethod
     def get_cluster_cells(cluster_cells):
@@ -305,13 +309,9 @@ class DifferentialExpression:
 
     @staticmethod
     def write_de_result(adata, group, annotation, rank_key, cluster_name, extra_params):
-        # de_type =  extra_params.get("de_type")
-        # method = extra_params.get("method")
-        # annot_scope = extra_params.get("annot_scope")
-        de_type =  extra_params["de_type"]
-        method = extra_params["method"]
-        annot_scope = extra_params["annotation_scope"]
-        clean_group = DifferentialExpression.sanitize_string(group)
+        de_type =  extra_params.get("de_type")
+        method = extra_params.get("method")
+        annot_scope = extra_params.get("annotation_scope")
         clean_annotation = DifferentialExpression.sanitize_string(annotation)
         rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
         if DifferentialExpression.all_match_ensembl_id_regex(rank, "names"):
@@ -325,12 +325,16 @@ class DifferentialExpression:
         if DifferentialExpression.delimiter_in_gene_name(rank):
             DifferentialExpression.extract_gene_id_for_out_file(rank)
         if de_type == "rest":
+            clean_group = DifferentialExpression.sanitize_string(group)
             out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
+            DifferentialExpression.de_logger.info(f"Writing DE output for {clean_group} vs restq")
         elif de_type == "pairwise":
-            # reference = extra_params.get("reference")
-            reference = extra_params["reference"]
-            clean_reference = DifferentialExpression.sanitize_string(reference)
-            out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{clean_reference}--{annot_scope}--{method}.tsv'
+            # rank_genes_groups accepts a list. For SCP pairwise, should be a list with one item
+            # converting list to string for incorporation into result filename
+            group1 = DifferentialExpression.sanitize_string(''.join(extra_params["group1"]))
+            group2 = DifferentialExpression.sanitize_string(extra_params["group2"])
+            out_file = f'{cluster_name}--{clean_annotation}--{group1}--{group2}--{annot_scope}--{method}.tsv'
+            DifferentialExpression.de_logger.info(f"Writing DE output for {group1} vs {group2} pairwise")
         else:
             msg = f'Unknown de_type, {de_type}'
             print(msg)
@@ -340,7 +344,6 @@ class DifferentialExpression:
             raise ValueError(msg)
         # Round numbers to 4 significant digits while respecting fixed point
         # and scientific notation (note: trailing zeros are removed)
-        DifferentialExpression.de_logger.info(f"Writing DE output for {clean_group}")
         rank.to_csv(out_file, sep='\t', float_format='%.4g')
 
 
@@ -354,13 +357,11 @@ class DifferentialExpression:
         cluster_name,
         extra_params,
     ):
-        # method = extra_params.get("method")
-        # de_type = extra_params.get("de_type")
-        method = extra_params["method"]
-        de_type = extra_params["de_type"]
+        method = extra_params.get("method")
+        de_type = extra_params.get("de_type")
 
         try:
-            DifferentialExpression.assess_annotation(annotation, metadata)
+            DifferentialExpression.assess_annotation(annotation, metadata, extra_params)
         except (TypeError, KeyError, ValueError) as e:
             raise ValueError(e)
 
@@ -380,10 +381,8 @@ class DifferentialExpression:
         else:
             # MTX reconstitution UNTESTED (SCP-4203)
             # will want try/except here to catch failed data object composition
-            # genes_path = extra_params.get("gene_file")
-            # barcodes_path = extra_params.get("barcode_file")
-            genes_path = extra_params["gene_file"]
-            barcodes_path = extra_params["barcode_file"]
+            genes_path = extra_params.get("gene_file")
+            barcodes_path = extra_params.get("barcode_file")
             adata = DifferentialExpression.adata_from_mtx(
                 matrix_file_path, genes_path, barcodes_path
             )
@@ -411,6 +410,7 @@ class DifferentialExpression:
 
         adata = DifferentialExpression.subset_adata(adata, de_cells)
 
+
         # h5ad inputs will already have obs data, only non-h5ad need this step
         if not matrix_file_type == "h5ad":
             adata.obs = DifferentialExpression.order_annots(de_annots, adata.obs_names)
@@ -421,38 +421,64 @@ class DifferentialExpression:
         sc.pp.log1p(adata)
         DifferentialExpression.de_logger.info("calculating DE")
         rank_key = f"rank.{annotation}.{method}"
-        try:
-            sc.tl.rank_genes_groups(
-                adata,
-                annotation,
-                key_added=rank_key,
-                method=method,
-                pts=True,
-            )
-        except KeyError:
-            msg = f"Missing expected annotation in metadata: {annotation}, unable to calculate DE."
-            print(msg)
-            log_exception(
-                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
-            )
-            raise KeyError(msg)
-        # ToDo - detection and handling of annotations with only one sample (SCP-4282)
-        except ValueError as e:
-            print(e)
-            log_exception(
-                DifferentialExpression.dev_logger, DifferentialExpression.de_logger, e
-            )
-            raise KeyError(e)
+        if de_type == "rest":
+            try:
+                sc.tl.rank_genes_groups(
+                    adata,
+                    annotation,
+                    key_added=rank_key,
+                    method=method,
+                    pts=True,
+                )
+            except KeyError:
+                msg = f"Missing expected annotation in metadata: {annotation}, unable to calculate DE."
+                print(msg)
+                log_exception(
+                    DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+                )
+                raise KeyError(msg)
+            # ToDo - detection and handling of annotations with only one sample (SCP-4282)
+            except ValueError as e:
+                print(e)
+                log_exception(
+                    DifferentialExpression.dev_logger, DifferentialExpression.de_logger, e
+                )
+                raise KeyError(e)
 
-        DifferentialExpression.de_logger.info("Gathering DE annotation labels")
-        groups = np.unique(adata.obs[annotation]).tolist()
-        for group in groups:
-            if de_type == "rest":
+            DifferentialExpression.de_logger.info("Gathering DE annotation labels")
+            groups = np.unique(adata.obs[annotation]).tolist()
+            for group in groups:
                 DifferentialExpression.write_de_result(adata, group, annotation, rank_key, cluster_name, extra_params)
-        # Provide h5ad of DE analysis as reference computable object
-        # DifferentialExpression.de_logger.info("Writing DE h5ad file")
-        # file_name = f'{study_accession}_{cluster_name}_to_DE.h5ad's
-        # adata.write_h5ad(file_name)
+
+        elif de_type == 'pairwise':
+            group1 = extra_params["group1"]
+            group2 = extra_params["group2"]
+            try:
+                sc.tl.rank_genes_groups(
+                    adata,
+                    groupby=annotation,
+                    groups=group1,
+                    reference=group2,
+                    key_added=rank_key,
+                    method=method,
+                    pts=True,
+                )
+            except KeyError:
+                msg = f"Missing expected annotation in metadata: {annotation}, unable to calculate DE."
+                print(msg)
+                log_exception(
+                    DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+                )
+                raise KeyError(msg)
+            # ToDo - detection and handling of annotations with only one sample (SCP-4282)
+            except ValueError as e:
+                print(e)
+                log_exception(
+                    DifferentialExpression.dev_logger, DifferentialExpression.de_logger, e
+                )
+                raise KeyError(e)
+            stringified_group1 = ''.join(extra_params["group1"])
+            DifferentialExpression.write_de_result(adata, stringified_group1, annotation, rank_key, cluster_name, extra_params)
 
         DifferentialExpression.de_logger.info("DE processing complete")
 

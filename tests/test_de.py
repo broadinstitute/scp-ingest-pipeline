@@ -31,17 +31,32 @@ def get_annotation_labels(metadata, annotation, de_cells):
     return unique_labels.tolist()
 
 
-def find_expected_files(labels, cluster_name, annotation, scope, method):
+def find_expected_files(labels, cluster_name, test_config):
     """Check that files were created for all expected annotation labels"""
     found = []
     sanitized_cluster_name = DifferentialExpression.sanitize_string(cluster_name)
-    sanitized_annotation = DifferentialExpression.sanitize_string(annotation)
-    for label in labels:
-        sanitized_label = DifferentialExpression.sanitize_string(label)
-        expected_file = f"{sanitized_cluster_name}--{sanitized_annotation}--{sanitized_label}--{scope}--{method}.tsv"
+    sanitized_annotation = DifferentialExpression.sanitize_string(test_config.get("test_annotation"))
+    de_type =  test_config.get("de_type")
+    method = test_config.get("test_method")
+    annot_scope = test_config.get("test_scope")
+    if de_type == "rest":
+        for label in labels:
+            sanitized_label = DifferentialExpression.sanitize_string(label)
+            expected_file = f"{sanitized_cluster_name}--{sanitized_annotation}--{sanitized_label}--{annot_scope}--{method}.tsv"
+            print(f'expected_file, {expected_file}')
+            assert os.path.exists(expected_file)
+            found.append(expected_file)
+        return found
+    elif de_type == "pairwise":
+        # rank_genes_groups accepts a list. For SCP pairwise, should be a list with one item
+        # converting list to string for incorporation into result filename
+        group1 = DifferentialExpression.sanitize_string(''.join(test_config["group1"]))
+        group2 = DifferentialExpression.sanitize_string(test_config["group2"])
+        expected_file = f'{sanitized_cluster_name}--{sanitized_annotation}--{group1}--{group2}--{annot_scope}--{method}.tsv'
+        print(f'expected_file, {expected_file}')
         assert os.path.exists(expected_file)
         found.append(expected_file)
-    return found
+        return found
 
 
 def run_de(**test_config):
@@ -54,6 +69,8 @@ def run_de(**test_config):
     cluster_name = test_config["cluster_name"]
     matrix_path = test_config["matrix_file"]
     matrix_type = test_config["matrix_type"]
+    de_type = test_config["de_type"]
+
 
     cm = CellMetadata(
         annot_path,
@@ -69,13 +86,24 @@ def run_de(**test_config):
         "dec0dedfeed0000000000000",
         cluster_name,
     )
-
-    de_kwargs = {
-        "study_accession": cm.study_accession,
-        "name": cluster.name,
-        "annotation_scope": test_scope,
-        "method": test_method,
-    }
+    if de_type == "pairwise":
+        de_kwargs = {
+            "study_accession": cm.study_accession,
+            "name": cluster.name,
+            "annotation_scope": test_scope,
+            "method": test_method,
+            "de_type": de_type,
+            "group1": test_config["group1"],
+            "group2": test_config["group2"]
+        }
+    else:
+        de_kwargs = {
+            "study_accession": cm.study_accession,
+            "name": cluster.name,
+            "annotation_scope": test_scope,
+            "method": test_method,
+            "de_type": de_type,
+        }
 
     if "gene_file" in test_config:
         de_kwargs["gene_file"] = test_config["gene_file"]
@@ -92,7 +120,7 @@ def run_de(**test_config):
     # In find_expected_files, checks all files with expected names were created
     # yields the number of files expected for an external check for file count
     found_labels = find_expected_files(
-        labels, cluster.name, test_annotation, test_scope, test_method
+        labels, cluster.name, test_config
     )
     return found_labels
 
@@ -126,20 +154,23 @@ class TestDifferentialExpression(unittest.TestCase):
             study_accession="SCPde",
             tracer=None,
         )
+        extra_params = {
+             "de_type": "rest",
+         }
         # alter metadata so seurat_clusters is TYPE numeric
         cm.annot_types[21] = 'numeric'
         self.assertRaises(
-            TypeError, DifferentialExpression.assess_annotation, test_annotation, cm
+            TypeError, DifferentialExpression.assess_annotation, test_annotation, cm, extra_params
         )
         # alter metadata so seurat_clusters has bad TYPE designation
         cm.annot_types[21] = 'foo'
         self.assertRaises(
-            ValueError, DifferentialExpression.assess_annotation, test_annotation, cm
+            ValueError, DifferentialExpression.assess_annotation, test_annotation, cm, extra_params
         )
         # remove seurat_clusters from metadata
         cm.headers.pop(21)
         self.assertRaises(
-            KeyError, DifferentialExpression.assess_annotation, test_annotation, cm
+            KeyError, DifferentialExpression.assess_annotation, test_annotation, cm, extra_params
         )
 
     def test_detect_duplicate_gene_names(self):
@@ -258,6 +289,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "cluster_name": "de_integration",
             "matrix_file": "../tests/data/differential_expression/de_dense_matrix.tsv",
             "matrix_type": "dense",
+            "de_type": "rest",
         }
 
         found_labels = run_de(**test_config)
@@ -335,6 +367,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "matrix_type": "mtx",
             "gene_file": "../tests/data/differential_expression/sparse/sparsemini_dup_gene_name.tsv",
             "barcode_file": "../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv",
+            "de_type": "rest",
         }
 
         found_labels = run_de(**test_config)
@@ -409,9 +442,12 @@ class TestDifferentialExpression(unittest.TestCase):
             except:
                 print(f"Error while deleting file : {file}")
 
-    def test_de_process_h5ad(self):
+    def test_de_process_pairwise(self):
         test_annotation = "cell_type__ontology_label"
         test_config = {
+            "de_type": "pairwise",
+            "group1": ['mature B cell'],
+            "group2": "plasma cell",
             "test_annotation": test_annotation,
             "test_scope": "study",
             "test_method": "wilcoxon",
@@ -428,12 +464,12 @@ class TestDifferentialExpression(unittest.TestCase):
 
         self.assertEqual(
             found_label_count,
-            2,
-            f"expected nine annotation labels for {test_annotation}",
+            1,
+            f"expected one annotation label for pairwise DE with {test_annotation}",
         )
 
         expected_file = (
-           "umap--cell_type__ontology_label--plasma_cell--study--wilcoxon.tsv"
+           "umap--cell_type__ontology_label--mature_B_cell--plasma_cell--study--wilcoxon.tsv"
         )
 
         expected_file_path = f"../tests/{expected_file}"
@@ -447,18 +483,18 @@ class TestDifferentialExpression(unittest.TestCase):
         # confirm expected gene in DE file at expected position
         self.assertEqual(
             content.iloc[0, 0],
-            "MZB1",
-            "Did not find expected gene, MZB1, at second row in DE file.",
+            "RPL32",
+            "Did not find expected gene, RPL32, at second row in DE file.",
         )
         # confirm calculated value has expected significant digits
         self.assertEqual(
             content.iloc[0, 2],
-            5.329,
-            "Did not find expected logfoldchange value for MZB1 in DE file.",
+            1.975,
+            "Did not find expected logfoldchange value for RPL32 in DE file.",
         )
 
         # md5 checksum calculated using reference file in tests/data/differential_expression/reference
-        expected_checksum = "649e5fd26575255bfca14c7b25d804ba"
+        expected_checksum = "f47ce72ba097b52c7ba09e4e0da94a05"
 
         # running DifferentialExpression via pytest results in output files in the tests dir
         with open(expected_file_path, "rb") as f:
@@ -479,8 +515,8 @@ class TestDifferentialExpression(unittest.TestCase):
 
             self.assertEqual(
                 IngestFiles.delocalize_file.call_count,
-                2,
-                "expected 2 calls to delocalize output files",
+                1,
+                "expected one call to delocalize output files",
             )
 
         # clean up DE outputs
@@ -507,6 +543,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "cluster_name": "de_na",
             "matrix_file": "../tests/data/differential_expression/de_dense_matrix.tsv",
             "matrix_type": "dense",
+            "de_type": "rest",
         }
 
         found_labels = run_de(**test_config)
@@ -551,6 +588,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "cluster_name": "UMAP, pre-QC",
             "matrix_file": "../tests/data/differential_expression/de_dense_matrix.tsv",
             "matrix_type": "dense",
+            "de_type": "rest",
         }
 
         found_labels = run_de(**test_config)
