@@ -344,7 +344,13 @@ def create_parser():
 
     # For pairwise analyses
     parser_differential_expression.add_argument(
-        "--reference",
+        "--group1",
+        type=ast.literal_eval,
+        help="1st annotation group to use for pairwise DE analysis",
+    )
+
+    parser_differential_expression.add_argument(
+        "--group2",
         help="2nd annotation group to use for pairwise DE analysis",
     )
 
