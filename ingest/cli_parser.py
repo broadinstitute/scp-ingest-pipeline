@@ -277,7 +277,8 @@ def create_parser():
     parser_differential_expression.add_argument(
         "--de-type",
         default="rest",
-        help="Accepted values: 'pairwise' or 'rest'",
+        choices=['rest', 'pairwise']
+        help="Accepted values: 'pairwise' or 'rest' (default)",
     )
 
     parser_differential_expression.add_argument(
