@@ -346,12 +346,12 @@ def create_parser():
     # For pairwise analyses
     parser_differential_expression.add_argument(
         "--group1",
-        help="1st annotation group to use for pairwise DE analysis",
+        help="1st annotation label to use for pairwise DE analysis",
     )
 
     parser_differential_expression.add_argument(
         "--group2",
-        help="2nd annotation group to use for pairwise DE analysis",
+        help="2nd annotation label to use for pairwise DE analysis",
     )
 
     parser_ingest_differential_expression = subparsers.add_parser(
