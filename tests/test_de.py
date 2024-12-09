@@ -519,6 +519,42 @@ class TestDifferentialExpression(unittest.TestCase):
                 "expected one call to delocalize output files",
             )
 
+        test_config = {
+            "de_type": "pairwise",
+            "group1": ['NO SUCH GROUP VALUE'],
+            "group2": "plasma cell",
+            "test_annotation": test_annotation,
+            "test_scope": "study",
+            "test_method": "wilcoxon",
+            "annot_path": "../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz",
+            "study_accession": "SCPh5adde",
+            "cluster_path": "../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz",
+            "cluster_name": "umap",
+            "matrix_file": "../tests/data/anndata/compliant_liver.h5ad",
+            "matrix_type": "h5ad",
+        }
+
+        self.assertRaises(
+        ValueError, run_de, **test_config)
+
+        test_config = {
+            "de_type": "pairwise",
+            "group1": [],
+            "group2": "plasma cell",
+            "test_annotation": test_annotation,
+            "test_scope": "study",
+            "test_method": "wilcoxon",
+            "annot_path": "../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz",
+            "study_accession": "SCPh5adde",
+            "cluster_path": "../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz",
+            "cluster_name": "umap",
+            "matrix_file": "../tests/data/anndata/compliant_liver.h5ad",
+            "matrix_type": "h5ad",
+        }
+        # Original error is KeyError but all errors passed through assess_annotation become ValueErrors
+        self.assertRaises(
+        ValueError, run_de, **test_config)
+
         # clean up DE outputs
         files = glob.glob(expected_output_match)
 

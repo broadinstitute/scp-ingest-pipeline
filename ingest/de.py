@@ -77,11 +77,36 @@ class DifferentialExpression:
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
             raise KeyError(msg)
-            #FIXME check pairwise groups exist
-            de_type =  extra_params.get("de_type")
         elif annotation_info == "group":
-            # DE annotations should be of TYPE group
-            return None
+            de_type =  extra_params.get("de_type")
+            group1 = extra_params.get("group1")
+            group2 = extra_params.get("group2")
+            if  de_type == "pairwise":
+                metadata.preprocess(False)
+                values = metadata.file[annotation]['group'].unique()
+                if group1 and group2:
+                    if group1 not in values or group2 not in values:
+                        msg = (
+                        f'Provided annotation value(s) group1, \"{group1}\", '
+                        f'or group2, \"{group2}\", not found in metadata file'
+                        )
+                        log_exception(
+                            DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+                        )
+                        raise ValueError(msg)
+                else:
+                    msg = (
+                    f'Provided annotation value(s) group1, \"{group1}\", or '
+                    f'group2, \"{group2}\", were false-y'
+                    )
+                    log_exception(
+                        DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+                    )
+                    raise KeyError(msg)
+            # de_type is "rest" by default, DE annotation TYPE expected to be group
+            else:
+                # assessment does not raise error
+                return None
         else:
             msg = f"Error: \"{annotation}\" has unexpected type \"{annotation_info}\"."
             print(msg)
@@ -181,35 +206,34 @@ class DifferentialExpression:
 
     def execute_de(self):
         DifferentialExpression.de_logger.info(f'dev_info: Starting DE for {self.accession}')
-        #FIXME
-        # try:
+        try:
         # only used in output filename, replacing non-alphanumeric with underscores
         # except '+' replaced with 'pos'
-        self.cluster_name = DifferentialExpression.sanitize_string(
-            self.kwargs["name"]
-        )
-        if self.matrix_file_type in ["dense", "mtx", "h5ad"]:
-            DifferentialExpression.de_logger.info(f"preparing DE on {self.matrix_file_type} matrix")
-            self.run_scanpy_de(
-                self.cluster,
-                self.metadata,
-                self.matrix_file_path,
-                self.matrix_file_type,
-                self.annotation,
-                self.cluster_name,
-                self.kwargs,
+            self.cluster_name = DifferentialExpression.sanitize_string(
+                self.kwargs["name"]
             )
-        else:
-            msg = f"Submitted matrix_file_type should be \"dense\", \"mtx\" or \"h5ad\" not \"{self.matrix_file_type}\""
-            print(msg)
-            log_exception(
-                DifferentialExpression.dev_logger,
-                DifferentialExpression.de_logger,
-                msg,
-            )
-            raise ValueError(msg)
-        # except Exception as e:
-        #     print(str(e))
+            if self.matrix_file_type in ["dense", "mtx", "h5ad"]:
+                DifferentialExpression.de_logger.info(f"preparing DE on {self.matrix_file_type} matrix")
+                self.run_scanpy_de(
+                    self.cluster,
+                    self.metadata,
+                    self.matrix_file_path,
+                    self.matrix_file_type,
+                    self.annotation,
+                    self.cluster_name,
+                    self.kwargs,
+                )
+            else:
+                msg = f"Submitted matrix_file_type should be \"dense\", \"mtx\" or \"h5ad\" not \"{self.matrix_file_type}\""
+                print(msg)
+                log_exception(
+                    DifferentialExpression.dev_logger,
+                    DifferentialExpression.de_logger,
+                    msg,
+                )
+                raise ValueError(msg)
+        except (TypeError, KeyError, ValueError) as e:
+            raise ValueError(e)
         return
 
 
