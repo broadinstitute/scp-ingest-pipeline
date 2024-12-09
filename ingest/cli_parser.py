@@ -277,7 +277,7 @@ def create_parser():
     parser_differential_expression.add_argument(
         "--de-type",
         default="rest",
-        choices=['rest', 'pairwise']
+        choices=['rest', 'pairwise'],
         help="Accepted values: 'pairwise' or 'rest' (default)",
     )
 
@@ -346,11 +346,13 @@ def create_parser():
     # For pairwise analyses
     parser_differential_expression.add_argument(
         "--group1",
+        # rank_genes_groups accepts a list for the `groups` parameter
         type=ast.literal_eval,
         help="1st annotation group to use for pairwise DE analysis",
     )
 
     parser_differential_expression.add_argument(
+        # rank_genes_groups expects a string for the `reference` parameter
         "--group2",
         help="2nd annotation group to use for pairwise DE analysis",
     )

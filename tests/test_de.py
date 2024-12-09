@@ -43,20 +43,17 @@ def find_expected_files(labels, cluster_name, test_config):
         for label in labels:
             sanitized_label = DifferentialExpression.sanitize_string(label)
             expected_file = f"{sanitized_cluster_name}--{sanitized_annotation}--{sanitized_label}--{annot_scope}--{method}.tsv"
-            print(f'expected_file, {expected_file}')
             assert os.path.exists(expected_file)
             found.append(expected_file)
-        return found
     elif de_type == "pairwise":
         # rank_genes_groups accepts a list. For SCP pairwise, should be a list with one item
         # converting list to string for incorporation into result filename
         group1 = DifferentialExpression.sanitize_string(''.join(test_config["group1"]))
         group2 = DifferentialExpression.sanitize_string(test_config["group2"])
         expected_file = f'{sanitized_cluster_name}--{sanitized_annotation}--{group1}--{group2}--{annot_scope}--{method}.tsv'
-        print(f'expected_file, {expected_file}')
         assert os.path.exists(expected_file)
         found.append(expected_file)
-        return found
+    return found
 
 
 def run_de(**test_config):
