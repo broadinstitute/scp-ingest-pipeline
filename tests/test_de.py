@@ -35,8 +35,10 @@ def find_expected_files(labels, cluster_name, test_config):
     """Check that files were created for all expected annotation labels"""
     found = []
     sanitized_cluster_name = DifferentialExpression.sanitize_string(cluster_name)
-    sanitized_annotation = DifferentialExpression.sanitize_string(test_config.get("test_annotation"))
-    de_type =  test_config.get("de_type")
+    sanitized_annotation = DifferentialExpression.sanitize_string(
+        test_config.get("test_annotation")
+    )
+    de_type = test_config.get("de_type")
     method = test_config.get("test_method")
     annot_scope = test_config.get("test_scope")
     if de_type == "rest":
@@ -68,7 +70,6 @@ def run_de(**test_config):
     matrix_type = test_config["matrix_type"]
     de_type = test_config["de_type"]
 
-
     cm = CellMetadata(
         annot_path,
         "addedfeed000000000000000",
@@ -91,7 +92,7 @@ def run_de(**test_config):
             "method": test_method,
             "de_type": de_type,
             "group1": test_config["group1"],
-            "group2": test_config["group2"]
+            "group2": test_config["group2"],
         }
     else:
         de_kwargs = {
@@ -116,9 +117,7 @@ def run_de(**test_config):
     labels = get_annotation_labels(cm, test_annotation, de_cells)
     # In find_expected_files, checks all files with expected names were created
     # yields the number of files expected for an external check for file count
-    found_labels = find_expected_files(
-        labels, cluster.name, test_config
-    )
+    found_labels = find_expected_files(labels, cluster.name, test_config)
     return found_labels
 
 
@@ -152,22 +151,34 @@ class TestDifferentialExpression(unittest.TestCase):
             tracer=None,
         )
         extra_params = {
-             "de_type": "rest",
-         }
+            "de_type": "rest",
+        }
         # alter metadata so seurat_clusters is TYPE numeric
         cm.annot_types[21] = 'numeric'
         self.assertRaises(
-            TypeError, DifferentialExpression.assess_annotation, test_annotation, cm, extra_params
+            TypeError,
+            DifferentialExpression.assess_annotation,
+            test_annotation,
+            cm,
+            extra_params,
         )
         # alter metadata so seurat_clusters has bad TYPE designation
         cm.annot_types[21] = 'foo'
         self.assertRaises(
-            ValueError, DifferentialExpression.assess_annotation, test_annotation, cm, extra_params
+            ValueError,
+            DifferentialExpression.assess_annotation,
+            test_annotation,
+            cm,
+            extra_params,
         )
         # remove seurat_clusters from metadata
         cm.headers.pop(21)
         self.assertRaises(
-            KeyError, DifferentialExpression.assess_annotation, test_annotation, cm, extra_params
+            KeyError,
+            DifferentialExpression.assess_annotation,
+            test_annotation,
+            cm,
+            extra_params,
         )
 
     def test_detect_duplicate_gene_names(self):
@@ -402,7 +413,9 @@ class TestDifferentialExpression(unittest.TestCase):
             "Did not find expected logfoldchange value for Sox17 in DE file.",
         )
         # confirm duplicate gene input generates expected gene_id info in output
-        self.assertIn('feature_id', content.columns, "Expected feature_id output not found.")
+        self.assertIn(
+            'feature_id', content.columns, "Expected feature_id output not found."
+        )
 
         # md5 checksum calculated using reference file in tests/data/differential_expression/sparse/reference
         expected_checksum = "7b13cb24b020aca268015e714ca2d666"
@@ -465,12 +478,9 @@ class TestDifferentialExpression(unittest.TestCase):
             f"expected one annotation label for pairwise DE with {test_annotation}",
         )
 
-        expected_file = (
-           "umap--cell_type__ontology_label--mature_B_cell--plasma_cell--study--wilcoxon.tsv"
-        )
+        expected_file = "umap--cell_type__ontology_label--mature_B_cell--plasma_cell--study--wilcoxon.tsv"
 
         expected_file_path = f"../tests/{expected_file}"
-
         # confirm expected results filename was generated in found result files
         self.assertIn(
             expected_file, found_labels, "Expected filename not in found files list"
@@ -503,7 +513,9 @@ class TestDifferentialExpression(unittest.TestCase):
             "Generated output file should match expected checksum.",
         )
 
-        expected_output_match = "umap--cell_type__ontology_label--*--study--wilcoxon.tsv"
+        expected_output_match = (
+            "umap--cell_type__ontology_label--*--study--wilcoxon.tsv"
+        )
 
         with patch('ingest_files.IngestFiles.delocalize_file'):
             DifferentialExpression.delocalize_de_files(
@@ -531,8 +543,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "matrix_type": "h5ad",
         }
 
-        self.assertRaises(
-        ValueError, run_de, **test_config)
+        self.assertRaises(ValueError, run_de, **test_config)
 
         test_config = {
             "de_type": "pairwise",
@@ -549,8 +560,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "matrix_type": "h5ad",
         }
         # Original error is KeyError but all errors passed through assess_annotation become ValueErrors
-        self.assertRaises(
-        ValueError, run_de, **test_config)
+        self.assertRaises(ValueError, run_de, **test_config)
 
         # clean up DE outputs
         files = glob.glob(expected_output_match)

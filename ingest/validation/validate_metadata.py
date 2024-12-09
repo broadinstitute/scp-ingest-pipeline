@@ -57,8 +57,7 @@ MAX_HTTP_ATTEMPTS = 8
 
 
 def backoff_handler(details):
-    """Handler function to log backoff attempts when querying OLS
-    """
+    """Handler function to log backoff attempts when querying OLS"""
     dev_logger.debug(
         "Backing off {wait:0.1f} seconds after {tries} tries "
         "calling function {target} with args {args} and kwargs "
@@ -92,10 +91,10 @@ class OntologyRetriever:
 
         if term not in self.cached_terms[property_name]:
             ontology_urls = get_urls_for_property(convention, property_name)
-            self.cached_terms[property_name][
-                term
-            ] = self.retrieve_ontology_term_label_remote(
-                term, property_name, ontology_urls, attribute_type
+            self.cached_terms[property_name][term] = (
+                self.retrieve_ontology_term_label_remote(
+                    term, property_name, ontology_urls, attribute_type
+                )
             )
 
         return self.cached_terms[property_name][term]
@@ -103,8 +102,7 @@ class OntologyRetriever:
     def retrieve_ontology_term_label_remote(
         self, term, property_name, ontology_urls, attribute_type
     ):
-        """Look up official ontology term from an id, always checking against the remote
-        """
+        """Look up official ontology term from an id, always checking against the remote"""
         # organ_region currently uses single a non-OLS ontology, the Allen Institute's Mouse Brain Atlas (MBA)
         # MBA was originally downloaded April 2020 from Allen Brain Atlas data portal URL
         # http://api.brain-map.org/api/v2/data/query.csv?criteria=model::Structure,rma::criteria,[ontology_id$eq1],rma::options[order$eq%27structures.graph_order%27][num_rows$eqall]
@@ -218,8 +216,7 @@ class OntologyRetriever:
             raise RuntimeError(msg)
 
     def retrieve_mouse_brain_term(self, term, property_name):
-        """Determine whether ID is in mouse brain atlas (MBA) file
-        """
+        """Determine whether ID is in mouse brain atlas (MBA) file"""
         # MBA ID is also the leaf entity of structure_id_path in the MBA file
         # Entries with short structure_id_path seem to be synonymous with
         # Uberon terms, suggesting MBA terms could be mapped as extensions of the
@@ -233,18 +230,16 @@ class OntologyRetriever:
         return {"label": mouse_brain_atlas[MBA_id]}
 
     def fetch_allen_mouse_brain_atlas(self):
-        """Get the mouse brain atlas file, either remote or cached, and parse it into an id -> name dictionary
-        """
+        """Get the mouse brain atlas file, either remote or cached, and parse it into an id -> name dictionary"""
         if "allen_mouse_brain_atlas" not in self.cached_ontologies:
-            self.cached_ontologies[
-                "allen_mouse_brain_atlas"
-            ] = fetch_allen_mouse_brain_atlas_remote()
+            self.cached_ontologies["allen_mouse_brain_atlas"] = (
+                fetch_allen_mouse_brain_atlas_remote()
+            )
         return self.cached_ontologies["allen_mouse_brain_atlas"]
 
 
 def parse_organ_region_ontology_id(term):
-    """Extract term id from valid identifiers or raise a ValueError
-    """
+    """Extract term id from valid identifiers or raise a ValueError"""
     try:
         ontology_shortname, term_id = re.split("[_:]", term)
         if ontology_shortname == "MBA":
@@ -261,8 +256,7 @@ def parse_organ_region_ontology_id(term):
 
 
 def fetch_allen_mouse_brain_atlas_remote():
-    """Get the mouse brain atlas file from the remote source, and parse it into an id -> name dictionary
-    """
+    """Get the mouse brain atlas file from the remote source, and parse it into an id -> name dictionary"""
     MBA_url = "https://raw.githubusercontent.com/broadinstitute/scp-ingest-pipeline/58f9308e425c667a34219a3dcadf7209fe09f788/schema/organ_region/mouse_brain_atlas/MouseBrainAtlas.csv"
     region_dict = {}
     try:
@@ -311,8 +305,7 @@ def encode_term_iri(term_id, base_uri):
 
 
 def extract_terminal_pathname(url):
-    """Extract the last path segment from a URL
-    """
+    """Extract the last path segment from a URL"""
     return list(filter(None, url.split("/"))).pop()
 
 
@@ -321,8 +314,7 @@ def get_urls_for_property(convention, property_name):
 
 
 def get_ontology_file_location(ontology):
-    """Find and format fileLocation URL for running queries against an ontology
-    """
+    """Find and format fileLocation URL for running queries against an ontology"""
     location = ontology["config"]["fileLocation"]
     # issue with some ontologies (like GO) having non-standard fileLocation URLs
     if 'extensions' in location:
@@ -330,6 +322,7 @@ def get_ontology_file_location(ontology):
     if location == "http://purl.obolibrary.org/obo/NCBITAXON_":
         location = "http://purl.obolibrary.org/obo/NCBITaxon_"
     return '/'.join(location.split('/')[:-1]) + '/'
+
 
 ######################## END ONTOLOGY RETRIVER DEFINITION #########################
 
@@ -355,8 +348,7 @@ def validate_schema(json, metadata):
 
 
 def is_array_metadata(convention, metadatum):
-    """Check if metadata is array type from metadata convention
-    """
+    """Check if metadata is array type from metadata convention"""
     try:
         type_lookup = convention["properties"][metadatum]["type"]
         if type_lookup == "array":
@@ -368,8 +360,7 @@ def is_array_metadata(convention, metadatum):
 
 
 def is_ontology_metadata(convention, metadatum):
-    """Check if metadata is ontology from metadata convention
-    """
+    """Check if metadata is ontology from metadata convention"""
     try:
         return bool(convention["properties"][metadatum]["ontology"])
     except KeyError:
@@ -377,8 +368,7 @@ def is_ontology_metadata(convention, metadatum):
 
 
 def is_required_metadata(convention, metadatum):
-    """Check in metadata convention if metadata is required
-    """
+    """Check in metadata convention if metadata is required"""
     try:
         if metadatum in convention["required"]:
             return True
@@ -389,8 +379,7 @@ def is_required_metadata(convention, metadatum):
 
 
 def lookup_metadata_type(convention, metadatum):
-    """Look up metadata type from metadata convention
-    """
+    """Look up metadata type from metadata convention"""
     try:
         if is_array_metadata(convention, metadatum):
             type_lookup = convention["properties"][metadatum]["items"]["type"]
@@ -402,8 +391,7 @@ def lookup_metadata_type(convention, metadatum):
 
 
 def list_duplicates(cells):
-    """Find duplicates in list for detailed reporting
-    """
+    """Find duplicates in list for detailed reporting"""
     # reference https://stackoverflow.com/questions/9835762
     seen = set()
     # save add function to avoid repeated lookups
@@ -416,8 +404,7 @@ def list_duplicates(cells):
 
 
 def validate_cells_unique(metadata):
-    """Check all CellID are unique.
-    """
+    """Check all CellID are unique."""
     valid = False
     if len(metadata.cells) == len(set(metadata.cells)):
         valid = True
@@ -450,8 +437,10 @@ def insert_array_ontology_label_row_data(
         for id in row[property_name]:
             label_lookup = ""
             try:
-                label_and_synonyms = retriever.retrieve_ontology_term_label_and_synonyms(
-                    id, property_name, convention, "array"
+                label_and_synonyms = (
+                    retriever.retrieve_ontology_term_label_and_synonyms(
+                        id, property_name, convention, "array"
+                    )
                 )
                 label_lookup = label_and_synonyms.get('label')
                 reference_ontology = (
@@ -622,8 +611,7 @@ def collect_cell_for_ontology(
 
 
 def collect_ontology_data(row_data, metadata, convention):
-    """Collect unique ontology IDs for ontology validation
-    """
+    """Collect unique ontology IDs for ontology validation"""
     row_ref = copy.deepcopy(row_data)
     for entry in row_ref.keys():
         if is_ontology_metadata(convention, entry):
@@ -642,8 +630,7 @@ def collect_ontology_data(row_data, metadata, convention):
 
 
 def compare_type_annots_to_convention(metadata, convention):
-    """Check if metadata type annotation is consistent with metadata convention type
-    """
+    """Check if metadata type annotation is consistent with metadata convention type"""
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     type_annots = metadata.file.columns.get_level_values(1).tolist()
     # if input was TSV metadata file, SCP format requires 'NAME' for the first
@@ -697,8 +684,7 @@ def compare_type_annots_to_convention(metadata, convention):
 
 
 def cast_boolean_type(value):
-    """Cast metadata value as boolean, if castable
-    """
+    """Cast metadata value as boolean, if castable"""
     if isinstance(value, bool):
         return value
     elif str(value).lower() == "true":
@@ -727,8 +713,7 @@ def value_is_nan(value):
 
 
 def cast_integer_type(value):
-    """Cast metadata value as integer
-    """
+    """Cast metadata value as integer"""
     if value_is_nan(value):
         # nan indicates missing data, has no valid integer value for casting
         return value
@@ -737,14 +722,12 @@ def cast_integer_type(value):
 
 
 def cast_float_type(value):
-    """Cast metadata value as float
-    """
+    """Cast metadata value as float"""
     return float(value)
 
 
 def cast_string_type(value):
-    """Cast string type per convention where Pandas autodetected a number
-    """
+    """Cast string type per convention where Pandas autodetected a number"""
     if value_is_nan(value):
         # nan indicates missing data; by type, nan is a numpy float
         # so a separate type check is needed for proper handling
@@ -756,8 +739,7 @@ def cast_string_type(value):
 
 
 def regularize_ontology_id(value):
-    """Regularize ontology_ids for storage with underscore format
-    """
+    """Regularize ontology_ids for storage with underscore format"""
     try:
         return value.replace(":", "_")
     except AttributeError:
@@ -768,7 +750,7 @@ def regularize_ontology_id(value):
 
 def cast_metadata_type(metadatum, value, id_for_error_detail, convention, metadata):
     """For metadatum, lookup expected type by metadata convention
-        and cast value as appropriate type for validation
+    and cast value as appropriate type for validation
     """
     cast_metadata = {}
     metadata_types = {
@@ -1102,8 +1084,10 @@ def validate_collected_ontology_data(metadata, convention):
             try:
                 attribute_type = convention["properties"][property_name]["type"]
                 # get actual label along with synonyms for more robust matching
-                label_and_synonyms = retriever.retrieve_ontology_term_label_and_synonyms(
-                    ontology_id, property_name, convention, attribute_type
+                label_and_synonyms = (
+                    retriever.retrieve_ontology_term_label_and_synonyms(
+                        ontology_id, property_name, convention, attribute_type
+                    )
                 )
 
                 if not is_label_or_synonym(label_and_synonyms, ontology_label):
@@ -1213,16 +1197,14 @@ def calculate_organism_age_in_seconds(organism_age, organism_age_unit_label):
 
 
 def serialize_issues(metadata):
-    """Write collected issues to json file
-    """
+    """Write collected issues to json file"""
     with open("issues.json", "w") as jsonfile:
         json.dump(metadata.issues, jsonfile, indent=2)
         jsonfile.write("\n")  # Add newline cause Py JSON does not
 
 
 def review_metadata_names(metadata):
-    """Check metadata names for disallowed characters
-    """
+    """Check metadata names for disallowed characters"""
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     for name in metadata_names:
         allowed_char = re.compile("^[A-Za-z0-9_]+$")
@@ -1238,7 +1220,7 @@ def review_metadata_names(metadata):
 
 def identify_multiply_assigned(list):
     """Given a list of ontology IDs and their purported labels,
-        return list of unique multiply-assigned labels
+    return list of unique multiply-assigned labels
     """
     ontology_tracker = defaultdict(lambda: defaultdict(int))
     multiply_assigned = []
@@ -1293,13 +1275,13 @@ def assess_ontology_ids(ids, property_name, metadata):
 
 
 def detect_excel_drag(metadata, convention):
-    """ Check if ontology IDs submitted have characteristic Excel drag properties
-        Todo1: "Excel drag" detection of array-based ontologyID data
-        is lacking (need to track pipe-delimited string)
-        Todo2: need to bypass EBI OLS queries to "fill in"
-        missing ontology labels for optional metadata)
-        Hint: try working with raw metadata.file data, would
-        allow this check to be moved before collect_jsonschema_errors
+    """Check if ontology IDs submitted have characteristic Excel drag properties
+    Todo1: "Excel drag" detection of array-based ontologyID data
+    is lacking (need to track pipe-delimited string)
+    Todo2: need to bypass EBI OLS queries to "fill in"
+    missing ontology labels for optional metadata)
+    Hint: try working with raw metadata.file data, would
+    allow this check to be moved before collect_jsonschema_errors
     """
     excel_drag = False
     for property_name in metadata.ontology.keys():
@@ -1341,13 +1323,12 @@ def detect_excel_drag(metadata, convention):
 
 
 def to_1D(series):
-    """ Pandas values which are list need unnesting
-    """
+    """Pandas values which are list need unnesting"""
     return [x for _list in series for x in _list]
 
 
 def replace_single_value_array(df, metadata_name, synonym, label):
-    """ Synonym replacement (in-place) for single-value array metadata
+    """Synonym replacement (in-place) for single-value array metadata
     Pandas doesn't operate well on lists which are potentially non-homogenous
     # https://stackoverflow.com/questions/53116286/how-to-assign-an-entire-list-to-each-row-of-a-pandas-dataframe
     """
@@ -1357,9 +1338,9 @@ def replace_single_value_array(df, metadata_name, synonym, label):
 
 
 def replace_synonym_in_multivalue_array(df, metadata_name, substitutions):
-    """ Synonym replacement (in-place) for multi-value array ontology labels
-        must identify all affected arrays of labels, construct replacement arrays
-        then replace old synonym-containing array with an updated array
+    """Synonym replacement (in-place) for multi-value array ontology labels
+    must identify all affected arrays of labels, construct replacement arrays
+    then replace old synonym-containing array with an updated array
     """
     orig_values = list(df[metadata_name].transform(tuple).unique())
     matching_synonyms = {}
@@ -1416,8 +1397,7 @@ def replace_synonyms(metadata):
 
 
 def validate_input_metadata(metadata, convention, bq_json=None):
-    """Wrapper function to run validation functions
-    """
+    """Wrapper function to run validation functions"""
     dev_logger.info("Checking metadata content against convention rules")
     collect_jsonschema_errors(metadata, convention, bq_json)
     review_metadata_names(metadata)
@@ -1434,8 +1414,7 @@ def validate_input_metadata(metadata, convention, bq_json=None):
 
 
 def push_metadata_to_bq(metadata, ndjson, dataset, table):
-    """Upload local NDJSON to BigQuery
-    """
+    """Upload local NDJSON to BigQuery"""
     client = bigquery.Client()
     dataset_ref = client.dataset(dataset)
     table_ref = dataset_ref.table(table)
@@ -1468,16 +1447,14 @@ def push_metadata_to_bq(metadata, ndjson, dataset, table):
 
 
 def write_metadata_to_bq(metadata, bq_dataset, bq_table):
-    """Wrapper function to gather metadata and write to BigQuery
-    """
+    """Wrapper function to gather metadata and write to BigQuery"""
     bq_filename = str(metadata.study_file_id) + ".json"
     push_status = push_metadata_to_bq(metadata, bq_filename, bq_dataset, bq_table)
     return push_status
 
 
 def check_if_old_output():
-    """Exit if old output files found
-    """
+    """Exit if old output files found"""
     output_files = ["bq.json"]
 
     old_output = False
@@ -1487,4 +1464,3 @@ def check_if_old_output():
             old_output = True
     if old_output:
         exit(1)
-

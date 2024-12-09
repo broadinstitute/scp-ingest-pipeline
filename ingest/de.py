@@ -87,20 +87,24 @@ class DifferentialExpression:
                 if group1 and group2:
                     if group1 not in values or group2 not in values:
                         msg = (
-                        f'Provided annotation value(s) group1, \"{group1}\", '
-                        f'or group2, \"{group2}\", not found in metadata file'
+                            f'Provided annotation value(s) group1, \"{group1}\", '
+                            f'or group2, \"{group2}\", not found in metadata file'
                         )
                         log_exception(
-                            DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+                            DifferentialExpression.dev_logger,
+                            DifferentialExpression.de_logger,
+                            msg,
                         )
                         raise ValueError(msg)
                 else:
                     msg = (
-                    f'Provided annotation value(s) group1, \"{group1}\", or '
-                    f'group2, \"{group2}\", were falsey'
+                        f'Provided annotation value(s) group1, \"{group1}\", or '
+                        f'group2, \"{group2}\", were false-y'
                     )
                     log_exception(
-                        DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+                        DifferentialExpression.dev_logger,
+                        DifferentialExpression.de_logger,
+                        msg,
                     )
                     raise KeyError(msg)
             # de_type is "rest" by default, DE annotation TYPE expected to be group
@@ -114,8 +118,6 @@ class DifferentialExpression:
                 DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
             )
             raise ValueError(msg)
-
-
 
     @staticmethod
     def get_cluster_cells(cluster_cells):
@@ -205,15 +207,19 @@ class DifferentialExpression:
         return adata
 
     def execute_de(self):
-        DifferentialExpression.de_logger.info(f'dev_info: Starting DE for {self.accession}')
+        DifferentialExpression.de_logger.info(
+            f'dev_info: Starting DE for {self.accession}'
+        )
         try:
-        # only used in output filename, replacing non-alphanumeric with underscores
-        # except '+' replaced with 'pos'
+            # only used in output filename, replacing non-alphanumeric with underscores
+            # except '+' replaced with 'pos'
             self.cluster_name = DifferentialExpression.sanitize_string(
                 self.kwargs["name"]
             )
             if self.matrix_file_type in ["dense", "mtx", "h5ad"]:
-                DifferentialExpression.de_logger.info(f"preparing DE on {self.matrix_file_type} matrix")
+                DifferentialExpression.de_logger.info(
+                    f"preparing DE on {self.matrix_file_type} matrix"
+                )
                 self.run_scanpy_de(
                     self.cluster,
                     self.metadata,
@@ -235,7 +241,6 @@ class DifferentialExpression:
         except (TypeError, KeyError, ValueError) as e:
             raise ValueError(e)
         return
-
 
     @staticmethod
     def get_genes(genes_path):
@@ -333,16 +338,26 @@ class DifferentialExpression:
 
     @staticmethod
     def write_de_result(adata, group, annotation, rank_key, cluster_name, extra_params):
-        de_type =  extra_params.get("de_type")
+        de_type = extra_params.get("de_type")
         method = extra_params.get("method")
         annot_scope = extra_params.get("annotation_scope")
         clean_annotation = DifferentialExpression.sanitize_string(annotation)
         rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
         if DifferentialExpression.all_match_ensembl_id_regex(rank, "names"):
-            feature_name_rank = rank.merge(adata.var['feature_name'], left_on="names", right_index=True, how='left')
+            feature_name_rank = rank.merge(
+                adata.var['feature_name'], left_on="names", right_index=True, how='left'
+            )
             feature_name_rank.rename(columns={'names': 'feature_id'}, inplace=True)
             feature_name_rank.rename(columns={'feature_name': 'names'}, inplace=True)
-            new_column_order = ["names"] + [col for col in feature_name_rank.columns if col not in {"names", "feature_id"}] + ["feature_id"]
+            new_column_order = (
+                ["names"]
+                + [
+                    col
+                    for col in feature_name_rank.columns
+                    if col not in {"names", "feature_id"}
+                ]
+                + ["feature_id"]
+            )
             feature_name_rank = feature_name_rank[new_column_order]
 
             rank = feature_name_rank
@@ -351,14 +366,20 @@ class DifferentialExpression:
         if de_type == "rest":
             clean_group = DifferentialExpression.sanitize_string(group)
             out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
-            DifferentialExpression.de_logger.info(f"Writing DE output for {clean_group} vs rest")
+            DifferentialExpression.de_logger.info(
+                f"Writing DE output for {clean_group} vs restq"
+            )
         elif de_type == "pairwise":
             # rank_genes_groups accepts a list. For SCP pairwise, should be a list with one item
             # converting list to string for incorporation into result filename
-            group1 = DifferentialExpression.sanitize_string(extra_params["group1"])
+            group1 = DifferentialExpression.sanitize_string(
+                ''.join(extra_params["group1"])
+            )
             group2 = DifferentialExpression.sanitize_string(extra_params["group2"])
             out_file = f'{cluster_name}--{clean_annotation}--{group1}--{group2}--{annot_scope}--{method}.tsv'
-            DifferentialExpression.de_logger.info(f"Writing DE output for {group1} vs {group2} pairwise")
+            DifferentialExpression.de_logger.info(
+                f"Writing DE output for {group1} vs {group2} pairwise"
+            )
         else:
             msg = f'Unknown de_type, {de_type}'
             print(msg)
@@ -369,7 +390,6 @@ class DifferentialExpression:
         # Round numbers to 4 significant digits while respecting fixed point
         # and scientific notation (note: trailing zeros are removed)
         rank.to_csv(out_file, sep='\t', float_format='%.4g')
-
 
     @staticmethod
     def run_scanpy_de(
@@ -417,15 +437,17 @@ class DifferentialExpression:
                     # using .copy() for the AnnData components is good practice
                     # but we won't be using orig_adata for analyses
                     # choosing to avoid .copy() for memory efficiency
-                    X = orig_adata.raw.X,
-                    obs = orig_adata.obs,
-                    var = orig_adata.var,
+                    X=orig_adata.raw.X,
+                    obs=orig_adata.obs,
+                    var=orig_adata.var,
                 )
             else:
                 msg = f'{matrix_file_path} does not have a .raw attribute'
                 print(msg)
                 log_exception(
-                    DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+                    DifferentialExpression.dev_logger,
+                    DifferentialExpression.de_logger,
+                    msg,
                 )
                 raise ValueError(msg)
         # AnnData expects gene x cell so dense and mtx matrices require transposition
@@ -433,7 +455,6 @@ class DifferentialExpression:
             adata = adata.transpose()
 
         adata = DifferentialExpression.subset_adata(adata, de_cells)
-
 
         # h5ad inputs will already have obs data, only non-h5ad need this step
         if not matrix_file_type == "h5ad":
@@ -458,21 +479,27 @@ class DifferentialExpression:
                 msg = f"Missing expected annotation in metadata: {annotation}, unable to calculate DE."
                 print(msg)
                 log_exception(
-                    DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+                    DifferentialExpression.dev_logger,
+                    DifferentialExpression.de_logger,
+                    msg,
                 )
                 raise KeyError(msg)
             # ToDo - detection and handling of annotations with only one sample (SCP-4282)
             except ValueError as e:
                 print(e)
                 log_exception(
-                    DifferentialExpression.dev_logger, DifferentialExpression.de_logger, e
+                    DifferentialExpression.dev_logger,
+                    DifferentialExpression.de_logger,
+                    e,
                 )
                 raise KeyError(e)
 
             DifferentialExpression.de_logger.info("Gathering DE annotation labels")
             groups = np.unique(adata.obs[annotation]).tolist()
             for group in groups:
-                DifferentialExpression.write_de_result(adata, group, annotation, rank_key, cluster_name, extra_params)
+                DifferentialExpression.write_de_result(
+                    adata, group, annotation, rank_key, cluster_name, extra_params
+                )
 
         elif de_type == 'pairwise':
             group1 = [extra_params["group1"]]
@@ -491,18 +518,29 @@ class DifferentialExpression:
                 msg = f"Missing expected annotation in metadata: {annotation}, unable to calculate DE."
                 print(msg)
                 log_exception(
-                    DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
+                    DifferentialExpression.dev_logger,
+                    DifferentialExpression.de_logger,
+                    msg,
                 )
                 raise KeyError(msg)
             # ToDo - detection and handling of annotations with only one sample (SCP-4282)
             except ValueError as e:
                 print(e)
                 log_exception(
-                    DifferentialExpression.dev_logger, DifferentialExpression.de_logger, e
+                    DifferentialExpression.dev_logger,
+                    DifferentialExpression.de_logger,
+                    e,
                 )
                 raise KeyError(e)
-            group1 = extra_params["group1"]
-            DifferentialExpression.write_de_result(adata, group1, annotation, rank_key, cluster_name, extra_params)
+            stringified_group1 = ''.join(extra_params["group1"])
+            DifferentialExpression.write_de_result(
+                adata,
+                stringified_group1,
+                annotation,
+                rank_key,
+                cluster_name,
+                extra_params,
+            )
 
         DifferentialExpression.de_logger.info("DE processing complete")
 

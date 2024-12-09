@@ -79,6 +79,7 @@ python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id de
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --de-type pairwise --group1 "['mature B cell']" --group2 "plasma cell" --annotation-type group --annotation-scope study --annotation-file ../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz --cluster-file ../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz --cluster-name umap --matrix-file-path ../tests/data/anndata/compliant_liver.h5ad  --matrix-file-type h5ad --study-accession SCPdev --differential-expression
 
 """
+
 import json
 import logging
 import os
@@ -135,8 +136,15 @@ class IngestPipeline:
 
     # array of actions to use when reporting to Mixpanel
     ACTION_NAMES = [
-        'ingest_cluster', 'ingest_cell_metadata', 'ingest_expression', 'ingest_anndata', 'ingest_subsample',
-        'ingest_differential_expression', 'differential_expression', 'render_expression_arrays', 'rank_genes'
+        'ingest_cluster',
+        'ingest_cell_metadata',
+        'ingest_expression',
+        'ingest_anndata',
+        'ingest_subsample',
+        'ingest_differential_expression',
+        'differential_expression',
+        'render_expression_arrays',
+        'rank_genes',
     ]
 
     # Logger provides more details for trouble shooting
@@ -400,7 +408,7 @@ class IngestPipeline:
     @custom_metric(config.get_metric_properties)
     def validate_cell_metadata(self):
         """If indicated, validate cell metadata against convention
-           otherwise, just preprocess file
+        otherwise, just preprocess file
         """
         validate_against_convention = False
         if self.kwargs["validate_convention"] is not None:
@@ -429,7 +437,6 @@ class IngestPipeline:
             IngestPipeline.user_logger.error("Cell metadata file format invalid")
             return 1
         return 0
-
 
     @custom_metric(config.get_metric_properties)
     def ingest_cell_metadata(self):
@@ -560,7 +567,9 @@ class IngestPipeline:
             ):
                 self.anndata.generate_processed_matrix(self.anndata.adata)
 
-            if self.kwargs.get('extract') and "raw_counts" in self.kwargs.get('extract'):
+            if self.kwargs.get('extract') and "raw_counts" in self.kwargs.get(
+                'extract'
+            ):
                 self.anndata.ingest_raw_cells()
             self.report_validation("success")
             return 0
@@ -599,7 +608,7 @@ class IngestPipeline:
                 "group": kwargs["group_header"],
                 "comparison_group": kwargs["comparison_group_header"],
                 "size": kwargs["size_metric"],
-                "significance": kwargs["significance_metric"]
+                "significance": kwargs["significance_metric"],
             }
 
             author_de = AuthorDifferentialExpression(
@@ -608,9 +617,8 @@ class IngestPipeline:
                 kwargs["study_accession"],
                 kwargs["annotation_scope"],
                 kwargs["method"],
-
                 kwargs["differential_expression_file"],
-                header_refmap
+                header_refmap,
             )
             author_de.execute()
 
@@ -621,7 +629,6 @@ class IngestPipeline:
             return 1
         # ToDo: surface failed DE for analytics (SCP-4206)
         return 0
-
 
     def render_expression_arrays(self):
         try:
@@ -640,10 +647,7 @@ class IngestPipeline:
     def rank_genes(self):
         try:
             kwargs = self.kwargs
-            RankGenes(
-                kwargs["study_accession"],
-                kwargs["publication"]
-            )
+            RankGenes(kwargs["study_accession"], kwargs["publication"])
         except Exception as e:
             log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
             return 1
@@ -668,12 +672,17 @@ def run_ingest(ingest, arguments, parsed_args):
             config.set_parent_event_name("ingest-pipeline:cell_metadata:ingest")
             status_cell_metadata_validation = ingest.validate_cell_metadata()
             status.append(status_cell_metadata_validation)
-            if parsed_args.bq_table is not None and status_cell_metadata_validation == 0:
+            if (
+                parsed_args.bq_table is not None
+                and status_cell_metadata_validation == 0
+            ):
                 status_metadata_bq = ingest.upload_metadata_to_bq()
                 status.append(status_metadata_bq)
             if status_cell_metadata_validation == 0:
                 if ingest.kwargs['has_modality'] is not None:
-                    ingest.cell_metadata.file = CellMetadata.restore_modality_metadata(ingest.cell_metadata)
+                    ingest.cell_metadata.file = CellMetadata.restore_modality_metadata(
+                        ingest.cell_metadata
+                    )
                 status_cell_metadata_ingest = ingest.ingest_cell_metadata()
                 status.append(status_cell_metadata_ingest)
     elif "ingest_cluster" in arguments:
@@ -695,7 +704,6 @@ def run_ingest(ingest, arguments, parsed_args):
         status_de = ingest.calculate_de()
         status.append(status_de)
         print(f"STATUS after DE {status}")
-
     elif "ingest_differential_expression" in arguments:
         config.set_parent_event_name("ingest-pipeline:differential-expression:ingest")
         status_de = ingest.calculate_author_de()
@@ -734,7 +742,10 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
     """Logs any errors, then exits Ingest Pipeline with standard OS code"""
     if len(status) > 0:
         # for successful DE jobs, need to delocalize results
-        if ("differential_expression" in arguments or "ingest_differential_expression" in arguments) and all(i < 1 for i in status):
+        if (
+            "differential_expression" in arguments
+            or "ingest_differential_expression" in arguments
+        ) and all(i < 1 for i in status):
             file_path, study_file_id = get_delocalization_info(arguments)
             print('file_path', file_path)
             print('study_file_id', study_file_id)
@@ -801,10 +812,12 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
                     sys.exit(os.EX_DATAERR)
             sys.exit(1)
 
+
 def get_action_from_args(arguments):
     """Get the action from list of arguments denoting which data type is being ingested/extracted"""
     action = list(set(IngestPipeline.ACTION_NAMES) & set(arguments))
     return action[0] if action else ""
+
 
 def main() -> None:
     """Enables running Ingest Pipeline via CLI
@@ -830,7 +843,7 @@ def main() -> None:
         arguments["study_id"],
         arguments["study_file_id"],
         arguments["user_metrics_uuid"],
-        get_action_from_args(arguments)
+        get_action_from_args(arguments),
     )
     ingest = IngestPipeline(**arguments)
     status, status_cell_metadata = run_ingest(ingest, arguments, parsed_args)

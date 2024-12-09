@@ -136,9 +136,11 @@ class Clusters(Annotations):
                 {
                     "name": annot_name,
                     "type": annot_type,
-                    "values": self.file[annot_headers].unique().tolist()
-                    if annot_type == "group"
-                    else [],
+                    "values": (
+                        self.file[annot_headers].unique().tolist()
+                        if annot_type == "group"
+                        else []
+                    ),
                 }
             )
         Annotations.dev_logger.info(f"Creating model for {self.study_id}")
@@ -148,9 +150,11 @@ class Clusters(Annotations):
             cell_annotations=cell_annotations,
             study_file_id=self.study_file_id,
             study_id=self.study_id,
-            domain_ranges=DomainRanges(**self.domain_ranges)
-            if self.domain_ranges is not None
-            else None,
+            domain_ranges=(
+                DomainRanges(**self.domain_ranges)
+                if self.domain_ranges is not None
+                else None
+            ),
         )
 
     def get_data_array_annot(self, linear_data_id):

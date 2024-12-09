@@ -6,6 +6,7 @@ import scanpy as sc
 import scipy
 from scipy.io.mmio import MMFile
 
+
 # scipy.io.mmwrite uses scientific notation by default
 # https://stackoverflow.com/questions/64748513
 class MMFileFixedFormat(MMFile):
@@ -72,7 +73,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
             linear_data_id=self.study_file_id,
             cluster_name=raw_filename,
             study_file_id=self.study_file_id,
-            study_id=self.study_id
+            study_id=self.study_id,
         ):
             data_arrays.append(data_array)
 
