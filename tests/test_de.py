@@ -48,7 +48,7 @@ def find_expected_files(labels, cluster_name, test_config):
     elif de_type == "pairwise":
         # rank_genes_groups accepts a list. For SCP pairwise, should be a list with one item
         # converting list to string for incorporation into result filename
-        group1 = DifferentialExpression.sanitize_string(''.join(test_config["group1"]))
+        group1 = DifferentialExpression.sanitize_string(test_config["group1"])
         group2 = DifferentialExpression.sanitize_string(test_config["group2"])
         expected_file = f'{sanitized_cluster_name}--{sanitized_annotation}--{group1}--{group2}--{annot_scope}--{method}.tsv'
         assert os.path.exists(expected_file)
@@ -443,7 +443,7 @@ class TestDifferentialExpression(unittest.TestCase):
         test_annotation = "cell_type__ontology_label"
         test_config = {
             "de_type": "pairwise",
-            "group1": ['mature B cell'],
+            "group1": "mature B cell",
             "group2": "plasma cell",
             "test_annotation": test_annotation,
             "test_scope": "study",
@@ -518,7 +518,7 @@ class TestDifferentialExpression(unittest.TestCase):
 
         test_config = {
             "de_type": "pairwise",
-            "group1": ['NO SUCH GROUP VALUE'],
+            "group1": "NO SUCH GROUP VALUE",
             "group2": "plasma cell",
             "test_annotation": test_annotation,
             "test_scope": "study",
@@ -536,7 +536,7 @@ class TestDifferentialExpression(unittest.TestCase):
 
         test_config = {
             "de_type": "pairwise",
-            "group1": [],
+            "group1": "",
             "group2": "plasma cell",
             "test_annotation": test_annotation,
             "test_scope": "study",

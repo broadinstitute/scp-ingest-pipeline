@@ -78,10 +78,10 @@ class DifferentialExpression:
             )
             raise KeyError(msg)
         elif annotation_info == "group":
-            de_type =  extra_params.get("de_type")
+            de_type = extra_params.get("de_type")
             group1 = extra_params.get("group1")
             group2 = extra_params.get("group2")
-            if  de_type == "pairwise":
+            if de_type == "pairwise":
                 metadata.preprocess(False)
                 values = metadata.file[annotation]['group'].unique()
                 if group1 and group2:
@@ -97,7 +97,7 @@ class DifferentialExpression:
                 else:
                     msg = (
                     f'Provided annotation value(s) group1, \"{group1}\", or '
-                    f'group2, \"{group2}\", were false-y'
+                    f'group2, \"{group2}\", were falsey'
                     )
                     log_exception(
                         DifferentialExpression.dev_logger, DifferentialExpression.de_logger, msg
@@ -340,8 +340,8 @@ class DifferentialExpression:
         rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
         if DifferentialExpression.all_match_ensembl_id_regex(rank, "names"):
             feature_name_rank = rank.merge(adata.var['feature_name'], left_on="names", right_index=True, how='left')
-            feature_name_rank.rename(columns={'names':'feature_id'}, inplace=True)
-            feature_name_rank.rename(columns={'feature_name':'names'}, inplace=True)
+            feature_name_rank.rename(columns={'names': 'feature_id'}, inplace=True)
+            feature_name_rank.rename(columns={'feature_name': 'names'}, inplace=True)
             new_column_order = ["names"] + [col for col in feature_name_rank.columns if col not in {"names", "feature_id"}] + ["feature_id"]
             feature_name_rank = feature_name_rank[new_column_order]
 
@@ -351,11 +351,11 @@ class DifferentialExpression:
         if de_type == "rest":
             clean_group = DifferentialExpression.sanitize_string(group)
             out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
-            DifferentialExpression.de_logger.info(f"Writing DE output for {clean_group} vs restq")
+            DifferentialExpression.de_logger.info(f"Writing DE output for {clean_group} vs rest")
         elif de_type == "pairwise":
             # rank_genes_groups accepts a list. For SCP pairwise, should be a list with one item
             # converting list to string for incorporation into result filename
-            group1 = DifferentialExpression.sanitize_string(''.join(extra_params["group1"]))
+            group1 = DifferentialExpression.sanitize_string(extra_params["group1"])
             group2 = DifferentialExpression.sanitize_string(extra_params["group2"])
             out_file = f'{cluster_name}--{clean_annotation}--{group1}--{group2}--{annot_scope}--{method}.tsv'
             DifferentialExpression.de_logger.info(f"Writing DE output for {group1} vs {group2} pairwise")
@@ -475,7 +475,7 @@ class DifferentialExpression:
                 DifferentialExpression.write_de_result(adata, group, annotation, rank_key, cluster_name, extra_params)
 
         elif de_type == 'pairwise':
-            group1 = extra_params["group1"]
+            group1 = [extra_params["group1"]]
             group2 = extra_params["group2"]
             try:
                 sc.tl.rank_genes_groups(
@@ -501,8 +501,8 @@ class DifferentialExpression:
                     DifferentialExpression.dev_logger, DifferentialExpression.de_logger, e
                 )
                 raise KeyError(e)
-            stringified_group1 = ''.join(extra_params["group1"])
-            DifferentialExpression.write_de_result(adata, stringified_group1, annotation, rank_key, cluster_name, extra_params)
+            group1 = extra_params["group1"]
+            DifferentialExpression.write_de_result(adata, group1, annotation, rank_key, cluster_name, extra_params)
 
         DifferentialExpression.de_logger.info("DE processing complete")
 
