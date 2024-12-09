@@ -7,6 +7,7 @@ Text, CSV, and TSV files are supported.
 PREREQUISITES
 Must have python 3.6 or higher.
 """
+
 import collections
 import ntpath
 from collections import defaultdict, OrderedDict
@@ -115,6 +116,7 @@ class CellMetadata(Annotations):
                 "error", msg, "format:cap:metadata-no-coordinates"
             )
             return False
+
     @staticmethod
     def make_multiindex_name(modality):
         """From modality, generate column name in multi-index format"""
@@ -127,7 +129,9 @@ class CellMetadata(Annotations):
         """Translate presence of single modality to boolean for BigQuery"""
         # check for empty cells (aka. nan) or empty strings
         modality_multiindex = CellMetadata.make_multiindex_name(modality)
-        no_modality_info = df[modality_multiindex].isna() | df[modality_multiindex].str.len().eq(0)
+        no_modality_info = df[modality_multiindex].isna() | df[
+            modality_multiindex
+        ].str.len().eq(0)
         bool_name = modality + "_bool"
         bool_multiindex = CellMetadata.make_multiindex_name(bool_name)
         # store inverse of no_modality_info (ie. True = has modality info)
@@ -145,12 +149,12 @@ class CellMetadata(Annotations):
             m_to_rename[bool_name] = has_m
         self.modality_urls = self.file.filter(m_to_hide, axis=1)
         self.file.drop(m_to_hide, axis=1, inplace=True)
-        self.file.rename(columns= m_to_rename, inplace=True)
+        self.file.rename(columns=m_to_rename, inplace=True)
         return
 
     def booleanize_modality_metadata(self):
         """Translate presence of modality data to boolean for BigQuery
-           If no modality data, self.files is unchanged
+        If no modality data, self.files is unchanged
         """
         if self.modalities is not None:
             df = copy.deepcopy(self.file)

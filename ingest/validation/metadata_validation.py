@@ -61,8 +61,7 @@ except ImportError:
 
 
 def create_parser():
-    """Parse command line values for validate_metadata
-    """
+    """Parse command line values for validate_metadata"""
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -122,8 +121,7 @@ def create_parser():
 
 
 def check_if_old_output():
-    """Exit if old output files found
-    """
+    """Exit if old output files found"""
     output_files = ["bq.json"]
 
     old_output = False
