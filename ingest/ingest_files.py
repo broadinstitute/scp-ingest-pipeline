@@ -3,6 +3,7 @@
 DESCRIPTION
 Module provides extract capabilities for text, CSV, and TSV file types
 """
+
 import copy
 import csv
 import gzip
@@ -91,10 +92,10 @@ class IngestFiles:
     }
 
     def __init__(
-            self,
-            file_path: str,
-            allowed_file_types: list = list(ALLOWED_FILE_EXTENSIONS.keys())
-        ):
+        self,
+        file_path: str,
+        allowed_file_types: list = list(ALLOWED_FILE_EXTENSIONS.keys()),
+    ):
         """
         :param file_path: GS URL or local file path
         :param allowed_file_types (optional): list of allowed file MIME types

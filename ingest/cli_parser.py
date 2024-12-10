@@ -275,6 +275,13 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
+        "--de-type",
+        default="rest",
+        choices=['rest', 'pairwise'],
+        help="Accepted values: 'pairwise' or 'rest' (default)",
+    )
+
+    parser_differential_expression.add_argument(
         "--study-accession",
         required=True,
         help="Single study accession associated with provided DE input files.",
@@ -336,6 +343,17 @@ def create_parser():
         "--gene-file", help="Path to .genes.tsv file"
     )
 
+    # For pairwise analyses
+    parser_differential_expression.add_argument(
+        "--group1",
+        help="1st annotation label to use for pairwise DE analysis",
+    )
+
+    parser_differential_expression.add_argument(
+        "--group2",
+        help="2nd annotation label to use for pairwise DE analysis",
+    )
+
     parser_ingest_differential_expression = subparsers.add_parser(
         "ingest_differential_expression",
         help="Indicates author differential expression analysis processing",
@@ -377,40 +395,38 @@ def create_parser():
     parser_ingest_differential_expression.add_argument(
         "--differential-expression-file",
         required=True,
-        help="Path to DE file uploaded by author."
+        help="Path to DE file uploaded by author.",
     )
 
     parser_ingest_differential_expression.add_argument(
         "--gene-header",
         required=True,
-        help="Header used for gene names / symbols in DE file"
+        help="Header used for gene names / symbols in DE file",
     )
 
     parser_ingest_differential_expression.add_argument(
-        "--group-header",
-        required=True,
-        help="Header used for group in DE file"
+        "--group-header", required=True, help="Header used for group in DE file"
     )
 
     parser_ingest_differential_expression.add_argument(
         "--comparison-group-header",
         required=False,
         help=(
-            "Header used for comparison group in DE file.  " +
-            "For pairwise comparisons.  Can omit if DE file is in one-vs-rest-only format."
-        )
+            "Header used for comparison group in DE file.  "
+            + "For pairwise comparisons.  Can omit if DE file is in one-vs-rest-only format."
+        ),
     )
 
     parser_ingest_differential_expression.add_argument(
         "--size-metric",
         required=True,
-        help='Header used as size metric in DE file, e.g. "logfoldchanges", "avg_log2FC", etc.'
+        help='Header used as size metric in DE file, e.g. "logfoldchanges", "avg_log2FC", etc.',
     )
 
     parser_ingest_differential_expression.add_argument(
         "--significance-metric",
         required=True,
-        help='Header used as significance metric in DE file, e.g. "pvals_adj", "p_val_adj", etc.'
+        help='Header used as significance metric in DE file, e.g. "pvals_adj", "p_val_adj", etc.',
     )
 
     # AnnData subparsers
@@ -493,7 +509,7 @@ def create_parser():
     parser_rank_genes.add_argument(
         '--publication',
         help="URL of the study's publicly-accessible research article, or GS URL or local path to publication text file",
-        required=True
+        required=True,
     )
 
     return parser
