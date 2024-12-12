@@ -86,6 +86,8 @@ jobs:
 
           # Commit changes
           git commit -m "Update minified ontologies via GitHub Actions"
+          echo "GITHUB_HEAD_REF: $GITHUB_HEAD_REF"
+          echo "github.head_ref: ${{ github.head_ref }}"
           git push origin ${{ github.head_ref }}
         else
           echo "No changes to commit."
