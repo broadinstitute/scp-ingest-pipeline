@@ -14,6 +14,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
 
     - name: Copy and decompress ontologies in repo
       run: cd ingest/validation/ontologies; mkdir tmp; cp -r *.min.tsv.gz tmp/; gzip -d tmp/*.min.tsv.gz
@@ -86,9 +88,7 @@ jobs:
 
           # Commit changes
           git commit -m "Update minified ontologies via GitHub Actions"
-          echo "GITHUB_HEAD_REF: $GITHUB_HEAD_REF"
-          echo "github.head_ref: ${{ github.head_ref }}"
-          git push origin ${{ github.head_ref }}
+          git push
         else
           echo "No changes to commit."
         fi
