@@ -105,7 +105,7 @@ from monitoring.metrics_service import MetricsService
 from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
 from opencensus.trace.samplers import AlwaysOnSampler
 from opencensus.trace.tracer import Tracer
-from pymongo import MongoClient
+from mongo_connection import MongoConnection, graceful_auto_reconnect
 from subsample import SubSample
 from validation.validate_metadata import (
     report_issues,
@@ -210,19 +210,7 @@ class IngestPipeline:
 
     # Will be replaced by MongoConnection as defined in SCP-2629
     def get_mongo_db(self):
-        host = os.environ["DATABASE_HOST"]
-        user = os.environ["MONGODB_USERNAME"]
-        password = os.environ["MONGODB_PASSWORD"]
-        db_name = os.environ["DATABASE_NAME"]
-        client = MongoClient(
-            host,
-            username=user,
-            password=password,
-            authSource=db_name,
-            authMechanism="SCRAM-SHA-1",
-        )
-
-        return client[db_name]
+        return MongoConnection()._client
 
     def initialize_file_connection(self, file_type, file_path):
         """Initializes connection to file.
@@ -258,6 +246,7 @@ class IngestPipeline:
             self.report_validation("failure")
             raise ValueError(v)
 
+    @graceful_auto_reconnect
     def insert_many(self, collection_name, documents):
         if not config.bypass_mongo_writes():
             self.db[collection_name].insert_many(documents)
@@ -333,7 +322,7 @@ class IngestPipeline:
                     },
                 ):
                     documents.append(model)
-            self.db["data_arrays"].insert_many(documents)
+            self.insert_many("data_arrays", documents)
 
         except Exception as e:
             log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
