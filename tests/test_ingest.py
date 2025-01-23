@@ -813,6 +813,54 @@ class IngestTestCase(unittest.TestCase):
         bad_args = ["foo", "bar", "bing"]
         self.assertEqual("", get_action_from_args(bad_args))
 
+    @patch("mongo_connection.MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS", 3)
+    def test_insert_reconnect(self):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_subsample",
+            "--cluster-file",
+            "../tests/data/good_subsample_cluster.csv",
+            "--name",
+            "cluster1",
+            "--cell-metadata-file",
+            "../tests/data/test_cell_metadata.csv",
+            "--subsample",
+        ]
+        parsed_args = create_parser().parse_args(args)
+        validate_arguments(parsed_args)
+        arguments = vars(parsed_args)
+        ingest = IngestPipeline(**arguments)
+        client_mock = MagicMock()
+        ingest.db = client_mock
+        docs = [
+            {
+                'id': 1,
+                'name': 'foo',
+                'study_id': 1,
+                'study_file_id': 1,
+                'array_index': 0,
+                'linear_data_type': 'Cluster',
+            },
+            {
+                'id': 2,
+                'name': 'bar',
+                'study_id': 1,
+                'study_file_id': 1,
+                'array_index': 0,
+                'linear_data_type': 'Cluster',
+            },
+        ]
+        ingest.insert_many("data_arrays", docs)
+        client_mock["data_arrays"].insert_many.assert_called_with(docs)
+
+        client_mock["data_arrays"].insert_many.side_effect = ValueError("Foo")
+        self.assertRaises(
+            Exception, ingest.insert_many, "data_arrays", docs
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
