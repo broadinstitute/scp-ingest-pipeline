@@ -124,7 +124,6 @@ def discard_inserted_documents(errors, original_documents) -> list[dict]:
     :param original_documents: (list[dict]) list of documents from original transaction that failed
     :returns list[dict]: list of documents with existing entries removed
     """
-    print(original_documents)
     error_docs = []
     for doc in errors:
         if doc['code'] == 11000:
