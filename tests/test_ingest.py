@@ -36,7 +36,7 @@ from unittest.mock import patch, MagicMock
 from test_dense import mock_load_r_files
 import os
 
-from pymongo.errors import AutoReconnect
+from pymongo.errors import AutoReconnect, BulkWriteError
 from test_expression_files import mock_expression_load
 from mock_gcp import mock_storage_client, mock_storage_blob
 
@@ -860,6 +860,40 @@ class IngestTestCase(unittest.TestCase):
         self.assertRaises(
             Exception, ingest.insert_many, "data_arrays", docs
         )
+        client_mock.reset_mock()
+
+        # Test exponential back off for auto reconnect
+        client_mock["data_arrays"].insert_many.side_effect = AutoReconnect
+        self.assertRaises(
+            AutoReconnect, ingest.insert_many, "data_arrays", docs
+        )
+        self.assertEqual(client_mock["data_arrays"].insert_many.call_count, 3)
+        client_mock.reset_mock()
+
+        def raiseError(*args, **kwargs):
+            details = {
+                "writeErrors": [
+                    {
+                        "code": 11000,
+                        "op": {
+                            'id': 1,
+                            'name': 'foo',
+                            'study_id': 1,
+                            'study_file_id': 1,
+                            'array_index': 0,
+                            'linear_data_type': 'Cluster',
+                        },
+                    }
+                ]
+            }
+            raise BulkWriteError(details)
+
+        # Test exponential back off for BulkWriteError
+        client_mock["data_arrays"].insert_many.side_effect = raiseError
+        self.assertRaises(
+            BulkWriteError, ingest.insert_many, "data_arrays", docs
+        )
+        self.assertEqual(client_mock["data_arrays"].insert_many.call_count, 3)
 
 
 if __name__ == "__main__":
