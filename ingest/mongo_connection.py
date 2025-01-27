@@ -67,6 +67,13 @@ def graceful_auto_reconnect(mongo_op_func):
     @functools.wraps(mongo_op_func)
     def wrapper(*args, **kwargs):
         args = list(args)
+        # detect which argument is the list of inserted documents
+        # when called from IngestPipeline, first arg is ingest instance, and 3rd is the list
+        # when called from GeneExpression (static implementation), first arg is list
+        if args[0].__class__.__name__ == 'IngestPipeline':
+            docs_idx = 2
+        else:
+            docs_idx = 0
         for attempt in range(MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS):
             try:
                 return mongo_op_func(*args, **kwargs)
@@ -84,12 +91,12 @@ def graceful_auto_reconnect(mongo_op_func):
                     error = bwe.details["writeErrors"]
                     # Check error code to see if any failures are due to violating a unique index (error code 11000)
                     # and discard those documents before retrying
-                    filtered_docs = discard_inserted_documents(error, args[0])
+                    filtered_docs = discard_inserted_documents(error, args[docs_idx])
                     if len(filtered_docs) > 0:
-                        args[0] = filtered_docs
+                        args[docs_idx] = filtered_docs
                         retry(attempt)
                     else:
-                        return args[0]
+                        return args[docs_idx]
                 else:
                     log_error_without_values(bwe)
                     raise bwe

@@ -35,8 +35,18 @@ case $OPTION in
 done
 
 if [[ $GCR_IMAGE = "" ]]; then
-  IMAGE_NAME="gcr.io/broad-singlecellportal-staging/scp-ingest-pipeline-development"
-  LATEST_TAG=$(gcloud container images list-tags ${IMAGE_NAME} --format='get(tags)' | head -n 1)
+  # Google Artifact Registry (GAR) formats Docker image names differently than the canonical Container Registry format
+  # both refer to the same image digest and will work with 'docker pull', but the GCR names do not work with any
+  # 'gcloud artifacts docker' commands
+  # for example:
+  # GCR name: gcr.io/broad-singlecellportal-staging/scp-ingest-pipeline-development
+  # GAR name: us-docker.pkg.dev/broad-singlecellportal-staging/gcr.io/scp-ingest-pipeline-development
+  REPO='gcr.io'
+  PROJECT='broad-singlecellportal-staging'
+  IMAGE='scp-ingest-pipeline-development'
+  GAR_NAME="us-docker.pkg.dev/$PROJECT/$REPO/$IMAGE"
+  IMAGE_NAME="$REPO/$PROJECT/$IMAGE"
+  LATEST_TAG=$(gcloud artifacts docker images list ${GAR_NAME} --include-tags --sort-by=~CREATE_TIME --format="get(tags)" | head -n 1)
   export GCR_IMAGE="${IMAGE_NAME}:${LATEST_TAG}"
 fi
 
