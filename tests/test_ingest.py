@@ -36,7 +36,7 @@ from unittest.mock import patch, MagicMock
 from test_dense import mock_load_r_files
 import os
 
-from pymongo.errors import AutoReconnect
+from pymongo.errors import AutoReconnect, BulkWriteError
 from test_expression_files import mock_expression_load
 from mock_gcp import mock_storage_client, mock_storage_blob
 
@@ -812,6 +812,88 @@ class IngestTestCase(unittest.TestCase):
         self.assertEqual("ingest_subsample", get_action_from_args(args))
         bad_args = ["foo", "bar", "bing"]
         self.assertEqual("", get_action_from_args(bad_args))
+
+    @patch("mongo_connection.MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS", 3)
+    def test_insert_reconnect(self):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_subsample",
+            "--cluster-file",
+            "../tests/data/good_subsample_cluster.csv",
+            "--name",
+            "cluster1",
+            "--cell-metadata-file",
+            "../tests/data/test_cell_metadata.csv",
+            "--subsample",
+        ]
+        parsed_args = create_parser().parse_args(args)
+        validate_arguments(parsed_args)
+        arguments = vars(parsed_args)
+        ingest = IngestPipeline(**arguments)
+        client_mock = MagicMock()
+        ingest.db = client_mock
+        docs = [
+            {
+                'id': 1,
+                'name': 'foo',
+                'study_id': 1,
+                'study_file_id': 1,
+                'array_index': 0,
+                'linear_data_type': 'Cluster',
+            },
+            {
+                'id': 2,
+                'name': 'bar',
+                'study_id': 1,
+                'study_file_id': 1,
+                'array_index': 0,
+                'linear_data_type': 'Cluster',
+            },
+        ]
+        ingest.insert_many("data_arrays", docs)
+        client_mock["data_arrays"].insert_many.assert_called_with(docs)
+
+        client_mock["data_arrays"].insert_many.side_effect = ValueError("Foo")
+        self.assertRaises(
+            Exception, ingest.insert_many, "data_arrays", docs
+        )
+        client_mock.reset_mock()
+
+        # Test exponential back off for auto reconnect
+        client_mock["data_arrays"].insert_many.side_effect = AutoReconnect
+        self.assertRaises(
+            AutoReconnect, ingest.insert_many, "data_arrays", docs
+        )
+        self.assertEqual(client_mock["data_arrays"].insert_many.call_count, 3)
+        client_mock.reset_mock()
+
+        def raiseError(*args, **kwargs):
+            details = {
+                "writeErrors": [
+                    {
+                        "code": 11000,
+                        "op": {
+                            'id': 1,
+                            'name': 'foo',
+                            'study_id': 1,
+                            'study_file_id': 1,
+                            'array_index': 0,
+                            'linear_data_type': 'Cluster',
+                        },
+                    }
+                ]
+            }
+            raise BulkWriteError(details)
+
+        # Test exponential back off for BulkWriteError
+        client_mock["data_arrays"].insert_many.side_effect = raiseError
+        self.assertRaises(
+            BulkWriteError, ingest.insert_many, "data_arrays", docs
+        )
+        self.assertEqual(client_mock["data_arrays"].insert_many.call_count, 3)
 
 
 if __name__ == "__main__":
