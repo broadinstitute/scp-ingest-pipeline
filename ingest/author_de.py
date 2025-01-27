@@ -6,6 +6,7 @@ python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id de
 
 import pandas as pd
 import numpy as np
+from scipy.stats import spearmanr
 import csv
 import logging
 
@@ -362,6 +363,36 @@ def detect_seurat_findallmarkers(headers):
     return is_seurat_findallmarkers
 
 
+def order_not_significant(array_1, array_2):
+    correlation, pval = spearmanr(array_1, array_2)
+    if correlation > 0.95:
+        return False
+    else:
+        return True
+
+
+def organize_results(df):
+    # processing turned values into strings, convert to numeric for sorting
+    df["order"] = df["order"].astype(float)
+    df["order"] = df["order"].astype(int)
+    # sort dataframe by input row order
+    df = df.sort_values(by="order")
+    df = df.set_index('order')
+    # processing ensures the significance metric is the 3rd column of the df
+    df[df.columns[2]] = df[df.columns[2]].astype(float)
+    input_order = df[df.columns[2]].to_numpy()
+    sig_sorted = df[df.columns[2]].sort_values()
+    sig_array = sig_sorted.to_numpy()
+
+    if order_not_significant(sig_array, input_order):
+        # sort dataframe by significance metric
+        df = df.sort_values(by=df.columns[2])
+        return df
+    else:
+        # leave dataframe sorted by input row order
+        return df
+
+
 class AuthorDifferentialExpression:
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
     author_de_logger = setup_logger(
@@ -566,7 +597,7 @@ class AuthorDifferentialExpression:
             t_arr = t_arr[~(t_arr == 'nan').any(axis=1)]
 
             inner_df = pd.DataFrame(data=t_arr, columns=headers)
-
+            inner_df = organize_results(inner_df)
             inner_df.to_csv(tsv_name, sep='\t')
 
             print(f"Wrote TSV: {tsv_name}")
