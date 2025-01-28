@@ -9,9 +9,10 @@ import sys
 import glob
 import os
 import pytest
+import pandas as pd
 
 sys.path.append("../ingest")
-from author_de import AuthorDifferentialExpression
+from author_de import AuthorDifferentialExpression, order_not_significant
 
 
 class TestDifferentialExpression(unittest.TestCase):
@@ -67,6 +68,20 @@ class TestDifferentialExpression(unittest.TestCase):
             '162	STAT5A	0.448482028401934	0.0092416783837615	0.837815462090376'
         )
         self.assertEqual(lines[1].strip(), expected_line_1)
+
+        # test order_not_significant function
+        test_author_de = (
+            "cluster_umap_txt--General_Celltype--B_cells--study--wilcoxon.tsv"
+        )
+        df = pd.read_csv(test_author_de, sep="\t")
+        sig_sorted = df[df.columns[2]].sort_values()
+        sig_array = sig_sorted.to_numpy()
+        df_sorted = df.sort_index()
+        input_order = df_sorted[df.columns[2]].to_numpy()
+        self.assertTrue(
+            order_not_significant(sig_array, input_order),
+            "Input order should assess as not significant.",
+        )
 
     def test_column_ordering(self):
         """Tests that processed output has specified size metric as 1st, significance as 2nd.
