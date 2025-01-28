@@ -609,7 +609,6 @@ class IngestPipeline:
                 "comparison_group": kwargs["comparison_group_header"],
                 "size": kwargs["size_metric"],
                 "significance": kwargs["significance_metric"],
-                "order": "order",
             }
 
             author_de = AuthorDifferentialExpression(

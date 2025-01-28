@@ -197,11 +197,6 @@ def sort_comparison_metrics(comparison_metrics, size, significance):
 
     # Arrange significance in expected order (ultimately ranked 3rd)
     comparison_metrics = sorted(
-        comparison_metrics, key=lambda x: x.split('--')[-1] == "order"
-    )
-
-    # Arrange significance in expected order (ultimately ranked 3rd)
-    comparison_metrics = sorted(
         comparison_metrics, key=lambda x: x.split('--')[-1] == significance
     )
 
@@ -231,11 +226,6 @@ def sort_headers(headers, size, significance):
 
     # Sort alphabetically
     headers = sorted(headers)
-
-    # Start sorting process with row index of author DE file
-    # This will ensure any author-provided pre-sort info
-    # ultimately appears as the col 6 in the cannonicalized df
-    headers = sorted(headers, key=lambda x: x == "order")
 
     # Rank significance 1st (ultimately ranked 5th)
     headers = sorted(headers, key=lambda x: x == significance)
@@ -378,6 +368,8 @@ def organize_results(df):
     # sort dataframe by input row order
     df = df.sort_values(by="order")
     df = df.set_index('order')
+    # maintain unnamed index column in DE results file
+    df.index.name = None
     # processing ensures the significance metric is the 3rd column of the df
     df[df.columns[2]] = df[df.columns[2]].astype(float)
     input_order = df[df.columns[2]].to_numpy()
