@@ -6,6 +6,7 @@ python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id de
 
 import pandas as pd
 import numpy as np
+from scipy.stats import spearmanr
 import csv
 import logging
 
@@ -25,7 +26,9 @@ def sort_comparison(groups):
     """
 
     if any(i.isdigit() for i in groups):
-        sorted_arr = sorted(groups, key=lambda x: int("".join([i for i in x if i.isdigit()])))
+        sorted_arr = sorted(
+            groups, key=lambda x: int("".join([i for i in x if i.isdigit()]))
+        )
         return sorted_arr
     elif "rest" == groups[1]:
         return groups
@@ -56,6 +59,7 @@ def canonicalize_name_and_order(data, header_refmap):
     data = data.rename(columns=rename_map)
 
     data = data.astype({"group": "string"})
+    data['order'] = data.index.astype(int)
 
     # Update headers to expected order
     unsorted_headers = list(data.columns)
@@ -139,7 +143,12 @@ def generate_manifest(stem, clean_val, clean_val_p, qual):
 
         if len(file_names_pairwise) != 0:
             for value in range(len(file_names_pairwise)):
-                tsv_output.writerow([file_names_pairwise[value][0], file_names_pairwise[value][1],])
+                tsv_output.writerow(
+                    [
+                        file_names_pairwise[value][0],
+                        file_names_pairwise[value][1],
+                    ]
+                )
 
 
 def sort_all_group(all_group):
@@ -188,20 +197,24 @@ def sort_comparison_metrics(comparison_metrics, size, significance):
 
     # Arrange significance in expected order (ultimately ranked 3rd)
     comparison_metrics = sorted(
-        comparison_metrics,
-        key=lambda x: x.split('--')[-1] == significance
+        comparison_metrics, key=lambda x: x.split('--')[-1] == significance
     )
 
     # Arrange size in expected order (ultimately ranked 2nd)
     comparison_metrics = sorted(
-        comparison_metrics,
-        key=lambda x: x.split('--')[-1] == size
+        comparison_metrics, key=lambda x: x.split('--')[-1] == size
     )
 
     # Rank 1st with "gene", "group", then (if present) "comparison_group"
-    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == "comparison_group")
-    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == "group")
-    comparison_metrics = sorted(comparison_metrics, key=lambda x: x.split('--')[-1] == "gene")
+    comparison_metrics = sorted(
+        comparison_metrics, key=lambda x: x.split('--')[-1] == "comparison_group"
+    )
+    comparison_metrics = sorted(
+        comparison_metrics, key=lambda x: x.split('--')[-1] == "group"
+    )
+    comparison_metrics = sorted(
+        comparison_metrics, key=lambda x: x.split('--')[-1] == "gene"
+    )
 
     comparison_metrics.reverse()
 
@@ -209,23 +222,16 @@ def sort_comparison_metrics(comparison_metrics, size, significance):
 
 
 def sort_headers(headers, size, significance):
-    """Like `sort_comparison_metrics`, but for bare headers / metrics
-    """
+    """Like `sort_comparison_metrics`, but for bare headers / metrics"""
 
     # Sort alphabetically
     headers = sorted(headers)
 
-    # Rank significance 1st (ultimately ranked 4th)
-    headers = sorted(
-        headers,
-        key=lambda x: x == significance
-    )
+    # Rank significance 1st (ultimately ranked 5th)
+    headers = sorted(headers, key=lambda x: x == significance)
 
     # Rank size 1st (ultimately ranked 4th)
-    headers = sorted(
-        headers,
-        key=lambda x: x == size
-    )
+    headers = sorted(headers, key=lambda x: x == size)
 
     # Rank 1st with "gene", "group", then (if present) "comparison_group"
     headers = sorted(headers, key=lambda x: x == "comparison_group")
@@ -235,6 +241,7 @@ def sort_headers(headers, size, significance):
     headers.reverse()
 
     return headers
+
 
 # note: my initial files had pval, qval, logfoldchanges.
 # David's files have qval, mean, logfoldchanges.
@@ -248,7 +255,9 @@ def validate_size_and_significance(metrics, size, significance, logger):
         - Log to Sentry / Mixpanel
     """
     has_size = any([metric.split('--')[-1] == size for metric in metrics])
-    has_significance = any([metric.split('--')[-1] == significance for metric in metrics])
+    has_significance = any(
+        [metric.split('--')[-1] == significance for metric in metrics]
+    )
 
     in_headers = f"in headers: {metrics}"
 
@@ -263,7 +272,9 @@ def validate_size_and_significance(metrics, size, significance, logger):
         logger.error(msg)
         raise ValueError(msg)
     elif has_size and has_significance:
-        logger.info(f'Found size ("{size}") and significance ("{significance}") metrics {in_headers}')
+        logger.info(
+            f'Found size ("{size}") and significance ("{significance}") metrics {in_headers}'
+        )
 
 
 def get_groups_and_metrics(raw_column_names, size, significance, logger):
@@ -292,7 +303,9 @@ def get_groups_and_metrics(raw_column_names, size, significance, logger):
         column_items = raw_column_name.split("--")
         split_header = []
         for item in column_items:
-            item = item.replace("'", "")  # Remove quotes in e.g. 'type_0'--'type_1'--qval
+            item = item.replace(
+                "'", ""
+            )  # Remove quotes in e.g. 'type_0'--'type_1'--qval
             if (item != "") and (item != "_"):
                 split_header.append(item.strip("_"))
         split_headers.append(split_header)
@@ -325,11 +338,51 @@ def detect_seurat_findallmarkers(headers):
 
     These headers were observed in a real user-uploaded DE file.
     """
-    findallmarkers_headers = ['p_val', 'avg_log2FC', 'pct.1', 'pct.2', 'p_val_adj', 'cluster', 'gene']
-    is_seurat_findallmarkers = (
-        len(headers) == len(findallmarkers_headers) and all(headers == findallmarkers_headers)
+    findallmarkers_headers = [
+        'p_val',
+        'avg_log2FC',
+        'pct.1',
+        'pct.2',
+        'p_val_adj',
+        'cluster',
+        'gene',
+    ]
+    is_seurat_findallmarkers = len(headers) == len(findallmarkers_headers) and all(
+        headers == findallmarkers_headers
     )
     return is_seurat_findallmarkers
+
+
+def order_not_significant(array_1, array_2):
+    correlation, pval = spearmanr(array_1, array_2)
+    if correlation > 0.95:
+        return False
+    else:
+        return True
+
+
+def organize_results(df):
+    # processing turned values into strings, convert to numeric for sorting
+    df["order"] = df["order"].astype(float)
+    df["order"] = df["order"].astype(int)
+    # sort dataframe by input row order
+    df = df.sort_values(by="order")
+    df = df.set_index('order')
+    # maintain unnamed index column in DE results file
+    df.index.name = None
+    # processing ensures the significance metric is the 3rd column of the df
+    df[df.columns[2]] = df[df.columns[2]].astype(float)
+    input_order = df[df.columns[2]].to_numpy()
+    sig_sorted = df[df.columns[2]].sort_values()
+    sig_array = sig_sorted.to_numpy()
+
+    if order_not_significant(sig_array, input_order):
+        # sort dataframe by significance metric
+        df = df.sort_values(by=df.columns[2])
+        return df
+    else:
+        # leave dataframe sorted by input row order
+        return df
 
 
 class AuthorDifferentialExpression:
@@ -351,7 +404,7 @@ class AuthorDifferentialExpression:
         annotation_scope,
         method,
         differential_expression_file,
-        header_refmap
+        header_refmap,
     ):
         """
         :param cluster_name (string) Name of cluster, e.g. "All Cells UMAP"
@@ -413,13 +466,17 @@ class AuthorDifferentialExpression:
             groups, clean_val, metrics = get_groups_and_metrics(
                 one_vs_rest, self.size_metric, self.significance_metric, logger
             )
-            self.generate_result_files(one_vs_rest, genes, rest, groups, clean_val, metrics)
+            self.generate_result_files(
+                one_vs_rest, genes, rest, groups, clean_val, metrics
+            )
 
         if len(pairwise) != 0:
             groups_p, clean_val_p, metrics = get_groups_and_metrics(
                 pairwise, self.size_metric, self.significance_metric, logger
             )
-            self.generate_result_files(pairwise, genes, rest, groups_p, clean_val_p, metrics)
+            self.generate_result_files(
+                pairwise, genes, rest, groups_p, clean_val_p, metrics
+            )
         generate_manifest(self.stem, clean_val, clean_val_p, metrics)
 
         print("Author DE transformation succeeded")
@@ -462,7 +519,7 @@ class AuthorDifferentialExpression:
         for i in all_group_fin:
             for j in range(0, len(i), num_metrics):
                 x = j
-                comparison_metrics = i[x: x + num_metrics]
+                comparison_metrics = i[x : x + num_metrics]
                 sorted_comparison_metrics = sort_comparison_metrics(
                     comparison_metrics, self.size_metric, self.significance_metric
                 )
@@ -510,7 +567,9 @@ class AuthorDifferentialExpression:
                 sorted_list = sort_comparison([group, comparison_group])
                 comparison = f'{sorted_list[0]}--{sorted_list[1]}'
 
-            clean_comparison_metric = '--'.join([sanitize_string(group) for group in comparison.split('--')])
+            clean_comparison_metric = '--'.join(
+                [sanitize_string(group) for group in comparison.split('--')]
+            )
 
             tsv_name = f'{self.stem}--{clean_comparison_metric}--{self.annot_scope}--{self.method}.tsv'
 
@@ -521,14 +580,16 @@ class AuthorDifferentialExpression:
             t_arr = arr.transpose()
 
             if len(t_arr) == 0:
-                print(f"No data to output for TSV, skip preparation to write {tsv_name}")
+                print(
+                    f"No data to output for TSV, skip preparation to write {tsv_name}"
+                )
                 continue
 
             # Drop rows that are all "nan", as seen sometimes in Seurat FindAllMarkers()
             t_arr = t_arr[~(t_arr == 'nan').any(axis=1)]
 
             inner_df = pd.DataFrame(data=t_arr, columns=headers)
-
+            inner_df = organize_results(inner_df)
             inner_df.to_csv(tsv_name, sep='\t')
 
             print(f"Wrote TSV: {tsv_name}")
