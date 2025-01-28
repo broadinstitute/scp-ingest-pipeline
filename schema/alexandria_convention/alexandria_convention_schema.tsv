@@ -52,8 +52,8 @@ growth_factor_perturbation__concentration__unit_label		string		unit_label					gr
 growth_factor_perturbation__ontology_label		string	TRUE	ontology_label					growth_factor_perturbation			growth_factor_perturbation__ontology_label
 growth_factor_perturbation__solvent		string	TRUE						growth_factor_perturbation			Solvent in which the growth factor was added to the cells. Ex. the base media.
 growth_factor_perturbation__source		string	TRUE						growth_factor_perturbation			Source from which the growth factor was purchased
-has_electrophysiology		boolean		boolean
-has_morphology		boolean		boolean
+has_electrophysiology		boolean		boolean								Indicates availability of electrophysiology data
+has_morphology		boolean		boolean								Indicates availability of morphology data
 is_living		string		enum				"[""yes"", ""no"", ""unknown""]"				Whether organism was alive at time of biomaterial collection
 mhc_genotype		string										MHC genotype for humans and other species
 mouse_strain		string		ontology	https://www.ebi.ac.uk/ols/api/ontologies/ncit	https://www.ebi.ac.uk/ols/ontologies/ncit	"NCIT_C14420 "			species == NCBITaxon_10090		Mouse strain of the donor organism (ex. C57BL/6, BALB/c, 129, undetermined)
