@@ -367,7 +367,7 @@ class DifferentialExpression:
             clean_group = DifferentialExpression.sanitize_string(group)
             out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
             DifferentialExpression.de_logger.info(
-                f"Writing DE output for {clean_group} vs restq"
+                f"Writing DE output for {clean_group} vs rest"
             )
         elif de_type == "pairwise":
             # rank_genes_groups accepts a list. For SCP pairwise, should be a list with one item

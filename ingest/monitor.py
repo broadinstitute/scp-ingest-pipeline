@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from contextlib import nullcontext
 
 # General docs for Sentry:
@@ -41,6 +42,8 @@ def setup_logger(logger_name, log_file, level=logging.DEBUG, format="default"):
         logger.propagate = True
     logger.setLevel(level)
     logger.addHandler(handler)
+    # also log to STDOUT to pass to cloud logging
+    logger.addHandler(logging.StreamHandler(sys.stdout))
     return logger
 
 
