@@ -38,7 +38,8 @@ function main {
   BASEPATH="secret/kdux/scp/development/$(whoami)"
   VAULT_SECRET=""
   ROLLBACK="false"
-  while getopts "t:p:b:s:rh" OPTION; do
+  NAME_OVERRIDE=""
+  while getopts "t:p:b:s:n:rh" OPTION; do
     case $OPTION in
       t)
         VAULT_TOKEN="$OPTARG"
@@ -54,6 +55,10 @@ function main {
       s)
         VAULT_SECRET="$OPTARG"
         echo "setting VAULT_SECRET to $VAULT_SECRET"
+        ;;
+      n)
+        NAME_OVERRIDE="$OPTARG"
+        echo "using $NAME_OVERRIDE as GSM secret name"
         ;;
       r)
         ROLLBACK="true"
@@ -78,7 +83,12 @@ function main {
 
   # set up for GSM secret based on existing vault path
   # changes / to -, e.g. mongo/hostname becomes mongo-hostname
-  GSM_SECRET_NAME=$(echo "$VAULT_SECRET" | sed 's/\//\-/g')
+  GSM_SECRET_NAME=$(echo "$VAULT_SECRET" | sed 's/[/_]/\-/g')
+
+  # use name override if specified
+  if [[ -n "$NAME_OVERRIDE" ]]; then
+    GSM_SECRET_NAME="$NAME_OVERRIDE"
+  fi
 
   if [[ "$ROLLBACK" = "true" ]]; then
     echo "Rolling back GSM migration"
@@ -109,6 +119,7 @@ USAGE:
   -s VAULT_SECRET set the name of the requested secret in vault to copy (no default)
 
   [OPTIONS]
+  -n GSM_NAME     set the name of the new GSM secret, otherwise defaults to old name with special chars converted to -
   -p PROJECT      set the GCP project in which to create secrets (defaults to '$(gcloud info --format="value(config.project)")')
   -b BASEPATH     set the base vault path for retrieving secrets (defaults to 'secret/kdux/scp/development/$(whoami)')
   -r              roll back migration and delete scp-ingest-pipeline secret in GSM
