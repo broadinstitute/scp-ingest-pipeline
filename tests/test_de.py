@@ -1,5 +1,5 @@
-""" test_de.py
-    integration test to verify that de process generates expected output
+"""test_de.py
+integration test to verify that de process generates expected output
 """
 
 import unittest
@@ -441,6 +441,92 @@ class TestDifferentialExpression(unittest.TestCase):
                 IngestFiles.delocalize_file.call_count,
                 7,
                 "expected 7 calls to delocalize output files",
+            )
+
+        # clean up DE outputs
+        files = glob.glob(expected_output_match)
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
+
+    def test_de_process_h5ad(self):
+        test_annotation = "cell_type__ontology_label"
+        test_config = {
+            "de_type": "rest",
+            "test_annotation": test_annotation,
+            "test_scope": "study",
+            "test_method": "wilcoxon",
+            "annot_path": "../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz",
+            "study_accession": "SCPh5adde",
+            "cluster_path": "../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz",
+            "cluster_name": "umap",
+            "matrix_file": "../tests/data/anndata/compliant_liver.h5ad",
+            "matrix_type": "h5ad",
+        }
+
+        found_labels = run_de(**test_config)
+        found_label_count = len(found_labels)
+
+        self.assertEqual(
+            found_label_count,
+            2,
+            f"expected nine annotation labels for {test_annotation}",
+        )
+
+        expected_file = (
+            "umap--cell_type__ontology_label--plasma_cell--study--wilcoxon.tsv"
+        )
+
+        expected_file_path = f"../tests/{expected_file}"
+
+        # confirm expected results filename was generated in found result files
+        self.assertIn(
+            expected_file, found_labels, "Expected filename not in found files list"
+        )
+
+        content = pd.read_csv(expected_file_path, sep="\t", index_col=0)
+        # confirm expected gene in DE file at expected position
+        self.assertEqual(
+            content.iloc[0, 0],
+            "MZB1",
+            "Did not find expected gene, MZB1, at second row in DE file.",
+        )
+        # confirm calculated value has expected significant digits
+        self.assertEqual(
+            content.iloc[0, 2],
+            5.329,
+            "Did not find expected logfoldchange value for MZB1 in DE file.",
+        )
+
+        # md5 checksum calculated using reference file in tests/data/differential_expression/reference
+        expected_checksum = "649e5fd26575255bfca14c7b25d804ba"
+
+        # running DifferentialExpression via pytest results in output files in the tests dir
+        with open(expected_file_path, "rb") as f:
+            bytes = f.read()
+            de_output_checksum = hashlib.md5(bytes).hexdigest()
+        self.assertEqual(
+            de_output_checksum,
+            expected_checksum,
+            "Generated output file should match expected checksum.",
+        )
+
+        expected_output_match = (
+            "umap--cell_type__ontology_label--*--study--wilcoxon.tsv"
+        )
+
+        with patch('ingest_files.IngestFiles.delocalize_file'):
+            DifferentialExpression.delocalize_de_files(
+                'gs://fake_bucket', None, expected_output_match
+            )
+
+            self.assertEqual(
+                IngestFiles.delocalize_file.call_count,
+                2,
+                "expected 2 calls to delocalize output files",
             )
 
         # clean up DE outputs
