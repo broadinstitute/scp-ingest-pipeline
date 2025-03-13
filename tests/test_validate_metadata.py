@@ -291,7 +291,7 @@ class TestValidateMetadata(unittest.TestCase):
             {
                 "CellID": "test1",
                 "ethnicity": ["HANCESTRO_0005"],
-                "ethnicity__ontology_label": ["European"],
+                "ethnicity__ontology_label": ["European ancestry"],
             },
             updated_row,
             "Row should be updated to inject missing ontology label as array",
@@ -299,7 +299,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertEqual(
             metadata.issues["warn"]["ontology"],
             {
-                'ethnicity: missing ontology label "HANCESTRO_0005" - using "European" per EBI OLS lookup': [
+                'ethnicity: missing ontology label "HANCESTRO_0005" - using "European ancestry" per EBI OLS lookup': [
                     "test1"
                 ]
             },
@@ -316,7 +316,7 @@ class TestValidateMetadata(unittest.TestCase):
             {
                 "CellID": "test1",
                 "ethnicity": ["HANCESTRO_0005"],
-                "ethnicity__ontology_label": ["European"],
+                "ethnicity__ontology_label": ["European ancestry"],
             },
             updated_row,
             "Row should be updated to inject missing ontology label as array",
@@ -324,7 +324,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertEqual(
             metadata.issues["warn"]["ontology"],
             {
-                'ethnicity: missing ontology label "HANCESTRO_0005" - using "European" per EBI OLS lookup': [
+                'ethnicity: missing ontology label "HANCESTRO_0005" - using "European ancestry" per EBI OLS lookup': [
                     "test1"
                 ]
             },
@@ -345,7 +345,7 @@ class TestValidateMetadata(unittest.TestCase):
             {
                 "CellID": "test1",
                 "ethnicity": ["HANCESTRO_0005"],
-                "ethnicity__ontology_label": ["European"],
+                "ethnicity__ontology_label": ["European ancestry"],
             },
             updated_row,
             "Row should be updated to inject missing ontology label as array",
@@ -353,7 +353,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertEqual(
             metadata.issues["warn"]["ontology"],
             {
-                'ethnicity: missing ontology label "HANCESTRO_0005" - using "European" per EBI OLS lookup': [
+                'ethnicity: missing ontology label "HANCESTRO_0005" - using "European ancestry" per EBI OLS lookup': [
                     "test1"
                 ]
             },
@@ -567,7 +567,8 @@ class TestValidateMetadata(unittest.TestCase):
         )
         validate_input_metadata(metadata, convention)
         self.assertFalse(
-            report_issues(metadata), "Valid multiple ontologies content should not elicit error"
+            report_issues(metadata),
+            "Valid multiple ontologies content should not elicit error",
         )
         self.teardown_metadata(metadata)
 
@@ -661,7 +662,8 @@ class TestValidateMetadata(unittest.TestCase):
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
         self.assertFalse(
-            report_issues(metadata), "Valid array-based ontology content should not elicit error"
+            report_issues(metadata),
+            "Valid array-based ontology content should not elicit error",
         )
         self.teardown_metadata(metadata)
 
@@ -671,7 +673,8 @@ class TestValidateMetadata(unittest.TestCase):
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
         self.assertFalse(
-            report_issues(metadata), "Valid cell type custom content should not elicit error"
+            report_issues(metadata),
+            "Valid cell type custom content should not elicit error",
         )
         self.teardown_metadata(metadata)
 
@@ -878,7 +881,6 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.assertEqual(mocked_requests_get.call_count, MAX_HTTP_ATTEMPTS)
 
-
     def test_is_label_or_synonym(self):
         label = "10x 3' v2"
         possible_matches = {
@@ -904,7 +906,8 @@ class TestValidateMetadata(unittest.TestCase):
         )
         validate_input_metadata(metadata, convention)
         self.assertFalse(
-            report_issues(metadata), "Valid ontology synonym content should not elicit error"
+            report_issues(metadata),
+            "Valid ontology synonym content should not elicit error",
         )
         self.teardown_metadata(metadata)
 
@@ -915,7 +918,7 @@ class TestValidateMetadata(unittest.TestCase):
         metadata_name = "ethnicity__ontology_label"
         matches_before_replace = [v == ["white"] for v in df[metadata_name]]
 
-        replace_single_value_array(df, metadata_name, "white", "European")
+        replace_single_value_array(df, metadata_name, "white", "European ancestry")
         matches_after_replace = [v == ["white"] for v in df[metadata_name]]
 
         self.assertTrue(

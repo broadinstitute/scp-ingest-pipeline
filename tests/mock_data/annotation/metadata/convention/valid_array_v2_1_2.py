@@ -185,7 +185,7 @@ valid_array_v2_1_2_models = {
         "ethnicity__ontology_label": {
             "name": "ethnicity__ontology_label",
             "annotation_type": "group",
-            "values": ["European", "European|British", ""],
+            "values": ["European ancestry", "European ancestry|British", ""],
             "study_file_id": ObjectId("600f42bdb067340e777b1385"),
             "study_id": ObjectId("5ea08bb17b2f150f29f4d952"),
         },
@@ -604,7 +604,13 @@ valid_array_v2_1_2_models = {
             "cluster_name": "valid_array_v2.1.2.csv",
             "array_type": "annotations",
             "array_index": 0,
-            "values": ["European", "European", "European|British", "", "European"],
+            "values": [
+                "European ancestry",
+                "European ancestry",
+                "European ancestry|British",
+                "",
+                "European ancestry",
+            ],
             "subsample_threshold": None,
             "subsample_annotation": None,
             "linear_data_type": "CellMetadatum",
