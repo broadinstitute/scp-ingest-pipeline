@@ -84,7 +84,6 @@ class DifferentialExpression:
             if de_type == "pairwise":
                 metadata.preprocess(False)
                 values = metadata.file[annotation]['group'].unique()
-                print(f'annotation values {values} from pairwise processing')
                 if group1 and group2:
                     if group1 not in values or group2 not in values:
                         msg = (
