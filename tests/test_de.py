@@ -103,6 +103,9 @@ def run_de(**test_config):
             "de_type": de_type,
         }
 
+    if "raw_location" in test_config:
+        de_kwargs["raw_location"] = test_config["raw_location"]
+
     if "gene_file" in test_config:
         de_kwargs["gene_file"] = test_config["gene_file"]
 
@@ -455,7 +458,6 @@ class TestDifferentialExpression(unittest.TestCase):
     def test_de_process_h5ad(self):
         test_annotation = "cell_type__ontology_label"
         test_config = {
-            "de_type": "rest",
             "test_annotation": test_annotation,
             "test_scope": "study",
             "test_method": "wilcoxon",
@@ -465,6 +467,8 @@ class TestDifferentialExpression(unittest.TestCase):
             "cluster_name": "umap",
             "matrix_file": "../tests/data/anndata/compliant_liver.h5ad",
             "matrix_type": "h5ad",
+            "de_type": "rest",
+            "raw_location": ".raw",
         }
 
         found_labels = run_de(**test_config)
@@ -538,10 +542,65 @@ class TestDifferentialExpression(unittest.TestCase):
             except:
                 print(f"Error while deleting file : {file}")
 
+    def test_de_process_layers(self):
+        test_annotation = "cell_type__ontology_label"
+        test_config = {
+            "test_annotation": test_annotation,
+            "test_scope": "study",
+            "test_method": "wilcoxon",
+            "annot_path": "../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz",
+            "study_accession": "SCPh5adde",
+            "cluster_path": "../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz",
+            "cluster_name": "umap",
+            "matrix_file": "../tests/data/anndata/compliant_liver_layers_counts.h5ad",
+            "matrix_type": "h5ad",
+            "de_type": "rest",
+            "raw_location": "counts",
+        }
+
+        found_labels = run_de(**test_config)
+
+        expected_file = (
+            "umap--cell_type__ontology_label--plasma_cell--study--wilcoxon.tsv"
+        )
+
+        expected_file_path = f"../tests/{expected_file}"
+
+        # confirm expected results filename was generated in found result files
+        self.assertIn(
+            expected_file, found_labels, "Expected filename not in found files list"
+        )
+
+        content = pd.read_csv(expected_file_path, sep="\t", index_col=0)
+        # confirm expected gene in DE file at expected position
+        self.assertEqual(
+            content.iloc[0, 0],
+            "SSR4",
+            "Did not find expected gene, SSR4, at second row in DE file.",
+        )
+        # confirm calculated value has expected significant digits
+        self.assertEqual(
+            content.iloc[0, 2],
+            3.413,
+            "Did not find expected logfoldchange value for SSR4 in DE file.",
+        )
+
+        expected_output_match = (
+            "umap--cell_type__ontology_label--*--study--wilcoxon.tsv"
+        )
+
+        # clean up DE outputs
+        files = glob.glob(expected_output_match)
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
+
     def test_de_process_pairwise(self):
         test_annotation = "cell_type__ontology_label"
         test_config = {
-            "de_type": "pairwise",
             "group1": "mature B cell",
             "group2": "plasma cell",
             "test_annotation": test_annotation,
@@ -553,6 +612,8 @@ class TestDifferentialExpression(unittest.TestCase):
             "cluster_name": "umap",
             "matrix_file": "../tests/data/anndata/compliant_liver.h5ad",
             "matrix_type": "h5ad",
+            "de_type": "pairwise",
+            "raw_location": ".raw",
         }
 
         found_labels = run_de(**test_config)
@@ -627,6 +688,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "cluster_name": "umap",
             "matrix_file": "../tests/data/anndata/compliant_liver.h5ad",
             "matrix_type": "h5ad",
+            "raw_location": ".raw",
         }
 
         self.assertRaises(ValueError, run_de, **test_config)
@@ -644,6 +706,7 @@ class TestDifferentialExpression(unittest.TestCase):
             "cluster_name": "umap",
             "matrix_file": "../tests/data/anndata/compliant_liver.h5ad",
             "matrix_type": "h5ad",
+            "raw_location": ".raw",
         }
         # Original error is KeyError but all errors passed through assess_annotation become ValueErrors
         self.assertRaises(ValueError, run_de, **test_config)
