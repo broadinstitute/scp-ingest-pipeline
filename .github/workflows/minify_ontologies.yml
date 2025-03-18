@@ -4,7 +4,8 @@ on:
   pull_request:
     types: [opened] # Only trigger on PR "opened" event
 push: # Uncomment, update branches to develop / debug
-  branches: jlc_allow_layers_de
+  branches: 
+    jlc_allow_layers_de
 
 jobs:
   build:
