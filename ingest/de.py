@@ -367,7 +367,7 @@ class DifferentialExpression:
             clean_group = DifferentialExpression.sanitize_string(group)
             out_file = f'{cluster_name}--{clean_annotation}--{clean_group}--{annot_scope}--{method}.tsv'
             DifferentialExpression.de_logger.info(
-                f"Writing DE output for {clean_group} vs rest"
+                f"Writing DE output for {clean_group} vs restq"
             )
         elif de_type == "pairwise":
             # rank_genes_groups accepts a list. For SCP pairwise, should be a list with one item
@@ -403,6 +403,7 @@ class DifferentialExpression:
     ):
         method = extra_params.get("method")
         de_type = extra_params.get("de_type")
+        raw_location = extra_params.get("raw_location")
 
         try:
             DifferentialExpression.assess_annotation(annotation, metadata, extra_params)
@@ -432,24 +433,50 @@ class DifferentialExpression:
             )
 
         if matrix_file_type == "h5ad":
-            if orig_adata.raw is not None:
-                adata = AnnData(
-                    # using .copy() for the AnnData components is good practice
-                    # but we won't be using orig_adata for analyses
-                    # choosing to avoid .copy() for memory efficiency
-                    X=orig_adata.raw.X,
-                    obs=orig_adata.obs,
-                    var=orig_adata.var,
-                )
+            if raw_location == ".raw":
+                if orig_adata.raw is not None:
+                    DifferentialExpression.de_logger.info(
+                        f"Performing DE on {raw_location} data"
+                    )
+                    adata = AnnData(
+                        # using .copy() for the AnnData components is good practice
+                        # but we won't be using orig_adata for analyses
+                        # choosing to avoid .copy() for memory efficiency
+                        X=orig_adata.raw.X,
+                        obs=orig_adata.obs,
+                        var=orig_adata.var,
+                    )
+                else:
+                    msg = f'{matrix_file_path} does not have a .raw attribute'
+                    print(msg)
+                    log_exception(
+                        DifferentialExpression.dev_logger,
+                        DifferentialExpression.de_logger,
+                        msg,
+                    )
+                    raise ValueError(msg)
             else:
-                msg = f'{matrix_file_path} does not have a .raw attribute'
-                print(msg)
-                log_exception(
-                    DifferentialExpression.dev_logger,
-                    DifferentialExpression.de_logger,
-                    msg,
-                )
-                raise ValueError(msg)
+                if raw_location in orig_adata.layers.keys():
+                    DifferentialExpression.de_logger.info(
+                        f"Performing DE on adata.layers['{raw_location}'] data"
+                    )
+                    adata = AnnData(
+                        # using .copy() for the AnnData components is good practice
+                        # but we won't be using orig_adata for analyses
+                        # choosing to avoid .copy() for memory efficiency
+                        X=orig_adata.layers[raw_location],
+                        obs=orig_adata.obs,
+                        var=orig_adata.var,
+                    )
+                else:
+                    msg = f'{matrix_file_path} does not have adata.layers["{raw_location}"]'
+                    print(msg)
+                    log_exception(
+                        DifferentialExpression.dev_logger,
+                        DifferentialExpression.de_logger,
+                        msg,
+                    )
+                    raise ValueError(msg)
         # AnnData expects gene x cell so dense and mtx matrices require transposition
         else:
             adata = adata.transpose()
