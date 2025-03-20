@@ -1,5 +1,4 @@
-"""Helper functions for ingest_pipeline.py
-"""
+"""Helper functions for ingest_pipeline.py"""
 
 import argparse
 import ast
@@ -279,6 +278,13 @@ def create_parser():
         default="rest",
         choices=['rest', 'pairwise'],
         help="Accepted values: 'pairwise' or 'rest' (default)",
+    )
+
+    parser_differential_expression.add_argument(
+        "--raw-location",
+        required=True,
+        help="location of raw counts. '.raw' for raw slot, "
+        "else adata.layers key value",
     )
 
     parser_differential_expression.add_argument(
