@@ -25,6 +25,7 @@ class TestAnnDataIngestor(unittest.TestCase):
     def setup_class(self):
         filepath_valid = "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad"
         filepath_invalid = "../tests/data/anndata/bad.h5"
+        filepath_layers = "../tests/data/anndata/compliant_liver_layers_counts.h5ad"
         filepath_dup_feature = "../tests/data/anndata/dup_feature.h5ad"
         filepath_dup_cell = "../tests/data/anndata/dup_cell.h5ad"
         filepath_nan = "../tests/data/anndata/nan_value.h5ad"
@@ -34,6 +35,7 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.study_file_id = "dec0dedfeed0000000000000"
         self.valid_args = [filepath_valid, self.study_id, self.study_file_id]
         self.invalid_args = [filepath_invalid, self.study_id, self.study_file_id]
+        self.layers_args = [filepath_layers, self.study_id, self.study_file_id]
         self.dup_feature_args = [
             filepath_dup_feature,
             self.study_id,
@@ -364,6 +366,7 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.assertTrue(result)
 
     def test_invalid_raw_location(self):
-        self.valid_kwargs = {'obsm_keys': [self.cluster_name], 'raw_location': 'counts'}
+        self.invalid_kwargs = {'obsm_keys': [self.cluster_name], 'raw_location': 'foo'}
+        self.anndata_ingest = AnnDataIngestor(*self.layers_args, **self.invalid_kwargs)
         result = self.anndata_ingest.validate_raw_location()
         self.assertFalse(result)
