@@ -281,13 +281,6 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
-        "--raw-location",
-        required=True,
-        help="location of raw counts. '.raw' for raw slot, "
-        "else adata.layers key value",
-    )
-
-    parser_differential_expression.add_argument(
         "--study-accession",
         required=True,
         help="Single study accession associated with provided DE input files.",
@@ -455,6 +448,12 @@ def create_parser():
         "--obsm-keys",
         type=ast.literal_eval,
         help="Array of obsm key(s) to extract as cluster files",
+    )
+
+    parser_anndata.add_argument(
+        "--raw-location",
+        help="location of raw counts. '.raw' for raw slot, "
+        "else adata.layers key value or None if no raw counts",
     )
 
     parser_anndata.add_argument(
