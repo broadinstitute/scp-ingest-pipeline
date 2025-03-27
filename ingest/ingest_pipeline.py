@@ -55,7 +55,7 @@ python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['processed_expression']"
 
 # Ingest AnnData - happy path raw count cell name only extraction
-python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['raw_counts']"
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['raw_counts']" --raw-location ".raw"
 
 # Ingest AnnData - happy path cluster and metadata extraction
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['cluster', 'metadata']" --obsm-keys "['X_umap','X_tsne']"
@@ -80,6 +80,7 @@ python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id de
 
 # Pairwise differential expression analysis (h5ad matrix, raw count in raw slot)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression  --raw-location '.raw' --annotation-name cell_type__ontology_label --de-type pairwise --group1 "mature B cell" --group2 "plasma cell" --annotation-type group --annotation-scope study --annotation-file ../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz --cluster-file ../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz --cluster-name umap --matrix-file-path ../tests/data/anndata/compliant_liver.h5ad  --matrix-file-type h5ad --study-accession SCPdev --differential-expression
+
 """
 
 import json
@@ -561,7 +562,11 @@ class IngestPipeline:
             if self.kwargs.get('extract') and "raw_counts" in self.kwargs.get(
                 'extract'
             ):
-                self.anndata.ingest_raw_cells()
+                if self.anndata.validate_raw_location():
+                    self.anndata.ingest_raw_cells()
+                else:
+                    self.report_validation("failure")
+                    return 1
             self.report_validation("success")
             return 0
         # scanpy unable to open AnnData file

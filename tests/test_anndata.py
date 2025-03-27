@@ -1,5 +1,5 @@
-""" test_anndata.py
-    verify basic AnnData validation works as expected
+"""test_anndata.py
+verify basic AnnData validation works as expected
 """
 
 import unittest
@@ -25,6 +25,7 @@ class TestAnnDataIngestor(unittest.TestCase):
     def setup_class(self):
         filepath_valid = "../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad"
         filepath_invalid = "../tests/data/anndata/bad.h5"
+        filepath_layers = "../tests/data/anndata/compliant_liver_layers_counts.h5ad"
         filepath_dup_feature = "../tests/data/anndata/dup_feature.h5ad"
         filepath_dup_cell = "../tests/data/anndata/dup_cell.h5ad"
         filepath_nan = "../tests/data/anndata/nan_value.h5ad"
@@ -34,6 +35,7 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.study_file_id = "dec0dedfeed0000000000000"
         self.valid_args = [filepath_valid, self.study_id, self.study_file_id]
         self.invalid_args = [filepath_invalid, self.study_id, self.study_file_id]
+        self.layers_args = [filepath_layers, self.study_id, self.study_file_id]
         self.dup_feature_args = [
             filepath_dup_feature,
             self.study_id,
@@ -44,7 +46,7 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.synthetic_args = [filepath_synthetic, self.study_id, self.study_file_id]
         self.boolean_args = [filepath_boolean, self.study_id, self.study_file_id]
         self.cluster_name = 'X_tsne'
-        self.valid_kwargs = {'obsm_keys': [self.cluster_name]}
+        self.valid_kwargs = {'obsm_keys': [self.cluster_name], 'raw_location': '.raw'}
         self.anndata_ingest = AnnDataIngestor(*self.valid_args, **self.valid_kwargs)
         self.cluster_filename = f"h5ad_frag.cluster.{self.cluster_name}.tsv"
         self.metadata_filename = "h5ad_frag.metadata.tsv"
@@ -158,7 +160,9 @@ class TestAnnDataIngestor(unittest.TestCase):
                 "library_preparation_protocol__ontology_label\n",
             ]
             self.assertEqual(
-                expected_names, name_line, 'did not get expected headers from metadata body'
+                expected_names,
+                name_line,
+                'did not get expected headers from metadata body',
             )
             type_line = metadata_body.readline().split("\t")
             expected_types = [
@@ -180,43 +184,71 @@ class TestAnnDataIngestor(unittest.TestCase):
                 "GROUP\n",
             ]
             self.assertEqual(
-                expected_types, type_line, 'did not get expected types from metadata body'
+                expected_types,
+                type_line,
+                'did not get expected types from metadata body',
             )
 
     def test_generate_metadata_with_boolean(self):
         boolean_ingest = AnnDataIngestor(*self.boolean_args, **self.valid_kwargs)
         adata = boolean_ingest.obtain_adata()
         boolean_filename = "h5ad_frag.metadata_boolean.tsv"
-        boolean_ingest.generate_metadata_file(
-            adata, boolean_filename
-        )
+        boolean_ingest.generate_metadata_file(adata, boolean_filename)
         self.assertEqual(
-            'bool', adata.obs['is_primary_data'].dtype.name,
-            'did not correctly get "bool" dtype for "is_primary_data"'
+            'bool',
+            adata.obs['is_primary_data'].dtype.name,
+            'did not correctly get "bool" dtype for "is_primary_data"',
         )
         compressed_file = boolean_filename + ".gz"
         with gzip.open(compressed_file, "rt", encoding="utf-8-sig") as metadata_body:
             name_line = metadata_body.readline().split("\t")
             expected_headers = [
-                'NAME', 'donor_id', 'biosample_id', 'sex', 'species', 'species__ontology_label',
-                'library_preparation_protocol', 'library_preparation_protocol__ontology_label', 'organ',
-                'organ__ontology_label', 'disease', 'disease__ontology_label', "is_primary_data\n"
+                'NAME',
+                'donor_id',
+                'biosample_id',
+                'sex',
+                'species',
+                'species__ontology_label',
+                'library_preparation_protocol',
+                'library_preparation_protocol__ontology_label',
+                'organ',
+                'organ__ontology_label',
+                'disease',
+                'disease__ontology_label',
+                "is_primary_data\n",
             ]
             self.assertEqual(
-                expected_headers, name_line, 'did not get expected headers from metadata body'
+                expected_headers,
+                name_line,
+                'did not get expected headers from metadata body',
             )
             expected_types = [
-                'TYPE', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP', 'GROUP',
-                'GROUP', "GROUP\n"
+                'TYPE',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                'GROUP',
+                "GROUP\n",
             ]
             type_line = metadata_body.readline().split("\t")
             self.assertEqual(
-                expected_types, type_line, 'did not get expected types from metadata body'
+                expected_types,
+                type_line,
+                'did not get expected types from metadata body',
             )
             for line in metadata_body.readlines():
                 is_primary_data = line.split("\t")[12].strip()
                 self.assertEqual(
-                    "False", is_primary_data, 'did not correctly read boolean value as string from data'
+                    "False",
+                    is_primary_data,
+                    'did not correctly read boolean value as string from data',
                 )
 
     def test_gene_id_indexed_generate_processed_matrix(self):
@@ -248,14 +280,16 @@ class TestAnnDataIngestor(unittest.TestCase):
             filtered_adata.write('indexed_by_gene_id.h5ad')
         """
         indexed_by_geneid = AnnDataIngestor(
-            "../tests/data/anndata/indexed_by_gene_id.h5ad", self.study_id, self.study_file_id
+            "../tests/data/anndata/indexed_by_gene_id.h5ad",
+            self.study_id,
+            self.study_file_id,
         )
         adata = indexed_by_geneid.obtain_adata()
         self.anndata_ingest.generate_processed_matrix(adata)
 
-        now = time.time() # current time (ms since epoch)
+        now = time.time()  # current time (ms since epoch)
         expected_features_fp = 'h5ad_frag.features.processed.tsv.gz'
-        mtime = os.path.getmtime(expected_features_fp) # modified time (ms since epoch)
+        mtime = os.path.getmtime(expected_features_fp)  # modified time (ms since epoch)
         self.assertTrue(abs(now - mtime) < 1000)
 
         with gzip.open(expected_features_fp, 'rt') as f:
@@ -269,14 +303,18 @@ class TestAnnDataIngestor(unittest.TestCase):
     def test_check_if_indexed_by_gene_id(self):
         # check var.index.name
         feature_name = AnnDataIngestor(
-            "../tests/data/anndata/indexed_by_gene_id.h5ad", self.study_id, self.study_file_id
+            "../tests/data/anndata/indexed_by_gene_id.h5ad",
+            self.study_id,
+            self.study_file_id,
         )
         adata = feature_name.obtain_adata()
         self.assertTrue(feature_name.check_ensembl_index(adata))
 
         # check data inspection
         data_inspect = AnnDataIngestor(
-            "../tests/data/anndata/cellxgene.human_liver_b_cells.h5ad", self.study_id, self.study_file_id
+            "../tests/data/anndata/cellxgene.human_liver_b_cells.h5ad",
+            self.study_id,
+            self.study_file_id,
         )
         liver_adata = data_inspect.obtain_adata()
         self.assertTrue(data_inspect.check_ensembl_index(liver_adata))
@@ -318,8 +356,17 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.assertEqual('h5ad_frag.matrix.raw.mtx.gz Cells', data_array['name'])
         self.assertEqual(2638, len(data_array['values']))
 
-
     def test_ingest_raw_cells(self):
         with patch('anndata_.bypass_mongo_writes', return_value=False):
             self.anndata_ingest.ingest_raw_cells()
             self.assertEqual(1, self.anndata_ingest.models_processed)
+
+    def test_validate_raw_location(self):
+        result = self.anndata_ingest.validate_raw_location()
+        self.assertTrue(result)
+
+    def test_invalid_raw_location(self):
+        self.invalid_kwargs = {'obsm_keys': [self.cluster_name], 'raw_location': 'foo'}
+        self.anndata_ingest = AnnDataIngestor(*self.layers_args, **self.invalid_kwargs)
+        result = self.anndata_ingest.validate_raw_location()
+        self.assertFalse(result)
