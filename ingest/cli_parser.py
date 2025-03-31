@@ -281,6 +281,13 @@ def create_parser():
     )
 
     parser_differential_expression.add_argument(
+        "--raw-location",
+        required=True,
+        help="location of raw counts. '.raw' for raw slot, "
+        "else adata.layers key value",
+    )
+
+    parser_differential_expression.add_argument(
         "--study-accession",
         required=True,
         help="Single study accession associated with provided DE input files.",
