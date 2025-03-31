@@ -55,7 +55,7 @@ python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['processed_expression']"
 
 # Ingest AnnData - happy path raw count cell name only extraction
-python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['raw_counts']"
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['raw_counts']" --raw-location ".raw"
 
 # Ingest AnnData - happy path cluster and metadata extraction
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['cluster', 'metadata']" --obsm-keys "['X_umap','X_tsne']"
@@ -66,8 +66,11 @@ python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id de
 # Differential expression analysis (sparse matrix)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --matrix-file-type mtx --annotation-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --cluster-name de_sparse_integration --study-accession SCPsparsemini --differential-expression
 
-# Differential expression analysis (h5ad matrix)
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name louvain --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad --matrix-file-type h5ad --annotation-file ../tests/data/anndata/h5ad_frag.metadata.tsv --cluster-file ../tests/data/anndata/h5ad_frag.cluster.X_umap.tsv --cluster-name umap --study-accession SCPdev --differential-expression
+# Differential expression analysis (h5ad matrix, raw count in raw slot)
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression  --raw-location '.raw' --annotation-name cell_type__ontology_label --de-type rest  --annotation-type group --annotation-scope study --annotation-file ../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz --cluster-file ../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz --cluster-name umap --matrix-file-path ../tests/data/anndata/compliant_liver.h5ad  --matrix-file-type h5ad --study-accession SCPdev --differential-expression
+
+# Differential expression analysis (h5ad matrix, raw count in adata.layers['counts'])
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression  --raw-location 'counts' --annotation-name cell_type__ontology_label --de-type rest  --annotation-type group --annotation-scope study --annotation-file ../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz --cluster-file ../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz --cluster-name umap --matrix-file-path ../tests/data/anndata/compliant_liver_layers_counts.h5ad  --matrix-file-type h5ad --study-accession SCPdev --differential-expression
 
 # Pairwise differential expression analysis (dense matrix)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --de-type pairwise --group1 "['cholinergic neuron']" --group2 "cranial somatomotor neuron" --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_dense_matrix.tsv --matrix-file-type dense --annotation-file ../tests/data/differential_expression/de_dense_metadata.tsv --cluster-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
@@ -75,8 +78,8 @@ python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id de
 # Pairwise differential expression analysis (sparse matrix)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --de-type pairwise --group1 "['endothelial cell']" --group2 "smooth muscle cell" --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --matrix-file-type mtx --annotation-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --cluster-name de_sparse_integration --study-accession SCPsparsemini --differential-expression
 
-# Pairwise differential expression analysis (h5ad matrix)
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --de-type pairwise --group1 "['mature B cell']" --group2 "plasma cell" --annotation-type group --annotation-scope study --annotation-file ../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz --cluster-file ../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz --cluster-name umap --matrix-file-path ../tests/data/anndata/compliant_liver.h5ad  --matrix-file-type h5ad --study-accession SCPdev --differential-expression
+# Pairwise differential expression analysis (h5ad matrix, raw count in raw slot)
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression  --raw-location '.raw' --annotation-name cell_type__ontology_label --de-type pairwise --group1 "mature B cell" --group2 "plasma cell" --annotation-type group --annotation-scope study --annotation-file ../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz --cluster-file ../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz --cluster-name umap --matrix-file-path ../tests/data/anndata/compliant_liver.h5ad  --matrix-file-type h5ad --study-accession SCPdev --differential-expression
 
 """
 
@@ -559,7 +562,11 @@ class IngestPipeline:
             if self.kwargs.get('extract') and "raw_counts" in self.kwargs.get(
                 'extract'
             ):
-                self.anndata.ingest_raw_cells()
+                if self.anndata.validate_raw_location():
+                    self.anndata.ingest_raw_cells()
+                else:
+                    self.report_validation("failure")
+                    return 1
             self.report_validation("success")
             return 0
         # scanpy unable to open AnnData file

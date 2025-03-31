@@ -36,6 +36,7 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
         IngestFiles.__init__(
             self, file_path, allowed_file_types=self.ALLOWED_FILE_TYPES
         )
+        self.kwargs = kwargs
 
     def obtain_adata(self):
         try:
@@ -56,6 +57,36 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
             self.adata = self.obtain_adata()
             return True
         except ValueError:
+            return False
+
+    def validate_raw_location(self):
+        """
+        Confirm file has data at raw_location
+        """
+        adata = self.obtain_adata()
+        raw_location = self.kwargs.get("raw_location")
+        if raw_location is not None:
+            try:
+                if raw_location == ".raw":
+                    if adata.raw is None:
+                        msg = f'No data found in .raw slot'
+                        log_exception(
+                            IngestFiles.dev_logger, IngestFiles.user_logger, msg
+                        )
+                        raise ValueError(msg)
+                else:
+                    if raw_location not in adata.layers.keys():
+                        msg = f'No data found at adata.layers["{raw_location}"]'
+                        log_exception(
+                            IngestFiles.dev_logger, IngestFiles.user_logger, msg
+                        )
+                        raise ValueError(msg)
+                return True
+            except ValueError:
+                return False
+        else:
+            msg = 'Must specify location of raw counts in AnnData object'
+            log_exception(IngestFiles.dev_logger, IngestFiles.user_logger, msg)
             return False
 
     def create_cell_data_arrays(self):

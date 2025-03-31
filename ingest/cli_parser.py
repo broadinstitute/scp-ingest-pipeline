@@ -1,5 +1,4 @@
-"""Helper functions for ingest_pipeline.py
-"""
+"""Helper functions for ingest_pipeline.py"""
 
 import argparse
 import ast
@@ -449,6 +448,12 @@ def create_parser():
         "--obsm-keys",
         type=ast.literal_eval,
         help="Array of obsm key(s) to extract as cluster files",
+    )
+
+    parser_anndata.add_argument(
+        "--raw-location",
+        help="location of raw counts. '.raw' for raw slot, "
+        "else adata.layers key value or None if no raw counts",
     )
 
     parser_anndata.add_argument(
