@@ -546,12 +546,18 @@ class IngestPipeline:
                 if not self.kwargs["obsm_keys"]:
                     self.kwargs["obsm_keys"] = ["X_tsne"]
                 # TODO (SCP-5104): perform check for successful extraction or report failure and exit
-                for key in self.kwargs["obsm_keys"]:
-                    AnnDataIngestor.generate_cluster_header(self.anndata.adata, key)
-                    AnnDataIngestor.generate_cluster_type_declaration(
-                        self.anndata.adata, key
+                try:
+                    for key in self.kwargs["obsm_keys"]:
+                        AnnDataIngestor.generate_cluster_header(self.anndata.adata, key)
+                        AnnDataIngestor.generate_cluster_type_declaration(
+                            self.anndata.adata, key
+                        )
+                        AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
+                except Exception as e:
+                    log_exception(
+                        IngestPipeline.dev_logger, IngestPipeline.user_logger, e
                     )
-                    AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
+                    return 1
             # process matrix data
             ### TODO (SCP-5102, SCP-5103): how to associate "raw_count" cells to anndata file
             if self.kwargs.get("extract") and "processed_expression" in self.kwargs.get(
