@@ -98,6 +98,17 @@ class TestAnnDataIngestor(unittest.TestCase):
             "h5ad_frag.cluster.X_Umap.tsv",
         )
 
+    def test_invalid_obsm_key(self):
+        valid_synthetic_anndata = AnnDataIngestor(*self.synthetic_args)
+        invalid_cluster_name = "foo"
+        self.assertRaisesRegex(
+            KeyError,
+            "foo",
+            lambda: self.anndata_ingest.generate_cluster_header(
+                valid_synthetic_anndata.obtain_adata(), invalid_cluster_name
+            ),
+        )
+
     def test_generate_cluster_header(self):
         self.anndata_ingest.generate_cluster_header(
             self.anndata_ingest.obtain_adata(), self.cluster_name
