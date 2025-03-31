@@ -553,6 +553,12 @@ class IngestPipeline:
                             self.anndata.adata, key
                         )
                         AnnDataIngestor.generate_cluster_body(self.anndata.adata, key)
+                except KeyError as e:
+                    msg = f"KeyError: {e} - Unable to extract cluster data from anndata file. Please check the provided obsm key."
+                    log_exception(
+                        IngestPipeline.dev_logger, IngestPipeline.user_logger, msg
+                    )
+                    return 1
                 except Exception as e:
                     log_exception(
                         IngestPipeline.dev_logger, IngestPipeline.user_logger, e
