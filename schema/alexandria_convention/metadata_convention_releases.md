@@ -1,3 +1,15 @@
+## 3.0.0
+commit date: 2025-04-08
+* Removed ontology validation for the following columns:
+  * development_stage
+  * gene_perturbation
+  * geographical_region
+  * growth_factor_perturbation
+  * mouse_strain
+  * race
+  * small_molecule_perturbation
+  * vaccination
+
 ## 2.2.1
 
 commit date: 2022-11-29
