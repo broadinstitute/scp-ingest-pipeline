@@ -75,7 +75,7 @@ def get_synonyms(node, label):
         if 'val' not in synonym_node:
             # Handles e.g. incomplete EFO synonym nodes
             continue
-        raw_synonym = synonym_node['val']
+        raw_synonym = synonym_node['val'].strip()
         if (
             not raw_synonym.startswith('obsolete ') and # Omit obsolete synonyms
             raw_synonym != label # Omit synonyms that are redundant with label
