@@ -478,10 +478,12 @@ def retrieve_label_and_synonyms(
     :param property_type: attribute type for term (string, array, boolean)
     """
     ontology_name = re.split("[_:]", ontology_id)[0].lower()
-    return \
-        minified_reader.find_ontology_entry(ontology_name, ontology_id, property_name) \
-        if ontology_is_local(ontology_name) \
-        else retriever.retrieve_ontology_term_label_and_synonyms(ontology_id, property_name, convention, property_type)
+    if ontology_is_local(ontology_name):
+        return minified_reader.find_ontology_entry(ontology_name, ontology_id, property_name)
+    else:
+        return retriever.retrieve_ontology_term_label_and_synonyms(
+            ontology_id, property_name, convention, property_type
+        )
 
 def insert_array_ontology_label_row_data(
     property_name, row, metadata, required, convention, ontology_label
