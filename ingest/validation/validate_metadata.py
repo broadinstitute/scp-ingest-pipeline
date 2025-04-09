@@ -18,6 +18,8 @@ import copy
 import itertools
 import math
 import pandas as pd
+import gzip
+import glob
 
 import colorama
 from colorama import Fore
@@ -63,6 +65,52 @@ def backoff_handler(details):
         "calling function {target} with args {args} and kwargs "
         "{kwargs}".format(**details)
     )
+
+# handles reading minified ontologies and performing term/synonym lookups
+class MinifiedOntologyReader():
+    parsed_ontologies = {}
+
+    def __init__(self):
+        ontology_dir = f"{os.path.dirname(os.path.realpath(__file__))}/ontologies"
+        for ontology_file in glob.glob(f"{ontology_dir}/*.min.tsv.gz"):
+            ontology_name = ontology_file.split('/')[-1].replace(".min.tsv.gz", "")
+            self.populate_ontology(ontology_name, ontology_file)
+
+    def ontology_names(self):
+        return list(self.parsed_ontologies.keys())
+
+    def populate_ontology(self, ontology_name, ontology_file):
+        """Parses ontology file by name and populates entries into parsed_ontologies for lookup
+        :param ontology_name: name of ontology
+        :param ontology_file: relative path to ontology file
+        :return: parsed ontology dictionary
+        """
+        dev_logger.debug(f"populating minified ontology {ontology_name} from {ontology_file}")
+        with gzip.open(ontology_file, 'rt') as file_gz:
+            ontology = {}
+            for line in file_gz.readlines():
+                try:
+                    ontology_id, label, raw_syn = line.split("\t")
+                    entry = {"label": label, "synonyms": [syn.replace("\n", '') for syn in raw_syn.split("||")]}
+                    ontology[ontology_id] = entry
+                except (ValueError, TypeError) as e:
+                    dev_logger.error(f"could not process {line} from {ontology_name}: {e}")
+            self.parsed_ontologies[ontology_name] = ontology
+
+    def find_ontology_entry(self, ontology_name, identifier, property_name):
+        """Find an entry in a parsed ontology by identfier
+        :param ontology_name: name of ontology
+        :param identifier: ontology ID, e.g. MONDO_0005887
+        :param property_name: name of metadata property, e.g. species
+        :return: dict
+        """
+        entry = self.parsed_ontologies.get(ontology_name, {}).get(identifier, {})
+        if entry:
+            return entry
+        else:
+
+            msg = f"{property_name}: No match found in EBI OLS for provided ontology ID: {identifier}"
+            raise ValueError(msg)
 
 
 # contains methods for looking up terms in various ontologies,
@@ -113,6 +161,10 @@ class OntologyRetriever:
         if property_name == "organ_region":
             return self.retrieve_mouse_brain_term(term, property_name)
         else:
+            # leave debug statement for QA purposes later
+            dev_logger.debug(
+                f"Using fallback EBI OLS call with {ontology_urls}, {term}, {property_name}"
+            )
             return self.retrieve_ols_term(
                 ontology_urls, term, property_name, attribute_type
             )
@@ -328,7 +380,7 @@ def get_ontology_file_location(ontology):
 
 # create an OntologyRetriever instance to handle fetching and caching ontology terms
 retriever = OntologyRetriever()
-
+minified_reader = MinifiedOntologyReader()
 
 def validate_schema(json, metadata):
     """Check validity of metadata convention as JSON schema.
@@ -416,6 +468,22 @@ def validate_cells_unique(metadata):
         )
     return valid
 
+def retrieve_label_and_synonyms(
+    ontology_id, property_name, convention, property_type
+):
+    """Wrapper method to retrieve label and synonyms depending on whether ontology is local or remote
+    :param ontology_id: ontology ID, e.g. MONDO_0005887
+    :param property_name: name of metadata property, e.g. species
+    :param convention: metadata convention being checked against
+    :param property_type: attribute type for term (string, array, boolean)
+    """
+    ontology_name = re.split("[_:]", ontology_id)[0].lower()
+    if ontology_is_local(ontology_name):
+        return minified_reader.find_ontology_entry(ontology_name, ontology_id, property_name)
+    else:
+        return retriever.retrieve_ontology_term_label_and_synonyms(
+            ontology_id, property_name, convention, property_type
+        )
 
 def insert_array_ontology_label_row_data(
     property_name, row, metadata, required, convention, ontology_label
@@ -437,11 +505,8 @@ def insert_array_ontology_label_row_data(
         for id in row[property_name]:
             label_lookup = ""
             try:
-                label_and_synonyms = (
-                    retriever.retrieve_ontology_term_label_and_synonyms(
-                        id, property_name, convention, "array"
-                    )
-                )
+
+                label_and_synonyms = retrieve_label_and_synonyms(id, property_name, convention, "array")
                 label_lookup = label_and_synonyms.get('label')
                 reference_ontology = (
                     "EBI OLS lookup"
@@ -494,9 +559,7 @@ def insert_ontology_label_row_data(
         # for optional columns, try to fill it in
         property_type = convention["properties"][property_name]["type"]
         try:
-            label_and_synonyms = retriever.retrieve_ontology_term_label_and_synonyms(
-                id, property_name, convention, property_type
-            )
+            label_and_synonyms = retrieve_label_and_synonyms(id, property_name, convention, property_type)
             label = label_and_synonyms.get('label')
             row[ontology_label] = label
             reference_ontology = (
@@ -1056,6 +1119,12 @@ def is_label_or_synonym(labels, provided_label):
     else:
         return False
 
+def ontology_is_local(ontology_name):
+    """Check if it is possible to use local ontology validation instead of OLS
+    :param ontology_name: name of ontology
+    :return: Boolean
+    """
+    return ontology_name is not None and ontology_name in minified_reader.ontology_names()
 
 def validate_collected_ontology_data(metadata, convention):
     """Evaluate collected ontology_id, ontology_label info in
@@ -1080,15 +1149,10 @@ def validate_collected_ontology_data(metadata, convention):
 
         for ontology_info in metadata.ontology[property_name].keys():
             ontology_id, ontology_label = ontology_info
-
             try:
                 attribute_type = convention["properties"][property_name]["type"]
                 # get actual label along with synonyms for more robust matching
-                label_and_synonyms = (
-                    retriever.retrieve_ontology_term_label_and_synonyms(
-                        ontology_id, property_name, convention, attribute_type
-                    )
-                )
+                label_and_synonyms = retrieve_label_and_synonyms(ontology_id, property_name, convention, attribute_type)
 
                 if not is_label_or_synonym(label_and_synonyms, ontology_label):
                     matched_label_for_id = label_and_synonyms.get("label")

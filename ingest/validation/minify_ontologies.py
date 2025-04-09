@@ -21,13 +21,17 @@ NCBITAXON_URL = 'https://github.com/obophenotype/ncbitaxon/releases/latest/downl
 EFO_URL = 'https://github.com/EBISPOT/efo/releases/latest/download/efo.json'
 UBERON_URL = 'https://github.com/obophenotype/uberon/releases/latest/download/uberon.json'
 CL_URL = 'https://github.com/obophenotype/cell-ontology/releases/latest/download/cl.json'
+UO_URL = 'https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/refs/heads/master/uo.json'
+HANCESTRO_URL = 'https://raw.githubusercontent.com/EBISPOT/hancestro/refs/heads/main/hancestro.json'
 
 ONTOLOGY_JSON_URLS = {
     'disease': [MONDO_URL, PATO_URL],
     'species': [NCBITAXON_URL],
     'library_preparation_protocol': [EFO_URL],
     'organ': [UBERON_URL],
-    'cell_type': [CL_URL]
+    'cell_type': [CL_URL],
+    'ethnicity': [HANCESTRO_URL],
+    'organism_age__unit': [UO_URL]
 }
 
 def fetch(url, use_cache=True):
@@ -71,7 +75,7 @@ def get_synonyms(node, label):
         if 'val' not in synonym_node:
             # Handles e.g. incomplete EFO synonym nodes
             continue
-        raw_synonym = synonym_node['val']
+        raw_synonym = synonym_node['val'].strip()
         if (
             not raw_synonym.startswith('obsolete ') and # Omit obsolete synonyms
             raw_synonym != label # Omit synonyms that are redundant with label
