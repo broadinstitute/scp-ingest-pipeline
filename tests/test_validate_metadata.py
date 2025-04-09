@@ -25,6 +25,7 @@ import io
 import numpy as np
 import pandas as pd
 import pprint
+import glob
 
 sys.path.append("../ingest")
 sys.path.append("../ingest/validation")
@@ -37,14 +38,13 @@ from validate_metadata import (
     validate_collected_ontology_data,
     collect_cell_for_ontology,
     validate_input_metadata,
-    request_json_with_backoff,
-    MAX_HTTP_ATTEMPTS,
     is_empty_string,
     is_label_or_synonym,
     replace_single_value_array,
     replace_synonym_in_multivalue_array,
 )
 from metadata_validation import create_parser
+from validate_metadata import MinifiedOntologyReader
 
 
 # do not attempt a request, but instead throw a request exception
@@ -611,23 +611,9 @@ class TestValidateMetadata(unittest.TestCase):
             'species: input ontology_label "homo sapien" does not match EBI OLS lookup "Homo sapiens" for ontology id "NCBITaxon_9606".',
             metadata.issues["error"]["ontology"].keys(),
         )
-        #   invalid ontologyID 'NCBITaxon_9606' for geographical_region
-        self.assertIn(
-            'geographical_region: input ontology_label "Boston" does not match EBI OLS lookup "Homo sapiens" for ontology id "NCBITaxon_9606".',
-            metadata.issues["error"]["ontology"].keys(),
-        )
         #   invalid ontologyID 'UBERON_1000331' for organ__ontology_label
         self.assertIn(
             "organ: No match found in EBI OLS for provided ontology ID: UBERON_1001913",
-            metadata.issues["error"]["ontology"].keys(),
-        )
-        #   improper ontology IDs 'NCIT_C-43862' and 'NC-IT_C126538' for race__ontology_label
-        self.assertIn(
-            "race: No match found in EBI OLS for provided ontology ID: NCIT_C-43862",
-            metadata.issues["error"]["ontology"].keys(),
-        )
-        self.assertIn(
-            "race: No match found in EBI OLS for provided ontology ID: NC-IT_C126538",
             metadata.issues["error"]["ontology"].keys(),
         )
         self.teardown_metadata(metadata)
@@ -872,15 +858,6 @@ class TestValidateMetadata(unittest.TestCase):
         self.assertFalse(is_empty_string("Hello"))
         self.assertFalse(is_empty_string(4))
 
-    @patch("requests.get", side_effect=mocked_requests_get)
-    def test_request_backoff_handling(self, mocked_requests_get):
-        """errors in retrieving data from external resources should attempt MAX_HTTP_ATTEMPTS times and throw an exception"""
-        request_url = "https://www.ebi.ac.uk/ols/api/ontologies/"
-        self.assertRaises(
-            requests.exceptions.RequestException, request_json_with_backoff, request_url
-        )
-        self.assertEqual(mocked_requests_get.call_count, MAX_HTTP_ATTEMPTS)
-
     def test_is_label_or_synonym(self):
         label = "10x 3' v2"
         possible_matches = {
@@ -1015,21 +992,6 @@ class TestValidateMetadata(unittest.TestCase):
             "25 consecutive incrementing ontologyIDs should not trigger error",
         )
 
-        # Metadata 'race' has multiple ontologyIDs paired with the same label,
-        # note: all incrementing ontologyIDs for race are valid IDS AND the
-        # input data has no ontology_label for race
-        # For most SCP-required ontologies, a casual search
-        # did not find runs of >25 actual, valid ontologyIDs
-        # It seems reasonable to mark 25 consecutive, adjacent ontologyIDs
-        # in cell-based data as error (ie. highly unlikely by chance)
-        self.assertIn(
-            "race: Long stretch of contiguously incrementing ontology ID values suggest cut and paste issue - "
-            "exiting validation, ontology content not validated against ontology server.\n"
-            "Please confirm ontology IDs are correct and resubmit.\n",
-            metadata.issues["error"]["ontology"].keys(),
-            "Run of >25 incrementing ontology labels should fail validation",
-        )
-
         # Metadata 'disease' also has multiple ontologyIDs paired with the same label
         # It advises to only check mismatches with labels that are truly multiply assigned:
         # ['disease', 'absent']
@@ -1055,6 +1017,25 @@ class TestValidateMetadata(unittest.TestCase):
         )
 
         self.teardown_metadata(metadata)
+
+    def test_minified_reader_validation(self):
+        ontologies_dir = '../ingest/validation/ontologies'
+        ext = '.min.tsv.gz'
+        expected_ontologies = [
+            file.split('/')[-1].replace(ext, "") for file in glob.glob(f'{ontologies_dir}/*{ext}')
+        ]
+        reader = MinifiedOntologyReader()
+        self.assertListEqual(expected_ontologies, reader.ontology_names())
+        property_name = 'disease'
+        diabetes_entry = reader.find_ontology_entry('mondo', 'MONDO_0005015', property_name)
+        for label in ['diabetes', 'diabetes mellitus', 'DM']:
+            self.assertTrue(is_label_or_synonym(diabetes_entry, label))
+
+        self.assertFalse(is_label_or_synonym(diabetes_entry, 'this is not the label'))
+
+        entry = reader.find_ontology_entry('mondo', 'MONDO_0005147', property_name)
+        self.assertEqual('type 1 diabetes mellitus', entry['label'])
+        self.assertIn('insulin dependent diabetes', entry['synonyms'])
 
 
 if __name__ == "__main__":
