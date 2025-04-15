@@ -282,7 +282,6 @@ def create_parser():
 
     parser_differential_expression.add_argument(
         "--raw-location",
-        required=True,
         help="location of raw counts. '.raw' for raw slot, "
         "else adata.layers key value",
     )

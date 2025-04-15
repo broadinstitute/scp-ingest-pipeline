@@ -36,6 +36,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from test_dense import mock_load_r_files
 import os
+import glob
 
 from pymongo.errors import AutoReconnect, BulkWriteError
 from test_expression_files import mock_expression_load
@@ -91,6 +92,13 @@ class IngestTestCase(unittest.TestCase):
         parsed_args = create_parser().parse_args(args)
         validate_arguments(parsed_args)
         arguments = vars(parsed_args)
+        if "differential_expression" in arguments:
+            # DE may use metadata or cluster file for annots BUT
+            # IngestPipeline initialization assumes a "cell_metadata_file"
+            arguments["cell_metadata_file"] = arguments["annotation_file"]
+            # IngestPipeline initialization expects "name" and not "cluster_name"
+            arguments["name"] = arguments["cluster_name"]
+
 
         ingest = IngestPipeline(**arguments)
 
@@ -790,6 +798,180 @@ class IngestTestCase(unittest.TestCase):
 
         # clean up mtx files
         files = [mtx_filename, barcodes_filename, features_filename]
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
+
+    def test_execute_de_dense(self):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "differential_expression",
+            "--annotation-file",
+            "../tests/data/differential_expression/de_dense_metadata.tsv",
+            "--annotation-name",
+            "cell_type__ontology_label",
+            "--annotation-type",
+            "group",
+            "--annotation-scope",
+            "study",
+            "--de-type",
+            "rest",
+            "--cluster-file",
+            "../tests/data/differential_expression/de_dense_cluster.tsv",
+            "--cluster-name",
+            "dense_de_integration",
+            "--matrix-file-path",
+            "../tests/data/differential_expression/de_dense_matrix.tsv",
+            "--matrix-file-type",
+            "dense",
+            "--study-accession",
+            "SCP123",
+            "--differential-expression"
+        ]
+
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], 0)
+
+        expected_file = "dense_de_integration--cell_type__ontology_label--cholinergic_neuron--study--wilcoxon.tsv"
+        expected_output_match = (
+            "dense_de_integration--cell_type__ontology_label--*--study--wilcoxon.tsv"
+        )
+
+        files = glob.glob(expected_output_match)
+
+        self.assertIn(
+            expected_file, files, "Expected filename not in found files list"
+        )
+
+        # clean up DE outputs
+        output_wildcard_match = f"../tests/dense_de_integration--cell_type__ontology_label*.tsv"
+        files = glob.glob(output_wildcard_match)
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
+
+    def test_execute_de_sparse(self):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "differential_expression",
+            "--annotation-file",
+            "../tests/data/differential_expression/sparse/sparsemini_metadata.txt",
+            "--annotation-name",
+            "cell_type__ontology_label",
+            "--annotation-type",
+            "group",
+            "--annotation-scope",
+            "study",
+            "--de-type",
+            "rest",
+            "--cluster-file",
+            "../tests/data/differential_expression/sparse/sparsemini_cluster.txt",
+            "--cluster-name",
+            "sparse_de_integration",
+            "--matrix-file-path",
+            "../tests/data/differential_expression/sparse/sparsemini_matrix.mtx",
+            "--gene-file",
+            "../tests/data/differential_expression/sparse/sparsemini_dup_gene_name.tsv",
+            "--barcode-file",
+            "../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv",
+            "--matrix-file-type",
+            "mtx",
+            "--study-accession",
+            "SCP123",
+            "--differential-expression"
+        ]
+
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], 0)
+
+        expected_file = "sparse_de_integration--cell_type__ontology_label--fibroblast--study--wilcoxon.tsv"
+        expected_output_match = (
+            "sparse_de_integration--cell_type__ontology_label--*--study--wilcoxon.tsv"
+        )
+
+        files = glob.glob(expected_output_match)
+
+        self.assertIn(
+            expected_file, files, "Expected filename not in found files list"
+        )
+
+        # clean up DE outputs
+        output_wildcard_match = f"../tests/sparse_de_integration--cell_type__ontology_label*.tsv"
+        files = glob.glob(output_wildcard_match)
+
+        for file in files:
+            try:
+                os.remove(file)
+            except:
+                print(f"Error while deleting file : {file}")
+
+    def test_execute_de_anndata(self):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "differential_expression",
+            "--annotation-file",
+            "../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz",
+            "--annotation-name",
+            "cell_type__ontology_label",
+            "--annotation-type",
+            "group",
+            "--annotation-scope",
+            "study",
+            "--de-type",
+            "rest",
+            "--cluster-file",
+            "../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz",
+            "--cluster-name",
+            "umap",
+            "--matrix-file-path",
+            "../tests/data/anndata/compliant_liver.h5ad",
+            "--matrix-file-type",
+            "h5ad",
+            "--raw-location",
+            ".raw",
+            "--study-accession",
+            "SCP123",
+            "--differential-expression"
+        ]
+
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], 0)
+
+        expected_file = "umap--cell_type__ontology_label--plasma_cell--study--wilcoxon.tsv"
+        expected_output_match = (
+            "umap--cell_type__ontology_label--*--study--wilcoxon.tsv"
+        )
+
+        files = glob.glob(expected_output_match)
+
+        self.assertIn(
+            expected_file, files, "Expected filename not in found files list"
+        )
+
+        # clean up DE outputs
+        output_wildcard_match = f"../tests/umap--cell_type__ontology_label*.tsv"
+        files = glob.glob(output_wildcard_match)
 
         for file in files:
             try:
