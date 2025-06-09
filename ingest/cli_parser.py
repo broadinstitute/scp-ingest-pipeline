@@ -3,38 +3,11 @@
 import argparse
 import ast
 
-from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 
 
 # Ingest file types
 EXPRESSION_FILE_TYPES = ["dense", "mtx", "h5ad"]
-
-
-def bq_dataset_exists(dataset):
-    bigquery_client = bigquery.Client()
-    dataset_ref = bigquery_client.dataset(dataset)
-    exists = False
-    try:
-        bigquery_client.get_dataset(dataset_ref)
-        exists = True
-    except NotFound:
-        print(f"Dataset {dataset} not found")
-    return exists
-
-
-def bq_table_exists(dataset, table):
-    bigquery_client = bigquery.Client()
-    dataset_ref = bigquery_client.dataset(dataset)
-    table_ref = dataset_ref.table(table)
-    exists = False
-    try:
-        bigquery_client.get_table(table_ref)
-        exists = True
-    except NotFound:
-        print(f"Dataset {table} not found")
-    return exists
-
 
 def validate_arguments(parsed_args):
     """Verify parsed input arguments
@@ -54,25 +27,6 @@ def validate_arguments(parsed_args):
             "must include .genes.tsv, and .barcodes.tsv files. See --help for "
             "more information"
         )
-    if "ingest_cell_metadata" in parsed_args:
-        if (parsed_args.bq_dataset is not None and parsed_args.bq_table is None) or (
-            parsed_args.bq_dataset is None and parsed_args.bq_table is not None
-        ):
-            raise ValueError(
-                "Missing argument: --bq_dataset and --bq_table are both required for BigQuery upload."
-            )
-        if parsed_args.bq_dataset is not None and not bq_dataset_exists(
-            parsed_args.bq_dataset
-        ):
-            raise ValueError(
-                f" Invalid argument: unable to connect to a BigQuery dataset called {parsed_args.bq_dataset}."
-            )
-        if parsed_args.bq_table is not None and not bq_table_exists(
-            parsed_args.bq_dataset, parsed_args.bq_table
-        ):
-            raise ValueError(
-                f" Invalid argument: unable to connect to a BigQuery table called {parsed_args.bq_table}."
-            )
     if (
         "differential_expression" in parsed_args
         and parsed_args.annotation_type != "group"
@@ -190,12 +144,6 @@ def create_parser():
         "--study-accession",
         required=True,
         help="Single study accession associated with ingest files.",
-    )
-    parser_cell_metadata.add_argument(
-        "--bq-dataset", help="BigQuery dataset identifer for ingest job."
-    )
-    parser_cell_metadata.add_argument(
-        "--bq-table", help="BigQuery table identifer for ingest job."
     )
     parser_cell_metadata.add_argument(
         "--ingest-cell-metadata",

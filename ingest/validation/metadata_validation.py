@@ -13,9 +13,6 @@ $ python3 metadata_validation.py  ../../tests/data/annotation/metadata/conventio
 # generate an issues.json file to compare with reference test files
 $ python3 metadata_validation.py --issues-json ../../tests/data/annotation/metadata/convention/valid_no_array_v2.0.0.tsv
 
-# generate a BigQuery upload file to compare with reference test files
-$ python3 metadata_validation.py --bq-json ../../tests/data/annotation/metadata/convention/valid_no_array_v2.0.0.tsv
-
 # use a different metadata convention for validation
 $ python3 metadata_validation.py --convention <path to convention json> ../../tests/data/annotation/metadata/convention/valid_no_array_v2.0.0.tsv
 
@@ -37,7 +34,6 @@ import csv
 import copy
 import itertools
 import math
-import pandas as pd
 
 import colorama
 from colorama import Fore
@@ -51,7 +47,6 @@ try:
     from validation.validate_metadata import (
         report_issues,
         validate_input_metadata,
-        write_metadata_to_bq,
         serialize_issues,
         exit_if_errors,
     )
@@ -84,12 +79,9 @@ def create_parser():
     # to generate reference output for tests
     parser.add_argument("--issues-json", action="store_true")
     # helper param to create JSON representation of convention metadata
-    # to generate json for bigquery testing
-    parser.add_argument("--bq-json", action="store_true")
     # overwrite existing output
     parser.add_argument("--force", action="store_true")
-    # test BigQuery upload functions
-    parser.add_argument("--upload", action="store_true")
+
     # validate_metadata.py CLI only for dev, bogus defaults below shouldn't propagate
     # make bogus defaults obviously artificial for ease of detection
     parser.add_argument(
@@ -106,12 +98,6 @@ def create_parser():
         "--study-accession", help="SCP study accession", default="SCPtest"
     )
     parser.add_argument(
-        "--bq-dataset", help="BigQuery dataset identifier", default="cell_metadata"
-    )
-    parser.add_argument(
-        "--bq-table", help="BigQuery table identifier", default="alexandria_convention"
-    )
-    parser.add_argument(
         "--convention",
         help="Metadata convention JSON file",
         default="../../schema/alexandria_convention/alexandria_convention_schema.json",
@@ -120,24 +106,9 @@ def create_parser():
     return parser
 
 
-def check_if_old_output():
-    """Exit if old output files found"""
-    output_files = ["bq.json"]
-
-    old_output = False
-    for file in output_files:
-        if os.path.exists(file):
-            print(f"{file} already exists, please delete file and try again")
-            old_output = True
-    if old_output:
-        exit(1)
-
-
 if __name__ == "__main__":
     args = create_parser().parse_args()
     arguments = vars(args)
-    if not args.force:
-        check_if_old_output()
 
     with open(args.convention, "r") as f:
         convention = json.load(f)
@@ -150,10 +121,8 @@ if __name__ == "__main__":
     metadata.preprocess(True)
     print("Validating", args.input_metadata)
 
-    validate_input_metadata(metadata, convention, args.bq_json)
+    validate_input_metadata(metadata, convention)
     if args.issues_json:
         serialize_issues(metadata)
     report_issues(metadata)
-    if args.upload:
-        write_metadata_to_bq(metadata, args.bq_dataset, args.bq_table)
     exit_if_errors(metadata)

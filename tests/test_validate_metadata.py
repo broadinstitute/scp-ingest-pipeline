@@ -40,8 +40,6 @@ from validate_metadata import (
     validate_input_metadata,
     is_empty_string,
     is_label_or_synonym,
-    replace_single_value_array,
-    replace_synonym_in_multivalue_array,
 )
 from metadata_validation import create_parser
 from validate_metadata import MinifiedOntologyReader
@@ -621,15 +619,11 @@ class TestValidateMetadata(unittest.TestCase):
     def test_content(self):
         """Array-based metadata should conform to convention requirements"""
 
-        def set_up_test(test_file_name, bq=None):
+        def set_up_test(test_file_name):
             test_file_path = "data/annotation/metadata/convention/" + test_file_name
             args = "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
             metadata, convention = self.setup_metadata(args + test_file_path)
-            if bq:
-                validate_input_metadata(metadata, convention, bq_json=True)
-            else:
-                validate_input_metadata(metadata, convention)
-
+            validate_input_metadata(metadata, convention)
             return metadata
 
         # metadata validation stores warning messages which are available through CLI
@@ -654,7 +648,7 @@ class TestValidateMetadata(unittest.TestCase):
         self.teardown_metadata(metadata)
 
         # cell_type__custom entries no longer required to have corresponding cell_type metadata
-        metadata = set_up_test("valid_cell_type__custom_v2.2.1.txt", bq=True)
+        metadata = set_up_test("valid_cell_type__custom_v2.2.1.txt")
         self.assertTrue(
             metadata.validate_format(), "Valid metadata headers should not elicit error"
         )
@@ -783,32 +777,6 @@ class TestValidateMetadata(unittest.TestCase):
         )
         self.teardown_metadata(metadata)
 
-    def test_bigquery_json_content(self):
-        """generated newline delimited JSON for BigQuery upload should match expected output"""
-        args = (
-            "--convention ../schema/alexandria_convention/alexandria_convention_schema.json "
-            "../tests/data/annotation/metadata/convention/valid_array_v2.1.2.txt"
-        )
-        metadata, convention = self.setup_metadata(args)
-        metadata.preprocess(is_metadata_convention=True)
-        validate_input_metadata(metadata, convention, bq_json=True)
-
-        generated_bq_json = str(metadata.study_file_id) + ".json"
-        # This reference file needs updating with every new metadata convention version
-        reference_bq_json = "../tests/data/bq_test.json"
-
-        self.assertListEqual(
-            list(io.open(generated_bq_json)), list(io.open(reference_bq_json))
-        )
-
-        self.teardown_metadata(metadata)
-
-        # clean up downloaded generated BigQuery upload file
-        try:
-            os.remove("addedfeed000000000000000.json")
-        except OSError:
-            print("no file to remove")
-
     def test_invalid_mba_content(self):
         """Mouse Brain Atlas metadata should validate against MBA ontology file"""
         args = (
@@ -887,50 +855,6 @@ class TestValidateMetadata(unittest.TestCase):
             "Valid ontology synonym content should not elicit error",
         )
         self.teardown_metadata(metadata)
-
-    def test_array_synonym_replacement(self):
-        data = "../tests/data/annotation/metadata/convention/df.json"
-        df = pd.read_json(data, lines=True)
-
-        metadata_name = "ethnicity__ontology_label"
-        matches_before_replace = [v == ["white"] for v in df[metadata_name]]
-
-        replace_single_value_array(df, metadata_name, "white", "European ancestry")
-        matches_after_replace = [v == ["white"] for v in df[metadata_name]]
-
-        self.assertTrue(
-            np.count_nonzero(matches_before_replace) == 1,
-            "original df should have one instance of ['white']",
-        )
-        self.assertTrue(
-            np.count_nonzero(matches_after_replace) == 0,
-            "resulting df should have no instances of ['white']",
-        )
-
-        metadata_name = "disease__ontology_label"
-        orig_values = list(df[metadata_name].transform(tuple).unique())
-        replace = {"diabetes": "diabetes mellitus", "breast infection": "mastitis"}
-        replace_synonym_in_multivalue_array(df, metadata_name, replace)
-        replaced_values = list(df[metadata_name].transform(tuple).unique())
-
-        expected_result = [
-            ('diabetes mellitus', 'mastitis'),
-            ('common cold',),
-            ('diabetes mellitus', 'common cold'),
-            ('diabetes mellitus', 'mastitis', 'common cold'),
-            ('disease',),
-        ]
-
-        self.assertFalse(
-            orig_values == replaced_values,
-            "multi-value array names should be different after replacement",
-        )
-
-        self.assertEqual(
-            replaced_values,
-            expected_result,
-            "multi-value array names should match expected result",
-        )
 
     def test_validate_nonconventional_numeric_content(self):
         """Nonconventional numeric metadata values should all validate as numeric"""

@@ -21,11 +21,10 @@ python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5d
 
 # Ingest Cell Metadata file against convention
 !! Please note that you must have a pre-configured BigQuery table available
-python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/annotation/metadata/convention/valid_no_array_v2.0.0.txt --study-accession SCP123 --ingest-cell-metadata --validate-convention --bq-dataset cell_metadata --bq-table alexandria_convention
+python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_cell_metadata --cell-metadata-file ../tests/data/annotation/metadata/convention/valid_no_array_v2.0.0.txt --study-accession SCP123 --ingest-cell-metadata --validate-convention
 
-# Ingest Cell Metadata file against convention AND booleanize has_<modality> metadata for BigQuery
-#### BQ schema must be updated for each has_<modality>
-python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_cell_metadata --cell-metadata-file ../tests/data/annotation/metadata/convention/brain_rf1/patchseq_classic_metadata_has_modality_10.tsv --study-accession SCPPR344 --ingest-cell-metadata --validate-convention --has-modality "['electrophysiology', 'morphology']" --bq-dataset cell_metadata_development --bq-table alexandria_convention
+# Ingest Cell Metadata file against convention with has_<modality> metadata
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_cell_metadata --cell-metadata-file ../tests/data/annotation/metadata/convention/brain_rf1/patchseq_classic_metadata_has_modality_10.tsv --study-accession SCPPR344 --ingest-cell-metadata --validate-convention --has-modality "['electrophysiology', 'morphology']"
 
 # Ingest dense file
 python ingest_pipeline.py --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_expression --taxon-name 'Homo sapiens' --taxon-common-name human --ncbi-taxid 9606 --matrix-file ../tests/data/dense_matrix_19_genes_1000_cells.txt --matrix-file-type dense
@@ -113,7 +112,6 @@ from subsample import SubSample
 from validation.validate_metadata import (
     report_issues,
     validate_input_metadata,
-    write_metadata_to_bq,
 )
 from cell_metadata import CellMetadata
 from cli_parser import create_parser, validate_arguments
@@ -346,27 +344,6 @@ class IngestPipeline:
             query["name"] = self.kwargs.get("name")
 
         return query
-
-    def upload_metadata_to_bq(self):
-        """Uploads metadata to BigQuery"""
-        if self.kwargs["validate_convention"] is not None:
-            if (
-                self.kwargs["validate_convention"]
-                and self.kwargs["bq_dataset"]
-                and self.kwargs["bq_table"]
-            ):
-                write_status = write_metadata_to_bq(
-                    self.cell_metadata,
-                    self.kwargs["bq_dataset"],
-                    self.kwargs["bq_table"],
-                )
-                return write_status
-            else:
-                IngestPipeline.dev_logger.error(
-                    "Erroneous call to upload_metadata_to_bq"
-                )
-                return 1
-        return 0
 
     @custom_metric(config.get_metric_properties)
     def ingest_expression(self) -> int:
@@ -681,12 +658,6 @@ def run_ingest(ingest, arguments, parsed_args):
             config.set_parent_event_name("ingest-pipeline:cell_metadata:ingest")
             status_cell_metadata_validation = ingest.validate_cell_metadata()
             status.append(status_cell_metadata_validation)
-            if (
-                parsed_args.bq_table is not None
-                and status_cell_metadata_validation == 0
-            ):
-                status_metadata_bq = ingest.upload_metadata_to_bq()
-                status.append(status_metadata_bq)
             if status_cell_metadata_validation == 0:
                 if ingest.kwargs['has_modality'] is not None:
                     ingest.cell_metadata.file = CellMetadata.restore_modality_metadata(
