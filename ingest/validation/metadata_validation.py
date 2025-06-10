@@ -38,7 +38,6 @@ import math
 import colorama
 from colorama import Fore
 import jsonschema
-from google.cloud import bigquery
 
 sys.path.append("..")
 try:
