@@ -26,7 +26,6 @@ try:
     from validation.validate_metadata import (
         report_issues,
         validate_input_metadata,
-        write_metadata_to_bq,
     )
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
@@ -180,8 +179,7 @@ class CellMetadata(Annotations):
         json_file = convention_file_object.open_file(self.JSON_CONVENTION)
         convention = json.load(json_file)
 
-        import_to_bq = self.kwargs["bq_dataset"] and self.kwargs["bq_table"]
-        validate_input_metadata(self, convention, bq_json=import_to_bq)
+        validate_input_metadata(self, convention)
 
         json_file.close()
         return not report_issues(self)
