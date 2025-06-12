@@ -17,14 +17,12 @@ import csv
 import copy
 import itertools
 import math
-import pandas as pd
 import gzip
 import glob
 
 import colorama
 from colorama import Fore
 import jsonschema
-from google.cloud import bigquery
 
 sys.path.append("..")
 try:
@@ -980,7 +978,7 @@ def is_empty_string(value):
         return value == "" or value.isspace()
 
 
-def collect_jsonschema_errors(metadata, convention, bq_json=None):
+def collect_jsonschema_errors(metadata, convention):
     """Evaluate metadata input against metadata convention using JSON schema
     returns False if input convention is invalid JSON schema
     """
@@ -990,11 +988,6 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
     js_errors = defaultdict(list)
     schema = validate_schema(convention, metadata)
 
-    if bq_json:
-        bq_filename = str(metadata.study_file_id) + ".json"
-        # truncate JSON file so data from serialize_bq starts with an empty file
-        fh = open(bq_filename, "w")
-        fh.close()
     if schema:
         compare_type_annots_to_convention(metadata, convention)
         rows = metadata.yield_by_row()
@@ -1009,13 +1002,6 @@ def collect_jsonschema_errors(metadata, convention, bq_json=None):
                 except IndexError:
                     pass
                 js_errors[error.message].append(row["CellID"])
-            if bq_json:
-                # add non-convention, SCP-required, metadata for BigQuery
-                row["study_accession"] = metadata.study_accession
-                row["file_id"] = str(metadata.study_file_id)
-                # extract convention version from URI in convention JSON file
-                row["metadata_convention_version"] = convention["$id"].split("/")[-2]
-                serialize_bq(row, bq_filename)
             try:
                 line = next(rows)
             except StopIteration:
@@ -1229,37 +1215,6 @@ def confirm_uniform_units(metadata, convention):
                 metadata.store_validation_issue("error", msg, "content:uniform-units")
 
 
-def serialize_bq(bq_dict, filename="bq.json"):
-    """Write metadata collected for validation to json file
-    BigQuery requires newline delimited json objects
-    """
-    bq_dict_copy = bq_dict.copy()
-    if "organism_age" in bq_dict and "organism_age__unit_label" in bq_dict:
-        bq_dict_copy["organism_age__seconds"] = calculate_organism_age_in_seconds(
-            bq_dict["organism_age"], bq_dict["organism_age__unit_label"]
-        )
-
-    data = json.dumps(bq_dict_copy)
-    with open(filename, "a") as jsonfile:
-        jsonfile.write(data + "\n")
-
-
-def calculate_organism_age_in_seconds(organism_age, organism_age_unit_label):
-    multipliers = {
-        "microsecond": 0.000001,
-        "millisecond": 0.001,
-        "second": 1,
-        "minute": 60,
-        "hour": 3600,
-        "day": 86400,
-        "week": 604800,
-        "month": 2626560,  # (day * 30.4 to fuzzy-account for different months)
-        "year": 31557600,  # (day * 365.25 to fuzzy-account for leap-years)
-    }
-    multiplier = multipliers[organism_age_unit_label]
-    return organism_age * multiplier
-
-
 def serialize_issues(metadata):
     """Write collected issues to json file"""
     with open("issues.json", "w") as jsonfile:
@@ -1386,84 +1341,10 @@ def detect_excel_drag(metadata, convention):
     return excel_drag
 
 
-def to_1D(series):
-    """Pandas values which are list need unnesting"""
-    return [x for _list in series for x in _list]
-
-
-def replace_single_value_array(df, metadata_name, synonym, label):
-    """Synonym replacement (in-place) for single-value array metadata
-    Pandas doesn't operate well on lists which are potentially non-homogenous
-    # https://stackoverflow.com/questions/53116286/how-to-assign-an-entire-list-to-each-row-of-a-pandas-dataframe
-    """
-    match = [v == [synonym] for v in df[metadata_name]]
-    value = [label]
-    df.loc[match, metadata_name] = df.apply(lambda x: value, axis=1)
-
-
-def replace_synonym_in_multivalue_array(df, metadata_name, substitutions):
-    """Synonym replacement (in-place) for multi-value array ontology labels
-    must identify all affected arrays of labels, construct replacement arrays
-    then replace old synonym-containing array with an updated array
-    """
-    orig_values = list(df[metadata_name].transform(tuple).unique())
-    matching_synonyms = {}
-    for o in orig_values:
-        # if a synonym (s) is an element of the multivalue array (o), track it
-        matching_synonyms[o] = [s for s in substitutions.keys() if s in o]
-    for o in matching_synonyms.keys():
-        # if a multivalue array contains synonyms
-        if matching_synonyms[o]:
-            # make a copy of the original multivalue array that will take on all substitutions
-            replacement_value = list(o)
-            # make all synonym substitutions into the multivalue array of ontology labels
-            for s in matching_synonyms[o]:
-                replacement_value = [
-                    substitutions[s] if term == s else term
-                    for term in replacement_value
-                ]
-            # select the rows in the dataframe with entries for multivalue array (o)
-            match = [v == list(o) for v in df[metadata_name]]
-            df.loc[match, metadata_name] = df.apply(lambda x: replacement_value, axis=1)
-
-
-def replace_synonyms(metadata):
-    """
-    Update BigQuery data to store ontology labels and not synonyms
-    """
-    bq_filename = str(metadata.study_file_id) + ".json"
-    df = pd.read_json(bq_filename, lines=True)
-    for metadata_name in metadata.synonym_updates.keys():
-        # non-array metadata values are strings
-        if isinstance(df[metadata_name][0], str):
-            for synonym in metadata.synonym_updates[metadata_name].keys():
-                df[metadata_name].replace(
-                    synonym,
-                    metadata.synonym_updates[metadata_name][synonym],
-                    inplace=True,
-                )
-        # Pandas can't hash mutable complex objects like lists
-        # need to find and replace by location (iloc)
-        elif len(df[metadata_name]) == len(to_1D(df[metadata_name])):
-            for synonym in metadata.synonym_updates[metadata_name].keys():
-                replace_single_value_array(
-                    df,
-                    metadata_name,
-                    synonym,
-                    metadata.synonym_updates[metadata_name][synonym],
-                )
-        # at least one non-single array-type metadata
-        else:
-            replace_synonym_in_multivalue_array(
-                df, metadata_name, metadata.synonym_updates[metadata_name]
-            )
-    df.to_json(bq_filename, orient="records", lines=True)
-
-
-def validate_input_metadata(metadata, convention, bq_json=None):
+def validate_input_metadata(metadata, convention):
     """Wrapper function to run validation functions"""
     dev_logger.info("Checking metadata content against convention rules")
-    collect_jsonschema_errors(metadata, convention, bq_json)
+    collect_jsonschema_errors(metadata, convention)
     review_metadata_names(metadata)
     dev_logger.info('Checking for "Excel drag" events')
     if not detect_excel_drag(metadata, convention):
@@ -1472,59 +1353,4 @@ def validate_input_metadata(metadata, convention, bq_json=None):
         # long-compute-time issue (if false positives are possible, bypass will be needed)
         dev_logger.info('Validating ontology content against EBI OLS')
         validate_collected_ontology_data(metadata, convention)
-        if metadata.synonym_updates:
-            replace_synonyms(metadata)
         confirm_uniform_units(metadata, convention)
-
-
-def push_metadata_to_bq(metadata, ndjson, dataset, table):
-    """Upload local NDJSON to BigQuery"""
-    client = bigquery.Client()
-    dataset_ref = client.dataset(dataset)
-    table_ref = dataset_ref.table(table)
-    job_config = bigquery.LoadJobConfig()
-    job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
-    job_config.source_format = bigquery.SourceFormat.NEWLINE_DELIMITED_JSON
-    try:
-        with open(ndjson, "rb") as source_file:
-            job = client.load_table_from_file(
-                source_file, table_ref, job_config=job_config
-            )
-        job.result()  # Waits for table load to complete.
-        info_msg = f"Metadata uploaded to BigQuery. ({job.output_rows} rows)"
-        print(info_msg)
-        dev_logger.info(info_msg)
-    # Unable to intentionally trigger a failed BigQuery upload
-    # please add print statement below to error logging so
-    # error handling can be updated when better understood
-    except Exception as e:
-        print(e)
-        dev_logger.exception(e)
-        return 1
-    if job.output_rows != len(metadata.cells):
-        msg = f"BigQuery upload error: upload ({job.output_rows} rows) does not match number of cells in file, {len(metadata.cells)} cells."
-        print(msg)
-        dev_logger.error(msg)
-        return 1
-    os.remove(ndjson)
-    return 0
-
-
-def write_metadata_to_bq(metadata, bq_dataset, bq_table):
-    """Wrapper function to gather metadata and write to BigQuery"""
-    bq_filename = str(metadata.study_file_id) + ".json"
-    push_status = push_metadata_to_bq(metadata, bq_filename, bq_dataset, bq_table)
-    return push_status
-
-
-def check_if_old_output():
-    """Exit if old output files found"""
-    output_files = ["bq.json"]
-
-    old_output = False
-    for file in output_files:
-        if os.path.exists(file):
-            print(f"{file} already exists, please delete file and try again")
-            old_output = True
-    if old_output:
-        exit(1)
