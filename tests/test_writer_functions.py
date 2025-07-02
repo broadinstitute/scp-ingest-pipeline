@@ -20,6 +20,7 @@ from writer_functions import (
     process_dense_line,
     filter_expression_for_cluster,
     write_gene_scores,
+    write_gene_json
 )
 
 
@@ -139,3 +140,25 @@ class TestWriterFunctions(unittest.TestCase):
         write_gene_scores(gene, data, data_dir)
         rendered_data = json.loads(gzip.open(f"{data_dir}/{gene}.json").read())
         self.assertEqual(data, rendered_data)
+
+    def test_write_gene_json_dict(self):
+        cluster_cells = [
+            'CTAACTTGTTCCATGA-1',
+            'CTCCTAGGTCTCATCC-1',
+            'CTCGGAGTCGTAGGAG-1',
+            'CTGAAACAGGGAAACA-1',
+            'GACTACAGTAACGCGA-1',
+        ]
+        expression = [0.0, 1.234, 2.345, 3.456, 4.567, 5.678]
+        gene = 'Gad1'
+        data_dir = 'data/writer_functions'
+        write_gene_json(gene, cluster_cells, expression, data_dir, False)
+        expected_data = dict(zip(cluster_cells, expression))
+        rendered_data = json.loads(gzip.open(f"{data_dir}/{gene}.json").read())
+        self.assertEqual(expected_data, rendered_data)
+        # test sparse writing
+        sparse_gene = 'CLDN4'
+        write_gene_json(sparse_gene, cluster_cells, expression, data_dir, True)
+        expected_data = dict(zip(cluster_cells[1:], expression[1:]))
+        rendered_data = json.loads(gzip.open(f"{data_dir}/{sparse_gene}.json").read())
+        self.assertEqual(expected_data, rendered_data)

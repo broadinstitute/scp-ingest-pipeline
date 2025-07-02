@@ -137,7 +137,7 @@ def get_entity_index(file) -> int:
     return 0 if len(entities) == 1 else 1
 
 
-def process_sparse_fragment(fragment_name, barcodes, cluster_cells, data_dir):
+def process_sparse_fragment(fragment_name, barcodes, cluster_cells, data_dir, output_format="array", sparse=False):
     """
     Extract and filter a single-gene sparse matrix fragment and write expression array
 
@@ -145,6 +145,8 @@ def process_sparse_fragment(fragment_name, barcodes, cluster_cells, data_dir):
     :param barcodes: (list) list of cell barcodes
     :param cluster_cells: (list) list of cells from cluster file
     :param data_dir: (str) name out output dir
+    :param output_format: (str) format of output, either array of expression or JSON dict
+    :param sparse: (bool) True for omitting zero expression values
     """
     gene_name = fragment_name.split('__')[0]
     full_path = f"{data_dir}/gene_entries/{fragment_name}"
@@ -157,7 +159,10 @@ def process_sparse_fragment(fragment_name, barcodes, cluster_cells, data_dir):
     filtered_expression = filter_expression_for_cluster(
         cluster_cells, observed_cells, exp_vals
     )
-    write_gene_scores(gene_name, filtered_expression, data_dir)
+    if output_format == "array":
+        write_gene_scores(gene_name, filtered_expression, data_dir)
+    elif output_format == "dict":
+        write_gene_json(gene_name, cluster_cells, filtered_expression, data_dir, sparse)
 
 
 def extract_sparse_line(line) -> list:
@@ -171,7 +176,7 @@ def extract_sparse_line(line) -> list:
     return [int(gene_idx), int(barcode_idx), round_exp(raw_exp, 3)]
 
 
-def process_dense_line(line, matrix_cells, cluster_cells, data_dir):
+def process_dense_line(line, matrix_cells, cluster_cells, data_dir, output_format="array", sparse=False):
     """
     Process a single line from a dense matrix and write gene-level data
 
@@ -179,6 +184,8 @@ def process_dense_line(line, matrix_cells, cluster_cells, data_dir):
     :param cluster_cells: (list) cell names from cluster file
     :param data_dir (str) name out output dir
     :param line: (str) single line from dense matrix
+    :param output_format: (str) format of output, either array of expression or JSON dict
+    :param sparse: (bool) True for omitting zero expression values
     """
     clean_line = line.rstrip().replace('"', '')
     raw_vals = re.split(COMMA_OR_TAB, clean_line)
@@ -187,8 +194,10 @@ def process_dense_line(line, matrix_cells, cluster_cells, data_dir):
     filtered_expression = filter_expression_for_cluster(
         cluster_cells, matrix_cells, exp_vals
     )
-    if gene_name:
+    if gene_name and output_format == "array":
         write_gene_scores(gene_name, filtered_expression, data_dir)
+    elif output_format == "dict":
+        write_gene_json(gene_name, cluster_cells, filtered_expression, data_dir, sparse)
 
 
 def filter_expression_for_cluster(cluster_cells, exp_cells, exp_scores) -> list:
@@ -216,3 +225,22 @@ def write_gene_scores(gene_name, exp_values, data_dir):
     safe_gene_name = urllib.parse.quote_plus(gene_name)
     with gzip.open(f"{data_dir}/{safe_gene_name}.json", "wt") as file:
         json.dump(list(exp_values), file, separators=(',', ':'))
+
+
+def write_gene_json(gene_name, cluster_cells, exp_values, data_dir, sparse):
+    """
+    Write a JSON document for a given gene of cell names to expression values
+    :param gene_name: (str) Name of gene
+    :param cluster_cells: (list) cluster cell names
+    :param exp_values: (list) expression values
+    :param data_dir: (str) name out output dir
+    :param sparse: (bool) True to omit zero expression values
+    """
+    safe_gene_name = urllib.parse.quote_plus(gene_name)
+    if sparse:
+        gene_data = {cell: exp for cell, exp in zip(cluster_cells, exp_values) if exp != 0}
+    else:
+        gene_data = {cell: exp for cell, exp in zip(cluster_cells, exp_values)}
+
+    with gzip.open(f"{data_dir}/{safe_gene_name}.json", "wt") as file:
+        json.dump(gene_data, file, separators=(',', ':'))

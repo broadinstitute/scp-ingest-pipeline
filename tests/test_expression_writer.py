@@ -68,6 +68,19 @@ class TestExpressionWriter(unittest.TestCase):
         rendered_data = json.loads(gzip.open(f"{cluster_name}/Sergef.json").read())
         self.assertEqual(expected_data, rendered_data)
 
+    def test_process_dense_matrix_to_dict(self):
+        cluster_name = encode_cluster_name(f"{self.TEST_PREFIX}dense_dict_{uuid.uuid4()}")
+        exp_writer = self.setup_dense_exp_writer(cluster_name)
+        kwargs = {"output_format": "dict", "sparse": True}
+        exp_writer.render_artifacts(**kwargs)
+        self.assertTrue(os.path.exists(cluster_name))
+        self.assertTrue(os.path.exists(f"{cluster_name}/Sergef.json"))
+        self.assertTrue(os.path.exists(f"{cluster_name}/Itm2a.json"))
+        self.assertTrue(os.path.exists(f"{cluster_name}/THRA1%2FBTR.json"))
+        expected_data = json.loads(open(f"data/expression_writer/gene_dicts/Sergef.json").read())
+        rendered_data = json.loads(gzip.open(f"{cluster_name}/Sergef.json").read())
+        self.assertEqual(expected_data, rendered_data)
+
     def test_process_sparse_matrix(self):
         cluster_name = encode_cluster_name(f"{self.TEST_PREFIX}sparse_{uuid.uuid4()}")
         exp_writer = self.setup_sparse_exp_writer(cluster_name)
@@ -82,6 +95,25 @@ class TestExpressionWriter(unittest.TestCase):
             )
         expected_data = json.loads(
             open(f"data/writer_functions/OXCT2.orig.json").read()
+        )
+        rendered_data = json.loads(gzip.open(f"{cluster_name}/OXCT2.json").read())
+        self.assertEqual(expected_data, rendered_data)
+
+    def test_process_sparse_matrix_to_dict(self):
+        cluster_name = encode_cluster_name(f"{self.TEST_PREFIX}sparse_dict_{uuid.uuid4()}")
+        exp_writer = self.setup_sparse_exp_writer(cluster_name)
+        kwargs = {"output_format": "dict", "sparse": True}
+        exp_writer.render_artifacts(**kwargs)
+        self.assertTrue(os.path.exists(cluster_name))
+        genes = load_entities_as_list(open(exp_writer.gene_file))
+        genes.remove('HOMER2')  # doesn't render gene entry file
+        for gene in genes:
+            self.assertTrue(os.path.exists(f"{cluster_name}/{gene}.json"))
+            self.assertTrue(
+                os.path.exists(f"{cluster_name}/gene_entries/{gene}__entries.txt")
+            )
+        expected_data = json.loads(
+            open(f"data/expression_writer/gene_dicts/OXCT2.json").read()
         )
         rendered_data = json.loads(gzip.open(f"{cluster_name}/OXCT2.json").read())
         self.assertEqual(expected_data, rendered_data)
