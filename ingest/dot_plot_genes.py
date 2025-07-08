@@ -231,14 +231,15 @@ class DotPlotGenes:
             return round(raw_exp * pct_exp, 3)
 
     @staticmethod
-    def pct_expression(gene_doc, cluster_cells):
+    def pct_expression(gene_doc, cells):
         """
         Get the percentage of cells expressing for a given gene relative to the cells in the cluster
         :param gene_doc: (dict) gene-level significant expression values
+        :param cells: (list) list of cells for given annotation label
         :return: (float)
         """
         observed_cells = gene_doc.keys()
-        return round(len(observed_cells) / len(cluster_cells), 4)
+        return round(len(observed_cells) / len(cells), 4)
 
     def process_all_genes(self):
         """
@@ -283,7 +284,7 @@ class DotPlotGenes:
         self.preprocess()
         self.process_all_genes()
         gene_docs = []
-        for gene_path in os.listdir(self.output_path):
+        for gene_path in glob.glob(f"{self.output_path}/*.json"):
             rendered_gene = DotPlotGenes.get_gene_dict(gene_path)
             gene_docs.append(rendered_gene)
             if len(gene_docs) == self.BATCH_SIZE:
