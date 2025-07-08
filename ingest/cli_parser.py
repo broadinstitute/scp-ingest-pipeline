@@ -471,6 +471,58 @@ def create_parser():
         required=True,
     )
 
+    parser_dot_plot_genes = subparsers.add_parser(
+        "ingest_dot_plot_genes",
+        help="Process expression/annotation/cluster data into pre-calculated gene-level dot plot entries"
+    )
+
+    parser_dot_plot_genes.add_argument(
+        "--ingest-dot-plot-genes",
+        required=True,
+        action="store_true",
+        help="Indicates that dot plot gene ingest should be invoked"
+    )
+
+    parser_dot_plot_genes.add_argument(
+        "--cluster-group-id",
+        help="ID of associated clustering object",
+        required=True
+    )
+
+    parser_dot_plot_genes.add_argument(
+        "--cluster-file",
+        help="Absolute or relative path to clustering file for cell names and annotations",
+        required=True
+    )
+
+    parser_dot_plot_genes.add_argument(
+        "--annotation-file",
+        required=True,
+        help="Absolute or relative path to cell metadata file of annotations",
+    )
+
+    parser_dot_plot_genes.add_argument(
+        "--matrix-file-path",
+        required=True,
+        help="Absolute or relative path to expression file. For 10x data this is the .mtx file",
+    )
+
+    parser_dot_plot_genes.add_argument(
+        "--matrix-file-type",
+        choices=EXPRESSION_FILE_TYPES,
+        type=str.lower,
+        required=True,
+        help=matrix_file_type_txt,
+    )
+
+    # Gene and Barcode arguments for MTX bundle
+    parser_dot_plot_genes.add_argument(
+        "--barcode-file", help="Path to .barcodes.tsv files"
+    )
+    parser_dot_plot_genes.add_argument(
+        "--gene-file", help="Path to .genes.tsv file"
+    )
+
     return parser
 
 

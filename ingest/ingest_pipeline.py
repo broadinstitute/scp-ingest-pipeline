@@ -123,6 +123,7 @@ from de import DifferentialExpression
 from author_de import AuthorDifferentialExpression
 from expression_writer import ExpressionWriter
 from rank_genes import RankGenes
+from dot_plot_genes import DotPlotGenes
 
 # scanpy uses anndata python package, disamibguate local anndata
 # using underscore https://peps.python.org/pep-0008/#naming-conventions
@@ -143,6 +144,7 @@ class IngestPipeline:
         'ingest_anndata',
         'ingest_subsample',
         'ingest_differential_expression',
+        'ingest_dot_plot_genes',
         'differential_expression',
         'render_expression_arrays',
         'rank_genes',
@@ -168,6 +170,7 @@ class IngestPipeline:
         ingest_cluster=False,
         differential_expression=False,
         ingest_differential_expression=False,
+        ingest_dot_plot_genes=False
         **kwargs,
     ):
         """Initializes variables in Ingest Pipeline"""
@@ -616,6 +619,26 @@ class IngestPipeline:
         # ToDo: surface failed DE for analytics (SCP-4206)
         return 0
 
+    def ingest_dot_plot_genes(self):
+        """Calculate scaled mean & pct. expression for genes in context of cluster/annotations"""
+        try:
+            dot_plot_genes = DotPlotGenes(
+                study_id=self.study_id,
+                study_file_id=self.study_file_id,
+                cluster_group_id=self.kwargs['cluster_group_id'],
+                cluster_file=self.cluster_file,
+                cell_metadata=self.cell_metadata,
+                matrix_file_path=self.matrix_file_path,
+                matrix_file_type=self.matrix_file_type,
+                **self.kwargs
+            )
+            dot_plot_genes.transform()
+        except Exception as e:
+            print(traceback.format_exc())
+            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+            return 1
+        return 0
+
     def render_expression_arrays(self):
         try:
             exp_writer = ExpressionWriter(
@@ -689,7 +712,11 @@ def run_ingest(ingest, arguments, parsed_args):
         status_de = ingest.calculate_author_de()
         status.append(status_de)
         print(f"STATUS after ingest author DE: {status}")
-
+    elif "ingest_dot_plot_genes" in arguments:
+        config.set_parent_event_name("ingest-pipeline:dot-plot-genes:ingest")
+        status_dot_plot = ingest.ingest_dot_plot_genes()
+        status.append(status_dot_plot)
+        print(f"STATUS after ingest dot plot genes: {status}")
     elif "render_expression_arrays" in arguments:
         config.set_parent_event_name("image-pipeline:render-expression-arrays")
         status_exp_writer = ingest.render_expression_arrays()

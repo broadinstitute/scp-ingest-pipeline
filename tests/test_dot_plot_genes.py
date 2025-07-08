@@ -9,6 +9,7 @@ from bson.objectid import ObjectId
 
 sys.path.append("../ingest")
 from dot_plot_genes import DotPlotGenes
+from annotations import Annotations
 
 
 class TestDotPlotGenes(unittest.TestCase):
@@ -28,6 +29,11 @@ class TestDotPlotGenes(unittest.TestCase):
             "CLST_B_2": [4.782, 0.6667],
             "CLST_C_1": [4.59, 0.6667],
             "CLST_C_2": [2.805, 0.5]
+        },
+        'Category--group--cluster': {
+            'A': [4.111, 0.6],
+            'B': [5.763, 0.8333],
+            'C': [0.0, 0.0]
         }
     }
     OXCT2_METRICS = {
@@ -53,7 +59,7 @@ class TestDotPlotGenes(unittest.TestCase):
             study_id=self.study_id,
             study_file_id=self.study_file_id,
             cluster_group_id=f"{self.TEST_PREFIX}_{ObjectId()}",
-            annotation_file='data/metadata_example.txt',
+            cell_metadata_file='data/metadata_example.txt',
             matrix_file_path='data/dense_expression_matrix.txt',
             matrix_file_type='dense',
             cluster_file='data/cluster_example.txt',
@@ -64,7 +70,7 @@ class TestDotPlotGenes(unittest.TestCase):
             study_id=self.study_id,
             study_file_id=self.study_file_id,
             cluster_group_id=f"{self.TEST_PREFIX}_{ObjectId()}",
-            annotation_file='data/mtx/metadata_mtx_barcodes.tsv',
+            cell_metadata_file='data/mtx/metadata_mtx_barcodes.tsv',
             matrix_file_path='data/mtx/matrix_with_header.mtx',
             gene_file='data/mtx/sampled_genes.tsv',
             barcode_file='data/mtx/barcodes.tsv',
@@ -81,16 +87,42 @@ class TestDotPlotGenes(unittest.TestCase):
         for dirname in test_dirs:
             rmtree(dirname)
 
-    def dense_cluster_cells(self):
-        return [f"CELL_000{i}" for i in range(1, 16)]
+    @staticmethod
+    def dense_cluster_cells(cell_range):
+        return [f"CELL_000{i}" for i in cell_range]
 
     def test_set_annotation_map(self):
         dot_plot = self.setup_dense()
         dot_plot.set_annotation_map()
-        self.assertEqual(['Cluster--group--study', 'Sub-Cluster--group--study'], list(dot_plot.annotation_map.keys()))
-        expected_cells = set(['CELL_0001', 'CELL_0002', 'CELL_0003', 'CELL_0004', 'CELL_0005'])
+        self.assertEqual(['Cluster--group--study', 'Sub-Cluster--group--study', 'Category--group--cluster'],
+                         list(dot_plot.annotation_map.keys()))
+        expected_cells = set(TestDotPlotGenes.dense_cluster_cells(range(1, 6)))
         self.assertEqual(expected_cells, dot_plot.annotation_map['Cluster--group--study']['CLST_A'])
-        self.assertEqual(self.dense_cluster_cells(), dot_plot.cluster_cells)
+        self.assertEqual(TestDotPlotGenes.dense_cluster_cells(range(1, 16)), dot_plot.cluster_cells)
+
+    def test_add_annotation_to_map(self):
+        dot_plot = self.setup_dense()
+        cell_metadata = Annotations(dot_plot.cell_metadata_file, ['text/plain'])
+        cell_metadata.preprocess(False)
+        cluster = Annotations(dot_plot.cluster_file, ['text/plain'])
+        cluster.preprocess(False)
+        # gotcha as preprocess() hasn't been called yet so set cluster_cells manually
+        dot_plot.cluster_cells = TestDotPlotGenes.dense_cluster_cells(range(1, 16))
+        dot_plot.add_annotation_to_map('Cluster', 'study', cell_metadata)
+        expected_cells = set(set(TestDotPlotGenes.dense_cluster_cells(range(1, 6))))
+        self.assertIn('Cluster--group--study', list(dot_plot.annotation_map.keys()))
+        print(dot_plot.annotation_map)
+        self.assertEqual(expected_cells, dot_plot.annotation_map['Cluster--group--study']['CLST_A'])
+        dot_plot.add_annotation_to_map('Category', 'cluster', cluster)
+        self.assertIn('Category--group--cluster', list(dot_plot.annotation_map.keys()))
+        expected_cells = set(set(TestDotPlotGenes.dense_cluster_cells([3, 6, 9, 12, 13])))
+        self.assertEqual(expected_cells, dot_plot.annotation_map['Category--group--cluster']['A'])
+
+    def test_annotation_is_valid(self):
+        dot_plot = self.setup_sparse()
+        cell_metadata = Annotations(dot_plot.cell_metadata_file, ['text/tab-separated-values'])
+        cell_metadata.preprocess(False)
+        self.assertTrue(DotPlotGenes.annotation_is_valid(['Cluster', 'group'], cell_metadata))
 
     def test_render_expression_dense(self):
         dot_plot = self.setup_dense()
@@ -108,7 +140,8 @@ class TestDotPlotGenes(unittest.TestCase):
 
     def test_compute_pct_exp(self):
         gene_doc = json.loads(open("data/expression_writer/gene_dicts/Sergef.json").read())
-        self.assertEqual(0.5333, DotPlotGenes.pct_expression(gene_doc, self.dense_cluster_cells()))
+        self.assertEqual(0.5333,
+                         DotPlotGenes.pct_expression(gene_doc, TestDotPlotGenes.dense_cluster_cells(range(1, 16))))
 
     def test_compute_scaled_mean(self):
         gene_doc = json.loads(open("data/expression_writer/gene_dicts/Sergef.json").read())
@@ -170,9 +203,9 @@ class TestDotPlotGenes(unittest.TestCase):
         rendered_gene = json.loads(gzip.open(rendered_path).read())
         self.assertEqual(self.SERGEF_METRICS, rendered_gene['exp_scores'])
 
-    def test_run_processor(self):
+    def test_run_transform(self):
         dot_plot = self.setup_sparse()
-        dot_plot.run_processor()
+        dot_plot.transform()
         total_genes = os.listdir(f"{dot_plot.cluster_name}/dot_plot_genes")
         self.assertEqual(7, len(total_genes))
         rendered_path = f"{dot_plot.cluster_name}/dot_plot_genes/OXCT2.json"

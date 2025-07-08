@@ -9,13 +9,12 @@ import sys
 import datetime
 from dateutil.relativedelta import relativedelta
 from functools import partial
-from bson.objectid import ObjectId
 
 try:
     from annotations import Annotations
     from expression_writer import ExpressionWriter
     from writer_functions import get_cluster_cells
-    from monitor import setup_logger, log_exception
+    from monitor import setup_logger, bypass_mongo_writes
     from mongo_connection import MongoConnection, graceful_auto_reconnect
     import config
 
@@ -24,9 +23,10 @@ except ImportError:
     from .annotations import Annotations
     from .expression_writer import ExpressionWriter
     from .writer_functions import get_cluster_cells
-    from .monitor import setup_logger, log_exception
+    from .monitor import setup_logger, bypass_mongo_writes
     from .mongo_connection import MongoConnection, graceful_auto_reconnect
     from . import config
+
 
 class DotPlotGenes:
     COLLECTION_NAME = "dot_plot_genes"
@@ -35,16 +35,15 @@ class DotPlotGenes:
     EXP_WRITER_SETTINGS = {"output_format": "dict", "sparse": True}
     denominator = 2 if re.match('darwin', sys.platform) else 1
     num_cores = int(multiprocessing.cpu_count() / denominator) - 1
-    # Logger provides more details
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
 
     def __init__(
             self,
             study_id,
-            study_file_id, # expression matrix file
+            study_file_id,  # expression matrix file
             cluster_group_id,
             cluster_file,
-            annotation_file,
+            cell_metadata_file,
             matrix_file_path,
             matrix_file_type,
             **kwargs,
@@ -53,7 +52,7 @@ class DotPlotGenes:
         self.study_file_id = study_file_id
         self.cluster_group_id = cluster_group_id
         self.cluster_file = cluster_file
-        self.annotation_file = annotation_file
+        self.cell_metadata_file = cell_metadata_file
         self.matrix_file_path = matrix_file_path
         self.matrix_file_type = matrix_file_type
         self.kwargs = kwargs
@@ -69,6 +68,7 @@ class DotPlotGenes:
 
         # the cluster name here is not important, it is only used for directory names
         self.cluster_name = f"cluster_{self.cluster_group_id}"
+        self.output_path = f"{self.cluster_name}/dot_plot_genes"
         self.exp_writer = ExpressionWriter(
             self.matrix_file_path, self.matrix_file_type, self.cluster_file, self.cluster_name, self.genes_path,
             self.barcodes_path
@@ -85,29 +85,43 @@ class DotPlotGenes:
         """
         self.dev_logger.info(f"getting cluster cells from {self.cluster_file}")
         self.cluster_cells = get_cluster_cells(self.cluster_file)
-        self.dev_logger.info(f"preprocessing annotation data from {self.annotation_file}")
-        raw_annotations = Annotations(self.annotation_file, self.ALLOWED_FILE_TYPES)
-        raw_annotations.preprocess(False)
-        valid_annot_names = [
-            column[0] for column in raw_annotations.file.columns if
-            column[1] == 'group' and
-            len(raw_annotations.file[column[0]]['group'].unique()) > 1
+        self.dev_logger.info(f"preprocessing annotation data from {self.cell_metadata_file}")
+        cell_metadata = Annotations(self.cell_metadata_file, self.ALLOWED_FILE_TYPES)
+        cell_metadata.preprocess(False)
+        valid_metadata = [
+            [column[0], 'study', cell_metadata] for column in cell_metadata.file.columns if
+            self.annotation_is_valid(column, cell_metadata)
         ]
-        for annot in valid_annot_names:
-            annotation_name = f"{annot}--group--study"
-            groups = dict(raw_annotations.file['NAME']['TYPE'].groupby(raw_annotations.file[annot]['group']).unique())
-            self.dev_logger.info(f"reading {annotation_name}, found {len(groups)} labels")
-            self.annotation_map[annotation_name] = {}
-            for group in groups:
-                filtered_cells = set(self.cluster_cells).intersection(set(groups[group]))
-                self.annotation_map[annotation_name][group] = filtered_cells
+        # check for annotations in cluster file
+        cluster_annots = Annotations(self.cluster_file, self.ALLOWED_FILE_TYPES)
+        cluster_annots.preprocess(False)
+        valid_cluster_annots = [
+            [column[0], 'cluster', cluster_annots] for column in cluster_annots.file.columns if
+            self.annotation_is_valid(column, cluster_annots)
+        ]
+        all_annotations = valid_metadata + valid_cluster_annots
+        for annotation_name, annotation_scope, source_data in all_annotations:
+            self.add_annotation_to_map(annotation_name, annotation_scope, source_data)
+        self.dev_logger.info(f"Annotation data preprocessing for {self.cell_metadata_file} complete")
 
-        self.dev_logger.info(f"Annotation data preprocessing for {self.annotation_file} complete")
+    def add_annotation_to_map(self, annotation_name, annotation_scope, source_data):
+        """
+        Take an individual annotation, filter cells and add it to the annotation_map dictionary
+        :param annotation_name: (str) name of annotation
+        :param annotation_scope: (str) scope of annotation, either study or cluster
+        :param source_data: (DataFrame) pandas dataframe of source data
+        """
+        annotation_id = f"{annotation_name}--group--{annotation_scope}"
+        groups = dict(source_data.file['NAME']['TYPE'].groupby(source_data.file[annotation_name]['group']).unique())
+        self.dev_logger.info(f"reading {annotation_name}, found {len(groups)} labels")
+        self.annotation_map[annotation_id] = {}
+        for group in groups:
+            filtered_cells = set(self.cluster_cells).intersection(set(groups[group]))
+            self.annotation_map[annotation_id][group] = filtered_cells
 
     def render_gene_expression(self):
         """
         Render gene-level expression for all cells in the given cluster, filtering for non-zero expression
-        :return:
         """
         self.dev_logger.info(f"Rendering cluster-filtered gene expression from {self.matrix_file_path}")
         self.exp_writer.render_artifacts(**self.EXP_WRITER_SETTINGS)
@@ -116,11 +130,23 @@ class DotPlotGenes:
     def preprocess(self):
         """
         Preprocess all data in preparation of creating DotPlotGene entries
-        :return:
         """
         self.set_annotation_map()
         self.render_gene_expression()
         self.dev_logger.info("All data preprocessing complete")
+
+    @staticmethod
+    def annotation_is_valid(column, source_data):
+        """
+        Determine if an given column in an annotation file is valid
+        must be group-based and have between 2 and 250 values
+        :param column: (str) name of column
+        :param source_data: (DataFrame) pandas dataframe of source data
+        :return: (bool)
+        """
+        viz_range = range(2, 200, 1)
+        column_name, annotation_type = column
+        return annotation_type == 'group' and len(source_data.file[column_name][annotation_type].unique()) in viz_range
 
     @staticmethod
     def process_gene(gene_file, output_path, dot_plot_gene, annotation_map):
@@ -134,7 +160,6 @@ class DotPlotGenes:
         :return: (dict) fully processed DotPlotGene
         """
         gene_name = DotPlotGenes.get_gene_name(gene_file)
-        dot_plot_gene["_id"] = str(ObjectId())
         dot_plot_gene["gene_symbol"] = gene_name
         dot_plot_gene["searchable_gene"] = gene_name.lower()
         gene_dict = DotPlotGenes.get_gene_dict(gene_file)
@@ -218,10 +243,8 @@ class DotPlotGenes:
     def process_all_genes(self):
         """
         Parallel function to process all files and render out DotPlotGene dicts
-        :return:
         """
-        output_path = f"{self.cluster_name}/dot_plot_genes"
-        os.mkdir(output_path)
+        os.mkdir(self.output_path)
         gene_files = glob.glob(f"{self.cluster_name}/*.json")
         blank_dot_plot_gene = {
             "study_id": self.study_id,
@@ -229,26 +252,42 @@ class DotPlotGenes:
             "cluster_group_id": self.cluster_group_id,
             "exp_scores": {}
         }
-        output_path = f"{self.cluster_name}/dot_plot_genes"
         self.dev_logger.info(f"beginning parallel rendering of {len(gene_files)} DotPlotGene entries")
         pool = multiprocessing.Pool(self.num_cores)
         processor = partial(
             DotPlotGenes.process_gene,
             dot_plot_gene=blank_dot_plot_gene,
-            output_path=output_path,
+            output_path=self.output_path,
             annotation_map=self.annotation_map
         )
         pool.map(processor, gene_files)
 
-    def run_processor(self):
+    @graceful_auto_reconnect
+    def load(self, documents):
         """
-        Main handler to process all data and render DotPlotGenes
-        :return:
+        Insert batch of documents into MongoDB
+        :param documents: (list) list of rendered documents to insert
+        """
+        if not bypass_mongo_writes():
+            self.mongo_connection.insert_many(documents, self.COLLECTION_NAME)
+        else:
+            dev_msg = f"Extracted {len(documents)} DotPlotGenes for {self.matrix_file_path}"
+            self.dev_logger.info(dev_msg)
+
+    def transform(self):
+        """
+        Main handler to process all data and render/insert DotPlotGenes
         """
         start_time = datetime.datetime.now()
         self.dev_logger.info(f"beginning rendering of {self.matrix_file_path} into DotPlotGene entries")
         self.preprocess()
         self.process_all_genes()
+        gene_docs = []
+        for rendered_gene in os.listdir(self.output_path):
+            gene_docs.append(rendered_gene)
+            if len(gene_docs) == self.BATCH_SIZE:
+                self.load(gene_docs)
+                gene_docs.clear()
         end_time = datetime.datetime.now()
         time_diff = relativedelta(end_time, start_time)
         self.dev_logger.info(
