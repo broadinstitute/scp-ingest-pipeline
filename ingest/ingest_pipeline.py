@@ -170,7 +170,6 @@ class IngestPipeline:
         ingest_cluster=False,
         differential_expression=False,
         ingest_differential_expression=False,
-        ingest_dot_plot_genes=False
         **kwargs,
     ):
         """Initializes variables in Ingest Pipeline"""

@@ -283,7 +283,8 @@ class DotPlotGenes:
         self.preprocess()
         self.process_all_genes()
         gene_docs = []
-        for rendered_gene in os.listdir(self.output_path):
+        for gene_path in os.listdir(self.output_path):
+            rendered_gene = DotPlotGenes.get_gene_dict(gene_path)
             gene_docs.append(rendered_gene)
             if len(gene_docs) == self.BATCH_SIZE:
                 self.load(gene_docs)
