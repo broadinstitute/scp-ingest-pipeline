@@ -123,7 +123,7 @@ class DotPlotGenes:
         self.dev_logger.info("All data preprocessing complete")
 
     @staticmethod
-    def process_gene(gene_file, output_path, dot_plot_gene, annotation_map, cluster_cells):
+    def process_gene(gene_file, output_path, dot_plot_gene, annotation_map):
         """
         Read gene-level document and compute both mean and percent cells expressing for all applicable annotations
         :param gene_file: (str) name of gene-level JSON file
@@ -134,22 +134,21 @@ class DotPlotGenes:
         :return: (dict) fully processed DotPlotGene
         """
         gene_name = DotPlotGenes.get_gene_name(gene_file)
-        dot_plot_gene["_id"] = ObjectId()
+        dot_plot_gene["_id"] = str(ObjectId())
         dot_plot_gene["gene_symbol"] = gene_name
         dot_plot_gene["searchable_gene"] = gene_name.lower()
         gene_dict = DotPlotGenes.get_gene_dict(gene_file)
-        exp_scores = DotPlotGenes.get_expression_metrics(gene_dict, annotation_map, cluster_cells)
+        exp_scores = DotPlotGenes.get_expression_metrics(gene_dict, annotation_map)
         dot_plot_gene['exp_scores'] = exp_scores
         with gzip.open(f"{output_path}/{gene_name}.json", "wt") as file:
             json.dump(dot_plot_gene, file, separators=(',', ':'))
 
     @staticmethod
-    def get_expression_metrics(gene_doc, annotation_map, cluster_cells):
+    def get_expression_metrics(gene_doc, annotation_map):
         """
         Set the mean expression and percent cells expressing for all available annotations/labels
         :param gene_doc: (dict) gene-level expression dict
         :param annotation_map (dict) class-level map of all annotations/labels and cells in each
-        :param cluster_cells (list) list of all cells from cluster
         :return: (dict)
         """
         expression_metrics = {}
@@ -158,9 +157,9 @@ class DotPlotGenes:
             for label in annotation_map[annotation]:
                 label_cells = annotation_map[annotation][label]
                 filtered_expression = DotPlotGenes.filter_expression_for_label(gene_doc, label_cells)
-                mean = DotPlotGenes.mean_expression(filtered_expression)
-                pct_exp = DotPlotGenes.pct_expression(filtered_expression, cluster_cells)
-                expression_metrics[annotation][label] = [mean, pct_exp]
+                pct_exp = DotPlotGenes.pct_expression(filtered_expression, label_cells)
+                scaled_mean = DotPlotGenes.scaled_mean_expression(filtered_expression, pct_exp)
+                expression_metrics[annotation][label] = [scaled_mean, pct_exp]
         return expression_metrics
 
     @staticmethod
@@ -192,14 +191,19 @@ class DotPlotGenes:
         return json.load(gzip.open(gene_path, 'rt'))
 
     @staticmethod
-    def mean_expression(gene_doc):
+    def scaled_mean_expression(gene_doc, pct_exp):
         """
-        Get the mean expression of cells for a given gene
+        Get the scaled mean expression of cells for a given gene
         :param gene_doc: (dict) gene-level significant expression values
+        :param pct_exp: (float) percentage of cells expressing for gene to scale mean by
         :return: (float)
         """
         exp_values = pd.DataFrame(gene_doc.values())
-        return 0.0 if exp_values.empty else round(exp_values.mean()[0], 3)
+        if exp_values.empty:
+            return 0.0
+        else:
+            raw_exp = exp_values.mean()[0]
+            return round(raw_exp * pct_exp, 3)
 
     @staticmethod
     def pct_expression(gene_doc, cluster_cells):
@@ -209,7 +213,7 @@ class DotPlotGenes:
         :return: (float)
         """
         observed_cells = gene_doc.keys()
-        return round(len(observed_cells) / len(cluster_cells), 3)
+        return round(len(observed_cells) / len(cluster_cells), 4)
 
     def process_all_genes(self):
         """
@@ -231,8 +235,8 @@ class DotPlotGenes:
         processor = partial(
             DotPlotGenes.process_gene,
             dot_plot_gene=blank_dot_plot_gene,
-            output_path=output_path,            annotation_map=self.annotation_map,
-            cluster_cells=self.cluster_cells
+            output_path=output_path,
+            annotation_map=self.annotation_map
         )
         pool.map(processor, gene_files)
 

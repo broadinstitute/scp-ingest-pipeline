@@ -1,5 +1,5 @@
-NAME    Cluster	Sub-Cluster	Intensity
-TYPE    group group	numeric
+NAME	Cluster	Sub-Cluster	Intensity
+TYPE	group	group	numeric
 AACGTTGGTTAAAGTG-1	CLST_A	CLST_A_1	7.7425
 AGTAGTCAGAGCTATA-1	CLST_A	CLST_A_1	-13.7456
 ATCTGCCCATACTCTT-1	CLST_A	CLST_A_1	-0.375345

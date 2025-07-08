@@ -110,7 +110,7 @@ def get_cluster_cells(file_path) -> list:
         file.readline()
         for row in file:
             cell = re.split(COMMA_OR_TAB, row)[0]
-            cells.append(cell)
+            cells.append(re.sub("\n", '', cell))
     return cells
 
 
