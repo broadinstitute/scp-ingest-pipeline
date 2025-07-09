@@ -999,7 +999,8 @@ class IngestTestCase(unittest.TestCase):
             "--gene-file",
             "../tests/data/differential_expression/sparse/sparsemini_dup_gene_name.tsv",
             "--barcode-file",
-            "../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv"
+            "../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv",
+            "--ingest-dot-plot-genes"
         ]
         ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
 

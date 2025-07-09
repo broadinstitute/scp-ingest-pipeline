@@ -238,6 +238,8 @@ class DotPlotGenes:
         :param cells: (list) list of cells for given annotation label
         :return: (float)
         """
+        if len(cells) == 0:
+            return 0.0
         observed_cells = gene_doc.keys()
         return round(len(observed_cells) / len(cells), 4)
 

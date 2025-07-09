@@ -496,7 +496,7 @@ def create_parser():
     )
 
     parser_dot_plot_genes.add_argument(
-        "--annotation-file",
+        "--cell-metadata-file",
         required=True,
         help="Absolute or relative path to cell metadata file of annotations",
     )

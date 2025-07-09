@@ -80,6 +80,12 @@ python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id de
 # Pairwise differential expression analysis (h5ad matrix, raw count in raw slot)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression  --raw-location '.raw' --annotation-name cell_type__ontology_label --de-type pairwise --group1 "mature B cell" --group2 "plasma cell" --annotation-type group --annotation-scope study --annotation-file ../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz --cluster-file ../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz --cluster-name umap --matrix-file-path ../tests/data/anndata/compliant_liver.h5ad  --matrix-file-type h5ad --study-accession SCPdev --differential-expression
 
+# Precompute and ingest DotPlotGene documents using a dense expression matrix, cell metadata, and cluster file
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_dot_plot_genes --cluster-group-id dec0dedfeed2222222222222 --matrix-file-path ../tests/data/dense_expression_matrix.txt --matrix-file-type dense --cell-metadata-file ../tests/data/metadata_example.txt --cluster-file ../tests/data/cluster_example.txt --ingest-dot-plot-genes
+
+# Precompute and ingest DotPlotGene documents using a sparse expression matrix, cell metadata, and cluster file
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_dot_plot_genes --cluster-group-id dec0dedfeed2222222222222 --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --cell-metadata-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --ingest-dot-plot-genes
+
 """
 
 import json
@@ -621,15 +627,17 @@ class IngestPipeline:
     def ingest_dot_plot_genes(self):
         """Calculate scaled mean & pct. expression for genes in context of cluster/annotations"""
         try:
+            kwargs = self.kwargs
+            cluster_group_id = kwargs.pop('cluster_group_id')
             dot_plot_genes = DotPlotGenes(
                 study_id=self.study_id,
                 study_file_id=self.study_file_id,
-                cluster_group_id=self.kwargs['cluster_group_id'],
+                cluster_group_id=cluster_group_id,
                 cluster_file=self.cluster_file,
-                cell_metadata=self.cell_metadata,
+                cell_metadata_file=self.cell_metadata_file,
                 matrix_file_path=self.matrix_file_path,
                 matrix_file_type=self.matrix_file_type,
-                **self.kwargs
+                **kwargs
             )
             dot_plot_genes.transform()
         except Exception as e:
