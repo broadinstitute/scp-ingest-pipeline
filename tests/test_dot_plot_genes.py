@@ -58,7 +58,7 @@ class TestDotPlotGenes(unittest.TestCase):
         return DotPlotGenes(
             study_id=self.study_id,
             study_file_id=self.study_file_id,
-            cluster_group_id=f"{self.TEST_PREFIX}_{ObjectId()}",
+            cluster_group_id=str(ObjectId()),
             cell_metadata_file='data/metadata_example.txt',
             matrix_file_path='data/dense_expression_matrix.txt',
             matrix_file_type='dense',
@@ -69,7 +69,7 @@ class TestDotPlotGenes(unittest.TestCase):
         return DotPlotGenes(
             study_id=self.study_id,
             study_file_id=self.study_file_id,
-            cluster_group_id=f"{self.TEST_PREFIX}_{ObjectId()}",
+            cluster_group_id=str(ObjectId()),
             cell_metadata_file='data/mtx/metadata_mtx_barcodes.tsv',
             matrix_file_path='data/mtx/matrix_with_header.mtx',
             gene_file='data/mtx/sampled_genes.tsv',
@@ -83,7 +83,7 @@ class TestDotPlotGenes(unittest.TestCase):
         logs = glob.glob('expression_scatter_data_*_log.txt')
         for log in logs:
             os.remove(log)
-        test_dirs = glob.glob(f"cluster_{TestDotPlotGenes.TEST_PREFIX}*")
+        test_dirs = glob.glob(f"cluster_entry_*")
         for dirname in test_dirs:
             rmtree(dirname)
 
@@ -158,6 +158,14 @@ class TestDotPlotGenes(unittest.TestCase):
         rendered_data = dot_plot.get_gene_dict(f"{dot_plot.cluster_name}/Sergef.json")
         self.assertEqual(expected_data, rendered_data)
 
+    def test_get_model_dict(self):
+        expected_data = json.loads(open("data/dot_plot_genes/Sergef.json").read())
+        gene_model = DotPlotGenes.to_model(expected_data)
+        self.assertTrue(isinstance(gene_model['study_id'], ObjectId))
+        self.assertTrue(isinstance(gene_model['study_file_id'], ObjectId))
+        self.assertTrue(isinstance(gene_model['cluster_group_id'], ObjectId))
+        self.assertEqual(expected_data['exp_scores'], gene_model['exp_scores'])
+
     def test_get_filtered_exp(self):
         filtered_cells = ['CELL_0002', 'CELL_0004']
         gene_doc = json.loads(open("data/expression_writer/gene_dicts/Sergef.json").read())
@@ -182,10 +190,9 @@ class TestDotPlotGenes(unittest.TestCase):
             "cluster_group_id": dot_plot.cluster_group_id,
             "exp_scores": {}
         }
-        output_path = f"{dot_plot.cluster_name}/dot_plot_genes"
-        os.mkdir(output_path)
+        os.mkdir(dot_plot.output_path)
         DotPlotGenes.process_gene(
-            f"{dot_plot.cluster_name}/Sergef.json", output_path, blank_dot_plot_gene, dot_plot.annotation_map
+            f"{dot_plot.cluster_name}/Sergef.json", dot_plot.output_path, blank_dot_plot_gene, dot_plot.annotation_map
         )
         rendered_path = f"{dot_plot.cluster_name}/dot_plot_genes/Sergef.json"
         self.assertTrue(os.path.exists(rendered_path))

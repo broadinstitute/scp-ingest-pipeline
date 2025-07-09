@@ -9,6 +9,7 @@ import sys
 import datetime
 from dateutil.relativedelta import relativedelta
 from functools import partial
+from bson.objectid import ObjectId
 
 try:
     from annotations import Annotations
@@ -67,7 +68,7 @@ class DotPlotGenes:
         self.mongo_connection = MongoConnection()
 
         # the cluster name here is not important, it is only used for directory names
-        self.cluster_name = f"cluster_{self.cluster_group_id}"
+        self.cluster_name = f"cluster_entry_{self.cluster_group_id}"
         self.output_path = f"{self.cluster_name}/dot_plot_genes"
         self.exp_writer = ExpressionWriter(
             self.matrix_file_path, self.matrix_file_type, self.cluster_file, self.cluster_name, self.genes_path,
@@ -216,6 +217,19 @@ class DotPlotGenes:
         return json.load(gzip.open(gene_path, 'rt'))
 
     @staticmethod
+    def to_model(gene_dict):
+        """
+        Convert a raw dict into a document that can be inserted into MongoDB
+        :param gene_dict: (dict) raw processed dot plot gene entry
+        :return: (dict) transformed dict with ObjectId entries
+        """
+        model_dict = gene_dict.copy()
+        model_dict['study_id'] = ObjectId(gene_dict['study_id'])
+        model_dict['study_file_id'] = ObjectId(gene_dict['study_file_id'])
+        model_dict['cluster_group_id'] = ObjectId(gene_dict['cluster_group_id'])
+        return model_dict
+
+    @staticmethod
     def scaled_mean_expression(gene_doc, pct_exp):
         """
         Get the scaled mean expression of cells for a given gene
@@ -272,7 +286,7 @@ class DotPlotGenes:
         :param documents: (list) list of rendered documents to insert
         """
         if not bypass_mongo_writes():
-            self.mongo_connection.insert_many(documents, self.COLLECTION_NAME)
+            self.mongo_connection._client[self.COLLECTION_NAME].insert_many(documents, ordered=False)
         else:
             dev_msg = f"Extracted {len(documents)} DotPlotGenes for {self.matrix_file_path}"
             self.dev_logger.info(dev_msg)
@@ -285,13 +299,18 @@ class DotPlotGenes:
         self.dev_logger.info(f"beginning rendering of {self.matrix_file_path} into DotPlotGene entries")
         self.preprocess()
         self.process_all_genes()
+        self.dev_logger.info(f"rendering of {self.matrix_file_path} complete, beginning load")
         gene_docs = []
         for gene_path in glob.glob(f"{self.output_path}/*.json"):
             rendered_gene = DotPlotGenes.get_gene_dict(gene_path)
-            gene_docs.append(rendered_gene)
+            model_dict = DotPlotGenes.to_model(rendered_gene)
+            gene_docs.append(model_dict)
             if len(gene_docs) == self.BATCH_SIZE:
                 self.load(gene_docs)
                 gene_docs.clear()
+        if len(gene_docs) > 0:
+            self.load(gene_docs)
+            gene_docs.clear()
         end_time = datetime.datetime.now()
         time_diff = relativedelta(end_time, start_time)
         self.dev_logger.info(

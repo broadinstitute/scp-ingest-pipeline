@@ -1,0 +1,27 @@
+{
+  "study_id":"686ea36fb02b91e930695b99",
+  "study_file_id":"686ea36fb02b91e930695b9a",
+  "cluster_group_id":"686ea36fb02b91e930695b9b",
+  "exp_scores": {
+    "Cluster--group--study": {
+      "CLST_A":[4.281,0.6],
+      "CLST_B":[2.869,0.4],
+      "CLST_C":[3.876,0.6]}
+    ,
+    "Sub-Cluster--group--study": {
+      "CLST_A_1":[2.364,0.3333],
+      "CLST_A_2":[7.157,1.0],
+      "CLST_B_1":[0.0,0.0],
+      "CLST_B_2":[4.782,0.6667],
+      "CLST_C_1":[4.59,0.6667],
+      "CLST_C_2":[2.805,0.5]}
+    ,
+    "Category--group--cluster": {
+      "A":[4.111,0.6],
+      "B":[5.763,0.8333],
+      "C":[0.0,0.0]
+    }
+  },
+  "gene_symbol":"Sergef",
+  "searchable_gene":"sergef"
+}
