@@ -7,6 +7,8 @@ import re
 import multiprocessing
 import sys
 import datetime
+import string
+import random
 from dateutil.relativedelta import relativedelta
 from functools import partial
 from bson.objectid import ObjectId
@@ -68,7 +70,9 @@ class DotPlotGenes:
         self.mongo_connection = MongoConnection()
 
         # the cluster name here is not important, it is only used for directory names
-        self.cluster_name = f"cluster_entry_{self.cluster_group_id}"
+        # a random 6-letter slug is appended to the end to avoid directory collisions when running in CI
+        random_slug = ''.join(random.sample(string.ascii_letters, 6))
+        self.cluster_name = f"cluster_entry_{self.cluster_group_id}_{random_slug}"
         self.output_path = f"{self.cluster_name}/dot_plot_genes"
         self.exp_writer = ExpressionWriter(
             self.matrix_file_path, self.matrix_file_type, self.cluster_file, self.cluster_name, self.genes_path,

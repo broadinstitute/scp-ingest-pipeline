@@ -979,7 +979,8 @@ class IngestTestCase(unittest.TestCase):
             except:
                 print(f"Error while deleting file : {file}")
 
-    def test_ingest_dot_plot(self):
+    @patch("dot_plot_genes.bypass_mongo_writes", return_value=True)
+    def test_ingest_dot_plot(self, mock_bypass):
         args = [
             "--study-id",
             "5d276a50421aa9117c982845",
@@ -1006,6 +1007,7 @@ class IngestTestCase(unittest.TestCase):
 
         self.assertEqual(len(status), 1)
         self.assertEqual(status[0], 0)
+        mock_bypass.assert_called_once()
 
     def test_get_action_from_args(self):
         args = [

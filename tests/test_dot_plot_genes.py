@@ -6,6 +6,7 @@ import gzip
 import glob
 from shutil import rmtree
 from bson.objectid import ObjectId
+from unittest.mock import patch
 
 sys.path.append("../ingest")
 from dot_plot_genes import DotPlotGenes
@@ -210,7 +211,8 @@ class TestDotPlotGenes(unittest.TestCase):
         rendered_gene = json.loads(gzip.open(rendered_path).read())
         self.assertEqual(self.SERGEF_METRICS, rendered_gene['exp_scores'])
 
-    def test_run_transform(self):
+    @patch("dot_plot_genes.bypass_mongo_writes", return_value=True)
+    def test_run_transform(self, mock_bypass):
         dot_plot = self.setup_sparse()
         dot_plot.transform()
         total_genes = os.listdir(f"{dot_plot.cluster_name}/dot_plot_genes")
@@ -219,3 +221,4 @@ class TestDotPlotGenes(unittest.TestCase):
         self.assertTrue(os.path.exists(rendered_path))
         rendered_gene = json.loads(gzip.open(rendered_path).read())
         self.assertEqual(self.OXCT2_METRICS, rendered_gene['exp_scores'])
+        mock_bypass.assert_called_once()
