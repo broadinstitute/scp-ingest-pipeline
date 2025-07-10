@@ -129,14 +129,14 @@ class TestDotPlotGenes(unittest.TestCase):
         dot_plot = self.setup_dense()
         dot_plot.render_gene_expression()
         expected_data = json.loads(open("data/expression_writer/gene_dicts/Sergef.json").read())
-        rendered_data = json.loads(gzip.open(f"{dot_plot.cluster_name}/Sergef.json").read())
+        rendered_data = json.loads(gzip.open(f"{dot_plot.cluster_name}/Sergef.json.gz").read())
         self.assertEqual(expected_data, rendered_data)
 
     def test_render_expression_sparse(self):
         dot_plot = self.setup_sparse()
         dot_plot.render_gene_expression()
         expected_data = json.loads(open("data/expression_writer/gene_dicts/OXCT2.json").read())
-        rendered_data = json.loads(gzip.open(f"{dot_plot.cluster_name}/OXCT2.json").read())
+        rendered_data = json.loads(gzip.open(f"{dot_plot.cluster_name}/OXCT2.json.gz").read())
         self.assertEqual(expected_data, rendered_data)
 
     def test_compute_pct_exp(self):
@@ -150,13 +150,13 @@ class TestDotPlotGenes(unittest.TestCase):
 
     def test_get_gene_name(self):
         cluster = "cluster-foo"
-        self.assertEqual("Sergef", DotPlotGenes.get_gene_name(f"{cluster}/Sergef.json"))
+        self.assertEqual("Sergef", DotPlotGenes.get_gene_name(f"{cluster}/Sergef.json.gz"))
 
     def test_get_gene_dict(self):
         dot_plot = self.setup_dense()
         dot_plot.render_gene_expression()
         expected_data = json.loads(open("data/expression_writer/gene_dicts/Sergef.json").read())
-        rendered_data = dot_plot.get_gene_dict(f"{dot_plot.cluster_name}/Sergef.json")
+        rendered_data = dot_plot.get_gene_dict(f"{dot_plot.cluster_name}/Sergef.json.gz")
         self.assertEqual(expected_data, rendered_data)
 
     def test_get_model_dict(self):
@@ -178,7 +178,7 @@ class TestDotPlotGenes(unittest.TestCase):
         dot_plot.preprocess()
         output_path = f"{dot_plot.cluster_name}/dot_plot_genes"
         os.mkdir(output_path)
-        gene_doc = json.loads(gzip.open(f"{dot_plot.cluster_name}/Sergef.json").read())
+        gene_doc = json.loads(gzip.open(f"{dot_plot.cluster_name}/Sergef.json.gz").read())
         rendered_exp = DotPlotGenes.get_expression_metrics(gene_doc, dot_plot.annotation_map)
         self.assertEqual(self.SERGEF_METRICS, rendered_exp)
 
@@ -193,9 +193,12 @@ class TestDotPlotGenes(unittest.TestCase):
         }
         os.mkdir(dot_plot.output_path)
         DotPlotGenes.process_gene(
-            f"{dot_plot.cluster_name}/Sergef.json", dot_plot.output_path, blank_dot_plot_gene, dot_plot.annotation_map
+            f"{dot_plot.cluster_name}/Sergef.json.gz",
+            dot_plot.output_path,
+            blank_dot_plot_gene,
+            dot_plot.annotation_map
         )
-        rendered_path = f"{dot_plot.cluster_name}/dot_plot_genes/Sergef.json"
+        rendered_path = f"{dot_plot.cluster_name}/dot_plot_genes/Sergef.json.gz"
         self.assertTrue(os.path.exists(rendered_path))
         rendered_gene = json.loads(gzip.open(rendered_path).read())
         self.assertEqual(self.SERGEF_METRICS, rendered_gene['exp_scores'])
@@ -206,7 +209,7 @@ class TestDotPlotGenes(unittest.TestCase):
         dot_plot.process_all_genes()
         total_genes = os.listdir(f"{dot_plot.cluster_name}/dot_plot_genes")
         self.assertEqual(3, len(total_genes))
-        rendered_path = f"{dot_plot.cluster_name}/dot_plot_genes/Sergef.json"
+        rendered_path = f"{dot_plot.cluster_name}/dot_plot_genes/Sergef.json.gz"
         self.assertTrue(os.path.exists(rendered_path))
         rendered_gene = json.loads(gzip.open(rendered_path).read())
         self.assertEqual(self.SERGEF_METRICS, rendered_gene['exp_scores'])
@@ -217,7 +220,7 @@ class TestDotPlotGenes(unittest.TestCase):
         dot_plot.transform()
         total_genes = os.listdir(f"{dot_plot.cluster_name}/dot_plot_genes")
         self.assertEqual(7, len(total_genes))
-        rendered_path = f"{dot_plot.cluster_name}/dot_plot_genes/OXCT2.json"
+        rendered_path = f"{dot_plot.cluster_name}/dot_plot_genes/OXCT2.json.gz"
         self.assertTrue(os.path.exists(rendered_path))
         rendered_gene = json.loads(gzip.open(rendered_path).read())
         self.assertEqual(self.OXCT2_METRICS, rendered_gene['exp_scores'])

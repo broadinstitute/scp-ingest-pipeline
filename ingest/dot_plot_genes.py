@@ -143,7 +143,7 @@ class DotPlotGenes:
     @staticmethod
     def annotation_is_valid(column, source_data):
         """
-        Determine if an given column in an annotation file is valid
+        Determine if a given column in an annotation file is valid
         must be group-based and have between 2 and 250 values
         :param column: (str) name of column
         :param source_data: (DataFrame) pandas dataframe of source data
@@ -170,7 +170,7 @@ class DotPlotGenes:
         gene_dict = DotPlotGenes.get_gene_dict(gene_file)
         exp_scores = DotPlotGenes.get_expression_metrics(gene_dict, annotation_map)
         dot_plot_gene['exp_scores'] = exp_scores
-        with gzip.open(f"{output_path}/{gene_name}.json", "wt") as file:
+        with gzip.open(f"{output_path}/{gene_name}.json.gz", "wt") as file:
             json.dump(dot_plot_gene, file, separators=(',', ':'))
 
     @staticmethod
@@ -209,7 +209,7 @@ class DotPlotGenes:
         :param gene_file_path: (str) path to gene JSON file
         :return: (str)
         """
-        return re.sub(r'\.json', '', gene_file_path.split('/')[1])
+        return re.sub(r'\.json\.gz', '', gene_file_path.split('/')[1])
 
     @staticmethod
     def get_gene_dict(gene_path):
@@ -266,7 +266,7 @@ class DotPlotGenes:
         Parallel function to process all files and render out DotPlotGene dicts
         """
         os.mkdir(self.output_path)
-        gene_files = glob.glob(f"{self.cluster_name}/*.json")
+        gene_files = glob.glob(f"{self.cluster_name}/*.json.gz")
         blank_dot_plot_gene = {
             "study_id": self.study_id,
             "study_file_id": self.study_file_id,
@@ -305,7 +305,7 @@ class DotPlotGenes:
         self.process_all_genes()
         self.dev_logger.info(f"rendering of {self.matrix_file_path} complete, beginning load")
         gene_docs = []
-        for gene_path in glob.glob(f"{self.output_path}/*.json"):
+        for gene_path in glob.glob(f"{self.output_path}/*.json.gz"):
             rendered_gene = DotPlotGenes.get_gene_dict(gene_path)
             model_dict = DotPlotGenes.to_model(rendered_gene)
             gene_docs.append(model_dict)

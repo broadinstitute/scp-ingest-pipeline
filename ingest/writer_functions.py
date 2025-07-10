@@ -223,7 +223,7 @@ def write_gene_scores(gene_name, exp_values, data_dir):
     :param data_dir: (str) name out output dir
     """
     safe_gene_name = urllib.parse.quote_plus(gene_name)
-    with gzip.open(f"{data_dir}/{safe_gene_name}.json", "wt") as file:
+    with gzip.open(f"{data_dir}/{safe_gene_name}.json.gz", "wt") as file:
         json.dump(list(exp_values), file, separators=(',', ':'))
 
 
@@ -242,5 +242,5 @@ def write_gene_json(gene_name, cluster_cells, exp_values, data_dir, sparse):
     else:
         gene_data = {cell: exp for cell, exp in zip(cluster_cells, exp_values)}
 
-    with gzip.open(f"{data_dir}/{safe_gene_name}.json", "wt") as file:
+    with gzip.open(f"{data_dir}/{safe_gene_name}.json.gz", "wt") as file:
         json.dump(gene_data, file, separators=(',', ':'))
