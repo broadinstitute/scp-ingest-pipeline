@@ -80,6 +80,12 @@ python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id de
 # Pairwise differential expression analysis (h5ad matrix, raw count in raw slot)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression  --raw-location '.raw' --annotation-name cell_type__ontology_label --de-type pairwise --group1 "mature B cell" --group2 "plasma cell" --annotation-type group --annotation-scope study --annotation-file ../tests/data/anndata/compliant_liver_h5ad_frag.metadata.tsv.gz --cluster-file ../tests/data/anndata/compliant_liver_h5ad_frag.cluster.X_umap.tsv.gz --cluster-name umap --matrix-file-path ../tests/data/anndata/compliant_liver.h5ad  --matrix-file-type h5ad --study-accession SCPdev --differential-expression
 
+# Precompute and ingest DotPlotGene documents using a dense expression matrix, cell metadata, and cluster file
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_dot_plot_genes --cluster-group-id dec0dedfeed2222222222222 --matrix-file-path ../tests/data/dense_expression_matrix.txt --matrix-file-type dense --cell-metadata-file ../tests/data/metadata_example.txt --cluster-file ../tests/data/cluster_example.txt --ingest-dot-plot-genes
+
+# Precompute and ingest DotPlotGene documents using a sparse expression matrix, cell metadata, and cluster file
+python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 ingest_dot_plot_genes --cluster-group-id dec0dedfeed2222222222222 --matrix-file-path ../tests/data/differential_expression/sparse/sparsemini_matrix.mtx --matrix-file-type mtx --gene-file ../tests/data/differential_expression/sparse/sparsemini_features.tsv --barcode-file ../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv --cell-metadata-file ../tests/data/differential_expression/sparse/sparsemini_metadata.txt --cluster-file ../tests/data/differential_expression/sparse/sparsemini_cluster.txt --ingest-dot-plot-genes
+
 """
 
 import json
@@ -123,6 +129,7 @@ from de import DifferentialExpression
 from author_de import AuthorDifferentialExpression
 from expression_writer import ExpressionWriter
 from rank_genes import RankGenes
+from dot_plot_genes import DotPlotGenes
 
 # scanpy uses anndata python package, disamibguate local anndata
 # using underscore https://peps.python.org/pep-0008/#naming-conventions
@@ -143,6 +150,7 @@ class IngestPipeline:
         'ingest_anndata',
         'ingest_subsample',
         'ingest_differential_expression',
+        'ingest_dot_plot_genes',
         'differential_expression',
         'render_expression_arrays',
         'rank_genes',
@@ -616,6 +624,28 @@ class IngestPipeline:
         # ToDo: surface failed DE for analytics (SCP-4206)
         return 0
 
+    def ingest_dot_plot_genes(self):
+        """Calculate scaled mean & pct. expression for genes in context of cluster/annotations"""
+        try:
+            kwargs = self.kwargs
+            cluster_group_id = kwargs.pop('cluster_group_id')
+            dot_plot_genes = DotPlotGenes(
+                study_id=self.study_id,
+                study_file_id=self.study_file_id,
+                cluster_group_id=cluster_group_id,
+                cluster_file=self.cluster_file,
+                cell_metadata_file=self.cell_metadata_file,
+                matrix_file_path=self.matrix_file_path,
+                matrix_file_type=self.matrix_file_type,
+                **kwargs
+            )
+            dot_plot_genes.transform()
+        except Exception as e:
+            print(traceback.format_exc())
+            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
+            return 1
+        return 0
+
     def render_expression_arrays(self):
         try:
             exp_writer = ExpressionWriter(
@@ -689,7 +719,11 @@ def run_ingest(ingest, arguments, parsed_args):
         status_de = ingest.calculate_author_de()
         status.append(status_de)
         print(f"STATUS after ingest author DE: {status}")
-
+    elif "ingest_dot_plot_genes" in arguments:
+        config.set_parent_event_name("ingest-pipeline:dot-plot-genes:ingest")
+        status_dot_plot = ingest.ingest_dot_plot_genes()
+        status.append(status_dot_plot)
+        print(f"STATUS after ingest dot plot genes: {status}")
     elif "render_expression_arrays" in arguments:
         config.set_parent_event_name("image-pipeline:render-expression-arrays")
         status_exp_writer = ingest.render_expression_arrays()
