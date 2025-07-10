@@ -13,22 +13,12 @@ from dateutil.relativedelta import relativedelta
 from functools import partial
 from bson.objectid import ObjectId
 
-try:
-    from annotations import Annotations
-    from expression_writer import ExpressionWriter
-    from writer_functions import get_cluster_cells
-    from monitor import setup_logger, bypass_mongo_writes
-    from mongo_connection import MongoConnection, graceful_auto_reconnect
-    import config
-
-except ImportError:
-    # Used when importing as external package, e.g. imports in single_cell_portal code
-    from .annotations import Annotations
-    from .expression_writer import ExpressionWriter
-    from .writer_functions import get_cluster_cells
-    from .monitor import setup_logger, bypass_mongo_writes
-    from .mongo_connection import MongoConnection, graceful_auto_reconnect
-    from . import config
+from annotations import Annotations
+from expression_writer import ExpressionWriter
+from writer_functions import get_cluster_cells
+from monitor import setup_logger, bypass_mongo_writes
+from mongo_connection import MongoConnection, graceful_auto_reconnect
+import config
 
 
 class DotPlotGenes:
