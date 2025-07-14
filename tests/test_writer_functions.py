@@ -20,6 +20,7 @@ from writer_functions import (
     process_dense_line,
     filter_expression_for_cluster,
     write_gene_scores,
+    write_gene_json
 )
 
 
@@ -76,8 +77,8 @@ class TestWriterFunctions(unittest.TestCase):
         data_dir = 'data/writer_functions'
         # barcodes & cluster cells should be identical in this example
         process_sparse_fragment('OXCT2__entries.txt', barcodes, barcodes, data_dir)
-        self.assertTrue(os.path.exists(f"{data_dir}/OXCT2.json"))
-        rendered_data = json.loads(gzip.open(f"{data_dir}/OXCT2.json").read())
+        self.assertTrue(os.path.exists(f"{data_dir}/OXCT2.json.gz"))
+        rendered_data = json.loads(gzip.open(f"{data_dir}/OXCT2.json.gz").read())
         expected_data = json.loads(open(f"{data_dir}/OXCT2.orig.json").read())
         self.assertEqual(expected_data, rendered_data)
 
@@ -105,8 +106,8 @@ class TestWriterFunctions(unittest.TestCase):
         expected_data = [0, 1.234, 0, 0, 0]
         data_dir = 'data/writer_functions'
         process_dense_line(line, matrix_cells, cluster_cells, data_dir)
-        self.assertTrue(os.path.exists(f"{data_dir}/Gad1.json"))
-        rendered_data = json.loads(gzip.open(f"{data_dir}/Gad1.json").read())
+        self.assertTrue(os.path.exists(f"{data_dir}/Gad1.json.gz"))
+        rendered_data = json.loads(gzip.open(f"{data_dir}/Gad1.json.gz").read())
         self.assertEqual(expected_data, rendered_data)
 
     def test_filter_expression_for_cluster(self):
@@ -137,5 +138,27 @@ class TestWriterFunctions(unittest.TestCase):
         gene = 'Egfr'
         data_dir = 'data/writer_functions'
         write_gene_scores(gene, data, data_dir)
-        rendered_data = json.loads(gzip.open(f"{data_dir}/{gene}.json").read())
+        rendered_data = json.loads(gzip.open(f"{data_dir}/{gene}.json.gz").read())
         self.assertEqual(data, rendered_data)
+
+    def test_write_gene_json_dict(self):
+        cluster_cells = [
+            'CTAACTTGTTCCATGA-1',
+            'CTCCTAGGTCTCATCC-1',
+            'CTCGGAGTCGTAGGAG-1',
+            'CTGAAACAGGGAAACA-1',
+            'GACTACAGTAACGCGA-1',
+        ]
+        expression = [0.0, 1.234, 2.345, 3.456, 4.567, 5.678]
+        gene = 'Gad1'
+        data_dir = 'data/writer_functions'
+        write_gene_json(gene, cluster_cells, expression, data_dir, False)
+        expected_data = dict(zip(cluster_cells, expression))
+        rendered_data = json.loads(gzip.open(f"{data_dir}/{gene}.json.gz").read())
+        self.assertEqual(expected_data, rendered_data)
+        # test sparse writing
+        sparse_gene = 'CLDN4'
+        write_gene_json(sparse_gene, cluster_cells, expression, data_dir, True)
+        expected_data = dict(zip(cluster_cells[1:], expression[1:]))
+        rendered_data = json.loads(gzip.open(f"{data_dir}/{sparse_gene}.json.gz").read())
+        self.assertEqual(expected_data, rendered_data)

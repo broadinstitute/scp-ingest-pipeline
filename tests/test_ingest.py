@@ -979,6 +979,36 @@ class IngestTestCase(unittest.TestCase):
             except:
                 print(f"Error while deleting file : {file}")
 
+    @patch("dot_plot_genes.bypass_mongo_writes", return_value=True)
+    def test_ingest_dot_plot(self, mock_bypass):
+        args = [
+            "--study-id",
+            "5d276a50421aa9117c982845",
+            "--study-file-id",
+            "5dd5ae25421aa910a723a337",
+            "ingest_dot_plot_genes",
+            "--cell-metadata-file",
+            "../tests/data/differential_expression/sparse/sparsemini_metadata.txt",
+            "--cluster-group-id",
+            "686d8982a374d4e7fadc89a6",
+            "--cluster-file",
+            "../tests/data/differential_expression/sparse/sparsemini_cluster.txt",
+            "--matrix-file-path",
+            "../tests/data/differential_expression/sparse/sparsemini_matrix.mtx",
+            "--matrix-file-type",
+            "mtx",
+            "--gene-file",
+            "../tests/data/differential_expression/sparse/sparsemini_dup_gene_name.tsv",
+            "--barcode-file",
+            "../tests/data/differential_expression/sparse/sparsemini_barcodes.tsv",
+            "--ingest-dot-plot-genes"
+        ]
+        ingest, arguments, status, status_cell_metadata = self.execute_ingest(args)
+
+        self.assertEqual(len(status), 1)
+        self.assertEqual(status[0], 0)
+        mock_bypass.assert_called_once()
+
     def test_get_action_from_args(self):
         args = [
             "--study-id",
