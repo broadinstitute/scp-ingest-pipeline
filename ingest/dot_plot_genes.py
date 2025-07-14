@@ -25,7 +25,7 @@ class DotPlotGenes:
     COLLECTION_NAME = "dot_plot_genes"
     BATCH_SIZE = 100
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
-    EXP_WRITER_SETTINGS = {"output_format": "dict", "sparse": True}
+    EXP_WRITER_SETTINGS = {"output_format": "dict", "sparse": True, "delocalize": False}
     denominator = 2 if re.match('darwin', sys.platform) else 1
     num_cores = int(multiprocessing.cpu_count() / denominator) - 1
     dev_logger = setup_logger(__name__, "log.txt", format="support_configs")
