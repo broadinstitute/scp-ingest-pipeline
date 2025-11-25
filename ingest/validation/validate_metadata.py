@@ -476,8 +476,17 @@ def retrieve_label_and_synonyms(
     :param property_type: attribute type for term (string, array, boolean)
     """
     ontology_name = re.split("[_:]", ontology_id)[0].lower()
-    if ontology_is_local(ontology_name):
+    # use OLS fallback for taxon IDs since minified version is not authoritative
+    use_fallback = ontology_name == "ncbitaxon"
+    if ontology_is_local(ontology_name) and not use_fallback:
         return minified_reader.find_ontology_entry(ontology_name, ontology_id, property_name)
+    elif ontology_is_local(ontology_name) and use_fallback:
+        try:
+            return minified_reader.find_ontology_entry(ontology_name, ontology_id, property_name)
+        except ValueError:
+            return retriever.retrieve_ontology_term_label_and_synonyms(
+                ontology_id, property_name, convention, property_type
+            )
     else:
         return retriever.retrieve_ontology_term_label_and_synonyms(
             ontology_id, property_name, convention, property_type
