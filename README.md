@@ -29,6 +29,14 @@ source env/bin/activate
 pip install -r requirements.txt
 source scripts/setup-mongo-dev.sh
 ```
+Note: if you encounter the following error:
+```
+AttributeError: module 'coverage' has no attribute 'types'
+```
+You can run the following to address this:
+```
+pip install --upgrade coverage
+```
 
 ### Docker
 
