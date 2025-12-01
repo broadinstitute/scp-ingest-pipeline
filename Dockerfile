@@ -10,7 +10,8 @@
 # Use a managed base image from Google.  It is continually updated for
 # security fixes (thus the "latest" tag).
 # https://github.com/GoogleContainerTools/base-images-docker/tree/master/ubuntu
-FROM marketplace.gcr.io/google/ubuntu2004:latest
+FROM marketplace.gcr.io/google/ubuntu2204:latest
+ENV DEBIAN_FRONTEND=noninteractive
 
 # RUN echo "Uncomment to clear cached layers below this statement (2022-03-14-1441)"
 
@@ -21,7 +22,8 @@ RUN apt-get -y update && \
   apt-get -y install python3-pip && \
   apt-get -y install python3.10 && \
   apt-get -y install python3.10-dev && \
-  apt-get -y install python3.10-distutils
+  apt-get -y install python3.10-distutils && \
+  apt-get -y remove python3-blinker # due to pip install errors of distutils package
 
 RUN apt-get -y update && apt-get -y install curl
 
