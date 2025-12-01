@@ -15,7 +15,7 @@ FROM marketplace.gcr.io/google/ubuntu2004:latest
 # RUN echo "Uncomment to clear cached layers below this statement (2022-03-14-1441)"
 
 # Install Python 3.10
-RUN apt-get -y update && \
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive \
   apt-get -y install software-properties-common && \
   add-apt-repository ppa:deadsnakes/ppa && \
   apt-get -y install python3-pip && \
@@ -23,7 +23,7 @@ RUN apt-get -y update && \
   apt-get -y install python3.10-dev && \
   apt-get -y install python3.10-distutils
 
-RUN apt-get -y update && apt-get -y install curl
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get -y install curl
 
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
 
