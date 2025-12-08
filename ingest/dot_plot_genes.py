@@ -18,12 +18,11 @@ from expression_writer import ExpressionWriter
 from writer_functions import get_cluster_cells
 from monitor import setup_logger, bypass_mongo_writes
 from mongo_connection import MongoConnection, graceful_auto_reconnect
-import config
 
 
 class DotPlotGenes:
     COLLECTION_NAME = "dot_plot_genes"
-    BATCH_SIZE = 100
+    BATCH_SIZE = 50
     ALLOWED_FILE_TYPES = ["text/csv", "text/plain", "text/tab-separated-values"]
     EXP_WRITER_SETTINGS = {"output_format": "dict", "sparse": True, "delocalize": False}
     denominator = 2 if re.match('darwin', sys.platform) else 1
