@@ -125,13 +125,15 @@ def discard_inserted_documents(errors, original_documents) -> list[dict]:
     :returns list[dict]: list of documents with existing entries removed
     """
     error_docs = []
+    first_doc = original_documents[0]
+    keys = ['name', 'array_index'] if 'array_index' in first_doc.keys() else ['searchable_gene']
     for doc in errors:
         if doc['code'] == 11000:
             error_docs.append(
-                {'name': doc['op']['name'], 'array_index': doc['op']['array_index']}
+                { key: doc['op'][key] for key in keys }
             )
     return list(
         d
         for d in original_documents
-        if {'name': d['name'], 'array_index': d['array_index']} not in error_docs
+        if { key: d[key] for key in keys } not in error_docs
     )
