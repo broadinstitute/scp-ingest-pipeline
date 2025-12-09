@@ -26,3 +26,23 @@ class TestDiscardDocuments(unittest.TestCase):
         ids = list(doc['id'] for doc in filtered_docs)
         ids.sort()
         self.assertEqual([2, 4, 5], ids, 'Did not return correct IDs')
+
+    # test discarding dot plot gene documents that have different structure
+    def test_discard_inserted_gene_documents(self):
+        error_docs = [
+            {'code': 11000, 'op': {'id': 1, 'searchable_gene': 'foo', 'study_id': '123456789'}},
+            {'code': 11000, 'op': {'id': 3, 'searchable_gene': 'blurg', 'study_id': '123456789'}},
+        ]
+        original_docs = [
+            {'id': 1, 'searchable_gene': 'foo', 'study_id': '123456789'},
+            {'id': 2, 'searchable_gene': 'bar', 'study_id': '123456789'},
+            {'id': 3, 'searchable_gene': 'blurg', 'study_id': '123456789'},
+            {'id': 4, 'searchable_gene': 'barf', 'study_id': '123456789'},
+        ]
+        filtered_docs = discard_inserted_documents(error_docs, original_docs)
+        self.assertEqual(
+            2, len(filtered_docs), 'Did not correctly return 3 filtered documents'
+        )
+        ids = list(doc['id'] for doc in filtered_docs)
+        ids.sort()
+        self.assertEqual([2, 4], ids, 'Did not return correct IDs')
