@@ -1,6 +1,6 @@
 google-cloud-storage==1.28.1
 grpcio==1.53.2
-urllib3==2.5.0
+urllib3==2.6.0
 requests==2.32.4
 numpy==1.23.5
 scipy==1.10.1
