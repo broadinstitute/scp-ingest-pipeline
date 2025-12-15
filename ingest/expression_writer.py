@@ -207,7 +207,7 @@ class ExpressionWriter:
         """
         fragments = os.listdir(f"{data_dir}/gene_entries")
         self.dev_logger.info(
-            f" subdivision complete, processing {len(fragments)} fragments"
+            f"subdivision complete, processing {len(fragments)} fragments"
         )
         pool = multiprocessing.Pool(self.num_cores)
         processor = partial(
