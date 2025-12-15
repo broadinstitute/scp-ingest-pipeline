@@ -273,13 +273,14 @@ class DotPlotGenes:
         pool.map(processor, gene_files)
 
     @graceful_auto_reconnect
-    def load(self, documents):
+    def load(self, collection, documents):
         """
         Insert batch of documents into MongoDB
+        :param collection: (String) name of db collection (ensure method signature matches @graceful_auto_reconnect)
         :param documents: (list) list of rendered documents to insert
         """
         if not bypass_mongo_writes():
-            self.mongo_connection._client[self.COLLECTION_NAME].insert_many(documents, ordered=False)
+            self.mongo_connection._client[collection].insert_many(documents, ordered=False)
         else:
             dev_msg = f"Extracted {len(documents)} DotPlotGenes for {self.matrix_file_path}"
             self.dev_logger.info(dev_msg)
@@ -294,15 +295,16 @@ class DotPlotGenes:
         self.process_all_genes()
         self.dev_logger.info(f"rendering of {self.matrix_file_path} complete, beginning load")
         gene_docs = []
+        collection = self.COLLECTION_NAME
         for gene_path in glob.glob(f"{self.output_path}/*.json.gz"):
             rendered_gene = DotPlotGenes.get_gene_dict(gene_path)
             model_dict = DotPlotGenes.to_model(rendered_gene)
             gene_docs.append(model_dict)
             if len(gene_docs) == self.BATCH_SIZE:
-                self.load(gene_docs)
+                self.load(collection, gene_docs)
                 gene_docs.clear()
         if len(gene_docs) > 0:
-            self.load(gene_docs)
+            self.load(collection, gene_docs)
             gene_docs.clear()
         end_time = datetime.datetime.now()
         time_diff = relativedelta(end_time, start_time)
