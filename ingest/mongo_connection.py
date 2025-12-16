@@ -67,13 +67,11 @@ def graceful_auto_reconnect(mongo_op_func):
     @functools.wraps(mongo_op_func)
     def wrapper(*args, **kwargs):
         args = list(args)
+        print(f"args: {args}")
         # detect which argument is the list of inserted documents
-        # when called from IngestPipeline, first arg is ingest instance, and 3rd is the list
+        # when called from IngestPipeline or DotPlotGenes, first arg is caller instance, and 3rd is the list
         # when called from GeneExpression (static implementation), first arg is list
-        if args[0].__class__.__name__ == 'IngestPipeline':
-            docs_idx = 2
-        else:
-            docs_idx = 0
+        docs_idx = find_docs_index(args)
         for attempt in range(MongoConnection.MAX_AUTO_RECONNECT_ATTEMPTS):
             try:
                 return mongo_op_func(*args, **kwargs)
@@ -137,3 +135,15 @@ def discard_inserted_documents(errors, original_documents) -> list[dict]:
         for d in original_documents
         if { key: d[key] for key in keys } not in error_docs
     )
+
+def find_docs_index(original_args):
+    """Finds where the original MongoDB documents are in a list of arguments
+    needed for filtering & retry logic
+
+    :param original_args: (list) list of arguments
+    :returns: (int) array index of documents"""
+    caller_class = original_args[0].__class__.__name__
+    if caller_class in ['IngestPipeline', 'DotPlotGenes']:
+        return 2
+    else:
+        return 0
