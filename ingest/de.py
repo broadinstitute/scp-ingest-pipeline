@@ -313,7 +313,7 @@ class DifferentialExpression:
         that has data with only a single sample
         """
         counts = adata.obs[annotation].value_counts(dropna=False)
-        for label, count in counts.iteritems():
+        for label, count in counts.items():
             if count == 1:
                 adata = adata[adata.obs[annotation] != label]
         return adata

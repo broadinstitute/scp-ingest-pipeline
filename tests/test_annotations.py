@@ -71,7 +71,7 @@ class TestAnnotations(unittest.TestCase):
     def test_get_dtypes_for_group_annots(self):
         headers = ["NAME", "cell_type", "organism_age"]
         annot_types = ["TYPE", "group", "numeric"]
-        expected_dtypes = {"NAME": np.str, "cell_type": np.str}
+        expected_dtypes = {"NAME": str, "cell_type": str}
         dtypes = Annotations.get_dtypes_for_group_annots(headers, annot_types)
         self.assertEqual(expected_dtypes, dtypes)
 
