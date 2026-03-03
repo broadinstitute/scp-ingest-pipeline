@@ -166,7 +166,8 @@ class TestAnnotations(unittest.TestCase):
         cm.create_data_frame()
         cm.file = Annotations.coerce_numeric_values(cm.file, cm.annot_types)
         dtype = cm.file.dtypes[("Average Intensity", "numeric")]
-        self.assertEqual(dtype, np.float)
+        # numpy removed aliases like `np.float`; assert column is a floating type
+        self.assertTrue(np.issubdtype(dtype, np.floating))
 
         # Test that numeric values were properly rounded
         # Pick a random number to choose a line in the test file
