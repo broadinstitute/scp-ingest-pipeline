@@ -21,8 +21,10 @@ jobs:
       # Download and cache dependencies
       - restore_cache:
           keys:
-            - v6-dependencies-{{ checksum "requirements.txt" }}
-            # fallback to using the latest cache if no exact match is found
+            - v6-dependencies-{{ checksum "requirements.txt" }}-python-3.11.1
+            # fallback to using the latest cache for this python version
+            - v6-dependencies-python-3.11.1
+            # ultimate fallback
             - v6-dependencies-
 
       - run:
@@ -36,7 +38,7 @@ jobs:
       - save_cache:
           paths:
             - ./venv
-          key: v6-dependencies-{{ checksum "requirements.txt" }}
+          key: v6-dependencies-{{ checksum "requirements.txt" }}-python-3.11.1
 
       - run:
           name: Run tests
