@@ -202,7 +202,7 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info(
             "subsetting matrix on cells in clustering"
         )
-        matrix_subset_list = np.in1d(adata.obs_names, de_cells)
+        matrix_subset_list = np.isin(adata.obs_names, de_cells)
         adata = adata[matrix_subset_list].copy()
         return adata
 

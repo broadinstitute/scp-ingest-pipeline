@@ -110,9 +110,16 @@ from monitoring.mixpanel_log import custom_metric
 from monitoring.metrics_service import MetricsService
 
 # For tracing
-from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
-from opencensus.trace.samplers import AlwaysOnSampler
-from opencensus.trace.tracer import Tracer
+try:
+    from opencensus.ext.stackdriver.trace_exporter import StackdriverExporter
+    from opencensus.trace.samplers import AlwaysOnSampler
+    from opencensus.trace.tracer import Tracer
+except (ImportError, TypeError):
+    # opencensus-ext-stackdriver has protobuf stubs incompatible with protobuf >= 3.21;
+    # tracing is skipped in environments where GOOGLE_CLOUD_PROJECT is not set (e.g. tests).
+    StackdriverExporter = None
+    AlwaysOnSampler = None
+    Tracer = None
 from mongo_connection import MongoConnection, graceful_auto_reconnect
 from subsample import SubSample
 from validation.validate_metadata import (
@@ -195,7 +202,7 @@ class IngestPipeline:
         self.kwargs = kwargs
         self.cell_metadata_file = cell_metadata_file
         self.props = {}
-        if "GOOGLE_CLOUD_PROJECT" in os.environ:
+        if "GOOGLE_CLOUD_PROJECT" in os.environ and StackdriverExporter is not None:
             # instantiate trace exporter
             exporter = StackdriverExporter(
                 project_id=os.environ["GOOGLE_CLOUD_PROJECT"]
