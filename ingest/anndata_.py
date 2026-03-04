@@ -4,7 +4,10 @@ import gzip
 import shutil
 import scanpy as sc
 import scipy
-from scipy.io.mmio import MMFile
+try:
+    from scipy.io.mmio import MMFile  # scipy < 1.14
+except ImportError:
+    from scipy.io._mmio import MMFile  # scipy >= 1.14 (moved to private module)
 
 
 # scipy.io.mmwrite uses scientific notation by default
