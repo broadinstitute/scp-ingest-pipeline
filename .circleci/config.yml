@@ -24,12 +24,11 @@ jobs:
             - v6-dependencies-{{ checksum "requirements.txt" }}-python-3.11.1
             # fallback to using the latest cache for this python version
             - v6-dependencies-python-3.11.1
-            # ultimate fallback
-            - v6-dependencies-
 
       - run:
           name: Install Python dependencies
           command: |
+            rm -rf venv
             python -m venv venv
             . venv/bin/activate
             pip install --upgrade pip
