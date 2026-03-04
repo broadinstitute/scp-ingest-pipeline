@@ -1235,7 +1235,7 @@ def review_metadata_names(metadata):
     """Check metadata names for disallowed characters"""
     metadata_names = metadata.file.columns.get_level_values(0).tolist()
     for name in metadata_names:
-        allowed_char = re.compile("^[A-Za-z0-9_]+$")
+        allowed_char = re.compile("^[A-Za-z0-9_.]+$")
         if not allowed_char.match(name):
             msg = (
                 f"{name}: only alphanumeric characters and underscore "

@@ -202,7 +202,7 @@ class DifferentialExpression:
         DifferentialExpression.de_logger.info(
             "subsetting matrix on cells in clustering"
         )
-        matrix_subset_list = np.in1d(adata.obs_names, de_cells)
+        matrix_subset_list = np.isin(adata.obs_names, de_cells)
         adata = adata[matrix_subset_list].copy()
         return adata
 
@@ -313,7 +313,7 @@ class DifferentialExpression:
         that has data with only a single sample
         """
         counts = adata.obs[annotation].value_counts(dropna=False)
-        for label, count in counts.iteritems():
+        for label, count in counts.items():
             if count == 1:
                 adata = adata[adata.obs[annotation] != label]
         return adata

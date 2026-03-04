@@ -67,7 +67,6 @@ def graceful_auto_reconnect(mongo_op_func):
     @functools.wraps(mongo_op_func)
     def wrapper(*args, **kwargs):
         args = list(args)
-        print(f"args: {args}")
         # detect which argument is the list of inserted documents
         # when called from IngestPipeline or DotPlotGenes, first arg is caller instance, and 3rd is the list
         # when called from GeneExpression (static implementation), first arg is list

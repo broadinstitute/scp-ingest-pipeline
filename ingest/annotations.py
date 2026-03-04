@@ -154,7 +154,7 @@ class Annotations(IngestFiles):
         group_dtypes = {}
         for annotation, annot_type in zip(header, annot_types):
             if annot_type != "numeric":
-                group_dtypes[annotation] = np.str
+                group_dtypes[annotation] = str
         return group_dtypes
 
     @staticmethod

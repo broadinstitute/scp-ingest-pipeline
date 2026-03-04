@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Dict, Generator, List, Tuple, Union  # noqa: F401
 import warnings
 import scanpy as sc
+import io
 
 
 import pandas as pd  # NOqa: F821
@@ -345,7 +346,27 @@ class IngestFiles:
             )
             dialect.skipinitialspace = True
             open_file_object.seek(0)
-            return pd.read_csv(file_path, low_memory=False, dialect=dialect, **kwargs)
+            sep = dialect.delimiter
+            # Read file content and strip trailing blank lines (these can cause
+            # tokenization errors with the C engine when lines contain only
+            # delimiters or tabs). Use an in-memory buffer for pandas to parse.
+            open_file_object.seek(0)
+            content = open_file_object.read()
+            lines = content.splitlines()
+            # Remove trailing blank lines
+            while lines and lines[-1].strip() == "":
+                lines.pop()
+            # Remove trailing delimiters from each line (e.g. extra tabs)
+            if sep is not None:
+                lines = [l.rstrip(sep) for l in lines]
+            buffer = io.StringIO("\n".join(lines))
+            try:
+                return pd.read_csv(buffer, low_memory=False, sep=sep, **kwargs)
+            except pd.errors.ParserError:
+                # Fallback: try the python engine without low_memory
+                buffer.seek(0)
+                filtered_kwargs = {k: v for k, v in kwargs.items() if k != "low_memory"}
+                return pd.read_csv(buffer, sep=sep, engine="python", **filtered_kwargs)
         else:
             raise ValueError("File must be tab or comma delimited")
 
