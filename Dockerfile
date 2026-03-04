@@ -20,17 +20,17 @@ RUN apt-get -y update && \
   apt-get -y install software-properties-common && \
   add-apt-repository ppa:deadsnakes/ppa && \
   apt-get -y install python3-pip && \
-  apt-get -y install python3.10 && \
-  apt-get -y install python3.10-dev && \
-  apt-get -y install python3.10-distutils && \
+  apt-get -y install python3.11 && \
+  apt-get -y install python3.11-dev && \
+  apt-get -y install python3.11-distutils && \
   apt-get -y remove python3-blinker # due to pip install errors of distutils package
 
 RUN apt-get -y update && apt-get -y install curl
 
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
 # symlink python3.10 to python
-RUN ln -s /usr/bin/python3.10 /usr/bin/python
+RUN ln -s /usr/bin/python3.11 /usr/bin/python
 
 # Copy contents of this repo into the Docker image
 # (See .Dockerignore for omitted files)
