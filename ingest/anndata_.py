@@ -161,14 +161,28 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
         Append clustering data to clustering file
         """
         cluster_cells = pd.DataFrame(adata.obs_names)
+        raw_cluster_body = pd.DataFrame(adata.obsm[clustering_name])
         cluster_body = pd.concat(
-            [cluster_cells, pd.DataFrame(adata.obsm[clustering_name])], axis=1
+            [cluster_cells, pd.DataFrame(
+                AnnDataIngestor.get_cluster_body_as_ndarray(raw_cluster_body)
+            )], axis=1
         )
         filename = AnnDataIngestor.set_clustering_filename(clustering_name)
         pd.DataFrame(cluster_body).to_csv(
             filename, sep="\t", mode="a", header=None, index=False
         )
         AnnDataIngestor.compress_file(filename)
+
+    @staticmethod
+    def get_cluster_body_as_ndarray(raw_body):
+        """
+        Get the cluster body as a numpy array
+        will convert on the fly as necessary
+        """
+        if raw_body.__class__.__name__ == "DataFrame":
+            return raw_body.to_numpy()
+        else:
+            return raw_body
 
     @staticmethod
     def set_clustering_filename(name):
