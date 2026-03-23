@@ -8,6 +8,8 @@ import glob
 import os
 import gzip
 import time
+import pandas as pd
+from numpy.testing import assert_array_equal
 from unittest.mock import MagicMock, patch
 
 from test_expression_files import mock_expression_load
@@ -144,6 +146,21 @@ class TestAnnDataIngestor(unittest.TestCase):
                 line,
                 'did not get expected coordinates from cluster body',
             )
+
+    def test_get_cluster_body_as_ndarray(self):
+        test_df = pd.DataFrame({
+            'X': [1, 2, 3],
+            'Y': [4, 5, 6],
+        })
+        cluster_body = self.anndata_ingest.get_cluster_body_as_ndarray(test_df)
+        expected_body = [[1, 4],[2, 5],[3, 6]]
+        assert_array_equal(expected_body, cluster_body)
+        # normal test
+        # long precision is because we're looking at raw numpy array
+        raw_body = self.anndata_ingest.obtain_adata().obsm[self.cluster_name]
+        cluster_body = self.anndata_ingest.get_cluster_body_as_ndarray(raw_body)
+        assert_array_equal([16.00995445251465, -21.07384490966797], cluster_body[0].tolist())
+
 
     def test_generate_metadata_file(self):
         self.anndata_ingest.generate_metadata_file(
