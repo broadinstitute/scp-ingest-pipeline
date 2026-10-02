@@ -1,7 +1,7 @@
 google-cloud-storage==3.9.0
 grpcio==1.53.2
-urllib3==2.5.0
-requests==2.32.4
+urllib3==2.8.0
+requests==2.33.0
 numpy==2.4.2
 scipy==1.17.1
 jsonschema==3.0.1
@@ -17,11 +17,11 @@ anndata==0.12.10
 ftfy==6.2.0
 
 # Dev dependencies
-pytest==7.2.1
+pytest==9.0.3
 coverage==7.12.0
 pytest-xdist==1.29.0
 pre-commit==1.18.1
-black==24.3.0
+black==26.3.1
 flake8==3.7.8
 pytest-cov==2.8.1
 diffxpy==0.7.4
