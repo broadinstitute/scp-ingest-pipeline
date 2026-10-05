@@ -135,7 +135,6 @@ from monitor import setup_logger, log_exception
 from de import DifferentialExpression
 from author_de import AuthorDifferentialExpression
 from expression_writer import ExpressionWriter
-from rank_genes import RankGenes
 from dot_plot_genes import DotPlotGenes
 
 # scanpy uses anndata python package, disamibguate local anndata
@@ -160,7 +159,6 @@ class IngestPipeline:
         'ingest_dot_plot_genes',
         'differential_expression',
         'render_expression_arrays',
-        'rank_genes',
     ]
 
     # Logger provides more details for trouble shooting
@@ -667,15 +665,6 @@ class IngestPipeline:
             return 1
         return 0
 
-    def rank_genes(self):
-        try:
-            kwargs = self.kwargs
-            RankGenes(kwargs["study_accession"], kwargs["publication"])
-        except Exception as e:
-            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
-            return 1
-        return 0
-
     def report_validation(self, status):
         self.props["status"] = status
         config.get_metric_properties().update(self.props)
@@ -735,11 +724,6 @@ def run_ingest(ingest, arguments, parsed_args):
         config.set_parent_event_name("image-pipeline:render-expression-arrays")
         status_exp_writer = ingest.render_expression_arrays()
         status.append(status_exp_writer)
-
-    elif "rank_genes" in arguments:
-        config.set_parent_event_name("image-pipeline:rank-genes")
-        status_rank_genes = ingest.rank_genes()
-        status.append(status_rank_genes)
 
     return status, status_cell_metadata
 
@@ -807,11 +791,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
         elif all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:
-            if "rank_genes" in arguments:
-                study_file_id = "rank_genes"
-                file_path = f"gs://{arguments.get('bucket_name')}/blank"
-            else:
-                file_path, study_file_id = get_delocalization_info(arguments)
+            file_path, study_file_id = get_delocalization_info(arguments)
             if IngestFiles.is_remote_file(file_path):
                 if "differential_expression" in arguments:
                     log_path = (
