@@ -1,0 +1,20 @@
+# Requires Python 3.10+.
+#
+# The TSV-only steps (download, crosstab, ontology mapping) use only the
+# standard library; these packages cover the H5AD and clustering steps.
+
+# project_ontology_to_h5ad.py
+h5py
+numpy
+
+# cluster_adata.py and cas.py
+scanpy
+anndata
+pandas
+scipy
+matplotlib
+leidenalg
+scikit-misc  # seurat_v3 HVG selection
+
+# cas.py also needs cellarium-cas[vis], which it installs itself from GitHub
+# on each run (see README "Installation" > "CAS").
