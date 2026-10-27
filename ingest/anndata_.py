@@ -23,12 +23,14 @@ try:
     from expression_files.expression_files import GeneExpression
     from monitor import log_exception, bypass_mongo_writes
     from validation.validate_metadata import list_duplicates
+    from nemo_scp_client.src.project_ontology_to_h5ad import project_ontology_to_h5ad
 except ImportError:
     # Used when importing as external package, e.g. imports in single_cell_portal code
     from .ingest_files import DataArray, IngestFiles
     from .expression_files.expression_files import GeneExpression
     from .monitor import log_exception, bypass_mongo_writes
     from .validation.validate_metadata import list_duplicates
+    from .nemo_scp_client.src.project_ontology_to_h5ad import project_ontology_to_h5ad
 
 
 class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
@@ -43,6 +45,10 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
 
     def obtain_adata(self):
         try:
+            manifest_location = self.kwargs.get('manifest_file')
+            if manifest_location is not None:
+                self.append_manifest_data(manifest_location)
+            
             adata = self.open_file(self.file_path)[0]
             # for faster dev, print adata info to screen, may want to remove in future
             print(adata)
@@ -50,6 +56,31 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
             return adata
         except ValueError as e:
             raise ValueError(e)
+
+    def append_manifest_data(self, manifest_location):
+        if IngestFiles.is_remote_file(manifest_location):
+            manifest_path = self.download_from_bucket(manifest_location)
+        else:
+            manifest_path = manifest_location
+
+        file_id = manifest_location.split('/')[-1].split('.')[0]
+        orig_filename = self.file_path.split('/')[-1].split('.h5ad')[0]
+        root = os.path.dirname(self.file_path)
+        new_h5ad_path = f"{root}/{orig_filename}.scp.h5ad"
+        try:
+            output_path = project_ontology_to_h5ad(
+                file_id,
+                scp_tsv_path=manifest_path,
+                h5ad_path=self.file_path,
+                root=root,
+                output_path=new_h5ad_path,
+                overwrite=True,
+            )
+            IngestFiles.dev_logger.info(f"Manifest annotation data from {manifest_path} appended to {output_path}")
+            self.file_path = str(output_path)
+        except Exception as e:
+            raise ValueError(e)
+
 
     def basic_validation(self):
         """

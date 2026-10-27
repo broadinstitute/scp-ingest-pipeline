@@ -398,3 +398,12 @@ class TestAnnDataIngestor(unittest.TestCase):
         self.anndata_ingest = AnnDataIngestor(*self.layers_args, **self.invalid_kwargs)
         result = self.anndata_ingest.validate_raw_location()
         self.assertFalse(result)
+
+    def test_merge_manifest_into_anndata(self):
+        manifest_kwargs = {'manifest_file': "../tests/data/anndata/fil-zg9sah3.scp.tsv"}
+        self.anndata_ingest = AnnDataIngestor(*self.synthetic_args, **manifest_kwargs)
+        merged_adata = self.anndata_ingest.obtain_adata()
+        self.assertEqual(['nucleus accumbens'], merged_adata.obs['organ__ontology_label'].unique().tolist())
+        for column in ['biosample_id', 'donor_id']:
+            self.assertEqual(['Pool20_Batch3_IVSAOxycodoneStudy1'], merged_adata.obs[column].unique().tolist())
+        self.assertTrue(os.path.isfile('../tests/data/anndata/anndata_test.scp.h5ad'))

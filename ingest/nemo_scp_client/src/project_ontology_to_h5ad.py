@@ -25,9 +25,13 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from nemo_h5ad_downloader import load_manifest_record, normalize_file_id
-from ontology_map_nemo_to_scp import ONTOLOGY_COLUMNS
-
+try:
+    from nemo_h5ad_downloader import load_manifest_record, normalize_file_id
+    from ontology_map_nemo_to_scp import ONTOLOGY_COLUMNS
+# when importing into AnnDataIngestor, we need to use paths from ingest root
+except ImportError:
+    from nemo_scp_client.src.nemo_h5ad_downloader import load_manifest_record, normalize_file_id
+    from nemo_scp_client.src.ontology_map_nemo_to_scp import ONTOLOGY_COLUMNS
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 

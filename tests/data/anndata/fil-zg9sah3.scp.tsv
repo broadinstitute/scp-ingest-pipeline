@@ -1,0 +1,2 @@
+biosample_id	donor_id	disease	disease__ontology_label	library_preparation_protocol	library_preparation_protocol__ontology_label	organ	organ__ontology_label	sample_id	sex	species	species__ontology_label
+Pool20_Batch3_IVSAOxycodoneStudy1	Pool20_Batch3_IVSAOxycodoneStudy1	PATO_0000461	normal	EFO_0009922	10x 3' v3	UBERON_0001882	nucleus accumbens	nemo:smp-9ppxzrw	male	NCBITaxon_10090	house mouse
