@@ -58,6 +58,10 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
             raise ValueError(e)
 
     def append_manifest_data(self, manifest_location):
+        """
+        Append in additional metadata columns from an sample manifest file (for NeMO ingest)
+        must include required columns like organ, species, disease, etc.
+        """
         if IngestFiles.is_remote_file(manifest_location):
             manifest_path = self.download_from_bucket(manifest_location)
         else:
