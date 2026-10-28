@@ -45,11 +45,12 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
 
     def obtain_adata(self):
         try:
+            adata = self.open_file(self.file_path)[0]
+            # once file is localized and confirmed valid, check if we need to append manifest data
             manifest_location = self.kwargs.get('manifest_file')
             if manifest_location is not None:
-                self.append_manifest_data(manifest_location)
-            
-            adata = self.open_file(self.file_path)[0]
+               self.append_manifest_data(manifest_location)
+               adata = self.open_file(self.file_path)[0]
             # for faster dev, print adata info to screen, may want to remove in future
             print(adata)
             IngestFiles.dev_logger.info(str(adata))
@@ -57,33 +58,45 @@ class AnnDataIngestor(GeneExpression, IngestFiles, DataArray):
         except ValueError as e:
             raise ValueError(e)
 
+    def get_workdir(self):
+        """
+        Determine where the study_file being processed is located
+        """
+        if hasattr(self, 'local_file_path') and self.local_file_path is not None:
+            return os.path.dirname(self.local_file_path)
+        else:
+            return os.path.dirname(self.file_path)
+
+
     def append_manifest_data(self, manifest_location):
         """
         Append in additional metadata columns from an sample manifest file (for NeMO ingest)
         must include required columns like organ, species, disease, etc.
         """
+        IngestFiles.dev_logger.info(f"Accessing manifest file from {manifest_location}")
+        manifest_filename =  manifest_location.split('/')[-1]    
+        root = self.get_workdir()
         if IngestFiles.is_remote_file(manifest_location):
-            manifest_path = self.download_from_bucket(manifest_location)
+            target_path = f"{root}/{manifest_filename}"
+            manifest_path = IngestFiles.localize_file(manifest_location, target_path)
         else:
             manifest_path = manifest_location
+        
+        file_id = manifest_filename.split('.')[0]
+        orig_filename = self.file_path.split('/')[-1]
+        base_filename = orig_filename.split('.h5ad')[0]
+        new_h5ad_path = f"{root}/{base_filename}.scp.h5ad"
+        output_path = project_ontology_to_h5ad(
+            file_id,
+            scp_tsv_path=manifest_path,
+            h5ad_path=f"{root}/{orig_filename}",
+            root=root,
+            output_path=new_h5ad_path,
+            overwrite=True,
+        )
+        IngestFiles.dev_logger.info(f"Manifest annotation data from {manifest_path} appended to {output_path}")
+        self.file_path = str(output_path)
 
-        file_id = manifest_location.split('/')[-1].split('.')[0]
-        orig_filename = self.file_path.split('/')[-1].split('.h5ad')[0]
-        root = os.path.dirname(self.file_path)
-        new_h5ad_path = f"{root}/{orig_filename}.scp.h5ad"
-        try:
-            output_path = project_ontology_to_h5ad(
-                file_id,
-                scp_tsv_path=manifest_path,
-                h5ad_path=self.file_path,
-                root=root,
-                output_path=new_h5ad_path,
-                overwrite=True,
-            )
-            IngestFiles.dev_logger.info(f"Manifest annotation data from {manifest_path} appended to {output_path}")
-            self.file_path = str(output_path)
-        except Exception as e:
-            raise ValueError(e)
 
 
     def basic_validation(self):

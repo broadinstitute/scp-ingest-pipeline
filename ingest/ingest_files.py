@@ -218,6 +218,28 @@ class IngestFiles:
                 exc_info=True,
             )
 
+    @staticmethod
+    def localize_file(
+        file_gs_url: str,
+        destination_path: str
+    ):
+        """
+        Standalone method to download a file from a bucket
+        Useful for downloading extra artifacts other than the study_file being parsed
+
+        :param file_gs_url: GS URL to remote file
+        :param destination_path: local path to download file to
+        """
+        print(f"localize_file: {file_gs_url}, {destination_path}")
+        path_segments = file_gs_url[5:].split("/")
+        bucket_name = path_segments[0]
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket(bucket_name)
+        source = "/".join(path_segments[1:])
+        blob = bucket.blob(source)        
+        blob.download_to_filename(destination_path)
+        IngestFiles.dev_logger.info(f"{file_gs_url} downloaded to {destination_path}.")
+
     def open_file(self, file_path, open_as=None, start_point: int = 0, **kwargs):
         """A wrapper function for opening txt (txt is expected to be tsv or csv), csv, or tsv formatted files"""
         open_file, file_path = self.resolve_path(file_path)
