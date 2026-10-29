@@ -416,6 +416,11 @@ def create_parser():
         help="Array of file types to extract, options include ['cluster', 'metadata', 'processed_expression']",
     )
 
+    parser_anndata.add_argument(
+        '--manifest-file',
+        help="Path to manifest file for appending metadata before extraction (for NeMO data only)"
+    )
+
     parser_expression_writer = subparsers.add_parser(
         "render_expression_arrays",
         help="Indicates preprocessing of cluster/expression files for image pipeline",
