@@ -337,13 +337,24 @@ class DifferentialExpression:
         return adata[col_name].astype(str).str.match(regex).all()
 
     @staticmethod
+    def feature_names_loaded(adata):
+        """
+        Check that the var_names index is using valid feature names
+        """
+        if 'feature_name' in adata.var.columns:
+            return adata.var_names[0] == adata.var['feature_name'].iloc[0]
+        else:
+            return True
+
+
+    @staticmethod
     def write_de_result(adata, group, annotation, rank_key, cluster_name, extra_params):
         de_type = extra_params.get("de_type")
         method = extra_params.get("method")
         annot_scope = extra_params.get("annotation_scope")
         clean_annotation = DifferentialExpression.sanitize_string(annotation)
         rank = sc.get.rank_genes_groups_df(adata, key=rank_key, group=group)
-        if DifferentialExpression.all_match_ensembl_id_regex(rank, "names"):
+        if DifferentialExpression.all_match_ensembl_id_regex(rank, "names") or not DifferentialExpression.feature_names_loaded(adata):
             feature_name_rank = rank.merge(
                 adata.var['feature_name'], left_on="names", right_index=True, how='left'
             )

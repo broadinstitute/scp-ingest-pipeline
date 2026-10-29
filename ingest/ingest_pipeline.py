@@ -59,6 +59,9 @@ python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5
 # Ingest AnnData - happy path cluster and metadata extraction
 python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['cluster', 'metadata']" --obsm-keys "['X_umap','X_tsne']"
 
+# Ingest AnnData - append sample manifest annotations and extract metadata
+python ingest_pipeline.py  --study-id 5d276a50421aa9117c982845 --study-file-id 5dd5ae25421aa910a723a337 ingest_anndata --ingest-anndata --anndata-file ../tests/data/anndata/trimmed_compliant_pbmc3K.h5ad  --extract "['metadata']" --manifest-file ../tests/data/anndata/fil-zg9sah3.scp.tsv
+
 # Differential expression analysis (dense matrix)
 python ingest_pipeline.py --study-id addedfeed000000000000000 --study-file-id dec0dedfeed1111111111111 differential_expression --annotation-name cell_type__ontology_label --annotation-type group --annotation-scope study --matrix-file-path ../tests/data/differential_expression/de_dense_matrix.tsv --matrix-file-type dense --annotation-file ../tests/data/differential_expression/de_dense_metadata.tsv --cluster-file ../tests/data/differential_expression/de_dense_cluster.tsv --cluster-name de_integration --study-accession SCPdev --differential-expression
 
@@ -135,7 +138,6 @@ from monitor import setup_logger, log_exception
 from de import DifferentialExpression
 from author_de import AuthorDifferentialExpression
 from expression_writer import ExpressionWriter
-from rank_genes import RankGenes
 from dot_plot_genes import DotPlotGenes
 
 # scanpy uses anndata python package, disamibguate local anndata
@@ -160,7 +162,6 @@ class IngestPipeline:
         'ingest_dot_plot_genes',
         'differential_expression',
         'render_expression_arrays',
-        'rank_genes',
     ]
 
     # Logger provides more details for trouble shooting
@@ -667,15 +668,6 @@ class IngestPipeline:
             return 1
         return 0
 
-    def rank_genes(self):
-        try:
-            kwargs = self.kwargs
-            RankGenes(kwargs["study_accession"], kwargs["publication"])
-        except Exception as e:
-            log_exception(IngestPipeline.dev_logger, IngestPipeline.user_logger, e)
-            return 1
-        return 0
-
     def report_validation(self, status):
         self.props["status"] = status
         config.get_metric_properties().update(self.props)
@@ -735,11 +727,6 @@ def run_ingest(ingest, arguments, parsed_args):
         config.set_parent_event_name("image-pipeline:render-expression-arrays")
         status_exp_writer = ingest.render_expression_arrays()
         status.append(status_exp_writer)
-
-    elif "rank_genes" in arguments:
-        config.set_parent_event_name("image-pipeline:rank-genes")
-        status_rank_genes = ingest.rank_genes()
-        status.append(status_rank_genes)
 
     return status, status_cell_metadata
 
@@ -807,11 +794,7 @@ def exit_pipeline(ingest, status, status_cell_metadata, arguments):
         elif all(i < 1 for i in status):
             sys.exit(os.EX_OK)
         else:
-            if "rank_genes" in arguments:
-                study_file_id = "rank_genes"
-                file_path = f"gs://{arguments.get('bucket_name')}/blank"
-            else:
-                file_path, study_file_id = get_delocalization_info(arguments)
+            file_path, study_file_id = get_delocalization_info(arguments)
             if IngestFiles.is_remote_file(file_path):
                 if "differential_expression" in arguments:
                     log_path = (
